@@ -29,3 +29,6 @@ R:       mvbutils (follow CRAN guidelines)
 --------------------------------------------------------------------------------
 Revision Control:
 
+Note that the repository has been create to be backward compatible with pre-1.4 versions of subversion. If you nonetheless have problems, speak up.
+
+
