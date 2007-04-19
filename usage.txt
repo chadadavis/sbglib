@@ -1,0 +1,31 @@
+
+
+Subdirectories exist for severl programming languages. Each of these languages has a different means for including home-made libraries. The following scripts hav been included for setting up your shell environment appropriately:
+
+environment.sh     For sh, bash, zsh, and related
+environment.csh    For cshell, tcshell and related
+
+--------------------------------------------------------------------------------
+Compiling:
+
+The language subdirectories are independent. There can be exceptions, however. For example, a Perl interface may make use of a C++ library. Simply running make in the perl directory will compile any other resources that the perl interfaces require. This only needs to be done once. The same holds for other interfaces between interpreted and compiled languages.
+
+
+--------------------------------------------------------------------------------
+API Documentation (optional):
+
+Compiling API documentation for the langauge-specific modules is done according
+to the method common for the given language:
+
+Done with the command 'make doc' either at the top-level or in a given subdir
+
+C++ :    Doxygen
+Java:    JavaDoc
+Perl:    POD (follow Bioperl/CPAN guidelines)
+Python:  ...
+R:       mvbutils (follow CRAN guidelines)
+
+
+--------------------------------------------------------------------------------
+Revision Control:
+
