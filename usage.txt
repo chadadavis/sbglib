@@ -21,7 +21,7 @@ Done with the command 'make doc' either at the top-level or in a given subdir
 
 C++ :    Doxygen
 Java:    JavaDoc
-Perl:    POD (follow Bioperl/CPAN guidelines)
+Perl:    POD/Pdoc (follow Bioperl/CPAN guidelines)
 Python:  ...
 R:       mvbutils (follow CRAN guidelines)
 

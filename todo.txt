@@ -1,5 +1,19 @@
 Organize this into sections ...
 
+Matthieu: /g/russell/russell5/pichaud/work/python_modules
+  How does Python do API docs?
+Chad:
+~/dev/*
+~/lmu/prakt-*
+~/scripts/*
+Others: ...
+
+Also include templates for each lang, simply to provide example of documentation formats
+
+First worry about getting everything into SVN
+Then start documenting
+Then start making interfaces uniform and abstract out common features
+
 It'll also kind be nice to have a forum/group(google)/message board where people can discuss what they're looking for and whether someone knows where to find / also what each person is working on so that we don't duplicate effort.
 Setup a google group and invite people. (only once project is mature, if ever)
 
@@ -110,3 +124,5 @@ Also integrate any part of Rob's Pblast.pm that's not arlready in Bioperlx
 
 Setup documentation systems based on previous projects:
 Javadoc, Doxygen, POD, 
+
+
