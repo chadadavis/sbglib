@@ -1,11 +1,14 @@
 
+
 # Intro ...
 
 # Library paths are always appended rathern than prepended.
 # They will not over-ride your own libraries
 
 # Get location of this script
-BASE=`dirname $0`
+# (This seems to work, but can it be proven?)
+BASE=`dirname ${BASH_SOURCE[0]}`
+#echo "EMBL Development Environment: $BASE"
 
 export PERL5LIB="$PERL5LIB:$BASE/perl"
 export PYTHONPATH="$PYTHONPATH:$BASE/python"
