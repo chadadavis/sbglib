@@ -8,6 +8,13 @@ Chad:
 ~/scripts/*
 Others: ...
 
+Cleanup Utils.pm
+  Rename it/break into different files based on provided functionality
+    get contributions from Evangelia/Rob/Eduardo
+  Rename the functions
+  Document with POD (using Pdoc/Bioperl style)
+  Don't duplicate things already in PDL (check!)
+
 Also include templates for each lang, simply to provide example of documentation formats
 
 First worry about getting everything into SVN
