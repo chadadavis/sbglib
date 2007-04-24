@@ -90,7 +90,7 @@ sub stddev {
     # Check if we were given a reference
     my $r = $_[0];
     my @list = (ref $r) ? @$r : @_;
-    return 0 unless @list;
+    return 0 unless @list > 1;
     my $sum = 0;
     my $avg = avg(\@list);
     for (my $i = 0; $i < @list; $i++) {
