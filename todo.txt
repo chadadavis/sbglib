@@ -8,6 +8,18 @@ Chad:
 ~/scripts/*
 Others: ...
 
+What about true cross-language (and not just down-stream)
+I.e. compile Perl/Java into binary libs, these can then be use again w/
+  native interface, as if they were C libs
+What about Perl/Python interaction
+Doesn't Java already have Python bindings?
+Read up on all this, get demos
+
+Also create another aconvert (with cmd line interface) according to:
+/g/russell1/apps/stamp_5.0/perl/aconvert
+Is this the same as 
+/g/russell1/apps/stamp_5.0/perl/Palign.pm ?
+
 Cleanup Utils.pm
   Rename it/break into different files based on provided functionality
     get contributions from Evangelia/Rob/Eduardo
