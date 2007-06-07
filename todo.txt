@@ -1,5 +1,7 @@
 Organize this into sections ...
 
+Document and link all this library business on the wiki
+
 Matthieu: /g/russell/russell5/pichaud/work/python_modules
   How does Python do API docs?
 Chad:
@@ -7,6 +9,23 @@ Chad:
 ~/lmu/prakt-*
 ~/scripts/*
 Others: ...
+
+kd-tree DS (this is probably already in BALL), but for Perl?
+
+Create Perl interface for BALL? Use Python interface as model?
+
+the HEPP project contained (potentially) useful utilities as well
+
+Use EMBL::Sys for OS interfaces
+
+Check standard libraries before rolling anything a new
+
+Documentent functions that are re-entrant.
+
+get split_fa.pl and Utils.pm and Measure.pm from MA
+
+remove rearrange() copied from Bioperl, instead:
+use CGI::Util qw(rearrange);
 
 What about true cross-language (and not just down-stream)
 I.e. compile Perl/Java into binary libs, these can then be use again w/
