@@ -8,7 +8,13 @@ Chad:
 ~/dev/*
 ~/lmu/prakt-*
 ~/scripts/*
+~/dev/GSF/*/*
 Others: ...
+
+Also get Css and JS code from gobi e.g.
+
+Aside: Provide a 'lib' directory on fileserver for 3rd party dependencies
+Do we not have a standard place where e.g. Bioperl/biopython/etc are installed?
 
 kd-tree DS (this is probably already in BALL), but for Perl?
 
