@@ -150,10 +150,14 @@ TODO add option to only fetch Fasta format (faster)
 sub get_Seq_by_id {
     my ($self, $id, @options) = @_;
 
+    # TODO use log4perl
+    print STDERR "Fetching $id from KEGG\n";
+
     # Fetches record as string in KEGG format
     # NB: the option: '-n a' only applies to Fasta format
     # I.e. the AA sequence is still buried in a L<Bio::Annotation::Comment>
     my $record = $self->{'serv'}->bget($id);
+#     print STDERR "record:\n$record\n";
 
     # Make a Bio::Seq
     my $iostr = new IO::String($record);
