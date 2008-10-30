@@ -1,5 +1,8 @@
 #!/usr/bin/env perl
 
+use strict;
+use warnings;
+
 use Graph;
 use Graph::Writer::Dot;
 use Graph::Writer::GraphViz;
@@ -8,13 +11,16 @@ use Text::ParseWords;
 use Bio::Seq;
 use Bio::Network::ProteinNet;
 use Bio::Network::Node;
+use Bio::Network::Edge;
 use Bio::Root::IO;
 
+# Non-CPAN libs
 use lib '..';
 use EMBL::DB;
 use Bio::DB::KEGG; # Not (yet) Bioperl
 use EMBL::Seq;
 use EMBL::Node;
+use EMBL::Interaction;
 
 use Data::Dumper;
 
@@ -76,17 +82,31 @@ sub stats {
 
 sub call_tree_edge {
     my ($u, $v, $self) = @_;
-    print STDERR "tree_edge $u $v\n";
-#     my $edge = 
-    my $ix;
-#     while ($ix = $edge->next_interaction) {
-#     }
+
+    print STDERR "tree_edge $u $v: ";
+    my $g = $self->graph;
+    my $e = new Bio::Network::Edge([$u, $v]);
+    my @ix_ids = $g->get_edge_attribute_names($u, $v);
+    print STDERR "ix_ids:@ix_ids: ";
+    foreach my $ix_id (@ix_ids) {
+        my $ix = $g->get_interaction_by_id($ix_id);
+        print STDERR "$ix ";
+        # Simulate clash here, backtrack?
+        if (rand() >= .5) {
+            print STDERR " clash\n";
+            $self->terminate;
+            return;
+        }
+    }
+    print STDERR "\n";
         
 }
 
 sub call_non_tree_edge {
     my ($u, $v, $self) = @_;
     print STDERR "non_tree_edge $u $v\n"
+
+
 }
 
 sub mytraverse {
@@ -113,7 +133,7 @@ sub traverse {
     my %opt = (
         'tree_edge' => \&call_tree_edge,
         # NB non_tree_edge identifies potentially novel interfaces
-        'non_tree_edge' => \&call_non_tree_edge,
+#         'non_tree_edge' => \&call_non_tree_edge,
         );
     my $b = Graph::Traversal::BFS->new($g, %opt);
 #     my $b = Graph::Traversal::DFS->new($g, %opt);
