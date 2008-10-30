@@ -1,80 +1,125 @@
 #!/usr/bin/env perl
 
-use lib '..';
-use EMBL::DB;
-use Bio::DB::KEGG; 
 use Graph;
 use Graph::Writer::Dot;
+use Graph::Writer::GraphViz;
 use Graph::Traversal::BFS;
+use Text::ParseWords;
+use Bio::Seq;
+use Bio::Network::ProteinNet;
+use Bio::Network::Node;
+use Bio::Root::IO;
+
+use lib '..';
+use EMBL::DB;
+use Bio::DB::KEGG; # Not (yet) Bioperl
+use EMBL::Seq;
+use EMBL::Node;
 
 use Data::Dumper;
-use Text::ParseWords;
 
-my @lines = <>;
-chomp for @lines;
-my @ids = quotewords('\s+', 0, @lines);
-# Prepend namespace qualifier for KEGG
-@ids = map { "mpn:" . $_ } @ids;
-my $kegg = new Bio::DB::KEGG;
-my @components = map { $kegg->get_Seq_by_id($_) } @ids;
+# Read IDs from a file, whitespace-separated
+my $ids = read_components(shift);
+# Convert to array of Bio::Seq objects
+my $components = sequences($ids);
+# A network of components
+my $netcomponents = network($components);
+# printg ($netcomponents, "components.dot");
 
-# my $seq = $kegg->get_Seq_by_id($ids[0]);
-# print Dumper($seq), "\n";
-# __END__
+# A network of iaction templates
+my $nettemplates = read_templates(shift);
+# printg ($nettemplates, "templates.dot");
+# graphviz($nettemplates, "templates.png");
+graphviz($nettemplates, "templates.dot");
+stats($nettemplates);
 
-foreach my $seq (@components) {
-    print $seq->display_id, "\n";
-}
+# Traversing:
+# MST does not seem to work on multi-edged Bio::Network::ProteinNet
+# mst($nettemplates);
+# BFS
+traverse($nettemplates);
 
-__END__
+mytraverse($nettemplates);
 
-
-
-
-
-our $dbh = dbconnect();
-our $stmt = $dbh->prepare(
-    "select * from i2 where " . 
-    "((mpn_id1=? and mpn_id2=?) or (mpn_id2=? and mpn_id1=?)) " .
-    "and z > 0 and raw > 0 " .
-    "order by z desc"
-    );
-
-my $g = assemble(\@components);
-
-printg($g, "file.dot");
-
-traverse($g);
-
-misc($g);
-
-# TODO destructor
-# $dbh->close();
 exit;
 
 ################################################################################
 
-sub misc {
-    my ($g) = @_;
+sub stats {
+    my ($graph) = @_;
+
+    print "nodes: " . $graph->nodes . "\n";
+    print "edges: " . $graph->edges . "\n";
+    print "interactions: " . $graph->interactions . "\n";
+
+    print "is_countedged:", $graph->is_countedged, "\n";
+    print "is_multiedged:", $graph->is_multiedged, "\n";
+    print "is_multivertexed:", $graph->is_multivertexed, "\n";
+    print "is_multi_graph:", $graph->is_multi_graph, "\n";
+
+    print "is_tree:", $nettemplates->is_tree, "\n";
+    print "is_forest:", $nettemplates->is_forest, "\n";
+
+    my @arts = $graph->articulation_points;
+    print "articulation_points: @arts\n";
+    my @unconn = $graph->unconnected_nodes;
+    print "unconnected_nodes: @unconn \n";
+
+    my @connected = $graph->connected_components;
+    print "connected_components:\n\t";
+    print join("; ", map { join(",", @$_) } @connected);
+    print "\n";
+
+    print "graph:\n$graph\n";
 }
+
 
 sub call_tree_edge {
     my ($u, $v, $self) = @_;
-    print STDERR "BFS $u $v\n"
+    print STDERR "tree_edge $u $v\n";
+#     my $edge = 
+    my $ix;
+#     while ($ix = $edge->next_interaction) {
+#     }
+        
+}
+
+sub call_non_tree_edge {
+    my ($u, $v, $self) = @_;
+    print STDERR "non_tree_edge $u $v\n"
+}
+
+sub mytraverse {
+    my ($g) = @_;
+
+    my @edges = $g->edges;
+    my @ixs = $g->interactions;
+    my @connected = $g->connected_components;
+
+
+
+
 }
 
 sub traverse {
     my ($g) = @_;
 
     # Use BFS, starting with vertex with most edges
-    # Just pick one of the vertices with most partners
-    my ($cent) = centre($g);
 
+    # Just pick one of the vertices with most partners
+#     my ($cent) = centre($g);
+
+    # Setup callbacks
     my %opt = (
         'tree_edge' => \&call_tree_edge,
+        # NB non_tree_edge identifies potentially novel interfaces
+        'non_tree_edge' => \&call_non_tree_edge,
         );
     my $b = Graph::Traversal::BFS->new($g, %opt);
-    $b->bfs; # Do the traversal.
+#     my $b = Graph::Traversal::DFS->new($g, %opt);
+    # Do the traversal.
+    $b->bfs; 
+#     $b->dfs; 
 
 
 }
@@ -112,13 +157,12 @@ sub mst {
 
 sub assemble {
     my ($components) = @_;
-    print STDERR "Components:\n\t@$components\n";
+    print "Components:\n\t";
 
-   
-#     my $g = graph($components, $adj_mat);
+    # Put proteins as lone vertices into new graph
     my $g = graph($components);
 
-    my $adj_mat = interactions($components, $g);
+#     my $adj_mat = interactions($components, $g);
 
     return $g;
 
@@ -139,6 +183,41 @@ sub graph {
         );
     return $g;
 }
+
+
+sub network {
+    my ($sequences) = @_;
+    my $graph = Bio::Network::ProteinNet->new(
+        refvertexed => 1,
+        vertices => $sequences,
+        );
+    return $graph;
+}
+
+
+sub keggsequences {
+    my ($ids) = @_;
+
+    # Fetch actual sequence records from KEGG
+    # Prepend namespace qualifier for KEGG
+    my @keggids = map { "mpn:" . $_ } @$ids;
+#     print "IDs:\n@keggids\n";
+    my $kegg = new Bio::DB::KEGG;
+    my @components = map { $kegg->get_Seq_by_id($_) } @keggids;
+    
+    foreach my $c (@components) {
+    #     print $c->primary_id, " ";
+#         print $c->accession_number, " ";
+    }
+    return \@components;
+}
+
+sub sequences {
+    my ($ids) = @_;
+    my @components = map { Bio::Seq->new(-accession_number => $_); } @$ids;
+    return \@components;
+}
+
 
 sub interactions {
     my ($components, $g) = @_;
@@ -199,3 +278,93 @@ sub printg {
     my $writer = Graph::Writer::Dot->new();
     $writer->write_graph($graph, $file);
 }
+
+sub graphviz {
+    my ($graph, $file) = @_;
+    $file ||= "mygraph.png";
+    my ($format) = $file =~ /\.(.*?)$/;
+#     print STDERR "$file:$format:\n";
+    $format ||= 'png';
+    my $writer = Graph::Writer::GraphViz->new(
+        -format => $format,
+#         -layout => 'twopi',
+#         -layout => 'fdp',
+        -ranksep => 1.5,
+        -fontsize => 8
+        -edge_color => 'grey',
+        -node_color => 'black',
+        );
+    $writer->write_graph($graph, $file);
+
+}
+
+sub read_components {
+    my ($file) = @_;
+    my $io = Bio::Root::IO->new(-file => $file);
+    my @components;
+    while (my $l = $io->_readline() ) {
+        push @components, split(/\s+/, $l);
+    }
+    return \@components;
+}
+
+sub read_templates {
+    my ($file) = @_;
+
+    my $io = Bio::Root::IO->new(-file => $file);
+    my $graph = Bio::Network::ProteinNet->new(
+        refvertexed => 1,
+        );
+    
+    # Must save the nodes we have already created, so as not to duplicate
+    my %nodes;
+
+    while (my $l = $io->_readline() ) {
+        # Skip comments/blank lines
+        next if ($l =~ /^\s*$/ or $l =~ /^\s*#/);
+
+        my ($comp_a, $comp_b, $templ_a, $templ_b, $score) = split(/\s+/, $l);
+
+        # Create network nodes from sequences. Sequences from accession_number
+        $nodes{$comp_a} ||= 
+            new Bio::Network::Node(new Bio::Seq(-accession_number=>$comp_a));
+        $nodes{$comp_b} ||= 
+            new Bio::Network::Node(new Bio::Seq(-accession_number=>$comp_b));
+
+        # create new Interaction object based on an id and weight
+        # NB the ID must be unique in the whole graph
+        my $interaction = Bio::Network::Interaction->new(
+            -id => "${comp_a}~${templ_a}/${templ_b}~${comp_b}",
+            -weight => $score,
+            );
+
+        # TODO Trying to get GraphViz to display edge labels ...
+#         $interaction->{'label'} = $interaction->primary_id;
+
+        print STDERR 
+            "Adding: $comp_a, $comp_b via ", $interaction->primary_id, "\n";
+
+        $graph->add_interaction(
+#             -nodes => [($prot1,$prot2)],
+#             -nodes => [($components{$comp_a}, $components{$comp_b})], 
+#             -nodes => [$components{$comp_a}, $components{$comp_b}], 
+            -nodes => [$nodes{$comp_a}, $nodes{$comp_b}], 
+            -interaction => $interaction,
+            );
+    }
+
+    return $graph;
+}
+
+
+################################################################################
+
+__END__
+
+# our $dbh = dbconnect("pc-russell12", "mpn_i2");
+# our $stmt = $dbh->prepare(
+#     "select * from i2 where " . 
+#     "((mpn_id1=? and mpn_id2=?) or (mpn_id2=? and mpn_id1=?)) " .
+#     "and z > 0 and raw > 0 " .
+#     "order by z desc"
+#     );
