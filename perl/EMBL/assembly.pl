@@ -45,11 +45,64 @@ stats($nettemplates);
 # BFS
 traverse($nettemplates);
 
-mytraverse($nettemplates);
+# mytraverse($nettemplates);
+
+
 
 exit;
 
 ################################################################################
+
+sub mytraverse {
+    my ($g) = @_;
+    
+    # Can be done in parallel
+    foreach my $subgraph ($g->connected_components) {
+        my $start = $subgraph->[rand(@$subgraph)];
+        print STDERR "start:$start:\n";
+
+        # Recursion starts
+        dive($g, $start);
+    }
+}
+
+sub dive {
+    my ($g, $v) = @_;
+    # Incident edges
+
+    my @edges = $g->edges_at($v);
+    print STDERR "edges:", arraystr(\@edges), "\n";
+
+    foreach my $edge (@edges) {
+
+        my @ix_ids = $g->get_edge_attribute_names(@$edge);
+        @ix_ids = sort @ix_ids;
+        print STDERR "ix_ids:@ix_ids: ";
+
+        foreach my $ix (@ix_ids) {
+
+#             my $ix_id = $ix_ids[$state];
+#             print STDERR "$state/" . @ix_ids . " ";
+#             my $ix = $g->get_interaction_by_id($ix_id);
+#             print STDERR "$ix ";
+#             # Structural compatibility test (backtrack on failure)
+#             # Simulate clash here, backtrack?
+#             my $success = try_interaction($ix);
+#             print STDERR $success?'Y':'N', " ";
+
+        }
+
+    }
+
+}
+
+
+# Convert 2D array to string list, e.g.:
+# red,blue,green,grey; alpha,beta,gamma; apples,oranges
+sub arraystr {
+    my ($a) = @_;
+    return join("; ", map { join(",", @$_) } @$a);
+}
 
 sub stats {
     my ($graph) = @_;
@@ -79,67 +132,213 @@ sub stats {
     print "graph:\n$graph\n";
 }
 
+sub do_visit {
+    my ($v, $traversal) = @_;
+
+}
+
+sub no_visit {
+    my ($v, $traversal) = @_;
+
+    print STDERR "\tGiving up on $v\n";
+
+    my $seen = $traversal->{'seen'};
+    my $unseen = $traversal->{'unseen'};
+    my $order = $traversal->{'order'};
+
+    # Add it to nodes that have already been seen
+    $seen->{$v} = $v;
+    # Remove from unseen nodes
+    delete $unseen->{$v};
+    # Remove from traversal order
+
+    # TODO determine this automatically
+    # BFS works from the left of the array, DFS from the right
+    # I.e. If DFS, pop. If BFS, shift
+    # Actually don't need to change this, doesn't affect neighbors
+#     pop @$order;
+
+
+    print STDERR "\tseen:", join(",", keys %$seen), "\n";
+    print STDERR "\tseeing:", join(",", @$order), "\n";
+    print STDERR "\tunseen:", join(",", keys %$unseen), "\n";
+
+}
+
+
+sub try_edge {
+    my ($u, $v, $traversal) = @_;
+
+    my $g = $traversal->graph;
+#     my $e = new Bio::Network::Edge([$u, $v]);
+    # IDs of Interaction's in this Edge
+    my @ix_ids = $g->get_edge_attribute_names($u, $v);
+    @ix_ids = sort @ix_ids;
+    print STDERR "ix_ids:@ix_ids: ";
+
+    # Extract current state of this edge, if any
+    my $edge_id = "$u--$v";
+
+#     my $seen = $traversal->{'seen'};
+#     my $unseen = $traversal->{'unseen'};
+#     my $order = $traversal->{'order'};
+#     $traversal->set_state($edge_id . "seen", $seen);
+#     $traversal->set_state($edge_id . "unseen", $unseen);
+#     $traversal->set_state($edge_id . "order", $order);
+
+    # Which of the interaction templates, for this edge, to try (next)
+    my $ix_index = $traversal->get_state($edge_id . "ix_index") || 0;
+
+    # If no templates (left) to try, do not traverse this edge
+    unless ($ix_index < @ix_ids) {
+        no_visit($v, $traversal);
+        return;
+    }
+
+    # Try next interaction template
+    my $ix_id = $ix_ids[$ix_index];
+    print STDERR "$ix_index/" . @ix_ids . " ";
+    my $ix = $g->get_interaction_by_id($ix_id);
+    print STDERR "$ix ";
+
+    # Structural compatibility test (backtrack on failure)
+    my $success = try_interaction($ix);
+    print STDERR $success?'Y':'N', " ";
+
+    $traversal->set_state($edge_id . "success", $success);
+
+    # Next interaction iface to try on this edge
+    $ix_index++;
+    $traversal->set_state($edge_id . "ix_index", $ix_index);
+
+    if ($success) {
+        # Template was successful. Allow traversal to continue unaltered
+    } else {
+        # Cannot traverse this edge with this template
+        # Redo this edge (using any remaining available interface templates)
+        printf STDERR "\n";
+        call_tree_edge($u, $v, $traversal);
+    }
+} # try_edge
+
+sub try_interaction {
+    my ($ix) = @_;
+
+    # Structural compatibility test (backtrack on failure)
+    # Simulate clash here, backtrack?
+    my $success = rand() < .5;
+    return $success;
+}
 
 sub call_tree_edge {
-    my ($u, $v, $self) = @_;
+    my ($u, $v, $traversal) = @_;
 
-    print STDERR "tree_edge $u $v: ";
-    my $g = $self->graph;
-    my $e = new Bio::Network::Edge([$u, $v]);
-    my @ix_ids = $g->get_edge_attribute_names($u, $v);
-    print STDERR "ix_ids:@ix_ids: ";
-    foreach my $ix_id (@ix_ids) {
-        my $ix = $g->get_interaction_by_id($ix_id);
-        print STDERR "$ix ";
-        # Simulate clash here, backtrack?
-        if (rand() >= .5) {
-            print STDERR " clash\n";
-            $self->terminate;
-            return;
-        }
-    }
+    my $seen = $traversal->{'seen'};
+    my $unseen = $traversal->{'unseen'};
+    my $order = $traversal->{'order'};
+
+    print STDERR "tree_edge:\n";
+    print STDERR "\tseen:", join(",", keys %$seen), "\n";
+    print STDERR "\tseeing:", join(",", @$order), "\n";
+    print STDERR "\tunseen:", join(",", keys %$unseen), "\n";
+#     print STDERR "\torder:", join(",", @{$traversal->{'order'}}), "\n";
+
+#     print STDERR "preorder:", join(",", $traversal->preorder), "\n";
+
+
+    print STDERR "\ttree_edge $u $v: ";
+    try_edge($u,$v,$traversal);
     print STDERR "\n";
-        
 }
 
 sub call_non_tree_edge {
-    my ($u, $v, $self) = @_;
-    print STDERR "non_tree_edge $u $v\n"
+    my ($u, $v, $traversal) = @_;
+    print STDERR "non_tree_edge $u $v\n";
+#     try_edge($u,$v,$traversal);
+}
+
+sub call_cross_edge {
+    my ($u, $v, $traversal) = @_;
+    print STDERR "cross_edge $u $v\n";
+}
+
+sub call_back_edge {
+    my ($u, $v, $traversal) = @_;
+    print STDERR "back_edge $u $v\n";
+}
+
+sub call_down_edge {
+    my ($u, $v, $traversal) = @_;
+    print STDERR "down_edge $u $v\n";
+}
+
+sub call_pre_edge {
+    my ($u, $v, $traversal) = @_;
+    print STDERR "pre_edge $u $v\n";
+}
+
+sub call_post_edge {
+    my ($u, $v, $traversal) = @_;
+    print STDERR "post_edge $u $v: ";
+
+    # Extract current state of this edge, if any
+    my $edge_id = "$u--$v";
+    my $success = $traversal->get_state($edge_id . "success");
+
+    # If placing the last interface template succeeded, we have partial solution
+    if ($success) {
+        # Output partial solution
+        # TODO also needs to be saved "in the Traversal"
+        print STDERR "partial model result\n";
+    }
+
+    # TODO
+    # If there are any templates left to try, reset traversal state
+    # Causes traversal to do this edge again.
+    # But counter will cause the next template(s) to be tried now
 
 
 }
 
-sub mytraverse {
-    my ($g) = @_;
+sub call_pre_vertex {
+    my ($v, $traversal) = @_;
+    print STDERR "pre_vertex $v\n";
+}
 
-    my @edges = $g->edges;
-    my @ixs = $g->interactions;
-    my @connected = $g->connected_components;
-
-
-
-
+sub call_post_vertex {
+    my ($v, $traversal) = @_;
+    print STDERR "post_vertex $v\n";
 }
 
 sub traverse {
     my ($g) = @_;
 
-    # Use BFS, starting with vertex with most edges
-
-    # Just pick one of the vertices with most partners
-#     my ($cent) = centre($g);
+    # NB back_edge identifies potentially novel interfaces
 
     # Setup callbacks
     my %opt = (
+#         'pre_vertex' => \&call_pre_vertex,
+        'pre' => \&call_pre_vertex,
+#         'post_vertex' => \&call_post_vertex,
+        'post' => \&call_post_vertex,
+        # tree_edge : an edge actually traversed in traversal tree
         'tree_edge' => \&call_tree_edge,
-        # NB non_tree_edge identifies potentially novel interfaces
+        # cross_edge : seems to exist only for BFS
+        'cross_edge' => \&call_cross_edge,
+        # back_edge : reaching a vert already seen in the current traversal
+        'back_edge' => \&call_back_edge,
+        # down_edge : reaching a vert already seen from a previous traversal
+#         'down_edge' => \&call_down_edge,
+        # non_tree_edge : back_edge , down_edge , or cross_edge
 #         'non_tree_edge' => \&call_non_tree_edge,
+#         'pre_edge' => \&call_pre_edge,
+        'post_edge' => \&call_post_edge,
         );
-    my $b = Graph::Traversal::BFS->new($g, %opt);
-#     my $b = Graph::Traversal::DFS->new($g, %opt);
-    # Do the traversal.
-    $b->bfs; 
-#     $b->dfs; 
+
+#     my $b = Graph::Traversal::BFS->new($g, %opt);
+#     $b->bfs; 
+    my $b = Graph::Traversal::DFS->new($g, %opt);
+    $b->dfs; 
 
 
 }
@@ -310,7 +509,7 @@ sub graphviz {
 #         -layout => 'twopi',
 #         -layout => 'fdp',
         -ranksep => 1.5,
-        -fontsize => 8
+        -fontsize => 8,
         -edge_color => 'grey',
         -node_color => 'black',
         );

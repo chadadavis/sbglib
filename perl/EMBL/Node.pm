@@ -63,11 +63,13 @@ sub compare {
     my ($a, $b) = @_;
     
     # Shortcut, since comparing lists is not always meaningful
-#     return 0;
+    return 0;
 
     # Compare all agains all.
     # If all A's are less than all B's, then A < B, and vice versa
     # If results are mixed, return 0 (equivalent)
+
+    # TODO BUG $a not always defined
     my @a = $a->proteins;
     my @b = $b->proteins;
     # Store all comparisons
