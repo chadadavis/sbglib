@@ -34,6 +34,8 @@ package Bio::Seq;
 use overload (
     '""' => 'stringify',
     'cmp' => 'compare',
+    'eq' => 'equal',
+
     );
 
 # Other modules in our hierarchy
@@ -55,6 +57,11 @@ sub stringify {
     my ($self) = @_;
     my $class = ref($self) || $self;
     return $self->accession_number;
+}
+
+sub equal {
+    my ($a, $b) = @_;
+    return 0 == compare($a, $b);
 }
 
 sub compare {

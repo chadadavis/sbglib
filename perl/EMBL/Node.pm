@@ -31,14 +31,17 @@ Private internal functions are generally preceded with an _
 
 package Bio::Network::Node;
 
+
 use overload (
     '""' => 'stringify',
     'cmp' => 'compare',
+    'eq' => 'equal',
     );
 
 # Other modules in our hierarchy
 use lib "..";
 
+use Data::Dumper; 
 
 ################################################################################
 =head2 
@@ -58,22 +61,39 @@ sub stringify {
     return join(",", $self->proteins);
 }
 
+sub equal {
+    my ($a, $b) = @_;
+    return 0 == compare($a, $b);
+}
+
 # Setwise comparison
 sub compare {
     my ($a, $b) = @_;
-    
-    # Shortcut, since comparing lists is not always meaningful
-    return 0;
 
-    # Compare all agains all.
     # If all A's are less than all B's, then A < B, and vice versa
     # If results are mixed, return 0 (equivalent)
+    my %cmp = tally($a,$b);
 
-    # TODO BUG $a not always defined
-    my @a = $a->proteins;
-    my @b = $b->proteins;
+    if ($cmp{-1} && !($cmp{0} || $cmp{+1})) {
+        return -1;
+    } elsif ($cmp{+1} && !($cmp{0} || $cmp{-1})) {
+        return +1;
+    } else {
+        return 0;
+    }
+}
+
+
+# Setwise counts of $a < $b (-1), $a == $b (0), $a > $b (+1)
+sub tally {
+    my ($a, $b) = @_;
+
+    # Compare all against all.
     # Store all comparisons
-    my %cmp;
+    my %cmp = (-1 => 0, 0 => 0, +1 => 0);
+
+    my @a = $a && $a->proteins;
+    my @b = $b && $b->proteins;
     foreach my $pa (@a) {
         foreach my $pb (@b) {
             # Either -1, 0, +1
@@ -81,15 +101,8 @@ sub compare {
             $cmp{$pa cmp $pb}++;
         }
     }
-    # If no A's were ever smaller, then A is bigger than all B's
-    if ($cmp{-1} == 0) { 
-        return 1;
-    } elsif ($cmp{1} == 0) {
-        return -1;
-    } else {
-        # Mixed sets
-        return 0;
-    }
+
+    return %cmp;
 }
 
 ###############################################################################

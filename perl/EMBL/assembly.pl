@@ -43,56 +43,21 @@ stats($nettemplates);
 # MST does not seem to work on multi-edged Bio::Network::ProteinNet
 # mst($nettemplates);
 # BFS
-traverse($nettemplates);
+# traverse($nettemplates);
 
-# mytraverse($nettemplates);
-
+mytraverse($nettemplates);
 
 
 exit;
 
 ################################################################################
 
+use EMBL::Traversal;
 sub mytraverse {
-    my ($g) = @_;
-    
-    # Can be done in parallel
-    foreach my $subgraph ($g->connected_components) {
-        my $start = $subgraph->[rand(@$subgraph)];
-        print STDERR "start:$start:\n";
+    my ($graph) = @_;
 
-        # Recursion starts
-        dive($g, $start);
-    }
-}
-
-sub dive {
-    my ($g, $v) = @_;
-    # Incident edges
-
-    my @edges = $g->edges_at($v);
-    print STDERR "edges:", arraystr(\@edges), "\n";
-
-    foreach my $edge (@edges) {
-
-        my @ix_ids = $g->get_edge_attribute_names(@$edge);
-        @ix_ids = sort @ix_ids;
-        print STDERR "ix_ids:@ix_ids: ";
-
-        foreach my $ix (@ix_ids) {
-
-#             my $ix_id = $ix_ids[$state];
-#             print STDERR "$state/" . @ix_ids . " ";
-#             my $ix = $g->get_interaction_by_id($ix_id);
-#             print STDERR "$ix ";
-#             # Structural compatibility test (backtrack on failure)
-#             # Simulate clash here, backtrack?
-#             my $success = try_interaction($ix);
-#             print STDERR $success?'Y':'N', " ";
-
-        }
-
-    }
+    my $t = new EMBL::Traversal($graph, \&try_edge);
+    $t->traverse;
 
 }
 
@@ -107,35 +72,34 @@ sub arraystr {
 sub stats {
     my ($graph) = @_;
 
-    print "nodes: " . $graph->nodes . "\n";
-    print "edges: " . $graph->edges . "\n";
-    print "interactions: " . $graph->interactions . "\n";
+    print "\nStatistics:\n";
+    print "\tgraph:\n\t$graph\n";
 
-    print "is_countedged:", $graph->is_countedged, "\n";
-    print "is_multiedged:", $graph->is_multiedged, "\n";
-    print "is_multivertexed:", $graph->is_multivertexed, "\n";
-    print "is_multi_graph:", $graph->is_multi_graph, "\n";
+    print "\tnodes: " . $graph->nodes . "\n";
+    print "\tedges: " . $graph->edges . "\n";
+    print "\tinteractions: " . $graph->interactions . "\n";
 
-    print "is_tree:", $nettemplates->is_tree, "\n";
-    print "is_forest:", $nettemplates->is_forest, "\n";
+    print "\tis_countedged:", $graph->is_countedged, "\n";
+    print "\tis_multiedged:", $graph->is_multiedged, "\n";
+    print "\tis_multivertexed:", $graph->is_multivertexed, "\n";
+    print "\tis_multi_graph:", $graph->is_multi_graph, "\n";
+
+    print "\tis_tree:", $nettemplates->is_tree, "\n";
+    print "\tis_forest:", $nettemplates->is_forest, "\n";
 
     my @arts = $graph->articulation_points;
-    print "articulation_points: @arts\n";
+    print "\tarticulation_points: @arts\n";
     my @unconn = $graph->unconnected_nodes;
-    print "unconnected_nodes: @unconn \n";
+    print "\tunconnected_nodes: @unconn \n";
 
     my @connected = $graph->connected_components;
-    print "connected_components:\n\t";
+    print "\tconnected_components:\n\t";
     print join("; ", map { join(",", @$_) } @connected);
     print "\n";
 
-    print "graph:\n$graph\n";
+    print "\n";
 }
 
-sub do_visit {
-    my ($v, $traversal) = @_;
-
-}
 
 sub no_visit {
     my ($v, $traversal) = @_;
@@ -152,6 +116,11 @@ sub no_visit {
     delete $unseen->{$v};
     # Remove from traversal order
 
+    # Try to remove edge to successor node from traversal tree
+    my $current = $traversal->current;
+    $traversal->{ tree }->delete_edge( $current, $v );
+
+
     # TODO determine this automatically
     # BFS works from the left of the array, DFS from the right
     # I.e. If DFS, pop. If BFS, shift
@@ -167,32 +136,28 @@ sub no_visit {
 
 
 sub try_edge {
-    my ($u, $v, $traversal) = @_;
+    my ($u, $v, $traversal, $ix_index) = @_;
 
+    $ix_index ||= 0;
+
+    print STDERR "\ttry_edge $u $v: ";
     my $g = $traversal->graph;
-#     my $e = new Bio::Network::Edge([$u, $v]);
-    # IDs of Interaction's in this Edge
+
+    # IDs of Interaction's (templates) in this Edge
     my @ix_ids = $g->get_edge_attribute_names($u, $v);
     @ix_ids = sort @ix_ids;
-    print STDERR "ix_ids:@ix_ids: ";
 
     # Extract current state of this edge, if any
-    my $edge_id = "$u--$v";
-
-#     my $seen = $traversal->{'seen'};
-#     my $unseen = $traversal->{'unseen'};
-#     my $order = $traversal->{'order'};
-#     $traversal->set_state($edge_id . "seen", $seen);
-#     $traversal->set_state($edge_id . "unseen", $unseen);
-#     $traversal->set_state($edge_id . "order", $order);
-
+#     my $edge_id = "$u--$v";
     # Which of the interaction templates, for this edge, to try (next)
-    my $ix_index = $traversal->get_state($edge_id . "ix_index") || 0;
+#     my $ix_index = $traversal->get_state($edge_id . "ix_index") || 0;
 
-    # If no templates (left) to try, do not traverse this edge
+    # If no templates (left) to try, cannot use this edge
     unless ($ix_index < @ix_ids) {
-        no_visit($v, $traversal);
-        return;
+        print STDERR "No more templates\n";
+        # Now reset, for any subsequent, independent attempts on this edge
+#         $traversal->set_state($edge_id . "ix_index", 0);
+        return undef;
     }
 
     # Try next interaction template
@@ -205,20 +170,22 @@ sub try_edge {
     my $success = try_interaction($ix);
     print STDERR $success?'Y':'N', " ";
 
-    $traversal->set_state($edge_id . "success", $success);
+#     $traversal->set_state($edge_id . "success", $success);
 
     # Next interaction iface to try on this edge
-    $ix_index++;
-    $traversal->set_state($edge_id . "ix_index", $ix_index);
+#     $ix_index++;
+#     $traversal->set_state($edge_id . "ix_index", $ix_index);
+
+    print STDERR "\n";
 
     if ($success) {
-        # Template was successful. Allow traversal to continue unaltered
+        return $ix_id;
     } else {
-        # Cannot traverse this edge with this template
-        # Redo this edge (using any remaining available interface templates)
-        printf STDERR "\n";
-        call_tree_edge($u, $v, $traversal);
+        return 0;
+        # Try any remaining templates
+#         return try_edge($u, $v, $traversal, $ix_index+1);
     }
+
 } # try_edge
 
 sub try_interaction {
@@ -226,27 +193,30 @@ sub try_interaction {
 
     # Structural compatibility test (backtrack on failure)
     # Simulate clash here, backtrack?
-    my $success = rand() < .5;
+    my $success = rand() < .50;
     return $success;
 }
 
-sub call_tree_edge {
-    my ($u, $v, $traversal) = @_;
+sub print_seeing {
+    my ($traversal) = @_;
 
     my $seen = $traversal->{'seen'};
     my $unseen = $traversal->{'unseen'};
     my $order = $traversal->{'order'};
 
-    print STDERR "tree_edge:\n";
     print STDERR "\tseen:", join(",", keys %$seen), "\n";
     print STDERR "\tseeing:", join(",", @$order), "\n";
     print STDERR "\tunseen:", join(",", keys %$unseen), "\n";
 #     print STDERR "\torder:", join(",", @{$traversal->{'order'}}), "\n";
 
-#     print STDERR "preorder:", join(",", $traversal->preorder), "\n";
+}
 
+sub call_tree_edge {
+    my ($u, $v, $traversal) = @_;
 
-    print STDERR "\ttree_edge $u $v: ";
+    print STDERR "tree_edge:\n";
+    print_seeing($traversal);
+
     try_edge($u,$v,$traversal);
     print STDERR "\n";
 }
@@ -254,7 +224,6 @@ sub call_tree_edge {
 sub call_non_tree_edge {
     my ($u, $v, $traversal) = @_;
     print STDERR "non_tree_edge $u $v\n";
-#     try_edge($u,$v,$traversal);
 }
 
 sub call_cross_edge {
@@ -274,7 +243,7 @@ sub call_down_edge {
 
 sub call_pre_edge {
     my ($u, $v, $traversal) = @_;
-    print STDERR "pre_edge $u $v\n";
+    print STDERR "pre_edge: $u $v\n";
 }
 
 sub call_post_edge {
@@ -295,7 +264,7 @@ sub call_post_edge {
     # TODO
     # If there are any templates left to try, reset traversal state
     # Causes traversal to do this edge again.
-    # But counter will cause the next template(s) to be tried now
+    # Though, counter will cause the next template(s) to be tried next
 
 
 }
@@ -310,6 +279,28 @@ sub call_post_vertex {
     print STDERR "post_vertex $v\n";
 }
 
+
+sub call_next_successor {
+    my ($traversal, $next) = @_;
+
+    # next is has of vertices that we could visit. Choose one.
+    my @keys = keys %$next;
+    print STDERR 
+        "next_successors: ", join(",", keys %$next), "\n";
+    my $successor_node;
+    my $success = 0;
+    foreach my $key (keys %$next) {
+        my $v = $next->{$key};
+        my $success = try_edge($traversal->current, $v, $traversal);
+        last if $success;
+    }
+
+    print STDERR "\tsuccessor: $successor_node\n";
+    return $successor_node;
+    
+}
+
+
 sub traverse {
     my ($g) = @_;
 
@@ -317,12 +308,14 @@ sub traverse {
 
     # Setup callbacks
     my %opt = (
+        # pre_edge is the same as tree_edge
+        'pre_edge' => \&call_pre_edge,
 #         'pre_vertex' => \&call_pre_vertex,
         'pre' => \&call_pre_vertex,
 #         'post_vertex' => \&call_post_vertex,
         'post' => \&call_post_vertex,
         # tree_edge : an edge actually traversed in traversal tree
-        'tree_edge' => \&call_tree_edge,
+#         'tree_edge' => \&call_tree_edge,
         # cross_edge : seems to exist only for BFS
         'cross_edge' => \&call_cross_edge,
         # back_edge : reaching a vert already seen in the current traversal
@@ -331,8 +324,8 @@ sub traverse {
 #         'down_edge' => \&call_down_edge,
         # non_tree_edge : back_edge , down_edge , or cross_edge
 #         'non_tree_edge' => \&call_non_tree_edge,
-#         'pre_edge' => \&call_pre_edge,
         'post_edge' => \&call_post_edge,
+        'next_successor' => \&call_next_successor,
         );
 
 #     my $b = Graph::Traversal::BFS->new($g, %opt);
@@ -574,6 +567,7 @@ sub read_templates {
 
     return $graph;
 }
+
 
 
 ################################################################################
