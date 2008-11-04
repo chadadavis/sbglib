@@ -62,12 +62,6 @@ sub mytraverse {
 }
 
 
-# Convert 2D array to string list, e.g.:
-# red,blue,green,grey; alpha,beta,gamma; apples,oranges
-sub arraystr {
-    my ($a) = @_;
-    return join("; ", map { join(",", @$_) } @$a);
-}
 
 sub stats {
     my ($graph) = @_;
@@ -136,9 +130,10 @@ sub no_visit {
 
 
 sub try_edge {
-    my ($u, $v, $traversal, $ix_index) = @_;
+#     my ($u, $v, $traversal, $ix_index) = @_;
+    my ($u, $v, $traversal) = @_;
 
-    $ix_index ||= 0;
+#     $ix_index ||= 0;
 
     print STDERR "\ttry_edge $u $v: ";
     my $g = $traversal->graph;
@@ -148,15 +143,15 @@ sub try_edge {
     @ix_ids = sort @ix_ids;
 
     # Extract current state of this edge, if any
-#     my $edge_id = "$u--$v";
+    my $edge_id = "$u--$v";
     # Which of the interaction templates, for this edge, to try (next)
-#     my $ix_index = $traversal->get_state($edge_id . "ix_index") || 0;
+    my $ix_index = $traversal->get_state($edge_id . "ix_index") || 0;
 
     # If no templates (left) to try, cannot use this edge
     unless ($ix_index < @ix_ids) {
         print STDERR "No more templates\n";
         # Now reset, for any subsequent, independent attempts on this edge
-#         $traversal->set_state($edge_id . "ix_index", 0);
+        $traversal->set_state($edge_id . "ix_index", 0);
         return undef;
     }
 
@@ -173,8 +168,8 @@ sub try_edge {
 #     $traversal->set_state($edge_id . "success", $success);
 
     # Next interaction iface to try on this edge
-#     $ix_index++;
-#     $traversal->set_state($edge_id . "ix_index", $ix_index);
+    $ix_index++;
+    $traversal->set_state($edge_id . "ix_index", $ix_index);
 
     print STDERR "\n";
 
@@ -183,6 +178,7 @@ sub try_edge {
     } else {
         return 0;
         # Try any remaining templates
+        # Recursion not managed here
 #         return try_edge($u, $v, $traversal, $ix_index+1);
     }
 

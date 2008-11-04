@@ -67,9 +67,19 @@ sub new {
     $self->{graph} = $graph;
     $self->{consider} = $consider;
 
+    $self->{next_edges} = [];
+    $self->{next_nodes} = [];
+
     return $self;
 
 } # new
+
+# Convert 2D array to string list, e.g.:
+# red,blue,green,grey; alpha,beta,gamma; apples,oranges
+sub arraystr {
+    my ($a) = @_;
+    return join("; ", map { join(",", @$_) } @$a);
+}
 
 sub get_state {
     my ($self, $key) = @_;
@@ -96,10 +106,11 @@ sub traverse {
 #     $self->do_node($uf, @vertices);
 #     $self->do_set(@vertices);
 #     $self->do_nodes2(@vertices);
-    push @{$self->{next_nodes}}, @vertices;
+#     push @{$self->{next_nodes}}, @vertices;
+    push @{$self->{next_nodes}}, $vertices[int rand @vertices];
 
     my $uf = new Graph::UnionFind;
-    $uf->add($_) for @nodes;
+    $uf->add($_) for @vertices;
 
     $self->do_nodes2($uf);
 
@@ -108,42 +119,74 @@ sub traverse {
 
 sub do_edges2 {
     my ($self, $uf) = @_;
-    my $current = pop @{$self->{next_edges}};
-    my ($src, $dest) = @$current;
+    my $current = shift @{$self->{next_edges}};
 
-    my $result = $self->consider()->($start, $neighbor, $self);
+    # When no edges left on stack, go to next level down in BFS traversal tree
+    # I.e. process outstanding nodes
+    unless ($current) {
+        print STDERR "No more edges\n";
+        return @{$self->{next_nodes}} ? $self->do_nodes2($uf) : undef;
+    }
+
+    my ($src, $dest) = @$current;
+    print STDERR "Edge: $src $dest (", arraystr($self->{next_edges}), ")\n";
+
+    my $result = $self->consider()->($src, $dest, $self);
     if (!defined $result) {
-        # No more templates left for this edge
+        # No more templates left for edge: $src,$dest
+        print STDERR "\tNo more alternatives for $src $dest\n";
         return;
     }
 
+    # Need to clone this object, as children want to change it in different ways
     my $clone = clone($uf);
 
-    if (0 == $result) {
-        # Failed to use the currently attempated template
+    if (0 eq $result) {
+        # Failed to use the currently attempted template
     } else {
         # Successfully placed the current interaction template
-        push @{$self->next_nodes}, $dest;
+        # Consider the destination node neighbor to have been visited
+        print STDERR "\tpush'ing node $dest\n";
+        push @{$self->{next_nodes}}, $dest;
         $clone->union($src, $dest);
     }
 
-    # Recursive call
+    # Recursive call, try other outstanding edges.
+    # Do this regardless of whether current template succeeded or not
     $self->do_edges2($clone);
-    # After recursive call: 
+
+    print STDERR "<= Edge: $src $dest\n";
+
+    # Whether we did or did not use this template, now try other templates on
+    # this edge
+    # I.e. push this edge back onto the edge stack
+    push @{$self->{next_edges}}, $current;
+    # This will stop when this edge runs out of templates
+    return $self->do_edges2($uf);
 
 }
 
 sub do_nodes2 {
     my ($self, $uf) = @_;
-    my $current = pop @{$self->{next_nodes}};
+    my $current = shift @{$self->{next_nodes}};
+
+    print STDERR 
+        "Node: ", ($current || "<none>"), 
+        " (@{$self->{next_nodes}})\n";
+
+    unless ($current) {
+        return @{$self->{next_edges}} ? $self->do_edges2($uf) : undef;
+    }
 
     my @unseen = $self->new_neighbors($current, $uf);
     for my $neighbor (@unseen) {
         # push edges onto stack
+        print STDERR "\tpush'ing edge: $current,$neighbor\n";
         push(@{$self->next_edges}, [$current, $neighbor]);
     }
-    $self->do_edges2($uf);
+    $self->do_nodes2($uf);
 
+    print STDERR "<= Node: $current\n";
 }
 
 
