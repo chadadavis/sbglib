@@ -1,5 +1,8 @@
 #!/usr/bin/env perl
 
+# TODO this needs to be integrated into Bioperl
+# In order to get around all the tmp file and file renaming junk
+
 package EMBL::DOMFile;
 
 use Utils;
