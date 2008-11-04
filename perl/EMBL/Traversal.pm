@@ -112,20 +112,27 @@ sub traverse {
     my $uf = new Graph::UnionFind;
     $uf->add($_) for @vertices;
 
-    $self->do_nodes2($uf);
+    $self->do_nodes2($uf, []);
 
 }
 
 
 sub do_edges2 {
-    my ($self, $uf) = @_;
+    my ($self, $uf, $assembly) = @_;
     my $current = shift @{$self->{next_edges}};
 
     # When no edges left on stack, go to next level down in BFS traversal tree
     # I.e. process outstanding nodes
     unless ($current) {
-        print STDERR "No more edges\n";
-        return @{$self->{next_nodes}} ? $self->do_nodes2($uf) : undef;
+        print STDERR "No more edges. ";
+        if (@{$self->{next_nodes}}) {
+            print STDERR "Nodes: @{$self->{next_nodes}}\n";
+            # Also give the progressive solution to peripheral nodes
+            return $self->do_nodes2($uf, $assembly);
+        } else {
+            print STDERR "Assembly:\n\t @$assembly\n";
+            return undef;
+        }
     }
 
     my ($src, $dest) = @$current;
@@ -143,40 +150,50 @@ sub do_edges2 {
 
     if (0 eq $result) {
         # Failed to use the currently attempted template
+        # Carry on with any other outstanding edges. No state has changed here.
+        $self->do_edges2($clone, $assembly);
     } else {
         # Successfully placed the current interaction template
         # Consider the destination node neighbor to have been visited
         print STDERR "\tpush'ing node $dest\n";
         push @{$self->{next_nodes}}, $dest;
         $clone->union($src, $dest);
-    }
 
-    # Recursive call, try other outstanding edges.
-    # Do this regardless of whether current template succeeded or not
-    $self->do_edges2($clone);
+        # Add this template to progressive solution
+        push @$assembly, $result;
+        # Recursive call to try other edges
+        $self->do_edges2($clone, $assembly);
+
+        # Undo
+        pop @$assembly;
+    }
 
     print STDERR "<= Edge: $src $dest\n";
 
-    # Whether we did or did not use this template, now try other templates on
-    # this edge
-    # I.e. push this edge back onto the edge stack
+    # Try other templates on this edge: push this edge back onto the edge stack
     push @{$self->{next_edges}}, $current;
     # This will stop when this edge runs out of templates
-    return $self->do_edges2($uf);
-
+    return $self->do_edges2($uf, $assembly);
 }
 
+
 sub do_nodes2 {
-    my ($self, $uf) = @_;
+    my ($self, $uf, $assembly) = @_;
     my $current = shift @{$self->{next_nodes}};
 
-    print STDERR 
-        "Node: ", ($current || "<none>"), 
-        " (@{$self->{next_nodes}})\n";
 
     unless ($current) {
-        return @{$self->{next_edges}} ? $self->do_edges2($uf) : undef;
+        print STDERR "No more nodes. ";
+        if (@{$self->{next_edges}}) {
+            print STDERR "Edges: ", arraystr($self->{next_edges}), "\n";
+            return $self->do_edges2($uf, $assembly);
+        } else {
+            print STDERR "Assembly:\n\t @$assembly\n";
+            return undef;
+        }
     }
+
+    print STDERR "Node: $current (@{$self->{next_nodes}})\n";
 
     my @unseen = $self->new_neighbors($current, $uf);
     for my $neighbor (@unseen) {
@@ -184,7 +201,7 @@ sub do_nodes2 {
         print STDERR "\tpush'ing edge: $current,$neighbor\n";
         push(@{$self->next_edges}, [$current, $neighbor]);
     }
-    $self->do_nodes2($uf);
+    $self->do_nodes2($uf, $assembly);
 
     print STDERR "<= Node: $current\n";
 }

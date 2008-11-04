@@ -37,7 +37,7 @@ my $nettemplates = read_templates(shift);
 # printg ($nettemplates, "templates.dot");
 # graphviz($nettemplates, "templates.png");
 graphviz($nettemplates, "templates.dot");
-stats($nettemplates);
+# stats($nettemplates);
 
 # Traversing:
 # MST does not seem to work on multi-edged Bio::Network::ProteinNet
@@ -549,8 +549,8 @@ sub read_templates {
         # TODO Trying to get GraphViz to display edge labels ...
 #         $interaction->{'label'} = $interaction->primary_id;
 
-        print STDERR 
-            "Adding: $comp_a, $comp_b via ", $interaction->primary_id, "\n";
+#         print STDERR 
+#             "Adding: $comp_a, $comp_b via ", $interaction->primary_id, "\n";
 
         $graph->add_interaction(
 #             -nodes => [($prot1,$prot2)],
