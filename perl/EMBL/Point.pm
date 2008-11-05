@@ -53,9 +53,9 @@ sub new {
     my $self = {};
     bless $self, $class;
 
-    $self->{x} = 0;
-    $self->{y} = 0;
-    $self->{z} = 0;
+    $self->{x} = shift @args || 0;
+    $self->{y} = shift @args || 0;
+    $self->{z} = shift @args || 0;
 
     return $self;
 

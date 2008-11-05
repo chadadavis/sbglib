@@ -21,25 +21,28 @@ use Bio::DB::KEGG; # Not (yet) Bioperl
 use EMBL::Seq;
 use EMBL::Node;
 use EMBL::Interaction;
+use EMBL::CofM;
 
 use Data::Dumper;
 
 # Read IDs from a file, whitespace-separated
-my $ids = read_components(shift);
+# my $ids = read_components(shift);
 # Convert to array of Bio::Seq objects
-my $components = sequences($ids);
+# my $components = sequences($ids);
 # A network of components
-my $netcomponents = network($components);
+# my $netcomponents = network($components);
 # printg ($netcomponents, "components.dot");
 
 # A network of iaction templates
 my $nettemplates = read_templates(shift);
-# printg ($nettemplates, "templates.dot");
-# graphviz($nettemplates, "templates.png");
+
+
+
+# graphviz($assembly, "assembly.dot");
 graphviz($nettemplates, "templates.dot");
 # stats($nettemplates);
 
-# Traversing:
+# TODO DOC Traversing:
 # MST does not seem to work on multi-edged Bio::Network::ProteinNet
 # mst($nettemplates);
 # BFS
@@ -54,9 +57,10 @@ exit;
 
 use EMBL::Traversal;
 sub mytraverse {
-    my ($graph) = @_;
+    my ($templategraph) = @_;
 
-    my $t = new EMBL::Traversal($graph, \&try_edge);
+    # TODO also need a callback for processing a solution
+    my $t = new EMBL::Traversal($templategraph, \&try_edge);
     $t->traverse;
 
 }
@@ -159,11 +163,14 @@ sub try_edge {
     my $ix_id = $ix_ids[$ix_index];
     print STDERR "$ix_index/" . @ix_ids . " ";
     my $ix = $g->get_interaction_by_id($ix_id);
-    print STDERR "$ix ";
+#     print STDERR "$ix ";
 
     # Structural compatibility test (backtrack on failure)
-    my $success = try_interaction($ix);
-    print STDERR $success?'Y':'N', " ";
+#     my $success = try_interaction($ix);
+    my $success = try_interaction2($traversal->assembly, $ix, $u, $v);
+
+
+
 
 #     $traversal->set_state($edge_id . "success", $success);
 
@@ -192,6 +199,54 @@ sub try_interaction {
     my $success = rand() < .50;
     return $success;
 }
+
+# TODO should be member function of Assembly module
+sub try_interaction2 {
+    my ($assembly, $iaction, $src, $dest) = @_;
+    my $success = 0;
+
+    # Lookup $src in $iaction to identify its monomeric template domain
+    my $srcdom = $iaction->{template}->{$src};
+    my $destdom = $iaction->{template}->{$dest};
+
+#     print STDERR "\n\tiaction: $iaction, $src($srcdom)->$dest($destdom)\n";
+    print STDERR "$src($srcdom)->$dest($destdom) ";
+
+    # Get reference domain of $src 
+    # (base case: no prevoius structural constraint, implicitly sterically OK)
+    $src->{refdom} ||= $srcdom;
+    my $refdom = $src->{refdom};
+
+    # STAMP $iaction template domain (of $src) onto reference domain (from $src)
+#     my $transformdom = `./transform.sh $srcdom $refdom`;
+
+    # Get CofM of dest template domain
+    my ($x, $y, $z, $r) = cofm($destdom);
+    print STDERR "cofm:$x,$y,$z+$r:\n";
+    my $sphere = new EMBL::Sphere($x, $y, $z, $r);
+
+    # Transform this sphere placeholder according to determined transformation
+    $sphere->transform($transform);
+    
+    # Check new coords of dest (Sphere) for clashes across currently assembly
+    $success = $assembly->clashes($sphere);
+
+    print STDERR $success?'Y':'N', " ";
+
+    return $success;
+}
+
+
+sub transform {
+    my ($srcdom, $refdom) = @_;
+    print STDERR "\tSuperposing $srcdom onto $refdom\n";
+
+    # TODO DOC STAMP uses lowercase chain IDs in domain identifiers
+
+
+
+}
+
 
 sub print_seeing {
     my ($traversal) = @_;
@@ -533,18 +588,29 @@ sub read_templates {
 
         my ($comp_a, $comp_b, $templ_a, $templ_b, $score) = split(/\s+/, $l);
 
+        # TODO could also be other templates (+score) on this line, for
+        # modelling this interaction. Could loop over these too.
+
         # Create network nodes from sequences. Sequences from accession_number
         $nodes{$comp_a} ||= 
             new Bio::Network::Node(new Bio::Seq(-accession_number=>$comp_a));
         $nodes{$comp_b} ||= 
             new Bio::Network::Node(new Bio::Seq(-accession_number=>$comp_b));
 
+        # TODO save a Template obj in Interaction?
+        # Since that's exactly what it represents
+
         # create new Interaction object based on an id and weight
         # NB the ID must be unique in the whole graph
         my $interaction = Bio::Network::Interaction->new(
-            -id => "${comp_a}~${templ_a}/${templ_b}~${comp_b}",
+            -id => "${comp_a} ${comp_b} ${templ_a} ${templ_b}",
             -weight => $score,
             );
+
+        # Add a dictionary to lookup which domain is model for which component
+        $interaction->{template} = { 
+            $comp_a => $templ_a, $comp_b => $templ_b,
+        };
 
         # TODO Trying to get GraphViz to display edge labels ...
 #         $interaction->{'label'} = $interaction->primary_id;

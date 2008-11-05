@@ -2,10 +2,9 @@
 
 =head1 NAME
 
-EMBL::Templat - 
+EMBL::Assembly - 
 
 =head1 SYNOPSIS
-
 
 
 =head1 DESCRIPTION
@@ -29,13 +28,11 @@ Private internal functions are generally preceded with an _
 
 ################################################################################
 
-package EMBL::Template;
-
 use lib "..";
 
-use overload (
-    '""' => 'stringify',
-    );
+package EMBL::Assembly;
+
+# use overload ();
 
 
 ################################################################################
@@ -50,42 +47,21 @@ use overload (
 =cut
 
 sub new {
-    my ($class, $component1, $component2, $template1, $template2) = @_;
+    my ($class, @args) = @_;
     my $self = {};
     bless $self, $class;
-
-    my $components = {
-        $component1 => $template1,
-        $component2 => $template2,
-    };
-    $self->{components} = $components;
 
     return $self;
 
 } # new
 
+# Add a Template (two domains) by linking 
+sub add {
+    my ($self, $template, $node) = @_;
 
-sub stringify {
-    my ($self) = @_;
-    my $str;
-    my @keys = keys %{$self->components};
-    $str .= "@keys";
-    foreach my $key (@keys) {
-        $str .= " " . $self->components()->{$key};
-    }
-    return $str;
+    return $success;
 }
 
-################################################################################
-=head2 
-
- Title   : 
- Usage   : 
- Function: 
- Returns : 
- Args    : 
-
-=cut
 
 
 

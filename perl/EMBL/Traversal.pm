@@ -70,6 +70,12 @@ sub new {
     $self->{next_edges} = [];
     $self->{next_nodes} = [];
 
+    # Assembly starts out as just the components, no interactions
+    my $assembly = new Bio::Network::ProteinNet(refvertexed => 1);
+    # Copy references to the nodes, without any interaction templates
+    $assembly->add_node($_) for $graph->nodes();
+    $self->{assembly} = $assembly;
+
     return $self;
 
 } # new

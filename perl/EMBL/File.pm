@@ -10,6 +10,7 @@ spit
 linei
 nlines
 nhead
+table
 wlock
 );
 
@@ -62,6 +63,8 @@ sub spit {
     print $fh $data;
     close $fh;
 }
+
+
 
 
 # Returns number of lines in file

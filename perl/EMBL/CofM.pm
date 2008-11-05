@@ -33,8 +33,16 @@ use warnings;
 
 package EMBL::CofM;
 
+require Exporter;
+our @ISA = qw(Exporter);
+# Automatically exported symbols
+our @EXPORT    = qw(cofm);
+# Manually exported symbols
+our @EXPORT_OK = qw();
+
 use lib "..";
 use EMBL::DB;
+
 
 ################################################################################
 =head2 new
@@ -61,9 +69,11 @@ sub new {
 } # new
 
 
-sub lookup {
+sub cofm {
 #     my ($self, $pdbid, $chainid) = @_;
-    my ($pdbid, $chainid) = @_;
+    my ($id) = @_;
+    
+    my ($pdbid, $chainid) = $id =~ /(.{4})(.{1})/;
 
     # TODO use Config::IniFiles;
     my $dbh = dbconnect("pc-russell12", "trans_1_5") or return undef;

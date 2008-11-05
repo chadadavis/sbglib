@@ -2,10 +2,9 @@
 
 =head1 NAME
 
-EMBL::Templat - 
+EMBL::Table - 
 
 =head1 SYNOPSIS
-
 
 
 =head1 DESCRIPTION
@@ -29,12 +28,17 @@ Private internal functions are generally preceded with an _
 
 ################################################################################
 
-package EMBL::Template;
-
 use lib "..";
 
+package EMBL::Table;
+
+require Exporter;
+our @ISA = qw(Exporter);
+# Automatically exported symbols
+our @EXPORT    = qw(table);
+
 use overload (
-    '""' => 'stringify',
+#     '""' => 'stringify',
     );
 
 
@@ -50,43 +54,29 @@ use overload (
 =cut
 
 sub new {
-    my ($class, $component1, $component2, $template1, $template2) = @_;
+    my ($class, $string) = @_;
     my $self = {};
     bless $self, $class;
 
-    my $components = {
-        $component1 => $template1,
-        $component2 => $template2,
-    };
-    $self->{components} = $components;
-
+    $self->{table} = table($string);
     return $self;
+}
 
-} # new
+# Take a string and turns it into a table, assuming whitespace separated values
+# Results is a 2D array ref
+sub table {
+    my ($str) = @_;
+    my @lines = split(/\n+/, $str);
+    s/^\s+// for @lines;
+    my @table = map { [ split(/\s+/, $_) ] } @lines;
+    return \@table;
+}
 
 
 sub stringify {
     my ($self) = @_;
-    my $str;
-    my @keys = keys %{$self->components};
-    $str .= "@keys";
-    foreach my $key (@keys) {
-        $str .= " " . $self->components()->{$key};
-    }
-    return $str;
+    return join("; ", map { join(",", @$_) } @{$self->{table}});
 }
-
-################################################################################
-=head2 
-
- Title   : 
- Usage   : 
- Function: 
- Returns : 
- Args    : 
-
-=cut
-
 
 
 ################################################################################

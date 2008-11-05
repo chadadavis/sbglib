@@ -56,8 +56,8 @@ sub new {
     my $self = {};
     bless $self, $class;
 
-    $self->{centre} = $self->{center} = new EMBL::Point();
-    $self->{radius} = 0;
+    $self->{centre} = $self->{center} = new EMBL::Point(@args);
+    $self->{radius} = $args[3] || 0;
 
     return $self;
 
