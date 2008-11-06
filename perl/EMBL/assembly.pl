@@ -22,6 +22,7 @@ use EMBL::Seq;
 use EMBL::Node;
 use EMBL::Interaction;
 use EMBL::CofM;
+use EMBL::Sphere;
 
 use Data::Dumper;
 
@@ -226,10 +227,10 @@ sub try_interaction2 {
     my $sphere = new EMBL::Sphere($x, $y, $z, $r);
 
     # Transform this sphere placeholder according to determined transformation
-    $sphere->transform($transform);
+#     $sphere->transform($transform);
     
     # Check new coords of dest (Sphere) for clashes across currently assembly
-    $success = $assembly->clashes($sphere);
+#     $success = $assembly->clashes($sphere);
 
     print STDERR $success?'Y':'N', " ";
 
