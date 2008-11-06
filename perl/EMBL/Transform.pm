@@ -2,7 +2,7 @@
 
 =head1 NAME
 
-EMBL::Sphere - 
+EMBL::Transform - 
 
 =head1 SYNOPSIS
 
@@ -28,15 +28,16 @@ Private internal functions are generally preceded with an _
 
 ################################################################################
 
-package EMBL::Sphere;
 
-use lib "..";
-use base qw(EMBL::Point);
 
+package EMBL::Transform;
 
 use overload (
-    '-' => 'difference',
+
     );
+
+
+use lib "..";
 
 
 
@@ -56,47 +57,13 @@ sub new {
     my $self = {};
     bless $self, $class;
 
-    $self->{centre} = $self->{center} = new EMBL::Point(@args);
-    $self->{radius} = $args[3] || 0;
-
     return $self;
 
 } # new
 
 
-################################################################################
-=head2 difference
-
- Title   : difference
- Usage   : 
- Function: 
- Returns : 
- Args    : 
-
-=cut
-
-sub difference {
-    my ($self, $obj) = @_;
-
-    return $self->radius + $obj->radius - ($self->centre - $obj->centre);
-
-} # add_template
 
 
-# Similar, but requires no sqrt calculation (which could be costly)
-sub overlaps {
-    my ($self, $obj, $thresh) = @_;
-    $thresh ||= 0;
-    my $sqdist = 
-            sq($self->centre->x - $obj->centre->x) + 
-            sq($self->centre->y - $obj->centre->y) +
-            sq($self->centre->z - $obj->centre->z);
-    my $radii = $self->radius + $obj->radius;
-    return $sqdist + $thresh <= $radii * $radii;
-}
-
-
-################################################################################
 =head2 AUTOLOAD
 
  Title   : AUTOLOAD
