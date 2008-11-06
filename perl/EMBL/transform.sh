@@ -15,6 +15,7 @@ pdbc -d $REF > $REF.dom
 
 cat $SRC.dom $REF.dom > $SRC-$REF.dom
 do_stamp $SRC-$REF.dom > $SRC-$REF.trans
+
 # NB $REF must have a lowercase chain ID
 pickframe -f $SRC-$REF.trans -i $REF > $SRC-$REF-FoR.trans
 
@@ -22,8 +23,14 @@ pickframe -f $SRC-$REF.trans -i $REF > $SRC-$REF-FoR.trans
 # But it still has a } character at the end
 
 # Whole domain block
-#cat $SRC-$REF-FoR.trans | egrep -v "(%|0.00000|$REF)"
+#cat $SRC-$REF-FoR.trans | egrep -v "(%|0.00000|$REF) "
+#cat $SRC-$REF-FoR.trans | egrep -v "(%|0.00000|$REF)" > $SRC-$REF-FoR.dom
 
 # Or just the transformation matrix
-cat $SRC-$REF-FoR.trans | egrep -v "(%|0.00000|$SRC|$REF)" | tr -d '}'
+# cat $SRC-$REF-FoR.trans | egrep -v "(%|0.00000|$SRC|$REF)" | tr -d '}'
+cat $SRC-$REF-FoR.trans | \
+    egrep -v "(%|0.00000|$SRC|$REF)" | \
+    tr -d '}' > $SRC-$REF-FoR.csv
+
+echo $DIR/$SRC-$REF-FoR.csv
 
