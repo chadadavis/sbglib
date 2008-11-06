@@ -74,77 +74,10 @@ sub init {
     $self->{pt}->slice('0,0:2') .= mpdl (@args[0..2]);
 }
 
-
-# TODO switching back and forth between pdl and mpdl is wasted copying
+# Transform this point, using a STAMP tranform from the given file
+# File is actually just a space-separated CSV with a 3x4 matrix
+# I.e not a STAMP DOM file
 sub transform {
-    my ($self, $filepath) = @_;
-    chomp $filepath;
-    print STDERR "transformation:\n$filepath\n";
-    return undef unless -r $filepath;
-    # This transformation is just a 3x4 text table, from STAMP, without any { }
-
-    # 4x4 of 0's
-    my $rasc = mpdl zeroes(4,4);
-    # Overwrite with 3x4 from file 
-    $rasc->rasc($filepath);
-    # Put in row-major order
-    $rasc = transpose $rasc;
-    # Put a 1 in the cell 3,3 (bottom right) for affine matrix multiplication
-    $rasc->slice('3,3') .= 1;
-    print STDERR "transform:$rasc";
-    
-    # Create column vector of current coords, with final 1, for affine multipl.
-    my $col = ones 4;
-    $col->slice('0:2') .= $self->{pt};
-    # Needs to be an mpdl object, like the transformation, for matrix multipl.
-    $col = mpdl transpose($col);
-    print STDERR "pt:$col";
-    
-    # Finally, transform vect using matrix
-    my $new = $rasc x $col;
-    print STDERR "new:$new";
-    # print wcols(transpose $new);
-
-    # Update saved point
-    $self->{pt} = pdl $new->slice('0:2')->transpose;
-    print "pt:", $self->{pt}, "\n";
-}
-
-sub transform2 {
-    my ($self, $filepath) = @_;
-    chomp $filepath;
-    return undef unless -r $filepath;
-
-    # This transformation is just a 3x4 text table, from STAMP, without any { }
-    # 4x4 of 0's
-    my $rasc = zeroes(4,4);
-    # Overwrite with 3x4 from file 
-    $rasc->rasc($filepath);
-    # Put a 1 in the cell 3,3 (bottom right) for affine matrix multiplication
-    $rasc->slice('3,3') .= 1;
-    print STDERR "transform:$rasc";
-
-    # Append final 1, for affine multipl.
-    my $col = ones 4;
-    $col->slice('0:2') .= $self->{pt};
-    print STDERR "pt:$col\n";
-
-    # Finally, transform vect using matrix (using PDL::Matrix::mpdl objects)
-    # (transpose'ing row of point coordinates to column vector)
-    my $new = mpdl($rasc) x mpdl($col->transpose);
-    print STDERR "new:$new";
-
-    # Update saved point
-    my @n;
-    push @n, $new->at($_, 0) for 0..2;
-
-#     print STDERR "back:", $new->at(1,0), $new->at(2,0), "\n";
-    print STDERR "back:@n\n";
-#     $self->{pt} = pdl $new->transpose->at(0..2);
-#     print STDERR "newpt:", $self->{pt}, "\n";
-}
-
-sub transform3 {
     my ($self, $filepath) = @_;
     chomp $filepath;
     return undef unless -r $filepath;
