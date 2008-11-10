@@ -32,10 +32,13 @@ Private internal functions are generally preceded with an _
 
 package EMBL::Transform;
 
+use PDL::Matrix;
+
 use overload (
-
+    '*' => 'multiply',
+    '*=' => 'multiplyeq',
+    '=' => 'assign',
     );
-
 
 use lib "..";
 
@@ -53,15 +56,64 @@ use lib "..";
 =cut
 
 sub new {
-    my ($class, @args) = @_;
+    my ($class, $matrix) = @_;
     my $self = {};
     bless $self, $class;
+
+
+    if ($matrix) {
+        $self->{transform} = $matrix;
+    } else {
+        # Identity 4x4
+        $self->{transform} = identity();
+    }
+    # PDBID/Chain (e.g. 2c6ta ) identifying the representative domain
+    $self->{dom} = "";
 
     return $self;
 
 } # new
 
 
+sub identity {
+    return mpdl [ [1,0,0,0], [0,1,0,0], [0,0,1,0], [0,0,0,1]];
+}
+
+sub assign {
+    my ($self, $other) = @_;
+    return $self->{transform} = $other->{transform};
+}
+
+sub multiply {
+    my ($self, $other) = @_;
+    return $self->{transform} x $other->{transform};
+}
+
+sub multiplyeq {
+    my ($self, $other) = @_;
+    return $self->{transform} = $self->{transform} x $other->{transform};
+}
+
+sub load {
+    my ($self, $filepath) = @_;
+
+    chomp $filepath;
+    print STDERR "load: $filepath\n";
+    unless (-f $filepath && -r $filepath && -s $filepath) {
+        print STDERR "Cannot read transformation from: $filepath\n";
+        return undef;
+    }
+
+    # This transformation is just a 3x4 text table, from STAMP, without any { }
+    my $rasc = zeroes(4,4);
+    # Overwrite with 3x4 from file 
+    $rasc->rasc($filepath);
+    # Put a 1 in the cell 3,3 (bottom right) for affine matrix multiplication
+    $rasc->slice('3,3') .= 1;
+
+    # Finally, make it an mpdl, 
+    return $self->{transform} = mpdl $rasc;
+}
 
 
 =head2 AUTOLOAD

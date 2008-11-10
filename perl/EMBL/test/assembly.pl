@@ -37,10 +37,11 @@ use Data::Dumper;
 # A network of iaction templates
 my $nettemplates = read_templates(shift);
 
+our $OUT = "./tmp";
 
 
-# graphviz($assembly, "assembly.dot");
-graphviz($nettemplates, "templates.dot");
+# graphviz($assembly, "$OUT/assembly.dot");
+# graphviz($nettemplates, "$OUT/templates.dot");
 # stats($nettemplates);
 
 # TODO DOC Traversing:
@@ -55,6 +56,7 @@ mytraverse($nettemplates);
 exit;
 
 ################################################################################
+
 
 use EMBL::Traversal;
 sub mytraverse {
@@ -140,7 +142,7 @@ sub try_edge {
 
 #     $ix_index ||= 0;
 
-    print STDERR "\ttry_edge $u $v: ";
+    print STDERR "\ttry_edge $u $v:\n";
     my $g = $traversal->graph;
 
     # IDs of Interaction's (templates) in this Edge
@@ -154,7 +156,7 @@ sub try_edge {
 
     # If no templates (left) to try, cannot use this edge
     unless ($ix_index < @ix_ids) {
-        print STDERR "No more templates\n";
+        print STDERR "\tNo more templates\n";
         # Now reset, for any subsequent, independent attempts on this edge
         $traversal->set_state($edge_id . "ix_index", 0);
         return undef;
@@ -162,7 +164,7 @@ sub try_edge {
 
     # Try next interaction template
     my $ix_id = $ix_ids[$ix_index];
-    print STDERR "$ix_index/" . @ix_ids . " ";
+    print STDERR "\ttemplate $ix_index/" . @ix_ids . "\n";
     my $ix = $g->get_interaction_by_id($ix_id);
 #     print STDERR "$ix ";
 
@@ -184,10 +186,10 @@ sub try_edge {
     if ($success) {
         return $ix_id;
     } else {
+        # This means failure, 
+        # This is not the same as exhausting the templates (that's undef)
         return 0;
-        # Try any remaining templates
-        # Recursion not managed here
-#         return try_edge($u, $v, $traversal, $ix_index+1);
+        # I.e. do not recurse here
     }
 
 } # try_edge
@@ -207,32 +209,68 @@ sub try_interaction2 {
     my $success = 0;
 
     # Lookup $src in $iaction to identify its monomeric template domain
+    # Uses the hash saved in the interation object (set when templates loaded)
     my $srcdom = $iaction->{template}->{$src};
     my $destdom = $iaction->{template}->{$dest};
 
 #     print STDERR "\n\tiaction: $iaction, $src($srcdom)->$dest($destdom)\n";
-    print STDERR "$src($srcdom)->$dest($destdom) ";
+    print STDERR "\t$src($srcdom)->$dest($destdom) ";
 
     # Get reference domain of $src 
     # (base case: no prevoius structural constraint, implicitly sterically OK)
-    $src->{refdom} ||= $srcdom;
-    my $refdom = $src->{refdom};
+    # This should only happen on the first edge processed
+
+    if (! $src->{ref}) {
+        $src->{ref} = new EMBL::Transform();
+        $src->{ref}->{dom} = $srcdom;
+        print STDERR "\tInitial FoR: $srcdom\n";
+        # Do the same for the $dest, as it's in the same frame of reference
+        $dest->{ref} = new EMBL::Transform();
+        $dest->{ref}->{dom} = $destdom;
+        return $success = 1;
+    }
+
+    # Get the transformation and reference domain for the source node
+    my $reftrans = $src->{ref};
+    my $refdom = $reftrans->dom;
 
     # STAMP $iaction template domain (of $src) onto reference domain (from $src)
-#     my $transformdom = `./transform.sh $srcdom $refdom`;
+    my $cmd = "./transform.sh $srcdom $refdom";
+    print STDERR "\t$cmd\n";
+    my $transfile = `$cmd`;
 
-    # Get CofM of dest template domain
-    my ($x, $y, $z, $r) = cofm($destdom);
-    print STDERR "cofm:$x,$y,$z+$r:\n";
-    my $sphere = new EMBL::Sphere($x, $y, $z, $r);
+    my $nexttrans = new EMBL::Transform();
+    unless ($nexttrans->load($transfile)) {
+        print STDERR "\tSTAMP failed on $srcdom -> $refdom\n";
+        return $success = 0;
+    }
 
-    # Transform this sphere placeholder according to determined transformation
-#     $sphere->transform($transform);
-    
-    # Check new coords of dest (Sphere) for clashes across currently assembly
-#     $success = $assembly->clashes($sphere);
+    # Product of relative with absolution transformation
+    # TODO verify that order of mult. is correct here
+    my $prodtrans = $nexttrans * $reftrans;
 
-    print STDERR $success?'Y':'N', " ";
+    # Then apply that transformation to the interaction partner $dest
+    # Get CofM of dest template domain (the one to be transformed)
+    my $cofm = new EMBL::CofM();
+    $cofm->fetch($destdom);
+    print STDERR "\t$destdom cofm before: $cofm\n";
+
+    # Apply transform(s) to cofm of $dest
+    $cofm->transform($prodtrans);
+
+    # Successfully transformed $dest template into current FoR
+    print STDERR "\t$destdom cofm after : $cofm\n";
+
+    # Check new coords of dest for clashes across currently assembly
+    $success = $assembly->clashes($cofm);
+
+    # if success, update FoR of dest
+    if ($success) {
+        $dest->{ref} = new EMBL::Transform($prodtrans);
+        $dest->{ref}->{dom} = $destdom;
+    }
+
+    print STDERR "\ttry_interaction ", $success ? "succeeded" : "failed", "\n";
 
     return $success;
 }

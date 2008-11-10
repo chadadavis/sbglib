@@ -38,6 +38,8 @@ use PDL::Math;
 use PDL::Matrix;
 use IO::String;
 
+use overload ('""' => 'stringify');
+
 use lib "..";
 use EMBL::DB;
 
@@ -59,11 +61,12 @@ sub new {
     my $self = {};
     bless $self, $class;
 
+    # Affine coords, append a 1
     $self->{pt} = mpdl (0,0,0,1);
 
     $self->init(@args) if @args;
 
-    # Radius of gyration
+    # Radius of gyration, if given
     $self->{rg} = $args[3] || 0;
     return $self;
 
@@ -71,7 +74,20 @@ sub new {
 
 sub init {
     my ($self, @args) = @_;
+    # Initialize with a 3-tuple of X,Y,Z coords
     $self->{pt}->slice('0,0:2') .= mpdl (@args[0..2]);
+}
+
+sub array {
+    my ($self) = @_;
+    my @a = ($self->{pt}->at(0,0), $self->{pt}->at(0,1), $self->{pt}->at(0,2)); 
+    return @a;
+}
+
+sub stringify {
+    my ($self) = @_;
+    my @a = $self->array;
+    return "@a";
 }
 
 # Transform this point, using a STAMP tranform from the given file
@@ -80,7 +96,11 @@ sub init {
 sub transform {
     my ($self, $filepath) = @_;
     chomp $filepath;
-    return undef unless -r $filepath;
+    print STDERR "transform: $filepath\n";
+    unless (-f $filepath && -r $filepath && -s $filepath) {
+        print STDERR "Cannot read transformation from: $filepath\n";
+        return undef;
+    }
 
     # This transformation is just a 3x4 text table, from STAMP, without any { }
     my $rasc = zeroes(4,4);
