@@ -78,6 +78,7 @@ sub init {
     $self->{pt}->slice('0,0:2') .= mpdl (@args[0..2]);
 }
 
+# Return as 3-tuple 
 sub array {
     my ($self) = @_;
     my @a = ($self->{pt}->at(0,0), $self->{pt}->at(0,1), $self->{pt}->at(0,2)); 
@@ -93,7 +94,7 @@ sub stringify {
 # Transform this point, using a STAMP tranform from the given file
 # File is actually just a space-separated CSV with a 3x4 matrix
 # I.e not a STAMP DOM file
-sub transform {
+sub ftransform {
     my ($self, $filepath) = @_;
     chomp $filepath;
     print STDERR "transform: $filepath\n";
@@ -118,6 +119,14 @@ sub transform {
     return $self->{pt};
 }
 
+
+sub transform {
+    my ($self, $transform) = @_;
+    my $new = $transform->{matrix} x $self->{pt}->transpose;
+    return $self->{pt} = $new->transpose;
+}
+
+
 # Extent to which two spheres overlap (linearly, i.e. not in terms of volume)
 # ... requires no sqrt calculation (which could be costly)
 sub overlap {
@@ -127,7 +136,7 @@ sub overlap {
     # Convert to scalar
     $sqdist = $sqdist->at(0);
     # Radii of two spheres
-    my $radii = $self->rg + $obj->rg;
+    my $radii = $self->{rg} + $obj->{rg};
     # Overlaps when distance between centres < sum of two radii
     return $radii * $radii - $sqdist;
 }
@@ -171,34 +180,6 @@ sub fetch {
     return @pt_rg;
 } # fetch
 
-
-
-################################################################################
-=head2 AUTOLOAD
-
- Title   : AUTOLOAD
- Usage   : $obj->member_var($new_value);
- Function: Implements get/set functions for member vars. dynamically
- Returns : Final value of the variable, whether it was changed or not
- Args    : New value of the variable, if it is to be updated
-
-Overrides built-in AUTOLOAD function. Allows us to treat member vars. as
-function calls.
-
-=cut
-
-sub AUTOLOAD {
-    my ($self, $arg) = @_;
-    our $AUTOLOAD;
-    return if $AUTOLOAD =~ /::DESTROY$/;
-    my ($pkg, $file, $line) = caller;
-    $line = sprintf("%4d", $line);
-    # Use unqualified member var. names,
-    # i.e. not 'Package::member', rather simply 'member'
-    my ($field) = $AUTOLOAD =~ /::([\w\d]+)$/;
-    $self->{$field} = $arg if defined $arg;
-    return $self->{$field} || '';
-} # AUTOLOAD
 
 
 ###############################################################################

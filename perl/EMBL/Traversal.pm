@@ -101,10 +101,10 @@ sub set_state {
 
 sub traverse {
     my ($self) = @_;
-    my $graph = $self->graph;
+    my $graph = $self->{graph};
 
     # Start with all vertices, independent
-    my @vertices = $self->graph()->vertices();
+    my @vertices = $self->{graph}->vertices();
     # Shuffle them
     @vertices = List::Util::shuffle @vertices;
 
@@ -124,8 +124,9 @@ sub traverse {
 
 
 sub do_edges2 {
-    my ($self, $uf, $assembly) = @_;
+    my ($self, $uf) = @_;
     my $current = shift @{$self->{next_edges}};
+    my $assembly = $self->{assembly};
 
     # When no edges left on stack, go to next level down in BFS traversal tree
     # I.e. process outstanding nodes
@@ -144,7 +145,7 @@ sub do_edges2 {
     my ($src, $dest) = @$current;
     print STDERR "Edge: $src $dest (", arraystr($self->{next_edges}), ")\n";
 
-    my $result = $self->consider()->($src, $dest, $self);
+    my $result = $self->{consider}($src, $dest, $self);
     if (!defined $result) {
         # No more templates left for edge: $src,$dest
         print STDERR "\tNo more alternatives for $src $dest\n";
@@ -184,9 +185,9 @@ sub do_edges2 {
 
 
 sub do_nodes2 {
-    my ($self, $uf, $assembly) = @_;
+    my ($self, $uf) = @_;
     my $current = shift @{$self->{next_nodes}};
-
+    my $assembly = $self->{assembly};
 
     unless ($current) {
         print STDERR "No more nodes. ";
@@ -205,7 +206,7 @@ sub do_nodes2 {
     for my $neighbor (@unseen) {
         # push edges onto stack
         print STDERR "\tpush'ing edge: $current,$neighbor\n";
-        push(@{$self->next_edges}, [$current, $neighbor]);
+        push(@{$self->{next_edges}}, [$current, $neighbor]);
     }
     $self->do_nodes2($uf, $assembly);
 
@@ -216,7 +217,7 @@ sub do_nodes2 {
 sub new_neighbors {
     my ($self, $node, $uf) = @_;
 
-    my @adj = $self->graph()->neighbors($node);
+    my @adj = $self->{graph}->neighbors($node);
     # Only adjacent vertices not already in same traversal set (i.e. the unseen)
     my @unseen = grep { ! $uf->same($node, $_) } @adj;
 
@@ -266,7 +267,7 @@ sub do_node {
         # TODO DES this doesn't make sense because it stop on the first failure
         # As I don't know the difference between "single failure" and "exhausted"
 
-        while (my $result = $self->consider()->($start, $neighbor, $self)) {
+        while (my $result = $self->{consider}($start, $neighbor, $self)) {
             # OK, visit the neighboring vertex
             # Process outstanding vertices, with this edge now in place
 #             $self->do_node($clone, @nodes);
@@ -297,33 +298,6 @@ sub do_node {
 #     $self->do_node($uf, @nodes);
 
 }
-
-################################################################################
-=head2 AUTOLOAD
-
- Title   : AUTOLOAD
- Usage   : $obj->member_var($new_value);
- Function: Implements get/set functions for member vars. dynamically
- Returns : Final value of the variable, whether it was changed or not
- Args    : New value of the variable, if it is to be updated
-
-Overrides built-in AUTOLOAD function. Allows us to treat member vars. as
-function calls.
-
-=cut
-
-sub AUTOLOAD {
-    my ($self, $arg) = @_;
-    our $AUTOLOAD;
-    return if $AUTOLOAD =~ /::DESTROY$/;
-    my ($pkg, $file, $line) = caller;
-    $line = sprintf("%4d", $line);
-    # Use unqualified member var. names,
-    # i.e. not 'Package::member', rather simply 'member'
-    my ($field) = $AUTOLOAD =~ /::([\w\d]+)$/;
-    $self->{$field} = $arg if defined $arg;
-    return $self->{$field} || '';
-} # AUTOLOAD
 
 
 ###############################################################################

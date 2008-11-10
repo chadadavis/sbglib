@@ -32,13 +32,14 @@ Private internal functions are generally preceded with an _
 
 package EMBL::Transform;
 
+use PDL;
 use PDL::Matrix;
 
-use overload (
-    '*' => 'multiply',
-    '*=' => 'multiplyeq',
-    '=' => 'assign',
-    );
+# use overload (
+#     '*' => 'mult',
+#     '*=' => 'multeq',
+#     '=' => 'assign',
+#     );
 
 use lib "..";
 
@@ -61,11 +62,13 @@ sub new {
     bless $self, $class;
 
 
-    if ($matrix) {
-        $self->{transform} = $matrix;
+    if (defined $matrix) {
+        $self->{matrix} = $matrix;
     } else {
         # Identity 4x4
-        $self->{transform} = identity();
+        $self->{matrix} = pdl (1,0);
+#         $self->{matrix} = mpdl (1,0);
+#         $self->{matrix} = EMBL::Transform::id();
     }
     # PDBID/Chain (e.g. 2c6ta ) identifying the representative domain
     $self->{dom} = "";
@@ -75,23 +78,23 @@ sub new {
 } # new
 
 
-sub identity {
-    return mpdl [ [1,0,0,0], [0,1,0,0], [0,0,1,0], [0,0,0,1]];
+sub id {
+    return mpdl [ [1,0,0,0], [0,1,0,0], [0,0,1,0], [0,0,0,1] ];
 }
 
 sub assign {
     my ($self, $other) = @_;
-    return $self->{transform} = $other->{transform};
+    return $self->{matrix} = $other->{matrix};
 }
 
-sub multiply {
+sub mult {
     my ($self, $other) = @_;
-    return $self->{transform} x $other->{transform};
+    return $self->{matrix} x $other->{matrix};
 }
 
-sub multiplyeq {
+sub multeq {
     my ($self, $other) = @_;
-    return $self->{transform} = $self->{transform} x $other->{transform};
+    return $self->{matrix} = $self->{matrix} x $other->{matrix};
 }
 
 sub load {
@@ -112,35 +115,9 @@ sub load {
     $rasc->slice('3,3') .= 1;
 
     # Finally, make it an mpdl, 
-    return $self->{transform} = mpdl $rasc;
+    return $self->{matrix} = mpdl $rasc;
 }
 
-
-=head2 AUTOLOAD
-
- Title   : AUTOLOAD
- Usage   : $obj->member_var($new_value);
- Function: Implements get/set functions for member vars. dynamically
- Returns : Final value of the variable, whether it was changed or not
- Args    : New value of the variable, if it is to be updated
-
-Overrides built-in AUTOLOAD function. Allows us to treat member vars. as
-function calls.
-
-=cut
-
-sub AUTOLOAD {
-    my ($self, $arg) = @_;
-    our $AUTOLOAD;
-    return if $AUTOLOAD =~ /::DESTROY$/;
-    my ($pkg, $file, $line) = caller;
-    $line = sprintf("%4d", $line);
-    # Use unqualified member var. names,
-    # i.e. not 'Package::member', rather simply 'member'
-    my ($field) = $AUTOLOAD =~ /::([\w\d]+)$/;
-    $self->{$field} = $arg if defined $arg;
-    return $self->{$field} || '';
-} # AUTOLOAD
 
 
 ###############################################################################

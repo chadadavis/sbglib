@@ -110,7 +110,8 @@ sub thresh {
 # (This is also comprehensible to gnuplot)
 sub put {
     my ($array) = @_;
-    my ($fh, $out) = tempfile("/tmp/disoconsXXXXXXXXXX", UNLINK=>!$::DEBUG);
+#     my ($fh, $out) = tempfile("/tmp/disoconsXXXXXXXXXX", UNLINK=>!$::DEBUG);
+    my ($fh, $out) = tempfile("/tmp/disoconsXXXXXXXXXX", UNLINK=>1);
     for (my $i = 1; $i < @$array; $i++) {
         print $fh "$i ", $array->[$i], "\n";
     }

@@ -47,7 +47,7 @@ sub printtrans {
 
 sub parsetrans {
     my ($transfile) = @_;
-    open my $fh, $transfile;
+    open(my $fh, $transfile);
     my %all;
     $all{'copy'} = [];
     my @existing;

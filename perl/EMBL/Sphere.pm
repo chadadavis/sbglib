@@ -78,7 +78,7 @@ sub new {
 sub difference {
     my ($self, $obj) = @_;
 
-    return $self->radius + $obj->radius - ($self->centre - $obj->centre);
+    return $self->{radius} + $obj->{radius} - ($self->{centre} - $obj->{centre});
 
 } # add_template
 
@@ -88,40 +88,12 @@ sub overlaps {
     my ($self, $obj, $thresh) = @_;
     $thresh ||= 0;
     my $sqdist = 
-            sq($self->centre->x - $obj->centre->x) + 
-            sq($self->centre->y - $obj->centre->y) +
-            sq($self->centre->z - $obj->centre->z);
-    my $radii = $self->radius + $obj->radius;
+            sq($self->centre->{x} - $obj->centre->{x}) + 
+            sq($self->centre->{y} - $obj->centre->{y}) +
+            sq($self->centre->{z} - $obj->centre->{z});
+    my $radii = $self->{radius} + $obj->{radius};
     return $sqdist + $thresh <= $radii * $radii;
 }
-
-
-################################################################################
-=head2 AUTOLOAD
-
- Title   : AUTOLOAD
- Usage   : $obj->member_var($new_value);
- Function: Implements get/set functions for member vars. dynamically
- Returns : Final value of the variable, whether it was changed or not
- Args    : New value of the variable, if it is to be updated
-
-Overrides built-in AUTOLOAD function. Allows us to treat member vars. as
-function calls.
-
-=cut
-
-sub AUTOLOAD {
-    my ($self, $arg) = @_;
-    our $AUTOLOAD;
-    return if $AUTOLOAD =~ /::DESTROY$/;
-    my ($pkg, $file, $line) = caller;
-    $line = sprintf("%4d", $line);
-    # Use unqualified member var. names,
-    # i.e. not 'Package::member', rather simply 'member'
-    my ($field) = $AUTOLOAD =~ /::([\w\d]+)$/;
-    $self->{$field} = $arg if defined $arg;
-    return $self->{$field} || '';
-} # AUTOLOAD
 
 
 ###############################################################################

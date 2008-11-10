@@ -2,12 +2,15 @@
 
 use strict;
 use warnings;
+use Data::Dumper;
 
 use Graph;
 use Graph::Writer::Dot;
 use Graph::Writer::GraphViz;
 use Graph::Traversal::BFS;
+
 use Text::ParseWords;
+
 use Bio::Seq;
 use Bio::Network::ProteinNet;
 use Bio::Network::Node;
@@ -23,8 +26,9 @@ use EMBL::Node;
 use EMBL::Interaction;
 use EMBL::CofM;
 use EMBL::Sphere;
+use EMBL::Transform;
 
-use Data::Dumper;
+use PDL;
 
 # Read IDs from a file, whitespace-separated
 # my $ids = read_components(shift);
@@ -70,7 +74,7 @@ sub mytraverse {
 
 
 
-sub stats {
+sub _stats {
     my ($graph) = @_;
 
     print "\nStatistics:\n";
@@ -119,7 +123,7 @@ sub no_visit {
 
     # Try to remove edge to successor node from traversal tree
     my $current = $traversal->current;
-    $traversal->{ tree }->delete_edge( $current, $v );
+    $traversal->{tree}->delete_edge( $current, $v );
 
 
     # TODO determine this automatically
@@ -143,7 +147,7 @@ sub try_edge {
 #     $ix_index ||= 0;
 
     print STDERR "\ttry_edge $u $v:\n";
-    my $g = $traversal->graph;
+    my $g = $traversal->{graph};
 
     # IDs of Interaction's (templates) in this Edge
     my @ix_ids = $g->get_edge_attribute_names($u, $v);
@@ -170,9 +174,8 @@ sub try_edge {
 
     # Structural compatibility test (backtrack on failure)
 #     my $success = try_interaction($ix);
-    my $success = try_interaction2($traversal->assembly, $ix, $u, $v);
-
-
+#     my $success = try_interaction2($traversal->assembly, $ix, $u, $v);
+    my $success = try_interaction2($traversal->{assembly}, $ix, $u, $v);
 
 
 #     $traversal->set_state($edge_id . "success", $success);
@@ -210,44 +213,69 @@ sub try_interaction2 {
 
     # Lookup $src in $iaction to identify its monomeric template domain
     # Uses the hash saved in the interation object (set when templates loaded)
-    my $srcdom = $iaction->{template}->{$src};
-    my $destdom = $iaction->{template}->{$dest};
+    my $srcdom = $iaction->{template}{$src};
+    my $destdom = $iaction->{template}{$dest};
+
+
+#     $src->{ref} = new EMBL::Transform(pdl([1,0]));
+#     $src->{_protein}{1}{ref} ||= new EMBL::Transform(pdl([1,0]));
+#     $src->{_protein}{1}{ref} ||= pdl([1,0]);
+#     $src->{ref} ||= pdl([1,0]);
+#     $src->{template} ||= pdl([1,0]);
+
+#      $assembly->{ref}{$src} = pdl([1,0]);
+#     $assembly->{ref}{$src} = 5;
+    print Dumper $assembly;
+    exit;
+
+#     print Dumper $src;
+#     exit;
+
+#     print Dumper $src;
+#     exit;
+    return 0;
 
 #     print STDERR "\n\tiaction: $iaction, $src($srcdom)->$dest($destdom)\n";
     print STDERR "\t$src($srcdom)->$dest($destdom) ";
+
 
     # Get reference domain of $src 
     # (base case: no prevoius structural constraint, implicitly sterically OK)
     # This should only happen on the first edge processed
 
-    if (! $src->{ref}) {
+    if (! exists $src->{ref}) {
         $src->{ref} = new EMBL::Transform();
-        $src->{ref}->{dom} = $srcdom;
+#         $src->{ref}{dom} = $srcdom;
         print STDERR "\tInitial FoR: $srcdom\n";
         # Do the same for the $dest, as it's in the same frame of reference
-        $dest->{ref} = new EMBL::Transform();
-        $dest->{ref}->{dom} = $destdom;
+#         $dest->{ref} = new EMBL::Transform();
+#         $dest->{ref}{dom} = $destdom;
         return $success = 1;
+    } else {
+#         print STDERR "\tSTAMP ...\n";
     }
+
+    return 0;
 
     # Get the transformation and reference domain for the source node
     my $reftrans = $src->{ref};
-    my $refdom = $reftrans->dom;
+    my $refdom = $reftrans->{dom};
 
     # STAMP $iaction template domain (of $src) onto reference domain (from $src)
     my $cmd = "./transform.sh $srcdom $refdom";
     print STDERR "\t$cmd\n";
-    my $transfile = `$cmd`;
+#     my $transfile = `$cmd`;
+    my $transfile = "";
 
-    my $nexttrans = new EMBL::Transform();
-    unless ($nexttrans->load($transfile)) {
+#     my $nexttrans = new EMBL::Transform();
+#     unless ($nexttrans->load($transfile)) {
         print STDERR "\tSTAMP failed on $srcdom -> $refdom\n";
         return $success = 0;
-    }
+#     }
 
     # Product of relative with absolution transformation
     # TODO verify that order of mult. is correct here
-    my $prodtrans = $nexttrans * $reftrans;
+#     my $prodtrans = $nexttrans * $reftrans;
 
     # Then apply that transformation to the interaction partner $dest
     # Get CofM of dest template domain (the one to be transformed)
@@ -256,18 +284,18 @@ sub try_interaction2 {
     print STDERR "\t$destdom cofm before: $cofm\n";
 
     # Apply transform(s) to cofm of $dest
-    $cofm->transform($prodtrans);
+#     $cofm->transform($prodtrans);
 
     # Successfully transformed $dest template into current FoR
     print STDERR "\t$destdom cofm after : $cofm\n";
 
     # Check new coords of dest for clashes across currently assembly
-    $success = $assembly->clashes($cofm);
+#     $success = $assembly->clashes($cofm);
 
     # if success, update FoR of dest
     if ($success) {
-        $dest->{ref} = new EMBL::Transform($prodtrans);
-        $dest->{ref}->{dom} = $destdom;
+#         $dest->{ref} = new EMBL::Transform($prodtrans);
+#         $dest->{ref}{dom} = $destdom;
     }
 
     print STDERR "\ttry_interaction ", $success ? "succeeded" : "failed", "\n";
