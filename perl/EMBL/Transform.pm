@@ -66,9 +66,9 @@ sub new {
         $self->{matrix} = $matrix;
     } else {
         # Identity 4x4
-        $self->{matrix} = pdl (1,0);
+#         $self->{matrix} = pdl (1,0);
 #         $self->{matrix} = mpdl (1,0);
-#         $self->{matrix} = EMBL::Transform::id();
+        $self->{matrix} = EMBL::Transform::id();
     }
     # PDBID/Chain (e.g. 2c6ta ) identifying the representative domain
     $self->{dom} = "";

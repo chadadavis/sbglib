@@ -5,6 +5,7 @@ use warnings;
 
 use lib "..";
 use EMBL::CofM;
+use EMBL::Transform;
 
 use PDL;
 use PDL::Matrix;
@@ -31,10 +32,16 @@ print "pt: $c\n";
 # $c->transform($transtxt);
 # $c->transform2($transtxt);
 
-$c->transform($transtxt);
+my $t = new EMBL::Transform;
+$t->load($transtxt);
+
+# $c->transform($transtxt);
+$c->transform($t);
 
 print "Transforming...\n";
 print "pt: $c\n";
+
+
 
 exit;
 

@@ -28,17 +28,22 @@ Private internal functions are generally preceded with an _
 
 ################################################################################
 
-use strict; 
-use warnings;
-
 package EMBL::CofM;
+
+use Spiffy -Base, -XXX;
+# Affine coords, append a 1
+# field pt => mpdl (0,0,0,1);
+field 'pt';
+# Radius of gyration
+field rg => 0;
+
+use overload ('""' => 'stringify');
+
 
 use PDL;
 use PDL::Math;
 use PDL::Matrix;
 use IO::String;
-
-use overload ('""' => 'stringify');
 
 use lib "..";
 use EMBL::DB;
@@ -56,37 +61,26 @@ use EMBL::DB;
 
 =cut
 
-sub new {
-    my ($class, @args) = @_;
+sub new() {
     my $self = {};
-    bless $self, $class;
-
-    # Affine coords, append a 1
+    bless $self, shift;
     $self->{pt} = mpdl (0,0,0,1);
-
-    $self->init(@args) if @args;
-
-    # Radius of gyration, if given
-    $self->{rg} = $args[3] || 0;
+    $self->init(@_) if @_;
     return $self;
-
 } # new
 
 sub init {
-    my ($self, @args) = @_;
     # Initialize with a 3-tuple of X,Y,Z coords
-    $self->{pt}->slice('0,0:2') .= mpdl (@args[0..2]);
+    $self->{pt}->slice('0,0:2') .= mpdl (@_[0..2]);
 }
 
 # Return as 3-tuple 
 sub array {
-    my ($self) = @_;
     my @a = ($self->{pt}->at(0,0), $self->{pt}->at(0,1), $self->{pt}->at(0,2)); 
     return @a;
 }
 
 sub stringify {
-    my ($self) = @_;
     my @a = $self->array;
     return "@a";
 }
@@ -95,7 +89,7 @@ sub stringify {
 # File is actually just a space-separated CSV with a 3x4 matrix
 # I.e not a STAMP DOM file
 sub ftransform {
-    my ($self, $filepath) = @_;
+    my $filepath = shift;
     chomp $filepath;
     print STDERR "transform: $filepath\n";
     unless (-f $filepath && -r $filepath && -s $filepath) {
@@ -121,7 +115,7 @@ sub ftransform {
 
 
 sub transform {
-    my ($self, $transform) = @_;
+    my $transform = shift;
     my $new = $transform->{matrix} x $self->{pt}->transpose;
     return $self->{pt} = $new->transpose;
 }
@@ -130,7 +124,7 @@ sub transform {
 # Extent to which two spheres overlap (linearly, i.e. not in terms of volume)
 # ... requires no sqrt calculation (which could be costly)
 sub overlap {
-    my ($self, $obj) = @_;
+    my $obj = shift;
     # Distance between centres
     my $sqdist = sumover (($self->{pt} - $obj->{pt}) ** 2);
     # Convert to scalar
@@ -143,14 +137,14 @@ sub overlap {
 
 # true of the spheres still overlap, beyond a given allowed minimum overlap
 sub overlaps {
-    my ($self, $obj, $thresh) = @_;
+    my ($obj, $thresh) = @_;
     $thresh ||= 0;
     return $self->overlap($obj) - $thresh > 0;
 }
 
 # Update internal coords from DB, given PDB ID/chain ID
 sub fetch {
-    my ($self, $id) = @_;
+    my $id = shift;
 
     # TODO use Config::IniFiles;
     my $dbh = dbconnect("pc-russell12", "trans_1_5") or return undef;
@@ -180,10 +174,3 @@ sub fetch {
     return @pt_rg;
 } # fetch
 
-
-
-###############################################################################
-
-1;
-
-__END__
