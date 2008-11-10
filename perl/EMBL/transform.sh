@@ -6,6 +6,10 @@ REF=`echo $2 | tr "[:upper:]" "[:lower:]" `
 
 DIR=`mktemp -t -d assembly.tmp.XXXX`
 
+if [ "$SRC" == "$REF" ]; then 
+    exit 0;
+fi
+
 cd $DIR
 #echo $PWD
 
