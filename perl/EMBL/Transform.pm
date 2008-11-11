@@ -35,11 +35,12 @@ package EMBL::Transform;
 use PDL;
 use PDL::Matrix;
 
-# use overload (
-#     '*' => 'mult',
+use overload (
+    '*' => 'mult',
 #     '*=' => 'multeq',
 #     '=' => 'assign',
-#     );
+    '""' => 'stringify',
+    );
 
 use lib "..";
 
@@ -82,6 +83,11 @@ sub id {
     return mpdl [ [1,0,0,0], [0,1,0,0], [0,0,1,0], [0,0,0,1] ];
 }
 
+sub stringify {
+    my ($self) = @_;
+    return $self->{matrix};
+}
+
 sub assign {
     my ($self, $other) = @_;
     return $self->{matrix} = $other->{matrix};
@@ -89,12 +95,14 @@ sub assign {
 
 sub mult {
     my ($self, $other) = @_;
-    return $self->{matrix} x $other->{matrix};
+    my $m = $self->{matrix} x $other->{matrix};
+    return new EMBL::Transform($m);
 }
 
 sub multeq {
     my ($self, $other) = @_;
-    return $self->{matrix} = $self->{matrix} x $other->{matrix};
+    $self->{matrix} = $self->{matrix} x $other->{matrix};
+    return $self;
 }
 
 sub load {
@@ -115,7 +123,8 @@ sub load {
     $rasc->slice('3,3') .= 1;
 
     # Finally, make it an mpdl, 
-    return $self->{matrix} = mpdl $rasc;
+    $self->{matrix} = mpdl $rasc;
+    return 1;
 }
 
 

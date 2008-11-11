@@ -29,16 +29,18 @@ Private internal functions are generally preceded with an _
 ################################################################################
 
 package EMBL::CofM;
-
 use Spiffy -Base, -XXX;
-# Affine coords, append a 1
-# field pt => mpdl (0,0,0,1);
+# The centre of mass is a point (an mpdl)
+# Default: (0,0,0,1). For affine multiplication, hence additional '1'
 field 'pt';
 # Radius of gyration
-field rg => 0;
+field 'rg' => 0;
+# A STAMP domain ID, if used
+field 'id';
 
-use overload ('""' => 'stringify');
-
+use overload (
+    '""' => 'stringify',
+    );
 
 use PDL;
 use PDL::Math;
@@ -116,6 +118,13 @@ sub ftransform {
 
 sub transform {
     my $transform = shift;
+
+    print STDERR "CofM::transform self: $self\n";
+    print STDERR "CofM::transform transform: $transform\n";
+
+    print STDERR "matrix: ", $transform->{matrix}, "\n";
+    print STDERR "pt: ", $self->{pt}, "\n";
+
     my $new = $transform->{matrix} x $self->{pt}->transpose;
     return $self->{pt} = $new->transpose;
 }
@@ -169,6 +178,7 @@ sub fetch {
 
     my @pt_rg = $sth->fetchrow_array();
 
+    $self->id($id);
     # Save as new coords in $self
     $self->init(@pt_rg);
     return @pt_rg;

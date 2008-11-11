@@ -39,13 +39,12 @@ use warnings;
 
 use Clone qw(clone);
 use List::Util;
-
-use lib "..";
-
 use Graph;
 use Graph::UnionFind;
-
 use Data::Dumper;
+
+use lib "..";
+use EMBL::Assembly;
 
 
 ################################################################################
@@ -61,20 +60,13 @@ use Data::Dumper;
 
 sub new {
     my ($class, $graph, $consider, @args) = @_;
-    my $self = {};
-    bless $self, $class;
+    my $self = bless {};
 
     $self->{graph} = $graph;
     $self->{consider} = $consider;
 
     $self->{next_edges} = [];
     $self->{next_nodes} = [];
-
-    # Assembly starts out as just the components, no interactions
-    my $assembly = new Bio::Network::ProteinNet(refvertexed => 1);
-    # Copy references to the nodes, without any interaction templates
-    $assembly->add_node($_) for $graph->nodes();
-    $self->{assembly} = $assembly;
 
     return $self;
 
@@ -113,20 +105,22 @@ sub traverse {
 #     $self->do_set(@vertices);
 #     $self->do_nodes2(@vertices);
 #     push @{$self->{next_nodes}}, @vertices;
+
+    # Start at a random node
     push @{$self->{next_nodes}}, $vertices[int rand @vertices];
 
     my $uf = new Graph::UnionFind;
     $uf->add($_) for @vertices;
 
-    $self->do_nodes2($uf, []);
+    # Initial assembly is empty
+    $self->do_nodes2($uf, new EMBL::Assembly);
 
 }
 
 
 sub do_edges2 {
-    my ($self, $uf) = @_;
+    my ($self, $uf, $assembly) = @_;
     my $current = shift @{$self->{next_edges}};
-    my $assembly = $self->{assembly};
 
     # When no edges left on stack, go to next level down in BFS traversal tree
     # I.e. process outstanding nodes
@@ -137,7 +131,7 @@ sub do_edges2 {
             # Also give the progressive solution to peripheral nodes
             return $self->do_nodes2($uf, $assembly);
         } else {
-            print STDERR "Assembly:\n\t @$assembly\n";
+            print STDERR "Assembly:\n\t $assembly\n";
             return undef;
         }
     }
@@ -145,34 +139,37 @@ sub do_edges2 {
     my ($src, $dest) = @$current;
     print STDERR "Edge: $src $dest (", arraystr($self->{next_edges}), ")\n";
 
-    my $result = $self->{consider}($src, $dest, $self);
+    my $result = $self->{consider}($src, $dest, $self, $assembly);
     if (!defined $result) {
         # No more templates left for edge: $src,$dest
         print STDERR "\tNo more alternatives for $src $dest\n";
         return;
     }
 
-    # Need to clone this object, as children want to change it in different ways
-    my $clone = clone($uf);
+    # As child nodes of traversal will change partial solutions, clone these
+    my $ufclone = clone($uf);
+    my $assclone = $assembly->clone();
 
     if (0 eq $result) {
         # Failed to use the currently attempted template
         # Carry on with any other outstanding edges. No state has changed here.
-        $self->do_edges2($clone, $assembly);
+        $self->do_edges2($ufclone, $assclone);
     } else {
         # Successfully placed the current interaction template
         # Consider the destination node neighbor to have been visited
         print STDERR "\tpush'ing node $dest\n";
         push @{$self->{next_nodes}}, $dest;
-        $clone->union($src, $dest);
+        # These are now in the same connected component
+        $ufclone->union($src, $dest);
 
         # Add this template to progressive solution
-        push @$assembly, $result;
+        $assclone->add($result);
         # Recursive call to try other edges
-        $self->do_edges2($clone, $assembly);
+        $self->do_edges2($ufclone, $assclone);
 
-        # Undo
-        pop @$assembly;
+        # Backtracking, undo intermediate solution by one edge
+        # Don't need this, as we already cloned
+#         $assembly->remove($result);
     }
 
     print STDERR "<= Edge: $src $dest\n";
@@ -185,9 +182,8 @@ sub do_edges2 {
 
 
 sub do_nodes2 {
-    my ($self, $uf) = @_;
+    my ($self, $uf, $assembly) = @_;
     my $current = shift @{$self->{next_nodes}};
-    my $assembly = $self->{assembly};
 
     unless ($current) {
         print STDERR "No more nodes. ";
@@ -195,7 +191,7 @@ sub do_nodes2 {
             print STDERR "Edges: ", arraystr($self->{next_edges}), "\n";
             return $self->do_edges2($uf, $assembly);
         } else {
-            print STDERR "Assembly:\n\t @$assembly\n";
+            print STDERR "Assembly:\n\t $assembly\n";
             return undef;
         }
     }
@@ -267,7 +263,8 @@ sub do_node {
         # TODO DES this doesn't make sense because it stop on the first failure
         # As I don't know the difference between "single failure" and "exhausted"
 
-        while (my $result = $self->{consider}($start, $neighbor, $self)) {
+        while (my $result = 
+               $self->{consider}($start, $neighbor, $self, $assembly)) {
             # OK, visit the neighboring vertex
             # Process outstanding vertices, with this edge now in place
 #             $self->do_node($clone, @nodes);

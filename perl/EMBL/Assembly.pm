@@ -28,14 +28,15 @@ Private internal functions are generally preceded with an _
 
 ################################################################################
 
-use strict;
-use warnings;
+package EMBL::Assembly;
+use Spiffy -Base, -XXX;
+use base 'Clone';
+
+use overload (
+    '""' => 'stringify',
+    );
 
 use lib "..";
-
-package EMBL::Assembly;
-
-# use overload ();
 
 
 ################################################################################
@@ -49,28 +50,64 @@ package EMBL::Assembly;
 
 =cut
 
-sub new {
-    my ($class, @args) = @_;
-    my $self = {};
-    bless $self, $class;
+sub new() {
+    my $self = bless {};
+
+    # Save the EMBL::CofM instances, indexed by component name
+    $self->{cofm} = {};
+    # Save the relative EMBL::Transform instance, indexed by component name
+    $self->{transform} = {};
+    # Bio::Net::Interaction objects used in this assembly, i.e. templates
+    $self->{interaction} = {};
 
     return $self;
-
 } # new
 
-# Add a Template (two domains) by linking 
-sub add {
-    my ($self, $template, $node) = @_;
-    my $success = 0;
+# Index hash of EMBL::CofM, by component name
+sub cofm {
+    my ($id, $cofm) = @_;
+    if (defined $cofm) {
+        $self->{cofm}{$id} = $cofm;
+    }
+    return $self->{cofm}{$id};
+}
 
-    return $success;
+# Index hash of EMBL::Transform, by component name
+sub transform {
+    my ($id, $transform) = @_;
+    if (defined $transform) {
+        $self->{transform}{$id} = $transform;
+    }
+#     $self->{transform}{$id} ||= new EMBL::Transform();
+    return $self->{transform}{$id};
+}
+
+# Add a chosen interaction template
+sub add {
+    my $ix = shift;
+    $self->{interaction}{$ix} = $ix;
+    return $self->{interaction}{$ix};
+}
+
+# Remove a node or an interaction
+sub remove {
+    my $id = shift;
+    delete $self->{interaction}{$id};
+    delete $self->{transform}{$id};
+    delete $self->{cofm}{$id};
 }
 
 
+# A shallow copy, copies hashes and their pointers.
+# Doesn't copy referenced CofM/Transform objects.
+# This is necessary, as backtracking graph traversal creates many Assembly's
+# Depth 2 means: copy assembly (1) and the hashes in assembly (2).
+# Does not copy what is referenced in the hashes (3).
+sub clone {
+    super(2);
+}
 
+sub stringify {
+    join ",", keys %{$self->{interaction}};
+}
 
-###############################################################################
-
-1;
-
-__END__

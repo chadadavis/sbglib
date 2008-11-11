@@ -18,7 +18,7 @@ use Bio::Network::Edge;
 use Bio::Root::IO;
 
 # Non-CPAN libs
-use lib '..';
+use lib '..', "../..";
 use EMBL::DB;
 use Bio::DB::KEGG; # Not (yet) Bioperl
 use EMBL::Seq;
@@ -142,7 +142,7 @@ sub no_visit {
 
 sub try_edge {
 #     my ($u, $v, $traversal, $ix_index) = @_;
-    my ($u, $v, $traversal) = @_;
+    my ($u, $v, $traversal, $assembly) = @_;
 
 #     $ix_index ||= 0;
 
@@ -175,7 +175,7 @@ sub try_edge {
     # Structural compatibility test (backtrack on failure)
 #     my $success = try_interaction($ix);
 #     my $success = try_interaction2($traversal->assembly, $ix, $u, $v);
-    my $success = try_interaction2($traversal->{assembly}, $ix, $u, $v);
+    my $success = try_interaction2($assembly, $ix, $u, $v);
 
 
 #     $traversal->set_state($edge_id . "success", $success);
@@ -216,80 +216,72 @@ sub try_interaction2 {
     my $srcdom = $iaction->{template}{$src};
     my $destdom = $iaction->{template}{$dest};
 
-
-#     $src->{ref} = new EMBL::Transform(pdl([1,0]));
-#     $src->{_protein}{1}{ref} ||= new EMBL::Transform(pdl([1,0]));
-#     $src->{_protein}{1}{ref} ||= pdl([1,0]);
-#     $src->{ref} ||= pdl([1,0]);
-#     $src->{template} ||= pdl([1,0]);
-
-#      $assembly->{ref}{$src} = pdl([1,0]);
-#     $assembly->{ref}{$src} = 5;
-    print Dumper $assembly;
-    exit;
-
-#     print Dumper $src;
-#     exit;
-
-#     print Dumper $src;
-#     exit;
-    return 0;
-
-#     print STDERR "\n\tiaction: $iaction, $src($srcdom)->$dest($destdom)\n";
     print STDERR "\t$src($srcdom)->$dest($destdom) ";
-
 
     # Get reference domain of $src 
     # (base case: no prevoius structural constraint, implicitly sterically OK)
     # This should only happen on the first edge processed
 
-    if (! exists $src->{ref}) {
-        $src->{ref} = new EMBL::Transform();
-#         $src->{ref}{dom} = $srcdom;
-        print STDERR "\tInitial FoR: $srcdom\n";
+    if (! defined $assembly->transform($src)) {
+        
+        my $srccofm = new EMBL::CofM();
+        $srccofm->fetch($srcdom);
+        $assembly->transform($src, new EMBL::Transform);
+        $assembly->cofm($src, $srccofm);
+        
         # Do the same for the $dest, as it's in the same frame of reference
-#         $dest->{ref} = new EMBL::Transform();
-#         $dest->{ref}{dom} = $destdom;
+        my $destcofm = new EMBL::CofM();
+        $destcofm->fetch($destdom);
+        $assembly->transform($dest, new EMBL::Transform);
+        $assembly->cofm($dest, $destcofm);
+        
+        print STDERR 
+            "\n\tInitial FoR: $srcdom at $srccofm $destdom at $destcofm\n";
+
         return $success = 1;
     } else {
-#         print STDERR "\tSTAMP ...\n";
+        print STDERR "\tSTAMP ...\n";
     }
 
-    return 0;
-
     # Get the transformation and reference domain for the source node
-    my $reftrans = $src->{ref};
-    my $refdom = $reftrans->{dom};
+
+    # Find the frame of reference for the source
+    my $reftrans = $assembly->transform($src);
+    my $refcofm = $assembly->cofm($src);
+    # STAMP dom identifier
+    my $refdom = $refcofm->id;
 
     # STAMP $iaction template domain (of $src) onto reference domain (from $src)
     my $cmd = "./transform.sh $srcdom $refdom";
     print STDERR "\t$cmd\n";
-#     my $transfile = `$cmd`;
-    my $transfile = "";
+    my $transfile = `$cmd`;
 
-#     my $nexttrans = new EMBL::Transform();
-#     unless ($nexttrans->load($transfile)) {
+    my $nexttrans = new EMBL::Transform();
+    unless ($nexttrans->load($transfile)) {
         print STDERR "\tSTAMP failed on $srcdom -> $refdom\n";
         return $success = 0;
-#     }
+    }
 
     # Product of relative with absolution transformation
     # TODO verify that order of mult. is correct here
-#     my $prodtrans = $nexttrans * $reftrans;
+
+    my $prodtrans = $nexttrans * $reftrans;
+    print STDERR "nexttrans: $nexttrans\nreftrans: $reftrans\nprodtrans: $prodtrans\n";
 
     # Then apply that transformation to the interaction partner $dest
     # Get CofM of dest template domain (the one to be transformed)
-    my $cofm = new EMBL::CofM();
-    $cofm->fetch($destdom);
-    print STDERR "\t$destdom cofm before: $cofm\n";
+    my $destcofm = new EMBL::CofM();
+    $destcofm->fetch($destdom);
+    print STDERR "\t$destdom cofm before: $destcofm\n";
 
     # Apply transform(s) to cofm of $dest
-#     $cofm->transform($prodtrans);
+    $destcofm->transform($prodtrans);
 
     # Successfully transformed $dest template into current FoR
-    print STDERR "\t$destdom cofm after : $cofm\n";
+    print STDERR "\t$destdom cofm after : $destcofm\n";
 
     # Check new coords of dest for clashes across currently assembly
+    # TODO
 #     $success = $assembly->clashes($cofm);
 
     # if success, update FoR of dest
