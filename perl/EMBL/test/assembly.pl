@@ -168,7 +168,7 @@ sub try_edge {
 
     # Try next interaction template
     my $ix_id = $ix_ids[$ix_index];
-    print STDERR "\ttemplate $ix_index/" . @ix_ids . "\n";
+    print STDERR "\ttemplate ", 1+$ix_index, "/" . @ix_ids . "\n";
     my $ix = $g->get_interaction_by_id($ix_id);
 #     print STDERR "$ix ";
 
@@ -216,7 +216,7 @@ sub try_interaction2 {
     my $srcdom = $iaction->{template}{$src};
     my $destdom = $iaction->{template}{$dest};
 
-    print STDERR "\t$src($srcdom)->$dest($destdom) ";
+    print STDERR "\t$src($srcdom)->$dest($destdom)\n";
 
     # Get reference domain of $src 
     # (base case: no prevoius structural constraint, implicitly sterically OK)
@@ -225,25 +225,29 @@ sub try_interaction2 {
     if (! defined $assembly->transform($src)) {
         
         my $srccofm = new EMBL::CofM();
+        $srccofm->label($src);
         $srccofm->fetch($srcdom);
         $assembly->transform($src, new EMBL::Transform);
         $assembly->cofm($src, $srccofm);
         
         # Do the same for the $dest, as it's in the same frame of reference
         my $destcofm = new EMBL::CofM();
+        $destcofm->label($dest);
         $destcofm->fetch($destdom);
         $assembly->transform($dest, new EMBL::Transform);
         $assembly->cofm($dest, $destcofm);
         
         print STDERR 
-            "\n\tInitial FoR: $srcdom at $srccofm $destdom at $destcofm\n";
+            "\n\tInitial FoR: $srccofm; $destcofm\n";
 
         return $success = 1;
     } else {
-        print STDERR "\tSTAMP ...\n";
+
     }
 
     # Get the transformation and reference domain for the source node
+
+    # TODO just save CofM, it should have handle to it's own Transform
 
     # Find the frame of reference for the source
     my $reftrans = $assembly->transform($src);
@@ -251,51 +255,96 @@ sub try_interaction2 {
     # STAMP dom identifier
     my $refdom = $refcofm->id;
 
-    # STAMP $iaction template domain (of $src) onto reference domain (from $src)
-    my $cmd = "./transform.sh $srcdom $refdom";
-    print STDERR "\t$cmd\n";
-    my $transfile = `$cmd`;
+    print STDERR "\trefcofm: $refcofm\n";
+#     print STDERR "\treftrans: $reftrans\n";
 
-    my $nexttrans = new EMBL::Transform();
-    unless ($nexttrans->load($transfile)) {
-        print STDERR "\tSTAMP failed on $srcdom -> $refdom\n";
-        return $success = 0;
+    # Use local file-cache of STAMP results
+    # TODO abstract this into a DB cache as well
+    my $nexttrans = stampfile($srcdom, $refdom);
+    if (! defined $nexttrans) { 
+        return $success = 0; 
     }
 
     # Product of relative with absolution transformation
-    # TODO verify that order of mult. is correct here
+    # Product transformation is from right-to-left
+    # I.e. first reftrans applied, then nexttrans applied
 
-    my $prodtrans = $nexttrans * $reftrans;
-    print STDERR "nexttrans: $nexttrans\nreftrans: $reftrans\nprodtrans: $prodtrans\n";
+    my $next_ref = $nexttrans * $reftrans;
+    my $ref_next = $reftrans * $nexttrans;
+
+     print STDERR 
+         "nexttrans: $nexttrans\n",
+         "reftrans: $reftrans\n",
+         "nexttrans * reftrans: ", $next_ref, "\n",
+         "reftrans * nexttrans: ", $ref_next, "\n",
+         ;
 
     # Then apply that transformation to the interaction partner $dest
     # Get CofM of dest template domain (the one to be transformed)
     my $destcofm = new EMBL::CofM();
+    $destcofm->label($dest);
     $destcofm->fetch($destdom);
-    print STDERR "\t$destdom cofm before: $destcofm\n";
-
     # Apply transform(s) to cofm of $dest
-    $destcofm->transform($prodtrans);
+#     $destcofm->transform($prodtrans);
+    $destcofm->transform($ref_next);
 
     # Successfully transformed $dest template into current FoR
-    print STDERR "\t$destdom cofm after : $destcofm\n";
+#     print STDERR "\t$destdom cofm next*ref after : $destcofm\n";
 
     # Check new coords of dest for clashes across currently assembly
     # TODO
-#     $success = $assembly->clashes($cofm);
+    $success = ! $assembly->clashes($destcofm);
+
 
     # if success, update FoR of dest
     if ($success) {
-#         $dest->{ref} = new EMBL::Transform($prodtrans);
-#         $dest->{ref}{dom} = $destdom;
+#         $assembly->transform($dest, $prodtrans);
+        $assembly->transform($dest, $ref_next);
+        $assembly->cofm($dest, $destcofm);
     }
+
 
     print STDERR "\ttry_interaction ", $success ? "succeeded" : "failed", "\n";
 
     return $success;
-}
 
+} # try_interaction2
 
+# Transformation will be relative to fram of reference of destdom
+sub stampfile {
+    my ($srcdom, $destdom) = @_;
+
+    # STAMP uses lowercase chain IDs
+    $srcdom = lc $srcdom;
+    $destdom = lc $destdom;
+
+    print STDERR "\tSTAMP ${srcdom}->${destdom}\n";
+    my $dir = "/tmp/stampcache";
+#     my $file = "$dir/$srcdom-$destdom-FoR.csv";
+    my $file = "$dir/$srcdom-$destdom-FoR-s.csv";
+
+    if (-r $file) {
+        print STDERR "\t\tCached: ";
+        if (-s $file) {
+            print STDERR "positive\n";
+        } else {
+            print STDERR "negative\n";
+            return undef;
+        }
+    } else {
+        my $cmd = "./transform.sh $srcdom $destdom $dir";
+        $file = `$cmd`;
+    }
+
+    my $trans = new EMBL::Transform();
+    unless ($trans->loadfile($file)) {
+        print STDERR "\tSTAMP failed: ${srcdom}->${destdom}\n";
+        return undef;
+    }
+    return $trans;
+} 
+
+# Check DB cache first
 sub transform {
     my ($srcdom, $refdom) = @_;
     print STDERR "\tSuperposing $srcdom onto $refdom\n";
@@ -662,7 +711,7 @@ sub read_templates {
         # create new Interaction object based on an id and weight
         # NB the ID must be unique in the whole graph
         my $interaction = Bio::Network::Interaction->new(
-            -id => "${comp_a} ${comp_b} ${templ_a} ${templ_b}",
+            -id => "${comp_a}-${comp_b}(${templ_a}-${templ_b})",
             -weight => $score,
             );
 

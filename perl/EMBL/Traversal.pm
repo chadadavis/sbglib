@@ -98,7 +98,7 @@ sub traverse {
     # Start with all vertices, independent
     my @vertices = $self->{graph}->vertices();
     # Shuffle them
-    @vertices = List::Util::shuffle @vertices;
+#     @vertices = List::Util::shuffle @vertices;
 
     # Start with full set of vertices
 #     $self->do_node($uf, @vertices);
@@ -108,6 +108,9 @@ sub traverse {
 
     # Start at a random node
     push @{$self->{next_nodes}}, $vertices[int rand @vertices];
+#     push @{$self->{next_nodes}}, $vertices[@vertices/2];
+#     push @{$self->{next_nodes}}, $vertices[5];
+#     push @{$self->{next_nodes}}, $vertices[0];
 
     my $uf = new Graph::UnionFind;
     $uf->add($_) for @vertices;
@@ -125,13 +128,21 @@ sub do_edges2 {
     # When no edges left on stack, go to next level down in BFS traversal tree
     # I.e. process outstanding nodes
     unless ($current) {
-        print STDERR "No more edges. ";
+        print STDERR "No more edges.\n";
         if (@{$self->{next_nodes}}) {
             print STDERR "Nodes: @{$self->{next_nodes}}\n";
             # Also give the progressive solution to peripheral nodes
-            return $self->do_nodes2($uf, $assembly);
+            $self->do_nodes2($uf, $assembly);
+            return;
         } else {
-            print STDERR "Assembly:\n\t $assembly\n";
+            if ($assembly eq $self->{lastass}) {
+#                 print STDERR 
+#                     "Duplicate Assembly: $assembly\n";
+                # Skip dup
+            } else {
+                $assembly->save();
+                $self->{lastass} = $assembly;
+            }
             return undef;
         }
     }
@@ -139,20 +150,23 @@ sub do_edges2 {
     my ($src, $dest) = @$current;
     print STDERR "Edge: $src $dest (", arraystr($self->{next_edges}), ")\n";
 
-    my $result = $self->{consider}($src, $dest, $self, $assembly);
-    if (!defined $result) {
-        # No more templates left for edge: $src,$dest
-        print STDERR "\tNo more alternatives for $src $dest\n";
-        return;
-    }
+# TODO Need to swap next to blocks. Where does clone need to happen
+# If we clone, will we still iterate over templates correctly?
 
     # As child nodes of traversal will change partial solutions, clone these
     my $ufclone = clone($uf);
     my $assclone = $assembly->clone();
 
-    if (0 eq $result) {
+#     my $result = $self->{consider}($src, $dest, $self, $assembly);
+    my $result = $self->{consider}($src, $dest, $self, $assclone);
+
+    if (!defined $result) {
+        # No more templates left for edge: $src,$dest
+        print STDERR "\tNo more alternatives for $src $dest\n";
+        return undef;
+    } elsif (0 eq $result) {
         # Failed to use the currently attempted template
-        # Carry on with any other outstanding edges. No state has changed here.
+        # Carry on with any other outstanding edges. 
         $self->do_edges2($ufclone, $assclone);
     } else {
         # Successfully placed the current interaction template
@@ -177,7 +191,21 @@ sub do_edges2 {
     # Try other templates on this edge: push this edge back onto the edge stack
     push @{$self->{next_edges}}, $current;
     # This will stop when this edge runs out of templates
-    return $self->do_edges2($uf, $assembly);
+
+#     return $self->do_edges2($uf, $assembly);
+    # Should be doing this also on a clone of assembly
+    # Otherwise two different template might be forced into same FoR
+
+    # As child nodes of traversal will change partial solutions, clone these.
+
+    # NB We are cloning here for the 2nd time in this function as we are now
+    # descending into a 2nd recursive call.  
+
+    # TODO make this flow more intuitive
+
+    $ufclone = clone($uf);
+    $assclone = $assembly->clone();
+    $self->do_edges2($uf, $assclone);
 }
 
 
@@ -186,12 +214,22 @@ sub do_nodes2 {
     my $current = shift @{$self->{next_nodes}};
 
     unless ($current) {
-        print STDERR "No more nodes. ";
+        print STDERR "No more nodes.\n";
         if (@{$self->{next_edges}}) {
             print STDERR "Edges: ", arraystr($self->{next_edges}), "\n";
-            return $self->do_edges2($uf, $assembly);
+            $self->do_edges2($uf, $assembly);
+            return;
         } else {
-            print STDERR "Assembly:\n\t $assembly\n";
+            if ($assembly eq $self->{lastass}) {
+#                 print STDERR 
+#                     "Duplicate Assembly: $assembly\n";
+                # Skip dup
+            } else {
+                # Partial solution
+                $assembly->save();
+                # Note this, so as not to duplicate it
+                $self->{lastass} = $assembly;
+            }
             return undef;
         }
     }

@@ -24,7 +24,15 @@ my $transtxt = `./transform.sh 2uzeA 2okrA`;
 my $c = new EMBL::CofM;
 $c->fetch('2uzeC');
 
-print "pt: $c\n";
+
+print "cofm: $c\n";
+print $c->id;
+print $c->description;
+print $c->file;
+print $c->pt;
+print "\n", $c->dom, "\n";
+
+__END__
 
 # Transform 2uzeC using transformation from 2uzeA => 2okrA
 # Put 2uzeC into 2okrA's frame of reference
@@ -39,7 +47,7 @@ $t->load($transtxt);
 $c->transform($t);
 
 print "Transforming...\n";
-print "pt: $c\n";
+print "cofm: $c\n";
 
 
 

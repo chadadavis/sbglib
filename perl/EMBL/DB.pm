@@ -77,19 +77,21 @@ Set $reconnect=1 when you need to be connected to more than one DB at a time.
 sub dbconnect {
     my ($host, $db, $reconnect) = @_;
 
-    # Use cached connection
-    our $dbh;
-    if ($dbh && ! $reconnect) { return $dbh; }
-
     #TODO use ini file for defaults
-    $host ||= "pc-russell12";
+    $host ||= "pc-russell12.embl.de";
     $db ||= "mpn_i2";
 
-    $dbh = DBI->connect("dbi:mysql:dbname=${db};host=${host}");
+    # Use cached connection
+    our %dbh;
+    $dbh{$host} ||= {};
+    my $dbh = $dbh{$host}{$db};
+    if ($dbh && ! $reconnect) { return $dbh; }
 
+    $dbh = DBI->connect("dbi:mysql:dbname=${db};host=${host}");
     $dbh or 
         print STDERR "Cannot connect to DB '${db}' on host '${host}'\n";
-    return $dbh;
+
+    return $dbh{$host}{$db} = $dbh;
 
 } # dbconnect
 

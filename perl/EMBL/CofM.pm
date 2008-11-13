@@ -35,8 +35,16 @@ use Spiffy -Base, -XXX;
 field 'pt';
 # Radius of gyration
 field 'rg' => 0;
-# A STAMP domain ID, if used
+# STAMP domain identifier (any label)
+field 'label';
+# The original stamp identifier of structure (PDB/chain)
 field 'id';
+# Path to PDB/MMol file
+field 'file';
+# STAMP descriptor (e.g. A 125 _ to A 555 _)
+field 'description';
+# Ref to product of all Transform objects ever applied
+field 'cumulative';
 
 use overload (
     '""' => 'stringify',
@@ -49,7 +57,7 @@ use IO::String;
 
 use lib "..";
 use EMBL::DB;
-
+use EMBL::Transform;
 
 
 ################################################################################
@@ -68,12 +76,18 @@ sub new() {
     bless $self, shift;
     $self->{pt} = mpdl (0,0,0,1);
     $self->init(@_) if @_;
+#     $self->reset();
     return $self;
 } # new
 
 sub init {
     # Initialize with a 3-tuple of X,Y,Z coords
     $self->{pt}->slice('0,0:2') .= mpdl (@_[0..2]);
+    $self->rg($_[3]) if $_[3];
+}
+
+sub reset {
+    $self->cumulative(new EMBL::Transform);
 }
 
 # Return as 3-tuple 
@@ -83,8 +97,44 @@ sub array {
 }
 
 sub stringify {
-    my @a = $self->array;
+    my @a = ($self->label, $self->id, $self->array, $self->rg);
     return "@a";
+}
+
+# Print in STAMP format, along with any transform that has been applied
+sub dom {
+    my $str = 
+        join(" ",
+             $self->file,
+             $self->label,
+             '{',
+             $self->description,
+        );
+    
+    if (defined $self->cumulative) {
+        $str .= " \n" . $self->cumulative->tostring . "}";
+    } else {
+        $str .= " }";
+    }
+    return $str;
+}
+
+sub dom2 {
+    my $transformation = shift;
+    my $str = 
+        join(" ",
+             $self->file,
+             $self->label,
+             '{',
+             $self->description,
+        );
+    
+    if (defined $transformation) {
+        $str .= " \n" . $transformation->tostring . "}";
+    } else {
+        $str .= " }";
+    }
+    return $str;
 }
 
 # Transform this point, using a STAMP tranform from the given file
@@ -108,10 +158,13 @@ sub ftransform {
 
     # Finally, transform vect using matrix (using PDL::Matrix::mpdl objects)
     # (transpose'ing row of point coordinates to column vector)
-    my $new = mpdl($rasc) x $self->{pt}->transpose;
+    my $mat = mpdl($rasc);
+    my $new = $mat x $self->{pt}->transpose;
     # Convert back to row vector
     $self->{pt} = $new->transpose;
 
+    # Save applied transform
+    $self->update(new EMBL::Transform($mat));
     return $self->{pt};
 }
 
@@ -119,16 +172,27 @@ sub ftransform {
 sub transform {
     my $transform = shift;
 
-    print STDERR "CofM::transform self: $self\n";
-    print STDERR "CofM::transform transform: $transform\n";
-
-    print STDERR "matrix: ", $transform->{matrix}, "\n";
-    print STDERR "pt: ", $self->{pt}, "\n";
+#     print STDERR "CofM::transform self: $self\n";
+#     print STDERR "CofM::transform transform: $transform\n";
+#     print STDERR "matrix: ", $transform->{matrix}, "\n";
+#     print STDERR "pt: ", $self->{pt}, "\n";
 
     my $new = $transform->{matrix} x $self->{pt}->transpose;
+    # Save a ref to the last applied transform
+    $self->update($transform);
     return $self->{pt} = $new->transpose;
 }
 
+
+sub update {
+    my $t = shift;
+    if (defined($self->cumulative())) {
+        $self->cumulative($self->cumulative * $t);
+    } else {
+        $self->cumulative($t);
+    }
+    return $self;
+}
 
 # Extent to which two spheres overlap (linearly, i.e. not in terms of volume)
 # ... requires no sqrt calculation (which could be costly)
@@ -137,11 +201,11 @@ sub overlap {
     # Distance between centres
     my $sqdist = sumover (($self->{pt} - $obj->{pt}) ** 2);
     # Convert to scalar
-    $sqdist = $sqdist->at(0);
+    my $dist = sqrt $sqdist->at(0);
     # Radii of two spheres
-    my $radii = $self->{rg} + $obj->{rg};
+    my $sum_radii = $self->{rg} + $obj->{rg};
     # Overlaps when distance between centres < sum of two radii
-    return $radii * $radii - $sqdist;
+    return $sum_radii - $dist;
 }
 
 # true of the spheres still overlap, beyond a given allowed minimum overlap
@@ -159,28 +223,36 @@ sub fetch {
     my $dbh = dbconnect("pc-russell12", "trans_1_5") or return undef;
     # Static handle, prepare it only once
     our $sth;
-    $sth ||= $dbh->prepare("select cofm.Cx,cofm.Cy,cofm.Cz,cofm.Rg " .
+    $sth ||= $dbh->prepare("select cofm.Cx,cofm.Cy,cofm.Cz," .
+                           "cofm.Rg,entity.file,entity.description " .
                            "from cofm, entity " .
                            "where cofm.id_entity=entity.id and " .
-                           "entity.acc=?");
+                           "(entity.acc=? or entity.acc=?)");
     $sth or return undef;
-
 
     # Upper-case PDB ID
     my ($pdbid, $chainid) = $id =~ /(.{4})(.{1})/;
     $pdbid = uc $pdbid;
-    my $str = "pdb|$pdbid|$chainid";
+    my $pdbstr = "pdb|$pdbid|$chainid";
 
-    if (! $sth->execute($str)) {
+# TODO support PQS too
+#     my $pqsstr = "pqs|$pdbid|$chainid";
+    my $pqsstr = "pdb|$pdbid|$chainid";
+
+    if (! $sth->execute($pdbstr, $pqsstr)) {
         print STDERR $sth->errstr;
         return undef;
     }
 
-    my @pt_rg = $sth->fetchrow_array();
+    my (@pt, $rg, $file, $description);
+    (@pt[0..2], $rg, $file, $description) = $sth->fetchrow_array();
 
     $self->id($id);
-    # Save as new coords in $self
-    $self->init(@pt_rg);
-    return @pt_rg;
+    $self->init(@pt);
+    $self->rg($rg);
+    $self->file($file);
+    $self->description($description);
+
+    return $self;
 } # fetch
 

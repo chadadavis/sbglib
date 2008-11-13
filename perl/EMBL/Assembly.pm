@@ -34,6 +34,8 @@ use base 'Clone';
 
 use overload (
     '""' => 'stringify',
+    '==' => 'eq',
+    'eq' => 'eq',
     );
 
 use lib "..";
@@ -62,6 +64,11 @@ sub new() {
 
     return $self;
 } # new
+
+sub eq {
+    my $other = shift;
+    return $self && $other && ("$self" eq "$other");
+}
 
 # Index hash of EMBL::CofM, by component name
 sub cofm {
@@ -111,3 +118,53 @@ sub stringify {
     join ",", keys %{$self->{interaction}};
 }
 
+
+# Dump domain IDs and their transformations in STAMP format
+sub save {
+    my $file = shift;
+    our $i;
+    $i++;
+    $file ||= sprintf("assembly-%03d.dom", $i);
+
+    print STDERR 
+        "Assembly: $file\n$self\n";
+
+    open my $fh, ">$file" or return undef;
+
+    print $fh "\% Assembly:\n\% $file\n\% $self\n\n";
+    # Print all CofM objects (STAMP format)
+    my $chainid = ord 'A';
+    foreach my $key (keys %{$self->{cofm}}) {
+        print STDERR "\tsaving: $key ", $self->cofm($key)->id(), "\n";
+#         print $fh $self->cofm($key)->dom(), "\n";
+        print $fh "\% CHAIN ", chr($chainid++), " $key\n";
+        print $fh $self->cofm($key)->dom2($self->transform($key)), "\n";
+    }
+    print $fh "\n";
+    close $fh;
+    return 1;
+}
+
+
+sub clashes {
+    my $newcofm = shift;
+
+    # TODO configurable
+#     my $thresh = 5; # Angstrom
+    my $thresh = 20; # Angstrom
+#     my $thresh = 10; # Angstrom
+
+    # $self->cofm is a hash of CofM objects
+    # If any of them clashes with the to-bo-added CofM, then disallow
+    foreach my $key (keys %{$self->{cofm}}) {
+        my $overlap = $newcofm->overlap($self->cofm($key));
+        print STDERR 
+            "\toverlap: ", $newcofm->id, "/", $self->cofm($key)->id, 
+            " $overlap\n";
+        if ($overlap > $thresh) {
+            return 1;
+        }
+    }
+    print STDERR "\t$newcofm fits\n";
+    return 0;
+}

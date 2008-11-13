@@ -32,6 +32,10 @@ Private internal functions are generally preceded with an _
 
 package EMBL::Transform;
 
+require Exporter;
+our @ISA = qw(Exporter);
+our @EXPORT = qw(onto);
+
 use PDL;
 use PDL::Matrix;
 
@@ -43,6 +47,10 @@ use overload (
     );
 
 use lib "..";
+use EMBL::DB;
+
+
+# TODO export all the static methods
 
 
 
@@ -78,14 +86,97 @@ sub new {
 
 } # new
 
+sub onto {
+    my ($srcdom, $destdom) = @_;
+    
+    print STDERR "\tonto()$srcdom -> $destdom\n";
+
+    # Lookup in DB
+    my $transstr = fetch($srcdom, $destdom);
+    if ($transstr) { 
+        my $t = new EMBL::Transform();
+        $t->loadstr($transstr);
+        return $t;
+    }
+
+    # Otherwise run stamp
+    my $transfile = stamp($srcdom, $destdom);
+    # If that succeeded: load it, cache it, return it
+    if ($transfile) {
+        my $trans = new EMBL::Transform();
+        $trans->loadfile($transfile);
+        $trans->cache($srcdom,$destdom);
+        return $trans;
+    }
+
+}
+
+sub cache {
+    my ($self, $srcdom, $destdom) = @_;
+    print STDERR "\tTransform::cache($srcdom,$destdom)\n";
+    # Write back to DB
+
+}
+
+sub stamp {
+    my ($srcdom, $destdom) = @_;
+    print STDERR "\tTransform::stamp($srcdom,$destdom)\n";
+    my $cmd = "./transform.sh $srcdom $destdom";
+    my $transfile = `$cmd`;
+    return (-s $transfile) ? $transfile : undef;
+}
+
+sub fetch {
+    my ($srcdom, $destdom) = @_;
+    print STDERR "\tTransform::fetch($srcdom,$destdom)\n";
+    # TODO use Config::IniFiles;
+    my $dbh = dbconnect("pc-russell12", "davis_trans") or return undef;
+    # Static handle, prepare it only once
+    our $fetch_sth;
+    $fetch_sth ||= $dbh->prepare("select trans " .
+                                 "from trans ".
+                                 "where (src=? and dest=?)");
+    $fetch_sth or return undef;
+    if (! $fetch_sth->execute($srcdom, $destdom)) {
+        print STDERR $fetch_sth->errstr;
+        return undef;
+    }
+    my ($transstr) = $fetch_sth->fetchrow_array();
+    return $transstr;
+}
+
+
+sub i {
+    my $self = shift;
+    return $self->{matrix}->at(@_);
+}
 
 sub id {
     return mpdl [ [1,0,0,0], [0,1,0,0], [0,0,1,0], [0,0,0,1] ];
 }
 
+# For printing
 sub stringify {
     my ($self) = @_;
     return $self->{matrix};
+}
+
+# For saving, STAMP format
+sub tostring {
+    my $self = shift;
+    my $str;
+    my $mat = $self->{matrix};
+
+    my ($n,$m) = $mat->dims;
+    # Don't do the final row (affine). Stop at $n - 1
+    for (my $i = 0; $i < $n - 1; $i++) {
+        for (my $j = 0; $j < $m; $j++) {
+            $str .= sprintf("%10.5f ", $mat->at($i,$j));
+        }
+        $str .= "\n";
+    }
+    return $str;
+        
 }
 
 sub assign {
@@ -105,13 +196,11 @@ sub multeq {
     return $self;
 }
 
-sub load {
+sub loadfile {
     my ($self, $filepath) = @_;
-
     chomp $filepath;
-    print STDERR "load: $filepath\n";
-    unless (-f $filepath && -r $filepath && -s $filepath) {
-        print STDERR "Cannot read transformation from: $filepath\n";
+    unless (-s $filepath) {
+        print STDERR "Cannot load transformation: $filepath\n";
         return undef;
     }
 
@@ -127,6 +216,25 @@ sub load {
     return 1;
 }
 
+sub loadstr {
+    my ($self, $str) = @_;
+    # This transformation is just a 3x4 text table, from STAMP, without any { }
+    my $rasc = zeroes(4,4);
+    # Overwrite with 3x4 from string
+    my @lines = split /\n/, $str;
+    for (my $i = 0; $i < @lines; $i++) {
+        my @fields = split /\s+/, $lines[$i];
+        for (my $j = 0; $j < @fields; $j++) {
+            $rasc->slice("$i,$j") .= $fields[$j];
+        }
+    }
+    # Put a 1 in the cell 3,3 (bottom right) for affine matrix multiplication
+    $rasc->slice('3,3') .= 1;
+
+    # Finally, make it an mpdl, 
+    $self->{matrix} = mpdl $rasc;
+    return 1;
+}
 
 
 ###############################################################################
