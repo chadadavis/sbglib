@@ -41,11 +41,12 @@ use PDL;
 # A network of iaction templates
 my $nettemplates = read_templates(shift);
 
-our $OUT = "./tmp";
+# our $OUT = "./tmp";
+our $OUT = "./out";
 
 
 # graphviz($assembly, "$OUT/assembly.dot");
-# graphviz($nettemplates, "$OUT/templates.dot");
+graphviz($nettemplates, "$OUT/templates.dot");
 # stats($nettemplates);
 
 # TODO DOC Traversing:
@@ -269,14 +270,22 @@ sub try_interaction2 {
     # Product transformation is from right-to-left
     # I.e. first reftrans applied, then nexttrans applied
 
-    my $next_ref = $nexttrans * $reftrans;
+
+#     print STDERR 
+#         "nexttrans: $nexttrans\n",
+#         "reftrans: $reftrans\n",
+#         ;
+
+#     my $next_ref = $nexttrans * $reftrans;
     my $ref_next = $reftrans * $nexttrans;
 
-     print STDERR 
-         "nexttrans: $nexttrans\n",
-         "reftrans: $reftrans\n",
-         "nexttrans * reftrans: ", $next_ref, "\n",
-         "reftrans * nexttrans: ", $ref_next, "\n",
+#      print STDERR 
+#          "nexttrans: $nexttrans\n",
+#          "reftrans: $reftrans\n",
+#          "next_ref: ", $next_ref, "\n",
+#          "ref_next: ", $ref_next, "\n",
+#          "nexttrans * reftrans: ", $nexttrans * $reftrans, "\n",
+#          "reftrans * nexttrans: ", $reftrans * $nexttrans, "\n",
          ;
 
     # Then apply that transformation to the interaction partner $dest
@@ -285,8 +294,9 @@ sub try_interaction2 {
     $destcofm->label($dest);
     $destcofm->fetch($destdom);
     # Apply transform(s) to cofm of $dest
-#     $destcofm->transform($prodtrans);
-    $destcofm->transform($ref_next);
+    $destcofm->ttransform($ref_next);
+#     $destcofm->ttransform($next_ref);
+
 
     # Successfully transformed $dest template into current FoR
 #     print STDERR "\t$destdom cofm next*ref after : $destcofm\n";
@@ -298,10 +308,18 @@ sub try_interaction2 {
 
     # if success, update FoR of dest
     if ($success) {
-#         $assembly->transform($dest, $prodtrans);
         $assembly->transform($dest, $ref_next);
+#         $assembly->transform($dest, $next_ref);
+
         $assembly->cofm($dest, $destcofm);
     }
+
+#     print STDERR 
+#         "nexttrans: $nexttrans\n",
+#         "reftrans: $reftrans\n",
+#         "next_ref: ", $next_ref, "\n",
+#         "ref_next: ", $ref_next, "\n",
+#         ;
 
 
     print STDERR "\ttry_interaction ", $success ? "succeeded" : "failed", "\n";
@@ -317,6 +335,11 @@ sub stampfile {
     # STAMP uses lowercase chain IDs
     $srcdom = lc $srcdom;
     $destdom = lc $destdom;
+
+    if ($srcdom eq $destdom) {
+        # Return identity
+        return new EMBL::Transform;
+    }
 
     print STDERR "\tSTAMP ${srcdom}->${destdom}\n";
     my $dir = "/tmp/stampcache";
@@ -653,9 +676,10 @@ sub printg {
 sub graphviz {
     my ($graph, $file) = @_;
     $file ||= "mygraph.png";
-    my ($format) = $file =~ /\.(.*?)$/;
-#     print STDERR "$file:$format:\n";
+    # File extension (everything after last . )
+    my ($format) = $file =~ /\.([^\/]+?)$/;
     $format ||= 'png';
+    print STDERR "graphviz: $file:$format:\n";
     my $writer = Graph::Writer::GraphViz->new(
         -format => $format,
 #         -layout => 'twopi',
@@ -696,6 +720,8 @@ sub read_templates {
 
         my ($comp_a, $comp_b, $templ_a, $templ_b, $score) = split(/\s+/, $l);
 
+        print STDERR "iaction:", join(",", $comp_a, $comp_b, $templ_a, $templ_b, $score), "\n";
+        
         # TODO could also be other templates (+score) on this line, for
         # modelling this interaction. Could loop over these too.
 

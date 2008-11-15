@@ -63,12 +63,17 @@ sub stringify {
 
 sub equal {
     my ($a, $b) = @_;
+
+
+
     return 0 == compare($a, $b);
 }
 
 # Setwise comparison
 sub compare {
     my ($a, $b) = @_;
+
+    return undef unless ref($b) eq "Bio::Network::Node";
 
     # If all A's are less than all B's, then A < B, and vice versa
     # If results are mixed, return 0 (equivalent)
@@ -91,6 +96,7 @@ sub tally {
     # Compare all against all.
     # Store all comparisons
     my %cmp = (-1 => 0, 0 => 0, +1 => 0);
+
 
     my @a = $a && $a->proteins;
     my @b = $b && $b->proteins;

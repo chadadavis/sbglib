@@ -40,6 +40,11 @@ use overload (
 
 use lib "..";
 
+# Allowed (linear) overlap between the spheres, that represent the proteins
+# Centre-of-mass + Radius-of-gyration
+# our $thresh = 30; # Angstrom
+our $thresh = 20; # Angstrom
+
 
 ################################################################################
 =head2 new
@@ -122,6 +127,12 @@ sub stringify {
 # Dump domain IDs and their transformations in STAMP format
 sub save {
     my $file = shift;
+    my $n = keys %{$self->{cofm}};
+    if ($n < 3) {
+        print STDERR "Skipping dimeric assembly\n";
+        return 1;
+    }
+
     our $i;
     $i++;
     $file ||= sprintf("assembly-%03d.dom", $i);
@@ -129,7 +140,7 @@ sub save {
     print STDERR 
         "Assembly: $file\n$self\n";
 
-    open my $fh, ">$file" or return undef;
+    open my $fh, ">out/$file" or return undef;
 
     print $fh "\% Assembly:\n\% $file\n\% $self\n\n";
     # Print all CofM objects (STAMP format)
@@ -149,10 +160,8 @@ sub save {
 sub clashes {
     my $newcofm = shift;
 
-    # TODO configurable
-#     my $thresh = 5; # Angstrom
-    my $thresh = 20; # Angstrom
-#     my $thresh = 10; # Angstrom
+    # TODO configurable Config::IniFiles
+    our $thresh;
 
     # $self->cofm is a hash of CofM objects
     # If any of them clashes with the to-bo-added CofM, then disallow

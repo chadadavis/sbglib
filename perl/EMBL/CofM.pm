@@ -164,12 +164,12 @@ sub ftransform {
     $self->{pt} = $new->transpose;
 
     # Save applied transform
-    $self->update(new EMBL::Transform($mat));
+#     $self->update(new EMBL::Transform($mat));
     return $self->{pt};
 }
 
 
-sub transform {
+sub ttransform {
     my $transform = shift;
 
 #     print STDERR "CofM::transform self: $self\n";
@@ -179,7 +179,7 @@ sub transform {
 
     my $new = $transform->{matrix} x $self->{pt}->transpose;
     # Save a ref to the last applied transform
-    $self->update($transform);
+#     $self->update($transform);
     return $self->{pt} = $new->transpose;
 }
 
@@ -188,6 +188,7 @@ sub update {
     my $t = shift;
     if (defined($self->cumulative())) {
         $self->cumulative($self->cumulative * $t);
+#         $self->cumulative($t * $self->cumulative);
     } else {
         $self->cumulative($t);
     }

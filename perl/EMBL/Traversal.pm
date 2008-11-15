@@ -97,26 +97,31 @@ sub traverse {
 
     # Start with all vertices, independent
     my @vertices = $self->{graph}->vertices();
+
+    print STDERR "verts:@vertices\n";
+
     # Shuffle them
 #     @vertices = List::Util::shuffle @vertices;
 
-    # Start with full set of vertices
-#     $self->do_node($uf, @vertices);
-#     $self->do_set(@vertices);
-#     $self->do_nodes2(@vertices);
+    # Use all verts as starting nodes
+    # Cannot do this, as all nodes are in separate frames of reference
 #     push @{$self->{next_nodes}}, @vertices;
 
     # Start at a random node
-    push @{$self->{next_nodes}}, $vertices[int rand @vertices];
-#     push @{$self->{next_nodes}}, $vertices[@vertices/2];
-#     push @{$self->{next_nodes}}, $vertices[5];
+#     push @{$self->{next_nodes}}, $vertices[int rand @vertices];
+    
 #     push @{$self->{next_nodes}}, $vertices[0];
 
-    my $uf = new Graph::UnionFind;
-    $uf->add($_) for @vertices;
 
-    # Initial assembly is empty
-    $self->do_nodes2($uf, new EMBL::Assembly);
+    # TODO Starting node should be a parameter
+    foreach my $node (@vertices) {
+        print STDERR ("=" x 80), "\nStart node: $node\n";
+        $self->{next_nodes} = [ shift @vertices ];
+        my $uf = new Graph::UnionFind;
+        $uf->add($_) for @vertices;
+        # Initial assembly is empty
+        $self->do_nodes2($uf, new EMBL::Assembly);
+    }
 
 }
 
