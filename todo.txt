@@ -1,5 +1,9 @@
 Organize this into sections ...
 
+Get stuff from here for Perl modules
+/g/russell1/apps/pm
+(Stop copying Palign.pm everywhere! 118 instances on fileserver)
+
 Document and link all this library business on the wiki
 
 Matthieu: /g/russell/russell5/pichaud/work/python_modules
