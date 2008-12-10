@@ -164,7 +164,7 @@ sub clashes {
     our $thresh;
 
     # $self->cofm is a hash of CofM objects
-    # If any of them clashes with the to-bo-added CofM, then disallow
+    # If any of them clashes with the to-be-added CofM, then disallow
     foreach my $key (keys %{$self->{cofm}}) {
         my $overlap = $newcofm->overlap($self->cofm($key));
         print STDERR 
