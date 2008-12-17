@@ -239,7 +239,10 @@ sub try_interaction2 {
         $assembly->cofm($dest, $destcofm);
         
         print STDERR 
-            "\n\tInitial FoR: $srccofm; $destcofm\n";
+            "\n\tInitial FoR CofMs: $srccofm; $destcofm\n";
+
+     #TODO DEL
+        print STDERR "\t\tbrokencofm? src dest: $srccofm $destcofm \n";
 
         return $success = 1;
     } else {
@@ -253,7 +256,7 @@ sub try_interaction2 {
     # Find the frame of reference for the source
     my $reftrans = $assembly->transform($src);
     my $refcofm = $assembly->cofm($src);
-    # STAMP dom identifier
+    # STAMP dom identifier (PDBID/CHAINID)
     my $refdom = $refcofm->id;
 
     print STDERR "\trefcofm: $refcofm\n";
@@ -323,6 +326,9 @@ sub try_interaction2 {
 
 
     print STDERR "\ttry_interaction ", $success ? "succeeded" : "failed", "\n";
+
+     #TODO DEL
+    print STDERR "\t\tbrokencofm? dest ref:  $destcofm $refcofm\n";
 
     return $success;
 

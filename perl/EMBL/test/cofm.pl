@@ -20,17 +20,17 @@ use PDL::Ufunc;
 # TODO Need to locate this script, relative to INSTALLDIR
 my $transtxt = `./transform.sh 2uzeA 2okrA`;
 
-# Get coords of 2uzeC
+my $pdbidchainid = shift || '2uzeC';
+
+# Get coords
 my $c = new EMBL::CofM;
-$c->fetch('2uzeC');
+$c->fetch($pdbidchainid);
 
 
-print "cofm: $c\n";
-print $c->id;
-print $c->description;
-print $c->file;
-print $c->pt;
-print "\n", $c->dom, "\n";
+print "cofm->stringify: $c\n";
+print "cofm->pt: ", $c->pt;
+print "cofm->dom: ", $c->dom, "\n";
+print "cofm->dom2: ", $c->dom2, "\n";
 
 __END__
 
