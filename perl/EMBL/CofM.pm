@@ -36,13 +36,13 @@ field 'pt';
 # Radius of gyration
 field 'rg' => 0;
 # STAMP domain identifier (any label)
-field 'label';
+field 'label' => '';
 # The original stamp identifier of structure (PDB/chain)
-field 'id';
+field 'id' => '';
 # Path to PDB/MMol file
-field 'file';
+field 'file' => '';
 # STAMP descriptor (e.g. A 125 _ to A 555 _)
-field 'description';
+field 'description' => '';
 # Ref to product of all Transform objects ever applied
 field 'cumulative';
 
@@ -54,10 +54,16 @@ use PDL;
 use PDL::Math;
 use PDL::Matrix;
 use IO::String;
+use File::Temp qw(tempfile);
+
+use Text::ParseWords;
 
 use lib "..";
 use EMBL::DB;
 use EMBL::Transform;
+
+# Needs to be contained in an EMBL::STAMP object
+our $cofm = "/g/russell2/russell/c/cofm/cofm";
 
 
 ################################################################################
@@ -77,6 +83,8 @@ sub new() {
     $self->{pt} = mpdl (0,0,0,1);
     $self->init(@_) if @_;
 #     $self->reset();
+
+
     return $self;
 } # new
 
@@ -102,6 +110,7 @@ sub stringify {
 }
 
 # Print in STAMP format, along with any transform that has been applied
+# TODO doc explain order of mat. mult.
 sub dom {
     my $str = 
         join(" ",
@@ -119,6 +128,7 @@ sub dom {
     return $str;
 }
 
+# Don't use this. Rather use $self->cumulative transformation
 sub dom2 {
     my $transformation = shift;
     my $str = 
@@ -217,8 +227,48 @@ sub overlaps {
 }
 
 # Update internal coords from DB, given PDB ID/chain ID
+# TODO combine this with run() below
 sub fetch {
     my $id = shift;
+
+    # Upper-case PDB ID (for DB, but acceptable to cofm as well)
+    my ($pdbid, $chainid) = $id =~ /(.{4})(.{1})/;
+    $pdbid = uc $pdbid;
+
+    # Defaults:
+#     $self->file($pdbid);
+#     $self->description("CHAIN $chainid");
+
+    my @fields;
+    # Try from DB:
+    @fields = $self->fetchdb($pdbid, $chainid);
+    # Couldn't get from DB, try running computation locally
+    @fields or @fields = $self->fetchrun($pdbid, $chainid);
+
+    unless (@fields) {
+        print STDERR "Cannot get centre-of-mass for $pdbid$chainid\n";
+        return undef;
+    }
+
+    my ($x, $y, $z, $rg, $file, $description) = @fields;
+
+    return $self unless @fields;
+
+    $self->id($id) if $id;
+    # Dont' overwrite any previously labelled
+    $self->label($id) if (!$self->label() && $id);
+    $self->init($x, $y, $z) if ($x && $y && $z);
+    $self->rg($rg) if $rg;
+    $self->file($file) if $file;
+    $self->description($description) if $description;
+
+    return $self;
+} # fetch
+
+
+sub fetchdb {
+    my ($pdbid, $chainid) = @_;
+    print STDERR "fetchdb($pdbid,$chainid)\n";
 
     # TODO use Config::IniFiles;
     my $dbh = dbconnect("pc-russell12", "trans_1_5") or return undef;
@@ -229,31 +279,70 @@ sub fetch {
                            "from cofm, entity " .
                            "where cofm.id_entity=entity.id and " .
                            "(entity.acc=? or entity.acc=?)");
-    $sth or return undef;
-
-    # Upper-case PDB ID
-    my ($pdbid, $chainid) = $id =~ /(.{4})(.{1})/;
-    $pdbid = uc $pdbid;
-    my $pdbstr = "pdb|$pdbid|$chainid";
-
-# TODO support PQS too
-#     my $pqsstr = "pqs|$pdbid|$chainid";
-    my $pqsstr = "pdb|$pdbid|$chainid";
-
-    if (! $sth->execute($pdbstr, $pqsstr)) {
-        print STDERR $sth->errstr;
+    unless ($sth) {
+        print STDERR $dbh->errstr, "\n";
         return undef;
     }
 
-    my (@pt, $rg, $file, $description);
-    (@pt[0..2], $rg, $file, $description) = $sth->fetchrow_array();
+    # Check PDB and PQS structures
+    my $pdbstr = "pdb|$pdbid|$chainid";
+    my $pqsstr = "pqs|$pdbid|$chainid";
 
-    $self->id($id);
-    $self->init(@pt);
-    $self->rg($rg);
-    $self->file($file);
-    $self->description($description);
+    if (! $sth->execute($pdbstr, $pqsstr)) {
+        print STDERR $sth->errstr, "\n";
+        return undef;
+    }
 
-    return $self;
-} # fetch
+    return $sth->fetchrow_array();
+} # fetchdb
 
+
+# Run external cofm
+# TODO update DB with cached results
+sub fetchrun {
+    my ($pdbid, $chainid) = @_;
+    print STDERR "fetchrun($pdbid,$chainid)\n";
+
+    # TODO Ini file!
+    our $cofm;
+
+    # TODO DES should be it's own class
+    # Run pdbc to get a STAMP DOM file
+    my (undef, $path) = tempfile();
+    my $cmd;
+    $cmd = "pdbc -d ${pdbid}${chainid} > ${path}";
+    # NB checking system()==0 fails, even when successful
+    system($cmd);
+    # So, just check that file was written to instead
+    unless (-s $path) {
+        print STDERR "Failed: $cmd : $!\n";
+        return undef;
+    }
+    # Pipe output back here into Perl
+    # NB the -v option is necessary to get the filename of the PDB file
+    $cmd = "$cofm -f $path -v |";
+    my $fh;
+    unless (open $fh, $cmd) {
+        print STDERR "Failed: $cmd : $!\n";
+        return undef;
+    }
+
+    my ($x, $y, $z, $rg, $file, $description);
+    while (<$fh>) {
+#         print STDERR "$_";
+        if (/^Domain\s+\S+\s+(\S+)/i) {
+            $file = $1;
+#             print STDERR "\tGOT file:$file:\n";
+        } elsif (/^\s+chain\s+(\S+)/i) {
+            $description = "CHAIN $1";
+#             print STDERR "\tGOT description:$description:\n";
+        } elsif (/^REMARK Domain/) {
+            my @a = quotewords('\s+', 0, $_);
+#             print STDERR "quotewords:@a:\n";
+            ($rg, $x, $y, $z) = ($a[10], $a[16], $a[17], $a[18]);
+        }
+    }
+
+    return ($x, $y, $z, $rg, $file, $description);
+
+} # fetchrun
