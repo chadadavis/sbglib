@@ -120,7 +120,11 @@ sub traverse {
         my $uf = new Graph::UnionFind;
         $uf->add($_) for @vertices;
         # Initial assembly is empty
-        $self->do_nodes2($uf, new EMBL::Assembly);
+        my $ass = new EMBL::Assembly();
+        # TODO Clean this up, should be in constructor
+        $ass->{graph} = $self->{graph};
+#         my $ass = new EMBL::Assembly;
+        $self->do_nodes2($uf, $ass);
     }
 
 }

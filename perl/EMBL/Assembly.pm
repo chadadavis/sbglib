@@ -40,6 +40,9 @@ use overload (
 
 use lib "..";
 
+use Data::Dumper;
+
+
 # Allowed (linear) overlap between the spheres, that represent the proteins
 # Centre-of-mass + Radius-of-gyration
 # our $thresh = 30; # Angstrom
@@ -62,7 +65,7 @@ sub new() {
 
     # Save the EMBL::CofM instances, indexed by component name
     $self->{cofm} = {};
-    # Save the relative EMBL::Transform instance, indexed by component name
+    # Save the relative EMBL::Transform instances, indexed by component name
     $self->{transform} = {};
     # Bio::Net::Interaction objects used in this assembly, i.e. templates
     $self->{interaction} = {};
@@ -113,39 +116,69 @@ sub remove {
 # A shallow copy, copies hashes and their pointers.
 # Doesn't copy referenced CofM/Transform objects.
 # This is necessary, as backtracking graph traversal creates many Assembly's
-# Depth 2 means: copy assembly (1) and the hashes in assembly (2).
-# Does not copy what is referenced in the hashes (3).
+# Depth 2 means: copy assembly (1) and the hashes/objects in assembly (2).
+# Does not copy what is referenced in/from the hashes/objects (3).
+# I.e. Assembly can efficiently contain references to other objects without
+#   incurring a cloning copy penalty.
 sub clone {
     super(2);
 }
 
+# TODO DOC the interaction field
 sub stringify {
     join ",", keys %{$self->{interaction}};
 }
 
 
 # Dump domain IDs and their transformations in STAMP format
+# TODO DOC what do return vals mean
 sub save {
     my $file = shift;
     my $n = keys %{$self->{cofm}};
+
     if ($n < 3) {
         print STDERR "Skipping dimeric assembly\n";
         return 1;
     }
 
-    our $i;
-    $i++;
-    $file ||= sprintf("assembly-%03d.dom", $i);
+    # Unique topology identifier:
+    # For each edge, component names sorted, then edges sorted
+    my @ikeys = keys %{$self->{interaction}};
+    my @iactions = map { $self->{graph}->get_interaction_by_id($_) } @ikeys;
+    my @edges = map { join(',', sort($_->nodes)) } @iactions;
+    my $topology = join(';', sort(@edges));
+
+    our %solutions;
+    our $topoi;
+    if (! exists $solutions{$topology}) {
+        # A new topology
+        $topoi++;
+        print STDERR "New solution topology #$topoi: $topology\n";
+        $solutions{$topology} = $topoi;
+    } else {
+        print STDERR "Another solution like #$topoi: $topology\n";
+    }
+
+
+    our $solutioni;
+    $solutioni++;
+    $file ||= sprintf("assembly-%03d-%03d.dom", $topoi, $solutioni);
 
     print STDERR 
         "Assembly: $file\n$self\n";
 
     open my $fh, ">out/$file" or return undef;
 
-    print $fh "\% Assembly:\n\% $file\n\% $self\n\n";
+    print $fh "\% File: $file\n";
+    print $fh "\% Assembly ID: $solutioni\n";
+    print $fh "\% Topology cluster ID: $topoi\n";
+    print $fh "\% Topology: $topology\n";
+    print $fh "\% Templates: $self\n";
+    print $fh "\n";
+
     # Print all CofM objects (STAMP format)
     my $chainid = ord 'A';
-    foreach my $key (keys %{$self->{cofm}}) {
+    foreach my $key (sort keys %{$self->{cofm}}) {
         print STDERR "\tsaving: $key ", $self->cofm($key)->id(), "\n";
 #         print $fh $self->cofm($key)->dom(), "\n";
         print $fh "\% CHAIN ", chr($chainid++), " $key\n";
