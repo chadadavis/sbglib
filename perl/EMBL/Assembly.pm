@@ -177,17 +177,27 @@ sub save {
     print $fh "\n";
 
     # Print all CofM objects (STAMP format)
+    # STAMP will number the chains alphabetically in the final output
     my $chainid = ord 'A';
+    # $key is the component's label
     foreach my $key (sort keys %{$self->{cofm}}) {
+        # id is the PDB ID of the template segment
         print STDERR "\tsaving: $key ", $self->cofm($key)->id(), "\n";
-#         print $fh $self->cofm($key)->dom(), "\n";
+
         print $fh "\% CHAIN ", chr($chainid++), " $key\n";
-        print $fh $self->cofm($key)->dom2($self->transform($key)), "\n";
+
+        # This uses the cumulative transform, maintained by CofM itself
+#         print $fh $self->cofm($key)->dom(), "\n";
+
+        # Or try to give it the transform that was maintained here in Assembly
+        my $cofm = $self->cofm($key);
+        my $transform = $self->transform($key);
+        print $fh $cofm->dom2($transform), "\n";
     }
     print $fh "\n";
     close $fh;
     return 1;
-}
+} # save
 
 
 sub clashes {

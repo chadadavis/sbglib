@@ -147,6 +147,7 @@ sub dom2 {
     return $str;
 }
 
+# Apply transform from a file
 # Transform this point, using a STAMP tranform from the given file
 # File is actually just a space-separated CSV with a 3x4 matrix
 # I.e not a STAMP DOM file
@@ -161,13 +162,13 @@ sub ftransform {
 
     # This transformation is just a 3x4 text table, from STAMP, without any { }
     my $rasc = zeroes(4,4);
-    # Overwrite with 3x4 from file 
+    # Overwrite zeroes with 3x4 from file 
     $rasc->rasc($filepath);
-    # Put a 1 in the cell 3,3 (bottom right) for affine matrix multiplication
+    # Assign a 1 to the cell 3,3 (bottom right) for affine matrix multiplication
     $rasc->slice('3,3') .= 1;
 
     # Finally, transform vect using matrix (using PDL::Matrix::mpdl objects)
-    # (transpose'ing row of point coordinates to column vector)
+    # (transpose()ing row of point coordinates to column vector)
     my $mat = mpdl($rasc);
     my $new = $mat x $self->{pt}->transpose;
     # Convert back to row vector
@@ -178,7 +179,7 @@ sub ftransform {
     return $self->{pt};
 }
 
-
+# Apply a given transform
 sub ttransform {
     my $transform = shift;
 
@@ -187,7 +188,11 @@ sub ttransform {
 #     print STDERR "matrix: ", $transform->{matrix}, "\n";
 #     print STDERR "pt: ", $self->{pt}, "\n";
 
+    # TODO DES this should be:
+    # $transform->applyto($self->{pt});
+
     my $new = $transform->{matrix} x $self->{pt}->transpose;
+
     # Save a ref to the last applied transform
 #     $self->update($transform);
     return $self->{pt} = $new->transpose;

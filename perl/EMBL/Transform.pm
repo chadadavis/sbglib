@@ -52,6 +52,8 @@ use EMBL::DB;
 
 # TODO export all the static methods
 
+# TODO use Spiffy
+# Document fields (e.g. 'matrix')
 
 
 ################################################################################
@@ -85,6 +87,16 @@ sub new {
     return $self;
 
 } # new
+
+
+# Apply this transformation to a point and return transformed point
+sub applyto {
+    my ($pt) = @_;
+    # transpose()s point before and after matrix multiplication
+
+
+}
+
 
 sub onto {
     my ($srcdom, $destdom) = @_;
