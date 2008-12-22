@@ -241,9 +241,6 @@ sub try_interaction2 {
         print STDERR 
             "\n\tInitial FoR CofMs: $srccofm; $destcofm\n";
 
-     #TODO DEL
-        print STDERR "\t\tbrokencofm? src dest: $srccofm $destcofm \n";
-
         return $success = 1;
     } else {
 
@@ -269,15 +266,7 @@ sub try_interaction2 {
         return $success = 0; 
     }
 
-    # Product of relative with absolution transformation
-    # Product transformation is from right-to-left
-    # I.e. first reftrans applied, then nexttrans applied
-
-
-#     print STDERR 
-#         "nexttrans: $nexttrans\n",
-#         "reftrans: $reftrans\n",
-#         ;
+    # Product of relative with absolute transformation
 
 #     my $next_ref = $nexttrans * $reftrans;
     my $ref_next = $reftrans * $nexttrans;
@@ -326,9 +315,6 @@ sub try_interaction2 {
 
 
     print STDERR "\ttry_interaction ", $success ? "succeeded" : "failed", "\n";
-
-     #TODO DEL
-    print STDERR "\t\tbrokencofm? dest ref:  $destcofm $refcofm\n";
 
     return $success;
 
