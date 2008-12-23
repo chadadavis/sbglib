@@ -46,7 +46,10 @@ use Data::Dumper;
 # Allowed (linear) overlap between the spheres, that represent the proteins
 # Centre-of-mass + Radius-of-gyration
 # our $thresh = 30; # Angstrom
-our $thresh = 20; # Angstrom
+# TODO IniFile
+# our $thresh = 20; # Angstrom
+# our $thresh = 30; # Angstrom
+our $thresh = 35; # Angstrom
 
 
 ################################################################################
