@@ -48,6 +48,7 @@ field 'cumulative';
 
 use overload (
     '""' => 'stringify',
+    '-' => 'rmsd',
     );
 
 use PDL;
@@ -196,6 +197,20 @@ sub ttransform {
     # Save a ref to the last applied transform
 #     $self->update($transform);
     return $self->{pt} = $new->transpose;
+}
+
+
+# Distance between this point and some other point
+sub rmsd { 
+    my $other = shift;
+    return undef unless $self->{pt}->dims == $other->{pt}->dims;
+    my $diff = $self->{pt} - $other->{pt};
+    # Remove dimension 0 of matrix, producing a 1-D list. 
+    # And remove the last field (just a 1, for affine multiplication)
+    $diff = $diff->slice('(0),0:2');
+    my $squared = $diff ** 2;
+    my $mean = sumover($squared) / nelem($squared);
+    return $mean;
 }
 
 
