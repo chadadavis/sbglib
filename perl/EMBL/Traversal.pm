@@ -104,7 +104,7 @@ sub traverse {
 #     @vertices = List::Util::shuffle @vertices;
 
     # Use all verts as starting nodes
-    # Cannot do this, as all nodes are in separate frames of reference
+    # TODO DES Cannot do this, as all nodes are in separate frames of reference
 #     push @{$self->{next_nodes}}, @vertices;
 
     # Start at a random node
@@ -116,7 +116,13 @@ sub traverse {
     # TODO Starting node should be a parameter
     foreach my $node (@vertices) {
         print STDERR ("=" x 80), "\nStart node: $node\n";
-        $self->{next_nodes} = [ shift @vertices ];
+        
+        # What was the idea here? This shortens @vertices !!
+#         $self->{next_nodes} = [ shift @vertices ];
+
+        # Should be using one different starting node in each iteration
+        $self->{next_nodes} = [ $node ];
+
         my $uf = new Graph::UnionFind;
         $uf->add($_) for @vertices;
         # Initial assembly is empty
