@@ -209,6 +209,7 @@ sub multeq {
     return $self;
 }
 
+# This transformation is just a 3x4 text table, from STAMP, without any { }
 sub loadfile {
     my ($self, $filepath) = @_;
     chomp $filepath;
@@ -217,7 +218,7 @@ sub loadfile {
         return undef;
     }
 
-    # This transformation is just a 3x4 text table, from STAMP, without any { }
+
     my $rasc = zeroes(4,4);
     # Overwrite with 3x4 from file 
     $rasc->rasc($filepath);
@@ -235,10 +236,13 @@ sub loadstr {
     my $rasc = zeroes(4,4);
     # Overwrite with 3x4 from string
     my @lines = split /\n/, $str;
+    @lines = grep { ! /^\s*$/ } @lines;
     for (my $i = 0; $i < @lines; $i++) {
         my @fields = split /\s+/, $lines[$i];
+        @fields = grep { ! /^\s*$/ } @fields;
         for (my $j = 0; $j < @fields; $j++) {
-            $rasc->slice("$i,$j") .= $fields[$j];
+            # Column major order, i.e. (j,i) not (i,j)
+            $rasc->slice("$j,$i") .= $fields[$j];
         }
     }
     # Put a 1 in the cell 3,3 (bottom right) for affine matrix multiplication

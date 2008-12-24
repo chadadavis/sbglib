@@ -4,17 +4,15 @@
 
 # TODO use Spiffy
 
-package EMBL::STAMP::DomIO;
-
-# TODO DEL
-use lib "../..";
+package EMBL::DomIO;
 
 use Spiffy -Base, -XXX;
 field 'fh';
 
+use lib "..";
 # TODO rename to EMBL::STAMP::Dom;
 use EMBL::CofM;
-
+use EMBL::Transform;
 
 ################################################################################
 
@@ -29,21 +27,25 @@ sub new() {
 
 
 # a EMBL::CofM and an open file handle
+# TODO BUG need a separate handle, opened for output
 sub write {
     my ($dom) = @_;
     my $fh = $self->fh;
-    print $fh $dom, "\n";
+#     print $fh $dom->dom(), "\n";
 }
 
 
 sub next_dom {
     my $fh = $self->fh;
     while (<$fh>) {
-        # Comments
-        next if /^\s+\%/;
+        chomp;
+        # Comments and blank lines
+        next if /^\s*\%/;
+        next if /^\s*$/;
+
         # Create/parse new domain header
-        unless (/^(\S+) (\S+) \{ ([^\}]+)/) {
-            print STDERR "Cannot parse: $_";
+        unless (/^(\S+)\s+(\S+)\s+\{ ([^}]+)\s+/) {
+            print STDERR "Cannot parse:$_:";
             return undef;
         }
 
@@ -51,7 +53,7 @@ sub next_dom {
         $dom->file($1);
         $dom->label($2);
         $dom->description($3);
-        
+
         # Header ends, i.e. contains no transformation
         if (/\}\s*$/) { 
             return $dom;
@@ -59,9 +61,11 @@ sub next_dom {
 
         # Parse transformtion
         my $transstr = $self->transstr;
-        my $trans = new EMBL::Transformation();
+        my $trans = new EMBL::Transform();
+#         print STDERR "transstr:$transstr:\n";
         $trans->loadstr($transstr);
-        $dom->cumulative($trans);
+#         print STDERR "trans:$trans:\n";
+        $dom->reset($trans);
         return $dom;
     }
     # End of file
@@ -72,9 +76,11 @@ sub transstr {
     my $transstr = shift;
     my $fh = $self->fh;
     while (<$fh>) {
-        chomp;
-        # Skip comments
-        next if /^\s+\%/;
+        # No chomp, keep this as CSV formatted text
+#         chomp;
+        # Comments and blank lines
+        next if /^\s*\%/;
+        next if /^\s*$/;
         $transstr .= $_;
         # Stop after a } has been encountered, and remove it
         last if $transstr =~ s/}//g;

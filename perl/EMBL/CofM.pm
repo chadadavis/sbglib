@@ -93,7 +93,7 @@ sub new() {
 # Sets the 'pt' field to a given 3-tuple (X,Y,Z)
 # Also sets 'rg' (radius of gyration), if given
 # Initialize with a 3-tuple of X,Y,Z coords
-sub set {
+sub init {
 #     $self->{pt}->slice('0,0:2') .= mpdl (@_[0..2]);
     $self->{pt} = mpdl (@_[0..2], 1);
     $self->rg($_[3]) if $_[3];
@@ -101,7 +101,14 @@ sub set {
 
 # Resets the cumulative Transform, but not the 'pt' field
 sub reset {
-    $self->cumulative(new EMBL::Transform);
+    my ($transform) = @_;
+    if (defined $transform) { 
+        $self->{tainted} = 1; 
+    } else {
+        $transform = new EMBL::Transform;
+        $self->{tainted} = 0; 
+    }
+    $self->cumulative($transform);
 }
 
 
@@ -127,12 +134,14 @@ sub dom {
              '{',
              $self->description,
         );
-    
-    if (defined $self->cumulative) {
-        $str .= " \n" . $self->cumulative->tostring . "}";
-    } else {
+
+    # Do not print transformation matrix, if it is still the identity
+    unless ($self->{tainted}) {
         $str .= " }";
+        return $str;
     }
+
+    $str .= " \n" . $self->cumulative->tostring . "}";
     return $str;
 }
 
@@ -179,8 +188,7 @@ sub apply {
     $self->{pt} = $newpt->transpose;
 
     # TODO DOC order of mat. mult.
-    $self->cumulative($self->cumulative * $transform);
-#         $self->cumulative($transform * $self->cumulative);
+    $self->reset($self->cumulative * $transform);
     return $self;
 }
 
@@ -252,7 +260,7 @@ sub fetch {
     $self->id($id) if $id;
     # Dont' overwrite any previously labelled
     $self->label($id) if (!$self->label() && $id);
-    $self->set($x, $y, $z) if ($x && $y && $z);
+    $self->init($x, $y, $z) if ($x && $y && $z);
     $self->rg($rg) if $rg;
     $self->file($file) if $file;
     $self->description($description) if $description;
