@@ -133,16 +133,15 @@ sub stringify {
 }
 
 
+# Number of components in this assembly
+sub ncomponents {
+    return scalar(keys %{$self->{cofm}});
+}
+
 # Dump domain IDs and their transformations in STAMP format
 # TODO DOC what do return vals mean
-sub save {
+sub write {
     my $file = shift;
-    my $n = keys %{$self->{cofm}};
-
-    if ($n < 3) {
-        print STDERR "Skipping dimeric assembly\n";
-        return 1;
-    }
 
     # Unique topology identifier:
     # For each edge, component names sorted, then edges sorted

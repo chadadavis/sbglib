@@ -155,7 +155,7 @@ sub do_edges2 {
 #                     "Duplicate Assembly: $assembly\n";
                 # Skip dup
             } else {
-                $assembly->save();
+                $assembly->write() if $assembly->ncomponents() > 2;
                 $self->{lastass} = $assembly;
             }
             return undef;
@@ -241,7 +241,7 @@ sub do_nodes2 {
                 # Skip dup
             } else {
                 # Partial solution
-                $assembly->save();
+                $assembly->write() if $assembly->ncomponents() > 2;
                 # Note this, so as not to duplicate it
                 $self->{lastass} = $assembly;
             }
