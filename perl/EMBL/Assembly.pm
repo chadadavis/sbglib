@@ -45,11 +45,14 @@ use Data::Dumper;
 
 # Allowed (linear) overlap between the spheres, that represent the proteins
 # Centre-of-mass + Radius-of-gyration
-# our $thresh = 30; # Angstrom
 # TODO IniFile
+
 # our $thresh = 20; # Angstrom
+# our $thresh = 25; # Angstrom
 # our $thresh = 30; # Angstrom
-our $thresh = 35; # Angstrom
+# our $thresh = 33; # Angstrom
+our $thresh = 35; # Angstrom # minimum for hexameric exosome
+
 
 
 ################################################################################
@@ -193,8 +196,12 @@ sub write {
 
         # Or try to give it the transform that was maintained here in Assembly
         my $cofm = $self->cofm($key);
-        my $transform = $self->transform($key);
-        print $fh $cofm->dom2($transform), "\n";
+
+#         my $transform = $self->transform($key);
+#         print $fh $cofm->dom2($transform), "\n";
+
+        # Try using the CofM::cumulative transform
+        print $fh $cofm->dom, "\n";
     }
     print $fh "\n";
     close $fh;

@@ -176,7 +176,8 @@ sub try_edge {
     # Structural compatibility test (backtrack on failure)
 #     my $success = try_interaction($ix);
 #     my $success = try_interaction2($traversal->assembly, $ix, $u, $v);
-    my $success = try_interaction2($assembly, $ix, $u, $v);
+#     my $success = try_interaction2($assembly, $ix, $u, $v);
+    my $success = try_interaction3($assembly, $ix, $u, $v);
 
 
 #     $traversal->set_state($edge_id . "success", $success);
@@ -220,9 +221,8 @@ sub try_interaction2 {
     print STDERR "\t$src($srcdom)->$dest($destdom)\n";
 
     # Get reference domain of $src 
-    # (base case: no prevoius structural constraint, implicitly sterically OK)
+    # (base case: no previous structural constraint, implicitly sterically OK)
     # This should only happen on the first edge processed
-
     if (! defined $assembly->transform($src)) {
         
         my $srccofm = new EMBL::CofM();
@@ -267,18 +267,10 @@ sub try_interaction2 {
     }
 
     # Product of relative with absolute transformation
+    # TODO DOC order of mat. mult.
 
 #     my $next_ref = $nexttrans * $reftrans;
     my $ref_next = $reftrans * $nexttrans;
-
-#      print STDERR 
-#          "nexttrans: $nexttrans\n",
-#          "reftrans: $reftrans\n",
-#          "next_ref: ", $next_ref, "\n",
-#          "ref_next: ", $ref_next, "\n",
-#          "nexttrans * reftrans: ", $nexttrans * $reftrans, "\n",
-#          "reftrans * nexttrans: ", $reftrans * $nexttrans, "\n",
-         ;
 
     # Then apply that transformation to the interaction partner $dest
     # Get CofM of dest template domain (the one to be transformed)
@@ -306,19 +298,68 @@ sub try_interaction2 {
         $assembly->cofm($dest, $destcofm);
     }
 
-#     print STDERR 
-#         "nexttrans: $nexttrans\n",
-#         "reftrans: $reftrans\n",
-#         "next_ref: ", $next_ref, "\n",
-#         "ref_next: ", $ref_next, "\n",
-#         ;
-
-
     print STDERR "\ttry_interaction ", $success ? "succeeded" : "failed", "\n";
-
     return $success;
 
 } # try_interaction2
+
+
+# TODO DOC:
+# Uses the hash saved in the interation object (set when templates loaded) to find out what templates used by which components on and edge in the interaction graph
+sub try_interaction3 {
+    my ($assembly, $iaction, $src, $dest) = @_;
+    my $success = 0;
+
+    # Lookup $src in $iaction to identify its monomeric template domain
+    my $srcdom = $iaction->{template}{$src};
+    my $destdom = $iaction->{template}{$dest};
+    print STDERR "\t$src($srcdom)->$dest($destdom)\n";
+
+    # Get reference domain of $src 
+    my $srccofm = $assembly->cofm($src);
+
+    unless (defined $srccofm) {
+        # base case: no previous structural constraint, implicitly sterically OK
+        $srccofm = new EMBL::CofM($src, $srcdom);
+        # Save CofM object for src component in assembly, indexed by $src
+        $assembly->cofm($src, $srccofm);
+        my $destcofm =  new EMBL::CofM($dest, $destdom);
+        $assembly->cofm($dest, $destcofm);
+        return $success = 1;
+    }
+
+    # Find the frame of reference for the source
+    # STAMP dom identifier (PDBID/CHAINID), TODO should be a descriptor
+    my $refdom = $srccofm->id;
+
+    # Superpose this template dom of the src component onto the reference dom
+    # TODO abstract this into a DB cache as well
+    my $nexttrans = stampfile($srcdom, $refdom);
+    if (! defined $nexttrans) { 
+        return $success = 0; 
+    }
+
+    # Then apply that transformation to the interaction partner $dest
+    # Get CofM of dest template domain (the one to be transformed)
+    # NB Any previous $assembly->cofm($dest) gets overwritten
+    my $destcofm =  new EMBL::CofM($dest, $destdom);
+
+    # Product of relative with absolute transformation
+    # TODO DOC order of mat. mult.
+    $destcofm->apply($srccofm->cumulative * $nexttrans);
+
+    # Check new coords of dest for clashes across currently assembly
+    $success = ! $assembly->clashes($destcofm);
+    if ($success) {
+        # Update frame-of-reference of interaction partner
+        $assembly->cofm($dest, $destcofm);
+    }
+
+    print STDERR "\ttry_interaction ", $success ? "succeeded" : "failed", "\n";
+    return $success;
+
+} # try_interaction3
+
 
 # Transformation will be relative to fram of reference of destdom
 sub stampfile {

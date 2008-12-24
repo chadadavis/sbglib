@@ -43,7 +43,7 @@ field 'id' => '';
 field 'file' => '';
 # STAMP descriptor (e.g. A 125 _ to A 555 _)
 field 'description' => '';
-# Ref to product of all Transform objects ever applied
+# Ref to Transform that is product of all Transform's ever applied
 field 'cumulative';
 
 use overload (
@@ -78,40 +78,47 @@ our $cofm = "/g/russell2/russell/c/cofm/cofm";
 
 =cut
 
+# Accepts a label (e.g. componentA) , and a PDBID/CHAIN ID (e.g. '2nn6A')
 sub new() {
     my $self = {};
     bless $self, shift;
     $self->{pt} = mpdl (0,0,0,1);
-    $self->init(@_) if @_;
-#     $self->reset();
-
-
+    my ($label, $pdbid_chainid) = @_;
+    $self->{label} = $label if $label;
+    $self->fetch($pdbid_chainid) if $pdbid_chainid;
+    $self->reset();
     return $self;
 } # new
 
-sub init {
-    # Initialize with a 3-tuple of X,Y,Z coords
-    $self->{pt}->slice('0,0:2') .= mpdl (@_[0..2]);
+# Sets the 'pt' field to a given 3-tuple (X,Y,Z)
+# Also sets 'rg' (radius of gyration), if given
+# Initialize with a 3-tuple of X,Y,Z coords
+sub set {
+#     $self->{pt}->slice('0,0:2') .= mpdl (@_[0..2]);
+    $self->{pt} = mpdl (@_[0..2], 1);
     $self->rg($_[3]) if $_[3];
 }
 
+# Resets the cumulative Transform, but not the 'pt' field
 sub reset {
     $self->cumulative(new EMBL::Transform);
 }
 
+
 # Return as 3-tuple 
-sub array {
+sub asarray {
     my @a = ($self->{pt}->at(0,0), $self->{pt}->at(0,1), $self->{pt}->at(0,2)); 
     return @a;
 }
 
 sub stringify {
-    my @a = ($self->label, $self->id, $self->array, $self->rg);
+    my @a = ($self->label, $self->id, $self->asarray, $self->rg);
     return "@a";
 }
 
 # Print in STAMP format, along with any transform that has been applied
 # TODO doc explain order of mat. mult.
+# This version uses the saved, cumulative Transformation
 sub dom {
     my $str = 
         join(" ",
@@ -129,29 +136,13 @@ sub dom {
     return $str;
 }
 
-# Don't use this. Rather use $self->cumulative transformation
-sub dom2 {
-    my $transformation = shift;
-    my $str = 
-        join(" ",
-             $self->file,
-             $self->label,
-             '{',
-             $self->description,
-        );
-    
-    if (defined $transformation) {
-        $str .= " \n" . $transformation->tostring . "}";
-    } else {
-        $str .= " }";
-    }
-    return $str;
-}
 
 # Apply transform from a file
 # Transform this point, using a STAMP tranform from the given file
 # File is actually just a space-separated CSV with a 3x4 matrix
 # I.e not a STAMP DOM file
+# Not currently used
+# TODO should be calling apply()
 sub ftransform {
     my $filepath = shift;
     chomp $filepath;
@@ -180,23 +171,17 @@ sub ftransform {
     return $self->{pt};
 }
 
-# Apply a given transform
-sub ttransform {
+
+# Apply transform to this point, and save cumulative transform
+sub apply {
     my $transform = shift;
+    my $newpt = $transform->{matrix} x $self->{pt}->transpose;
+    $self->{pt} = $newpt->transpose;
 
-#     print STDERR "CofM::transform self: $self\n";
-#     print STDERR "CofM::transform transform: $transform\n";
-#     print STDERR "matrix: ", $transform->{matrix}, "\n";
-#     print STDERR "pt: ", $self->{pt}, "\n";
-
-    # TODO DES this should be:
-    # $transform->applyto($self->{pt});
-
-    my $new = $transform->{matrix} x $self->{pt}->transpose;
-
-    # Save a ref to the last applied transform
-#     $self->update($transform);
-    return $self->{pt} = $new->transpose;
+    # TODO DOC order of mat. mult.
+    $self->cumulative($self->cumulative * $transform);
+#         $self->cumulative($transform * $self->cumulative);
+    return $self;
 }
 
 
@@ -213,17 +198,6 @@ sub rmsd {
     return $mean;
 }
 
-
-sub update {
-    my $t = shift;
-    if (defined($self->cumulative())) {
-        $self->cumulative($self->cumulative * $t);
-#         $self->cumulative($t * $self->cumulative);
-    } else {
-        $self->cumulative($t);
-    }
-    return $self;
-}
 
 # Extent to which two spheres overlap (linearly, i.e. not in terms of volume)
 # ... requires no sqrt calculation (which could be costly)
@@ -248,6 +222,7 @@ sub overlaps {
 
 # Update internal coords from DB, given PDB ID/chain ID
 # TODO combine this with run() below
+# TODO needs to accept a STAMP descriptor
 sub fetch {
     my $id = shift;
 
@@ -277,7 +252,7 @@ sub fetch {
     $self->id($id) if $id;
     # Dont' overwrite any previously labelled
     $self->label($id) if (!$self->label() && $id);
-    $self->init($x, $y, $z) if ($x && $y && $z);
+    $self->set($x, $y, $z) if ($x && $y && $z);
     $self->rg($rg) if $rg;
     $self->file($file) if $file;
     $self->description($description) if $description;

@@ -163,6 +163,7 @@ sub i {
     return $self->{matrix}->at(@_);
 }
 
+# Static function (i.e. class method)
 sub id {
     return mpdl [ [1,0,0,0], [0,1,0,0], [0,0,1,0], [0,0,0,1] ];
 }
