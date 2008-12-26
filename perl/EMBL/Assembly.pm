@@ -86,11 +86,11 @@ sub eq {
 
 # Index hash of EMBL::CofM, by component name
 sub cofm {
-    my ($id, $cofm) = @_;
+    my ($label, $cofm) = @_;
     if (defined $cofm) {
-        $self->{cofm}{$id} = $cofm;
+        $self->{cofm}{$label} = $cofm;
     }
-    return $self->{cofm}{$id};
+    return $self->{cofm}{$label};
 }
 
 # Index hash of EMBL::Transform, by component name
@@ -146,6 +146,8 @@ sub ncomponents {
 sub write {
     my $file = shift;
 
+    print STDERR "write\n";
+
     # Unique topology identifier:
     # For each edge, component names sorted, then edges sorted
     my @ikeys = keys %{$self->{interaction}};
@@ -174,6 +176,8 @@ sub write {
 
     open my $fh, ">out/$file" or return undef;
 
+
+
     print $fh "\% File: $file\n";
     print $fh "\% Assembly ID: $solutioni\n";
     print $fh "\% Topology cluster ID: $topoi\n";
@@ -192,15 +196,7 @@ sub write {
         print $fh "\% CHAIN ", chr($chainid++), " $key\n";
 
         # This uses the cumulative transform, maintained by CofM itself
-#         print $fh $self->cofm($key)->dom(), "\n";
-
-        # Or try to give it the transform that was maintained here in Assembly
         my $cofm = $self->cofm($key);
-
-#         my $transform = $self->transform($key);
-#         print $fh $cofm->dom2($transform), "\n";
-
-        # Try using the CofM::cumulative transform
         print $fh $cofm->dom, "\n";
     }
     print $fh "\n";
@@ -229,3 +225,6 @@ sub clashes {
     print STDERR "\t$newcofm fits\n";
     return 0;
 }
+
+################################################################################
+1;

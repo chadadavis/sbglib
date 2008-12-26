@@ -90,6 +90,16 @@ sub new() {
     return $self;
 } # new
 
+# Parse out the original ID, from the file name
+sub id_from_file {
+    my $file = $self->file;
+    return unless $file;
+    my (undef,$id) = m|.*/(pdb)?(.*?)\..*|;
+    print STDERR "$file=>$id\n";
+    $self->id($id);
+    return $id;
+}
+
 # Sets the 'pt' field to a given 3-tuple (X,Y,Z)
 # Also sets 'rg' (radius of gyration), if given
 # Initialize with a 3-tuple of X,Y,Z coords
@@ -349,3 +359,7 @@ sub fetchrun {
     return ($x, $y, $z, $rg, $file, $description);
 
 } # fetchrun
+
+################################################################################
+1;
+

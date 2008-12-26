@@ -34,6 +34,23 @@ sub write {
 #     print $fh $dom->dom(), "\n";
 }
 
+sub write_dom {
+
+}
+
+
+sub write_assembly {
+
+}
+
+sub next_assembly {
+    my $dom;
+    my $assem = new EMBL::Assembly();
+    while ($dom = $self->next_dom) {
+        # Add Dom to Assembly
+    }
+    
+}
 
 sub next_dom {
     my $fh = $self->fh;
@@ -51,6 +68,7 @@ sub next_dom {
 
         my $dom = new EMBL::CofM();
         $dom->file($1);
+        $dom->id_from_file();
         $dom->label($2);
         $dom->description($3);
 
@@ -62,9 +80,7 @@ sub next_dom {
         # Parse transformtion
         my $transstr = $self->transstr;
         my $trans = new EMBL::Transform();
-#         print STDERR "transstr:$transstr:\n";
         $trans->loadstr($transstr);
-#         print STDERR "trans:$trans:\n";
         $dom->reset($trans);
         return $dom;
     }
@@ -89,3 +105,5 @@ sub transstr {
 }
 
 
+################################################################################
+1;
