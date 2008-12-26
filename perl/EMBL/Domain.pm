@@ -2,24 +2,18 @@
 
 =head1 NAME
 
-EMBL::CofM - Centre of Mass (of a PDB protein chain)
+EMBL::Domain - Represents a STAMP domain
 
 =head1 SYNOPSIS
 
-use EMBL::CofM;
+use EMBL::Domain;
 
 =head1 DESCRIPTION
 
+Represents a single STAMP Domain, being a chain or sub-segment of a protein
+chain from a PDB entry.
 
-=head1 BUGS
-
-None known.
-
-=head1 REVISION
-
-$Id: Prediction.pm,v 1.33 2005/02/28 01:34:35 uid1343 Exp $
-
-=head1 APPENDIX
+=head1 Functions
 
 Details on functions implemented here are described below.
 Private internal functions are generally preceded with an _
@@ -28,26 +22,27 @@ Private internal functions are generally preceded with an _
 
 ################################################################################
 
-package EMBL::CofM;
+package EMBL::Domain;
 use Spiffy -Base, -XXX;
-# The centre of mass is a point (an mpdl)
+# The centre of mass is a point (as an mpdl, from PDL::Matrix)
 # Default: (0,0,0,1). For affine multiplication, hence additional '1'
-field 'pt';
+field 'cofm';
 # Radius of gyration
 field 'rg' => 0;
 # STAMP domain identifier (any label)
-field 'label' => '';
-# The original stamp identifier of structure (PDB/chain)
-field 'id' => '';
+field 'stampid' => '';
+# The original stamp identifier of structure
+# TODO BUG With or without chain ID ?
+field 'pdbidid' => '';
 # Path to PDB/MMol file
 field 'file' => '';
 # STAMP descriptor (e.g. A 125 _ to A 555 _)
-field 'description' => '';
+field 'descriptor' => '';
 # Ref to Transform that is product of all Transform's ever applied
-field 'cumulative';
+field 'transformation';
 
 use overload (
-    '""' => 'stringify',
+    '""' => 'asstring',
     '-' => 'rmsd',
     );
 
@@ -59,7 +54,6 @@ use File::Temp qw(tempfile);
 
 use Text::ParseWords;
 
-use lib "..";
 use EMBL::DB;
 use EMBL::Transform;
 
@@ -71,15 +65,16 @@ our $cofm = "/g/russell2/russell/c/cofm/cofm";
 =head2 new
 
  Title   : new
- Usage   : 
- Function: 
- Returns : 
- Args    :
+ Usage   : usage
+ Function: function
+ Returns : returns
+ Args    : args
+
+Accepts a label (e.g. componentA) , and a PDBID/CHAIN ID (e.g. '2nn6A')
 
 =cut
-
-# Accepts a label (e.g. componentA) , and a PDBID/CHAIN ID (e.g. '2nn6A')
-sub new() {
+# NB Spiffy requires () on constructors and Pdoc requires a space before the ()
+sub new () {
     my $self = {};
     bless $self, shift;
     $self->{pt} = mpdl (0,0,0,1);
@@ -89,6 +84,8 @@ sub new() {
     $self->reset();
     return $self;
 } # new
+
+
 
 # Parse out the original ID, from the file name
 sub id_from_file {
