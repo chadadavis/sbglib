@@ -3,9 +3,17 @@
 # TODO this needs to be integrated into Bioperl
 # In order to get around all the tmp file and file renaming junk
 
-package EMBL::DOMFile;
+package EMBL::STAMP;
 
-use Utils;
+require Exporter;
+our @ISA = qw(Exporter);
+# Automatically exported symbols
+our @EXPORT    = qw(stampfile );
+# Manually exported symbols
+our @EXPORT_OK = qw();
+
+
+# use Utils;
 
 # Creates ring/filamentous homo-oligomeric structures from monomers.  Applies
 # the given transformation to a chain and repeats the transformation on newly
@@ -14,19 +22,17 @@ use Utils;
 use File::Basename;
 
 # STAMP-formatted transformation file
-my $transfile = shift or die;
+# my $transfile = shift or die;
 # Extend this many times (e.g. 1 turns a monomer into a dimer)
-my $n = shift || 1;
+# my $n = shift || 1;
 
 ################################################################################
 
-my $base = basename($transfile, qw(.trans .dom));
-my %trans = parsetrans($transfile);
-
-for (my $i = 0; $i < $n; $i++) {
+# my $base = basename($transfile, qw(.trans .dom));
+# my %trans = parsetrans($transfile);
 
 
-}
+
 
 sub transform {
     my ($trans) = @_;
@@ -44,6 +50,48 @@ sub printtrans {
 
 
 }
+
+# returns EMBL::Transform
+# Transformation will be relative to fram of reference of destdom
+sub stampfile {
+    my ($srcdom, $destdom) = @_;
+
+    # STAMP uses lowercase chain IDs
+    $srcdom = lc $srcdom;
+    $destdom = lc $destdom;
+
+    if ($srcdom eq $destdom) {
+        # Return identity
+        return new EMBL::Transform;
+    }
+
+    print STDERR "\tSTAMP ${srcdom}->${destdom}\n";
+    my $dir = "/tmp/stampcache";
+    `mkdir /tmp/stampcache` unless -d $dir;
+#     my $file = "$dir/$srcdom-$destdom-FoR.csv";
+    my $file = "$dir/$srcdom-$destdom-FoR-s.csv";
+
+    if (-r $file) {
+        print STDERR "\t\tCached: ";
+        if (-s $file) {
+            print STDERR "positive\n";
+        } else {
+            print STDERR "negative\n";
+            return undef;
+        }
+    } else {
+        my $cmd = "./transform.sh $srcdom $destdom $dir";
+        $file = `$cmd`;
+    }
+
+    my $trans = new EMBL::Transform();
+    unless ($trans->loadfile($file)) {
+        print STDERR "\tSTAMP failed: ${srcdom}->${destdom}\n";
+        return undef;
+    }
+    return $trans;
+} 
+
 
 sub parsetrans {
     my ($transfile) = @_;
@@ -70,3 +118,5 @@ sub parsetrans {
 }
 
 
+################################################################################
+1;

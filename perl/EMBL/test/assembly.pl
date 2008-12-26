@@ -4,6 +4,8 @@ use strict;
 use warnings;
 use Data::Dumper;
 
+use PDL;
+
 use Graph;
 use Graph::Writer::Dot;
 use Graph::Writer::GraphViz;
@@ -17,6 +19,7 @@ use Bio::Network::Node;
 use Bio::Network::Edge;
 use Bio::Root::IO;
 
+
 # Non-CPAN libs
 use lib '..', "../..";
 use EMBL::DB;
@@ -27,8 +30,9 @@ use EMBL::Interaction;
 use EMBL::CofM;
 use EMBL::Sphere;
 use EMBL::Transform;
+use EMBL::STAMP; # stampfile
 
-use PDL;
+
 
 # Read IDs from a file, whitespace-separated
 # my $ids = read_components(shift);
@@ -361,44 +365,6 @@ sub try_interaction3 {
 } # try_interaction3
 
 
-# Transformation will be relative to fram of reference of destdom
-sub stampfile {
-    my ($srcdom, $destdom) = @_;
-
-    # STAMP uses lowercase chain IDs
-    $srcdom = lc $srcdom;
-    $destdom = lc $destdom;
-
-    if ($srcdom eq $destdom) {
-        # Return identity
-        return new EMBL::Transform;
-    }
-
-    print STDERR "\tSTAMP ${srcdom}->${destdom}\n";
-    my $dir = "/tmp/stampcache";
-#     my $file = "$dir/$srcdom-$destdom-FoR.csv";
-    my $file = "$dir/$srcdom-$destdom-FoR-s.csv";
-
-    if (-r $file) {
-        print STDERR "\t\tCached: ";
-        if (-s $file) {
-            print STDERR "positive\n";
-        } else {
-            print STDERR "negative\n";
-            return undef;
-        }
-    } else {
-        my $cmd = "./transform.sh $srcdom $destdom $dir";
-        $file = `$cmd`;
-    }
-
-    my $trans = new EMBL::Transform();
-    unless ($trans->loadfile($file)) {
-        print STDERR "\tSTAMP failed: ${srcdom}->${destdom}\n";
-        return undef;
-    }
-    return $trans;
-} 
 
 # Check DB cache first
 sub transform {
