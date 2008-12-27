@@ -1,19 +1,24 @@
 #!/usr/bin/env perl
 
-use strict;
-use warnings;
+use Test::More 'no_plan';
 
-use lib "..";
-use EMBL::CofM;
+use EMBL::Domain;
 use EMBL::Transform;
 
 use PDL;
 use PDL::Matrix;
-use PDL::Ufunc;
+# use PDL::Ufunc;
 
-# my $a = mpdl (0,0,0,1);
-# $a->slice('0,0:2') .= mpdl (1,2,3);
-# print "a:$a";
+my $dom = new EMBL::Domain();
+isa_ok($dom, "EMBL::Domain");
+isa_ok($dom->cofm, "PDL::Matrix");
+is($dom->cofm, mpdl (0,0,0,1), 'Identity 3-tuple centre-of-mass, affine');
+isa_ok($dom->transformation, "EMBL::Transform");
+is_deeply($dom->transformation, new EMBL::Transform, 'Identity Tranform, affine');
+
+
+
+__END__
 
 
 # Get transform to superimpose 2uzeA onto 2okrA
