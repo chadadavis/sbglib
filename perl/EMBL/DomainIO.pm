@@ -2,57 +2,94 @@
 
 # TODO POD
 
-# TODO use Spiffy
-
-package EMBL::DomIO;
+package EMBL::DomainIO;
 
 use Spiffy -Base, -XXX;
 field 'fh';
 
-use lib "..";
-# TODO rename to EMBL::STAMP::Dom;
-use EMBL::CofM;
+use base "Bio::Root::Root";
+
+use File::Temp qw(tempfile);
+use Carp;
+
+use EMBL::Domain;
 use EMBL::Transform;
 
 ################################################################################
 
 # TODO DOC
-sub new() {
-    my $self = {};
-    bless $self, shift;
-    my $fh = shift;
-    $self->{fh} = $fh;
+sub new () {
+    my $self = bless {}, shift;
+    # Params
+    my ($fh, $file) = 
+        $self->_rearrange(
+            [qw(FH FILE)], 
+            @_);
+
+    if ($file) {
+        $self->_open($file) or return undef;
+    } elsif ($fh) {
+        $self->fh($fh);
+    }
     return $self;
 }
 
+# File here also has the "<" or ">" part at the front
+sub _open {
+    my $file = shift;
+    my $fh;
+    unless (open($fh, $file)) {
+        print STDERR "$!\n";
+        return undef;
+    }
+    $self->fh($fh);
+    return $self;
+}
 
-# a EMBL::CofM and an open file handle
-# TODO BUG need a separate handle, opened for output
+sub close {
+    return close $self->fh;
+}
+
+
+
+################################################################################
+=head2 write
+
+ Title   : write
+ Usage   :
+ Function:
+ Example :
+ Returns : 
+ Args    : EMBL::Domain
+
+Print in STAMP format, along with any transform(s) that have been applied.
+
+TODO doc explain order of mat. mult.
+
+=cut
 sub write {
     my ($dom) = @_;
     my $fh = $self->fh;
-#     print $fh $dom->dom(), "\n";
-}
-
-sub write_dom {
-
-}
-
-
-sub write_assembly {
-
-}
-
-sub next_assembly {
-    my $dom;
-    my $assem = new EMBL::Assembly();
-    while ($dom = $self->next_dom) {
-        # Add Dom to Assembly
+    my $str = 
+        join(" ",
+             $dom->file,
+             $dom->stampid,
+             '{',
+             $dom->descriptor,
+        );
+    # Do not print transformation matrix, if it is still the identity
+    if ($dom->{tainted}) {
+        $str .= " \n" . $dom->transformation->print . "}";
+    } else {
+        $str .= " }";
     }
-    
-}
+    print $fh $str;
+    return $str;
 
-sub next_dom {
+} # write
+
+
+sub next_domain {
     my $fh = $self->fh;
     while (<$fh>) {
         chomp;
@@ -62,15 +99,15 @@ sub next_dom {
 
         # Create/parse new domain header
         unless (/^(\S+)\s+(\S+)\s+\{ ([^}]+)\s+/) {
-            print STDERR "Cannot parse:$_:";
+            carp "Cannot parse:$_:";
             return undef;
         }
 
-        my $dom = new EMBL::CofM();
+        my $dom = new EMBL::Domain();
         $dom->file($1);
         $dom->id_from_file();
-        $dom->label($2);
-        $dom->description($3);
+        $dom->stampid($2);
+        $dom->descriptor($3);
 
         # Header ends, i.e. contains no transformation
         if (/\}\s*$/) { 
@@ -81,7 +118,7 @@ sub next_dom {
         my $transstr = $self->transstr;
         my $trans = new EMBL::Transform();
         $trans->loadstr($transstr);
-        $dom->reset($trans);
+        $dom->transformation($trans);
         return $dom;
     }
     # End of file
@@ -102,6 +139,12 @@ sub transstr {
         last if $transstr =~ s/}//g;
     }
     return $transstr;
+}
+
+# TODO DOC
+sub pdbc {
+    my ($pdbidchid) = @_;
+    
 }
 
 

@@ -43,7 +43,7 @@ use overload (
     '*' => 'mult',
 #     '*=' => 'multeq',
 #     '=' => 'assign',
-    '""' => 'stringify',
+    '""' => 'asstring',
     );
 
 use lib "..";
@@ -169,13 +169,13 @@ sub id {
 }
 
 # For printing
-sub stringify {
+sub asstring {
     my ($self) = @_;
     return $self->{matrix};
 }
 
 # For saving, STAMP format
-sub tostring {
+sub print {
     my $self = shift;
     my $str;
     my $mat = $self->{matrix};
@@ -201,6 +201,13 @@ sub mult {
     my ($self, $other) = @_;
     my $m = $self->{matrix} x $other->{matrix};
     return new EMBL::Transform($m);
+}
+
+# Apply this transform to some point
+# If the thing needs to be transpose()'d, do that first
+sub transform {
+    my ($self, $thing) = @_;
+    return $self->{matrix} x $thing;
 }
 
 sub multeq {
