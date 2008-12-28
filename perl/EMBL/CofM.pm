@@ -6,15 +6,11 @@ EMBL::CofM - Computes STAMP centre-of-mass of an EMBL::Domain
 
 =head1 SYNOPSIS
 
-use EMBL::CofM;
+ use EMBL::CofM;
 
 =head1 DESCRIPTION
 
 
-=head1 Functions
-
-Details on functions implemented here are described below.
-Private internal functions are generally preceded with an _
 
 =cut
 
