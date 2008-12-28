@@ -65,7 +65,7 @@ use EMBL::Transform;
 =head2 new
 
  Title   : new
- Usage   : 
+ Usage   : my $dom = new EMBL::Domain(-stampid=>'mydom', -pdbid=>'2nn6');
  Function: 
  Returns : 
  Args    : 
@@ -74,18 +74,16 @@ Accepts a label (e.g. componentA) , and a PDBID/CHAIN ID (e.g. '2nn6A')
 
 =cut 
 # NB Spiffy requires () on constructors and Pdoc requires a space before the ()
+
 sub new () {
-    my $self = {};
-    bless $self, shift;
-    $self->{cofm} = mpdl (0,0,0,1);
+    my ($class, %o) = @_;
+    my $self = { %o };
+    bless $self, $class;
+    $self->_undash;
+
+    $self->{cofm} ||= mpdl (0,0,0,1);
     $self->reset();
 
-    my ($stampid, $pdbid, $descriptor) = 
-        $self->_rearrange(
-            [qw(STAMPID PDBID DESCRIPTOR)], 
-            @_);
-
-    $self->{stampid} = $stampid if $stampid;
 
 # TODO
 #     $self->fetch($pdbid_chainid) if $pdbid_chainid;
