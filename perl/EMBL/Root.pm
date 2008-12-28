@@ -2,19 +2,52 @@
 
 =head1 NAME
 
-EMBL::Root - 
+EMBL::Root - Base class of inheritance hierarchy, including useful tools
 
 =head1 SYNOPSIS
 
-use base 'EMBL::Root';
+Inherit from EMBL::Root (using L<Spiffy>)
+
+ use EMBL::Root -base;
+
+To also get the B<$self> variable automatically defined in your class methods:
+
+ use EMBL::Root -Base;
+
+nTo also get the useful B<YYY> debugging function (also from L<Spiffy>), use:
+
+ use EMBL::Root -Base, -XXX;
+
+Then you can simply prepend B<YYY> to any line of code to debug it
+
+ YYY my $x = some_function($params);
+
+To use the logging facility (L<Log::Log4perl>), just any of:
+
+ $logger->trace("x is $x");
+ $logger->debug("x is $x");
+ $logger->info("x is $x");
+ $logger->warn("x is $x");
+ $logger->error("x is $x");
+ $logger->fatal("x is $x");
+
+Using an initialisation file (B<embl.ini>) (via L<Config::IniFiles>) :
+
+ my $thresh = $config->val("MySection", "MyThreshold");
+
+This assumes there is a bit in the ini file like:
+
+ [MySection]
+ MyThreshold = 0.045
+
 
 =head1 DESCRIPTION
 
 
-=head1 Functions
 
-Details on functions implemented here are described below.
-Private internal functions are generally preceded with an _
+=head1 SEE ALSO
+
+L<Spiffy>, L<Bio::Root::Root>, L<Log::Log4perl>, L<Config::IniFiles>
 
 =cut
 
@@ -22,35 +55,56 @@ Private internal functions are generally preceded with an _
 
 package EMBL::Root;
 use Spiffy -base, -XXX;
-
-use base "Bio::Root::Root";
-
-use Carp;
-
 use Log::Log4perl qw(get_logger :levels);
 use Log::Dispatch;
-
 use FindBin;
 use File::Spec::Functions;
 use Config::IniFiles;
 
 our $logger;
-our $inicfg;
+our $config;
 
-our @EXPORT = qw($logger $inicfg);
+our @EXPORT = qw($logger $config);
+
+
+################################################################################
+=head2 undash
+
+ Title   : undash
+ Usage   :
+ Function:
+ Example :
+ Returns : 
+ Args    :
+
+Give a hash, or hash reference, remove an -dash from keynames.
+
+Useful in object constructors that receive named parameters as a hash.
+
+=cut
+sub _undash (\%) {
+    my $o = shift;
+    foreach my $old (keys %$o) {
+        my $new = $old;
+        $new =~ s/^-//;
+        $o->{$new} = $o->{$old};
+        delete $o->{$old};
+    }
+    return $o;
+} # _undash
 
 
 sub _init_ini {
 
     my $inifile = catdir($FindBin::RealBin, 'embl.ini');
-    our $inicfg = new Config::IniFiles(-file=>$inifile);
+    our $config = new Config::IniFiles(-file=>$inifile);
 
 }
 
 
 sub _init_log {
 
-    my $logfile = $inicfg->val('log','file') || 'log.log';
+    my $logfile = $config->val('log','file') || 'log.log';
 
     # Initialize system logger
     $logger = get_logger("embl");
