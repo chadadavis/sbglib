@@ -28,7 +28,6 @@ use EMBL::Seq;
 use EMBL::Node;
 use EMBL::Interaction;
 use EMBL::CofM;
-use EMBL::Sphere;
 use EMBL::Transform;
 use EMBL::STAMP; # stampfile
 
