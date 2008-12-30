@@ -119,167 +119,9 @@ sub parsetrans {
 }
 
 
-# -min_fit 30
-# -sc_cut 2.0
-sub do_stamp {
-    my $dom = shift;
-
-    my $stamp = $config->val('stamp', 'executable') || 'stamp';
-    my $min_fit = $config->val('stamp', 'min_fit') || 30;
-    my $sc_cut = $config->val('stamp', 'sc_cut') || 2.0;
-    my $min_sc_to_keep= $sc_cut;
-
-    my $stamp_pars = " -n 2 -slide 5 -s -secscreen F -scancut ".$sc_cut." -opd ";
+################################################################################
 
 
-    my $in = new EMBL::DomainIO(-file=>$dom);
-    my $out = new EMBL::DomainIO();
-    my $dom_s;
-    my %DOM;
-    while (my $dom = $in->next_domain) {
-        $DOM{$dom->stampid} = $out->write($dom);
-        $dom_s .= $dom->stampid . ' ';
-    }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    $tmp_probe = "tmp_".$$.".dom";
-    $tmp_doms = "tmp_db_".$$.".dom";
-    $tmp_prefix = "tmp_".$$;
-    $tmp_scan = $tmp_prefix . ".scan";
-    
-    $n_disjoins=0;
-    @DSET = keys %DOM;
-    $ndom = @DSET;
-    $probes_tried=0;
-    %TRIED = ();
-    %HAVE = ();
-    $probe = $DSET[0];
-    $missing = $ndom;
-    $in_disjoint=0;
-    if($ndom>=2) {
-        while(($missing>0) && ($probes_tried<$ndom)) {
-            if($probe eq "") { 
-                # Get another probe from the set that are included
-                foreach $dom (keys %HAVE) {
-                    if(!defined($TRIED{$dom})) { $probe = $dom; }
-                }
-            }
-            if($probe eq "") { # Get another probe from anywhere (i.e. unconnected now)
-                foreach $dom (@DSET) {
-                    if(!defined($TRIED{$dom})) { 
-                        $probe = $dom; 
-                        $in_disjoint=1;
-                        printf("%%Warning potential disjoint \n");
-                    }
-                }
-            }
-            if($probe eq "") {
-                printf("Out of probes and %d still missing\n",$missing);
-            }
-#  printf("STAMP_SET F %s P %s VS %d OF %d doms\n",$fold,$probe,$missing,$ndom);
-            open(OUT,">$tmp_probe") || die "Error writing $tmp_probe\n";
-            print OUT $DOM{$probe};
-            close(OUT);
-            open(OUT,">$tmp_doms") || die "Error writing $tmp_doms\n";
-            foreach $dom (@DSET) {
-                if((!defined($HAVE{$dom})) && ($dom ne $probe)) {
-                    print OUT $DOM{$dom};
-                    
-                }
-            }
-            close(OUT);
-            $com = $stamp . " " . $stamp_pars . " -l ".$tmp_probe." -prefix ".$tmp_prefix." -d ".$tmp_doms."|";
-            open(IN,"$com") || die "Error running/reading $com\n";
-            %KEEP = ();
-            while(<IN>) {
-                if((/^Scan/) && (!/skipped/) && (!/error/) && (!/missing/)) {
-                    chomp;
-                    print "%",$_;
-                    #Scan 1ddiA.c.25.1.4-1 1qfjB.c.25.1.1-1    1   5.772   1.816  153  135  162  102  102    9  19.61  82.35 7.27e-43
-                    @t = split(/\s+/);
-                    $id1 = $t[1];
-                    $id2 = $t[2];
-                    $sc = $t[4];
-                    $nfit = $t[9];
-                    if(($sc > 0.5) && (($sc>=$min_sc_to_keep) || ($nfit >= $min_fit))) {
-                        $HAVE{$id1}=1;
-                        $HAVE{$id2}=1;
-                        $KEEP{$id1}=1;
-                        $KEEP{$id2}=1;
-                        print " ** ";
-                    }
-                    print "\n";
-                }
-            }
-            close(IN);
-            $com = "sorttrans -f ".$tmp_scan." -s Sc 0.5 -i |";
-            open(IN,"$com") || die "Error running/reading $com\n";
-            $output=0;
-            $trans_s = "";
-            $good_trans=0; # Only good if something other than the probe is there
-            $nd=0;
-            while(<IN>) {
-                if((!/\%/) && (!/\#/)) {
-                    if(/\{/) {
-#         printf("Changed %s\n",$_);
-                        if($nd>0) {
-                            s/_[0-9]+ {/ {/
-                        }
-                        $nd++;
-#         printf("     to %s\n",$_);
-                        $id = (split(/\s+/,$_))[1];
-                        if(defined($KEEP{$id})) { 
-                            if($id ne $probe) { $good_trans=1 }
-                            $output=1;
-                        } else { 
-                            $output=0 
-                        }
-                    }
-                    if($output==1) { 
-                        $trans_s .= $_;
-                    }
-                }
-            }
-            
-            close(IN);
-
-            if($good_trans==1) {
-                print "%TRANS_BEGIN\n";
-                $trans_s_reordered = reorder($trans_s,$dom_s);
-                print $trans_s_reordered;
-                print "%TRANS_END\n";
-                if($in_disjoint==1) {
-                    $n_disjoins++;
-                }
-            }
-            
-            $TRIED{$probe}=1;
-            $probes_tried++;
-            $probe = "";
-            $missing = $ndom;
-            foreach $dom (keys %HAVE) { $missing-- }
-        }
-    }
-    printf("%%Summary %4d out of %4d domains linked using %4d probes giving a total of %4d trans files (when linked)\n", 
-           $ndom-$missing,$ndom,$probes_tried,$n_disjoins+1);
-
-    unlink $tmp_probe;
-    unlink $tmp_doms;
-    unlink $tmp_scan;
-
-} # do_stamp
 
 # Turns a string into array of EMBL::Domain, returns array ref
 sub string2doms {
@@ -333,7 +175,7 @@ sub reorder {
         if(($T[$i] !~ /^%/) && ($T[$i] =~ /{/)) { # end }
             # The stampid
             $id = (split(/\s+/,$T[$i]))[1];
-            printf("Here assigned id %s from %s\n",$id,$T[$i]);
+#             printf("Here assigned id %s from %s\n",$id,$T[$i]);
 
             # Index header lines by stampid
             $TR{$id} = $T[$i]."\n";

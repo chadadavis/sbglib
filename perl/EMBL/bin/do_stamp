@@ -1,11 +1,14 @@
-#!/usr/bin/perl -w
+#!/usr/bin/env perl
+
+use warnings;
 
 use EMBL::STAMP;
 use Carp;
+use Data::Dumper;
 
 my $dom = shift;
 unless ($dom) {
-    carp "Please specify as file of stamp formatted domains.";
+    carp "Please specify as file of stamp formatted domains.\n";
     return;
 }
 
@@ -25,26 +28,23 @@ my $out = new EMBL::DomainIO();
 my $dom_s;
 my %DOM;
 while (my $dom = $in->next_domain) {
-    $DOM{$dom->stampid} = $out->write($dom);
+    $DOM{$dom->stampid} = $out->write($dom, -newline=>1);
     $dom_s .= $dom->stampid . ' ';
 }
 
 unless (keys(%DOM) > 1) {
-    carp "Need at least two domains.";
+    carp "Need at least two domains.\n";
     return;
 }
 
 # tempfiles
-$tmp_probe = "tmp_".$$.".dom";
-$tmp_doms = "tmp_db_".$$.".dom";
-$tmp_prefix = "tmp_".$$;
+$tmp_prefix = "tmp_$$";
+$tmp_probe = $tmp_prefix . ".probe";
 $tmp_scan = $tmp_prefix . ".scan";
-
-
+$tmp_doms = $tmp_prefix . ".db";
 
 # Names of stampid's
 @DSET = keys %DOM;
-# $ndom = @DSET;
 
 %TRIED = ();
 %HAVE = ();
@@ -150,9 +150,16 @@ while(($missing>0) && ($probes_tried<@DSET)) {
     close(IN);
     if($good_trans==1) {
         print "%TRANS_BEGIN\n";
-#     $trans_s_reordered = reorder($trans_s,$dom_s);
+
+#         print STDERR "trans_s:\n$trans_s:\n";
 
         my $doms = string2doms($trans_s);
+        my $tmpout = new EMBL::DomainIO(-fh=>\*STDOUT);
+        for my $td (@$doms) {
+#             print "td: ", Dumper($td), ":\n";
+#             $tmpout->write($td,-newline=>1);
+        }
+
 #     print STDERR "doms:@$doms:\n";
         my @ordering = split(/\s+/, $dom_s);
 #     print STDERR "ordering:@ordering:\n";
@@ -160,6 +167,10 @@ while(($missing>0) && ($probes_tried<@DSET)) {
 #     print STDERR "ordered:@$ordered:\n";
         $trans_s_reordered = doms2string($ordered);
 #     print STDERR "string:$trans_s_reordered:\n";
+
+#         $trans_s_reordered = reorder($trans_s,$dom_s);
+
+
 
         print $trans_s_reordered;
         print "%TRANS_END\n";
@@ -177,7 +188,7 @@ while(($missing>0) && ($probes_tried<@DSET)) {
 
 
 printf("%%Summary %4d out of %4d domains linked using %4d probes giving a total of %4d trans files (when linked)\n", 
-       @DSET-$missing,@DSET,$probes_tried,$n_disjoins+1);
+       @DSET-$missing,scalar(@DSET),$probes_tried,$n_disjoins+1);
 
 unlink $tmp_probe;
 unlink $tmp_doms;
