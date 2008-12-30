@@ -72,7 +72,7 @@ sub dbconnect {
     if ($dbh) {
         $dbh{ $o{host} }{ $o{db} } = $dbh;
     } else {
-        carp "Cannot connect to DB '$o{db}' on host '$o{host}'";
+        carp "Cannot connect to DB '$o{db}' on host '$o{host}'\n";
     }
     return $dbh;
 

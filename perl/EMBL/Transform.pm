@@ -106,7 +106,7 @@ Matrix multiplication. Order of operations mattters.
 sub mult {
     my ($self, $other) = @_;
     unless (ref($other) eq __PACKAGE__) {
-        carp "Need to mult() objects of own type: " . __PACKAGE__;
+        carp "Need to mult() objects of own type: " . __PACKAGE__ . "\n";
         return undef;
     }
     my $m = $self->matrix x $other->matrix;

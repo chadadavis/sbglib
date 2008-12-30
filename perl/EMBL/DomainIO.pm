@@ -174,7 +174,7 @@ sub write {
     my $self = shift;
     my ($dom, %o) = @_;
     unless (ref($dom) eq 'EMBL::Domain') {
-        carp "Can only write() an EMBL::Domain";
+        carp "write() expected EMBL::Domain , got: " . ref($dom) . "\n";
         return;
     }
 
@@ -230,7 +230,7 @@ sub next_domain {
 
         # Create/parse new domain header
         unless (/^(\S+)\s+(\S+)\s+\{ ([^}]+)\s+/) {
-            carp "Cannot parse:$_:";
+            carp "Cannot parse:$_:\n";
             return undef;
         }
 

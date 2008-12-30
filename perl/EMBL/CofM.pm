@@ -67,7 +67,7 @@ sub query {
                            "where cofm.id_entity=entity.id and " .
                            "(entity.acc=? or entity.acc=?)");
     unless ($sth) {
-        carp $dbh->errstr;
+        carp $dbh->errstr, "\n";
         return undef;
     }
 
@@ -75,7 +75,7 @@ sub query {
     my $pdbstr = "pdb|$pdbid|$chainid";
     my $pqsstr = "pqs|$pdbid|$chainid";
     if (! $sth->execute($pdbstr, $pqsstr)) {
-        carp $sth->errstr;
+        carp $sth->errstr, "\n";
         return undef;
     }
 
@@ -114,7 +114,7 @@ sub run {
     $io->write($dom, -id=>'pdbid');
     $io->flush;
     unless (-s $path) {
-        carp "Failed to write Domain to $path";
+        carp "Failed to write Domain to $path\n";
         return;
     }
 
