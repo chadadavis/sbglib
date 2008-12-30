@@ -45,7 +45,7 @@ system("cat $outfile");
 ok(unlink($outfile), "Removing $outfile");
 
 # Test pdbc
-my $dom = pdbc(-pdbid=>'2nn6', -chainid=>'A')->next_domain();
+my $dom = pdbc('2nn6', 'A')->next_domain();
 is($dom->stampid, '2nn6a', 'pdbc');
 
 # Domain without a file

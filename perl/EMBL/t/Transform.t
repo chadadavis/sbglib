@@ -8,8 +8,8 @@ use EMBL::Transform;
 
 # Locally computed transform
 
-my $d2uzeA = pdbc(-pdbid=>'2uze', -chainid=>'A')->next_domain();
-my $d2okrA = pdbc(-pdbid=>'2okr', -chainid=>'A')->next_domain();
+my $d2uzeA = pdbc('2uze', 'A')->next_domain();
+my $d2okrA = pdbc('2okr', 'A')->next_domain();
 
 # Get transform to superimpose 2uzeA onto 2okrA
 my $transtxt = `../bin/transform.sh 2uzeA 2okrA`;
@@ -18,7 +18,7 @@ $trans->loadfile($transtxt);
 
 # Transform 2uzeC using transformation from 2uzeA => 2okrA
 # i.e. Put 2uzeC into 2okrA's frame of reference
-my $d2uzeC = pdbc(-pdbid=>'2uze', -chainid=>'C')->next_domain();
+my $d2uzeC = pdbc('2uze', 'C')->next_domain();
 
 print "d2uzeC:$d2uzeC:\n";
 $d2uzeC->transform($trans);

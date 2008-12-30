@@ -293,31 +293,31 @@ sub _read_trans {
 =head2 pdbc
 
  Title   : pdbc
- Usage   : pdbc((-pdbid=>'2nn6');
+ Usage   : pdbc('2nn6');
+           pdbc('2nn6', 'A', 'B');
+           pdbc('2nn6A', 'F');
  Function: Runs STAMP's pdbc and opens its output as the internal input stream.
- Example : my $domio = pdbc(-pdbid=>'2nn6');
+ Example : my $domio = pdbc('2nn6');
            my $dom = $domio->next_domain();
            # or all in one:
-           my $dom = pdbc(-pdbid=>'2nn6')->next_domain();
+           my $first_dom = pdbc(-pdbid=>'2nn6')->next_domain();
  Returns : $self (success) or undef (failure)
- Args    : -pdbid - PDB ID
-           -chainid - Optional, chain ID (otherwise all chains)
+ Args    : @ids - begins with one PDB ID, followed by any number of chain IDs
 
 Depending on the configuration of STAMP, domains may be searched in PQS first.
 
  my $io = new EMBL::DomainIO;
- $io->pdbc(-pdbid=>'2nn6');
+ $io->pdbc('2nn6');
  # Get the first domain (i.e. chain) from 2nn6
+ my $dom = $io->next_domain;
 
 =cut
 sub pdbc {
-    my %o = @_;
-    EMBL::Root::_undash(%o);
-    return 0 unless $o{'pdbid'};
-    $o{'chainid'} ||= '';
+    my $str = join("", @_);
+    return unless $str;
     my (undef, $path) = tempfile();
     my $cmd;
-    $cmd = "pdbc -d $o{pdbid}$o{chainid} > ${path}";
+    $cmd = "pdbc -d $str > ${path}";
     # NB checking system()==0 fails, even when successful
     system($cmd);
     # So, just check that file was written to instead
