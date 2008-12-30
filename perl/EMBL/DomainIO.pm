@@ -1,95 +1,226 @@
 #!/usr/bin/env perl
 
-# TODO POD
+=head1 NAME
+
+EMBL::Domain - Represents a STAMP domain
+
+=head1 SYNOPSIS
+
+ use EMBL::DomainIO;
+
+ my $file = "domains.dom";
+ my $io = new EMBL::DomainIO(-file=>"<$file");
+ 
+ # Read all domains from a dom file
+ my @doms;
+ while (my $dom = $io->next_domain) {
+     push @doms, $dom;
+ }
+ print "Read in " . scalar(@doms) . " domains\n";
+
+ # Write domains
+ my $outfile = ">results.dom";
+ my $ioout = new EMBL::DomainIO(-file=>">$outfile");
+ foreach my $d (@doms) {
+     $ioout->write($d, 1); # Appending 1 also prints newline
+ }
+
+
+=head1 DESCRIPTION
+
+Represents a single STAMP Domain, being a chain or sub-segment of a protein
+chain from a PDB entry.
+
+=head1 SEE ALSO
+
+L<EMBL::Domain> , L<EMBL::CofM>
+
+=cut
+
+################################################################################
 
 package EMBL::DomainIO;
+use EMBL::Root -base, -XXX;
 
-use Spiffy -Base, -XXX;
 field 'fh';
+field 'file';
 
-use base "Bio::Root::Root";
+our @EXPORT = qw(pdbc);
 
+use warnings;
 use File::Temp qw(tempfile);
 use Carp;
 
 use EMBL::Domain;
 use EMBL::Transform;
 
+
 ################################################################################
+=head2 new
 
-# TODO DOC
+ Title   : new
+ Usage   : my $input = new EMBL::DomainIO(-file=>"<file.dom");
+           my $input = new EMBL::DomainIO(-fh=>\*STDIN);
+ Function: Open a new input stream to a STAMP domain file
+ Example : my $input = new EMBL::DomainIO(-file=>"<file.dom");
+ Returns : Instance of L<EMBL::DomainIO>
+ Args    : -file - Path to domain file to open, including preceeding "<" or ">"
+           -fh - An already opened file handle to read domains from
+
+=cut
 sub new () {
-    my $self = bless {}, shift;
-    # Params
-    my ($fh, $file) = 
-        $self->_rearrange(
-            [qw(FH FILE)], 
-            @_);
+    my ($class, %o) = @_;
+    my $self = { %o };
+    bless $self, $class;
+    $self->_undash;
 
-    if ($file) {
-        $self->_open($file) or return undef;
-    } elsif ($fh) {
-        $self->fh($fh);
+    if ($self->file) {
+        $self->_open() or return undef;
     }
-    return $self;
-}
 
-# File here also has the "<" or ">" part at the front
+    return $self;
+} # new
+
+
+################################################################################
+=head2 _open
+
+ Title   : _open
+ Usage   : $self->_open("<file.dom");
+ Function: Opens the internal file handle on the file path given
+ Example : $self->_open("<file.dom");
+ Returns : $self
+ Args    : file - Path to file to open for reading, including the  "<" or ">"
+
+=cut
 sub _open {
-    my $file = shift;
+    my $self = shift;
+    my $file = shift || $self->file;
+    if ($self->fh) {
+        close $self->fh;
+        delete $self->{'fh'};
+    }
     my $fh;
     unless (open($fh, $file)) {
-        print STDERR "$!\n";
+        carp "Cannot read $file: $!\n";
         return undef;
     }
     $self->fh($fh);
     return $self;
-}
+} # _open
 
+
+################################################################################
+=head2 close
+
+ Title   : close
+ Usage   : $domainio->close;
+ Function: Closes the internal file handle
+ Example : $domainio->close;
+ Returns : result of close()
+ Args    : NA
+
+Should not generally need to be explicitly called.
+
+=cut
 sub close {
-    return close $self->fh;
+    my $self = shift;
+    return $self->fh()->close;
 }
 
+
+################################################################################
+=head2 flush
+
+ Title   : flush
+ Usage   : $domainio->flush;
+ Function: Flushes the internal file handle
+ Example : $domainio->flush;
+ Returns : result of flush()
+ Args    : NA
+
+Should not generally need to be explicitly called.
+
+=cut
+sub flush {
+    my $self = shift;
+    return $self->fh()->flush;
+}
 
 
 ################################################################################
 =head2 write
 
  Title   : write
- Usage   :
- Function:
- Example :
- Returns : 
- Args    : EMBL::Domain
+ Usage   : $output->write($dom);
+ Function: Writes given domain object to the output stream
+ Example : (see below)
+ Returns : The string that was printed to the stream
+ Args    : L<EMBL::Domain> - A domain, may contain an L<EMBL::Transform>
+           -id Print 'pdbid' or 'stampid' (default) as domain label
+           -newline If true, also prints a newline after the domain
+           -fh another file handle
 
-Print in STAMP format, along with any transform(s) that have been applied.
+Prints in STAMP format, along with any transform(s) that have been applied.
 
-TODO doc explain order of mat. mult.
+ my $outfile = ">results.dom";
+ my $ioout = new EMBL::DomainIO(-file=>">$outfile");
+ foreach my $d (@doms) {
+     $ioout->write($d, 1); # Appending 1 also prints newline
+ }
 
 =cut
 sub write {
-    my ($dom) = @_;
+    my $self = shift;
+    my ($dom, %o) = @_;
+    unless (ref($dom) eq 'EMBL::Domain') {
+        carp "Can only write() an EMBL::Domain";
+        return;
+    }
+
     my $fh = $self->fh;
+    $fh = $o{-fh} if defined $o{-fh};
+    my $id = $o{-id} || 'stampid';
     my $str = 
         join(" ",
              $dom->file,
-             $dom->stampid,
+             $dom->{$id},
              '{',
              $dom->descriptor,
         );
-    # Do not print transformation matrix, if it is still the identity
+    # Do not print transformation matrix if it is still the identity (unchanged)
     if ($dom->{tainted}) {
         $str .= " \n" . $dom->transformation->print . "}";
     } else {
         $str .= " }";
     }
-    print $fh $str;
+    $str .= "\n" if $o{-newline};
+    defined($fh) and print $fh $str;
     return $str;
 
 } # write
 
 
+################################################################################
+=head2 next_domain
+
+ Title   : next_domain
+ Usage   : my $dom = $io->next_domain();
+ Function: Reads the next domain from the stream and make an L<EMBL::Domain>
+ Example : (see below)
+ Returns : An L<EMBL::Domain>
+ Args    : NA
+
+ # Read all domains from a dom file
+ my @doms;
+ while (my $dom = $io->next_domain) {
+     push @doms, $dom;
+ }
+ print "Read in " . scalar(@doms) . " domains\n";
+
+=cut
 sub next_domain {
+    my $self = shift;
     my $fh = $self->fh;
     while (<$fh>) {
         chomp;
@@ -105,7 +236,7 @@ sub next_domain {
 
         my $dom = new EMBL::Domain();
         $dom->file($1);
-        $dom->id_from_file();
+        $dom->file2pdbid(); # Parses out PDB ID from filename
         $dom->stampid($2);
         $dom->descriptor($3);
 
@@ -115,19 +246,35 @@ sub next_domain {
         }
 
         # Parse transformtion
-        my $transstr = $self->transstr;
-        my $trans = new EMBL::Transform();
-        $trans->loadstr($transstr);
+        my $transstr = $self->_read_trans;
+        my $trans = new EMBL::Transform(-string=>$transstr);
         $dom->transformation($trans);
         return $dom;
     }
     # End of file
     return undef;
-} # next_dom
+} # next_domain
 
-sub transstr {
-    my $transstr = shift;
-    my $fh = $self->fh;
+
+
+################################################################################
+=head2 _read_trans
+
+ Title   : _read_trans
+ Usage   : my $trans_string = $self->_read_trans();
+ Function: Reads a transformation matrix from the internal stream
+ Example : my $trans_string = $self->_read_trans();
+ Returns : Transformation matrix (3x4) as a 3-lined CSV string
+ Args    : fh - An openeded file handle to read from, if not the internal one
+
+Returned string is in CSV format, whitespace-separated, including newlines.
+Matrix is 3x4 (3 rows, 4 cols).
+
+=cut
+sub _read_trans {
+    my $self = shift;
+    my $fh = shift || $self->fh;
+    my $transstr;
     while (<$fh>) {
         # No chomp, keep this as CSV formatted text
 #         chomp;
@@ -141,11 +288,46 @@ sub transstr {
     return $transstr;
 }
 
-# TODO DOC
+
+################################################################################
+=head2 pdbc
+
+ Title   : pdbc
+ Usage   : pdbc((-pdbid=>'2nn6');
+ Function: Runs STAMP's pdbc and opens its output as the internal input stream.
+ Example : my $domio = pdbc(-pdbid=>'2nn6');
+           my $dom = $domio->next_domain();
+           # or all in one:
+           my $dom = pdbc(-pdbid=>'2nn6')->next_domain();
+ Returns : $self (success) or undef (failure)
+ Args    : -pdbid - PDB ID
+           -chainid - Optional, chain ID (otherwise all chains)
+
+Depending on the configuration of STAMP, domains may be searched in PQS first.
+
+ my $io = new EMBL::DomainIO;
+ $io->pdbc(-pdbid=>'2nn6');
+ # Get the first domain (i.e. chain) from 2nn6
+
+=cut
 sub pdbc {
-    my ($pdbidchid) = @_;
-    
-}
+    my %o = @_;
+    EMBL::Root::_undash(%o);
+    return 0 unless $o{'pdbid'};
+    $o{'chainid'} ||= '';
+    my (undef, $path) = tempfile();
+    my $cmd;
+    $cmd = "pdbc -d $o{pdbid}$o{chainid} > ${path}";
+    # NB checking system()==0 fails, even when successful
+    system($cmd);
+    # So, just check that file was written to instead
+    unless (-s $path) {
+        carp "Failed: $cmd : $!\n";
+        return 0;
+    }
+    return new EMBL::DomainIO(-file=>"<$path");
+
+} # pdbc
 
 
 ################################################################################
