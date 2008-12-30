@@ -14,7 +14,7 @@ To also get the B<$self> variable automatically defined in your class methods:
 
  use EMBL::Root -Base;
 
-nTo also get the useful B<YYY> debugging function (also from L<Spiffy>), use:
+To also get the useful B<YYY> debugging function (also from L<Spiffy>), use:
 
  use EMBL::Root -Base, -XXX;
 
@@ -43,11 +43,11 @@ This assumes there is a bit in the ini file like:
 
 =head1 DESCRIPTION
 
-
+Root class to be inherited from by all other classes.
 
 =head1 SEE ALSO
 
-L<Spiffy>, L<Bio::Root::Root>, L<Log::Log4perl>, L<Config::IniFiles>
+L<Spiffy>, L<Log::Log4perl>, L<Config::IniFiles>
 
 =cut
 
@@ -55,6 +55,8 @@ L<Spiffy>, L<Bio::Root::Root>, L<Log::Log4perl>, L<Config::IniFiles>
 
 package EMBL::Root;
 use Spiffy -base, -XXX;
+
+use warnings;
 use Log::Log4perl qw(get_logger :levels);
 use Log::Dispatch;
 use FindBin;
@@ -68,20 +70,32 @@ our @EXPORT = qw($logger $config);
 
 
 ################################################################################
-=head2 undash
+=head2 _undash
 
- Title   : undash
- Usage   :
- Function:
- Example :
- Returns : 
- Args    :
+ Title   : _undash
+ Usage   : _undash(%some_hash); # or for objects: $self->_undash();
+ Function: Remove any leading '-' character from keynames in hash
+ Example : (see below)
+ Returns : Reference to the modified hash. 
+ Args    : hash
 
-Give a hash, or hash reference, remove an -dash from keynames.
+Give a hash, or hash reference, remove any preceeding dash ('-') from keynames.
 
-Useful in object constructors that receive named parameters as a hash.
+Modifies the given hash, and returns a reference to it as well. I.e. call by
+reference semantics.
+
+Useful in object constructors that receive named parameters as a hash. E.g
+
+ sub new () {
+     my ($class, %o) = @_;
+     my $self = { %o };
+     bless $self, $class;
+     $self->_undash;
+     return $self;
+ }
 
 =cut
+
 sub _undash (\%) {
     my $o = shift;
     foreach my $old (keys %$o) {

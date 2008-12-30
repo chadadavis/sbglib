@@ -29,6 +29,7 @@ use EMBL::Root -base, -XXX;
 
 our @EXPORT = qw(dbconnect);
 
+use warnings;
 use DBI;
 use Carp;
 
