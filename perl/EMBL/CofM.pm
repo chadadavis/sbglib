@@ -153,11 +153,11 @@ sub run {
 =head2 get_cofm
 
  Title   : get_cofm
- Usage   :
- Function:
- Example :
- Returns : 
- Args    :
+ Usage   : get_cofm($dom)
+ Function: Sets the center of mass of an L<EMBL::Domain>
+ Example : get_cofm($dom)
+ Returns : The $dom, now containing $dom->cofm;
+ Args    : L<EMBL::Domain>
 
 Gets centre-of-mass of an EMBL::Domain.
 
