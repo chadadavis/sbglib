@@ -61,12 +61,15 @@ use Log::Log4perl qw(get_logger :levels);
 use Log::Dispatch;
 use FindBin;
 use File::Spec::Functions;
+use File::Basename;
 use Config::IniFiles;
+use Carp;
 
+our $installdir;
 our $logger;
 our $config;
 
-our @EXPORT = qw($logger $config);
+our @EXPORT = qw($installdir $logger $config);
 
 
 ################################################################################
@@ -108,16 +111,33 @@ sub _undash (\%) {
 } # _undash
 
 
-sub _init_ini {
+sub _init_dir {
 
-    my $inifile = catdir($FindBin::RealBin, 'embl.ini');
-    our $config = new Config::IniFiles(-file=>$inifile);
+    my $package_name = __PACKAGE__;
+    $package_name =~ s/::/\//g;
+    $package_name .= '.pm';
+    my $path = $INC{$package_name} || '';
+    our $installdir = dirname($path);
 
 }
 
 
+sub _init_ini {
+    our $installdir;
+    my $inifile = shift || catdir($installdir, 'embl.ini');
+    our $config;
+    unless (-r $inifile) {
+        carp "No configuration: $inifile\n";
+        $config = new Config::IniFiles;
+    } else {
+        $config = new Config::IniFiles(-file=>$inifile);
+    }
+} # _init_ini
+
+
 sub _init_log {
 
+    # In the working directory
     my $logfile = $config->val('log','file') || 'log.log';
 
     # Initialize system logger
@@ -146,6 +166,8 @@ sub _init_log {
 
 
 BEGIN {
+
+    _init_dir();
     _init_ini();
     _init_log();
 }
