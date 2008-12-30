@@ -213,7 +213,7 @@ sub transformation {
 
  Title   : reset
  Usage   : $dom->reset;
- Function: Sets the 'transformation' to the identity and marks it 'unmodified'
+ Function: Resets the 'transformation' to the identity;
  Example : $dom->reset;
  Returns : The new value of 'transformation', i.e. an identity.
  Args    : NA
@@ -222,7 +222,6 @@ Resets the internal Transform, but not the centre of mass ('cofm');
 
 =cut
 sub reset {
-    $self->{tainted} = 0; 
     return $self->{transformation} = new EMBL::Transform;
 }
 

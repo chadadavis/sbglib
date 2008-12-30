@@ -189,8 +189,8 @@ sub write {
              $dom->descriptor,
         );
     # Do not print transformation matrix if it is still the identity (unchanged)
-    if ($dom->{tainted}) {
-        $str .= " \n" . $dom->transformation->print . "}";
+    if ($dom->transformation->tainted) {
+        $str .= " \n" . $dom->transformation->asstamp . "}";
     } else {
         $str .= " }";
     }

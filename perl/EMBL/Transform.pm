@@ -30,6 +30,7 @@ our @EXPORT = qw(onto);
 field 'matrix';
 field 'string';
 field 'file';
+field 'tainted';
 
 use overload (
     '*' => 'mult',
@@ -64,13 +65,33 @@ sub new () {
     } elsif (defined $self->{file}) {
         $self->_from_file;
     } elsif (defined $self->{matrix}) {
-        # Already there
+        # Note that matrix is set
+        $self->tainted(1);
     } else {
-        $self->{matrix} = idtransform();
+        $self->reset();
     }
     return $self;
 } # new
 
+
+################################################################################
+=head2 reset
+
+ Title   : reset
+ Usage   : $transf->reset;
+ Function: Resets the 'transformation' to the identity;
+ Example : $transf->reset;
+ Returns : The new value of matrix, i.e. an identity.
+ Args    : NA
+
+Resets the internal matrix
+
+=cut
+sub reset {
+    my $self = shift;
+    $self->tainted(0);
+    return $self->matrix(idtransform());
+}
 
 ################################################################################
 =head2 idtransform
@@ -212,6 +233,7 @@ sub _from_file {
 
     # Finally, make it an mpdl, 
     $self->{matrix} = mpdl $rasc;
+    $self->tainted(1);
     return $self;
 } # _from_file
 
@@ -257,6 +279,7 @@ sub _from_string {
 
     # Finally, make it an mpdl, 
     $self->{matrix} = mpdl $rasc;
+    $self->tainted(1);
     return $self;
 } # _from_string
 
