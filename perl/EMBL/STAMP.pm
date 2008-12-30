@@ -293,6 +293,7 @@ sub string2doms {
     return \@doms;
 }
 
+# TODO get this working on arbitrary fields, other than stampid
 sub reorder2 {
     my ($ordering, $objects, $func) = @_;
     # First put the objects into a dictionary, indexed by $func
