@@ -175,24 +175,25 @@ sub asstring {
 
 
 ################################################################################
-=head2 asstamp
+=head2 ascsv
 
- Title   : asstamp
+ Title   : ascsv
  Usage   :
  Function:
  Example :
  Returns : 
- Args    :
+ Args    : -explicit - even print if only the identity matrix
 
-For saving, STAMP format
+For saving, CSV format
 
 =cut
-sub asstamp {
-    my $self = shift;
-    my $str;
-    my $mat = $self->matrix;
+sub ascsv {
+    my ($self, %o) = @_;
+    return "" unless $self->tainted || defined $o{-explicit};
 
+    my $mat = $self->matrix;
     my ($n,$m) = $mat->dims;
+    my $str;
     # Don't do the final row (affine). Stop at $n - 1
     for (my $i = 0; $i < $n - 1; $i++) {
         for (my $j = 0; $j < $m; $j++) {

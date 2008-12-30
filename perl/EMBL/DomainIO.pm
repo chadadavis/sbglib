@@ -188,12 +188,9 @@ sub write {
              '{',
              $dom->descriptor,
         );
-    # Do not print transformation matrix if it is still the identity (unchanged)
-    if ($dom->transformation->tainted) {
-        $str .= " \n" . $dom->transformation->asstamp . "}";
-    } else {
-        $str .= " }";
-    }
+    my $transstr = $dom->transformation->ascsv;
+    # Append any transformation
+    $str .= $transstr ? (" \n${transstr}\}") : " \}";
     $str .= "\n" if $o{-newline};
     defined($fh) and print $fh $str;
     return $str;
