@@ -172,6 +172,10 @@ Prints in STAMP format, along with any transform(s) that have been applied.
      $ioout->write($d);
  }
 
+Or, to just convert to a string, without any file I/O:
+
+ my $str = new EMBL::DomainIO->write($dom);
+
 =cut
 sub write {
     my $self = shift;
