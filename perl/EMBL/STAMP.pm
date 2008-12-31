@@ -17,7 +17,7 @@ Also fetches radius of gyration of the centre of mass.
 
 =head1 SEE ALSO
 
-L<EMBL::Domain>
+L<EMBL::Domain> , L<EMBL::DomainIO>
 
 =cut
 
@@ -42,90 +42,26 @@ use EMBL::DomainIO;
 ################################################################################
 
 
-# TODO DES
+# Converts an array of L<EMBL::Domain>s to a PDB file
+# returns Path to PDB file, if successful
 sub transform {
-    my ($transfile) = @_;
-
-    system("transform -f $transfile -g -o out.pdb") == 0 or
-        die("$!");
-    rename "out.pdb", "in.pdb";
-
-}
-
-
-# returns EMBL::Transform
-# Transformation will be relative to fram of reference of destdom
-sub stampfile {
-    my ($srcdom, $destdom) = @_;
-
-    # STAMP uses lowercase chain IDs
-    $srcdom = lc $srcdom;
-    $destdom = lc $destdom;
-
-    if ($srcdom eq $destdom) {
-        # Return identity
-        return new EMBL::Transform;
+    my ($doms, $pdbfile) = @_;
+    (undef, $pdbfile) = tempfile unless $file;
+    my (undef, $transfile) = tempfile;
+    
+    my $cmd = "transform -f ${transfile} -g -o $pdbfile";
+    system($cmd);
+    unless (-s $pdbfile) {
+        carp "Failed:\n\t$cmd\n";
+        return;
     }
-
-    print STDERR "\tSTAMP ${srcdom}->${destdom}\n";
-    my $dir = "/tmp/stampcache";
-    `mkdir /tmp/stampcache` unless -d $dir;
-#     my $file = "$dir/$srcdom-$destdom-FoR.csv";
-    my $file = "$dir/$srcdom-$destdom-FoR-s.csv";
-
-    if (-r $file) {
-        print STDERR "\t\tCached: ";
-        if (-s $file) {
-            print STDERR "positive\n";
-        } else {
-            print STDERR "negative\n";
-            return undef;
-        }
-    } else {
-        my $cmd = "./transform.sh $srcdom $destdom $dir";
-        $file = `$cmd`;
-    }
-
-    my $trans = new EMBL::Transform();
-    unless ($trans->loadfile($file)) {
-        print STDERR "\tSTAMP failed: ${srcdom}->${destdom}\n";
-        return undef;
-    }
-    return $trans;
-} 
-
-
-# TODO DEL
-# This is already in DomainIO
-sub parsetrans {
-    my ($transfile) = @_;
-    open(my $fh, $transfile);
-    my %all;
-    $all{'copy'} = [];
-    my @existing;
-    while (<$fh>) {
-        next if /^%/;
-        if (/^(\S+) (\S+) \{ ([^\}]+)/) {
-            $all{'file'} = $1;
-            $all{'name'} = $2;
-            $all{'dom'} = $3;
-            # The last line here includes a trailing }
-            $all{'transform'} = [ <>, <>, <> ];
-        } elsif (/^(\S+) (\S+) \{ (.*?) \}/) {
-            push @{$all{'copy'}}, $_;
-        } else {
-            print STDERR "?: $_";
-        }
-    }
-    close $fh;
-    return %all;
-}
-
-
-################################################################################
+    return $pdbfile;
+} # transform
 
 
 
+# Inputs are arrayref of L<EMBL::Domain>s
+# TODO caching, based on what? (PDB/PQS ID + descriptor)
 sub do_stamp {
     my ($doms) = @_;
     unless (@$doms > 1) {
@@ -188,10 +124,12 @@ sub do_stamp {
 
 
 #     pickframe('2nn6b', \@keep_doms);
+# NB STAMP uses lowercase chain IDs. Need to change IDs for pickframe?
+# $key is a regular expression, case insensitive
 sub pickframe {
     my ($key, $doms) = @_;
     # Find the domain with the given stampid
-    my ($ref) = grep { $_->stampid eq $key } @$doms;
+    my ($ref) = grep { $_->stampid =~ /$key/i } @$doms;
     unless ($ref) {
         carp "Cannot find domain: $key\n";
         return;
@@ -298,19 +236,30 @@ sub sorttrans {
 } # sorttrans
 
 
-# Sorts objects given a pre-defined ordering.
+# The Perl sort() is fine for sorting things alphabeticall/numerically.
+#   This is for sorting objects in a pre-defined order, based on some attribute
+# Sorts objects, given a pre-defined ordering.
 # Takes:
 # $objects - an arrayref of objects, in any order
 # $accessor - the name of an accessor function to call on each object, like:
 #     $_->$accessor()
-# $ordering - an arrayref of strings in the desired order
-
+# Otherwise, standard Perl stringification is used on the objects, i.e. "$obj"
+# $ordering - an arrayref of keys (as strings) in the desired order
+#   If no ordering given, sorts lexically
+# E.g.: 
 sub reorder {
     my ($objects, $ordering, $accessor) = @_;
 
     # First put the objects into a dictionary, indexed by $func
-    my %dict = map { $_->$accessor() => $_ } @$objects;
-#     my %dict = map { $_->stampid() => $_ } @$objects;
+    my %dict;
+    if ($accessor) {
+        %dict = map { $_->$accessor() => $_ } @$objects;
+    } else {
+        %dict = map { $_ => $_ } @$objects;
+    }
+
+    # Sort lexically by default
+    $ordering ||= [ sort keys %dict ];
     # Sorted array based on given ordering of keys
     my @sorted = map { $dict{$_} } @$ordering;
     return \@sorted;
@@ -340,3 +289,7 @@ sub next_probe {
 
 ################################################################################
 1;
+
+__END__
+
+
