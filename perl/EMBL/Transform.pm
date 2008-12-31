@@ -39,9 +39,8 @@ use overload (
 
 use PDL;
 use PDL::Matrix;
+use PDL::IO::Storable;
 use Carp;
-
-use EMBL::DB;
 
 
 ################################################################################
@@ -307,96 +306,9 @@ sub _from_string {
 } # _from_string
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-sub onto {
-    my ($srcdom, $destdom) = @_;
-    
-    print STDERR "\tonto()$srcdom -> $destdom\n";
-
-    # Lookup in DB
-    my $transstr = fetch($srcdom, $destdom);
-    if ($transstr) { 
-        my $t = new EMBL::Transform();
-        $t->loadstr($transstr);
-        return $t;
-    }
-
-    # Otherwise run stamp
-    my $transfile = stamp($srcdom, $destdom);
-    # If that succeeded: load it, cache it, return it
-    if ($transfile) {
-        my $trans = new EMBL::Transform();
-        $trans->loadfile($transfile);
-#         $trans->cache($srcdom,$destdom);
-        return $trans;
-    }
-
-}
-
-# TODO put in STAMP.pm
-sub stamp {
-    my ($srcdom, $destdom) = @_;
-    print STDERR "\tTransform::stamp($srcdom,$destdom)\n";
-    my $cmd = "./transform.sh $srcdom $destdom";
-    my $transfile = `$cmd`;
-    return (-s $transfile) ? $transfile : undef;
-}
-
-
-
-
-
-
-
-
-
-
 ###############################################################################
 
 1;
 
 __END__
-
-
-# TODO
-# Get from database
-sub dbfetch {
-    my ($srcdom, $destdom) = @_;
-    print STDERR "\tTransform::fetch($srcdom,$destdom)\n";
-    # TODO use Config::IniFiles;
-    my $dbh = dbconnect("pc-russell12", "davis_trans") or return undef;
-    # Static handle, prepare it only once
-    our $fetch_sth;
-    $fetch_sth ||= $dbh->prepare("select trans " .
-                                 "from trans ".
-                                 "where (src=? and dest=?)");
-    $fetch_sth or return undef;
-    if (! $fetch_sth->execute($srcdom, $destdom)) {
-        print STDERR $fetch_sth->errstr;
-        return undef;
-    }
-    my ($transstr) = $fetch_sth->fetchrow_array();
-    return $transstr;
-}
-
-
-# TODO
-# Wrrite back to database
-sub dbcache {
-    my ($self, $srcdom, $destdom) = @_;
-    print STDERR "\tTransform::cache($srcdom,$destdom)\n";
-    # Write back to DB
-
-}
 
