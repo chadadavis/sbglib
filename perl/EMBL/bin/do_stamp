@@ -1,11 +1,32 @@
 #!/usr/bin/env perl
 
 use warnings;
-use EMBL::STAMP;
 use Carp;
-use Data::Dumper;
-use File::Temp qw(tempfile);
 
+use EMBL::STAMP;
+
+################################################################################
+
+
+my $dom = shift;
+unless ($dom) {
+    carp "Please specify as file of stamp formatted domains.\n";
+    return;
+}
+# Read input domains into %DOM hash
+my $in = new EMBL::DomainIO(-file=>$dom);
+my @doms;
+while (my $dom = $in->next_domain) {
+    push @doms, $dom;
+}
+
+my @stamped = do_stamp(\@doms);
+
+stampprint(\@stamped);
+
+exit;
+
+################################################################################
 
 sub stampprint {
     my ($doms, $order, $fh) = @_;
@@ -24,112 +45,5 @@ sub stampprint {
 
 ################################################################################
 
-my $dom = shift;
-unless ($dom) {
-    carp "Please specify as file of stamp formatted domains.\n";
-    return;
-}
-# Read input domains into %DOM hash
-my $in = new EMBL::DomainIO(-file=>$dom);
-my @doms;
-while (my $dom = $in->next_domain) {
-    push @doms, $dom;
-}
-
-my @stamped = do_stamp(\@doms);
-
-pickframe('2nn6b', \@stamped);
-stampprint(\@stamped);
-
-
 __END__
-
-
-my $dom = shift;
-unless ($dom) {
-    carp "Please specify as file of stamp formatted domains.\n";
-    return;
-}
-# Read input domains into %DOM hash
-my $in = new EMBL::DomainIO(-file=>$dom);
-# All domains
-my %domains;
-# Original order of domains, to later set the output order
-my @dom_ids;
-while (my $dom = $in->next_domain) {
-    $domains{$dom->stampid} = $dom;
-    push @dom_ids, $dom->stampid;
-}
-unless (@dom_ids > 1) {
-    carp "Need at least two domains.\n";
-    return;
-}
-
-
-# No. domains tried;
-my %TRIED = ();
-my $probes_tried=0;
-# Domains in current set
-my %HAVE = ();
-# No. Domains that we haven't tried yet
-my $missing = @dom_ids;
-# Number of disjoint domain sets
-my $n_disjoins=0;
-
-
-while(($missing>0) && ($probes_tried<@dom_ids)) {
-
-    # Get next not-yet-tried probe domain, preferably from current %HAVE set
-    my ($probe, $in_disjoint) = next_probe(\@dom_ids, \%HAVE, \%TRIED);
-    last unless $probe;
-
-    # Write probe domain to file
-    my (undef, $tmp_probe) = tempfile();
-    my $ioprobe = new EMBL::DomainIO(-file=>">$tmp_probe");
-    $ioprobe->write($domains{$probe});
-
-    # Write other domains to single file
-    my (undef, $tmp_doms) = tempfile();
-    my $iodoms = new EMBL::DomainIO(-file=>">$tmp_doms");
-    foreach $dom (@dom_ids) {
-        if((!defined($HAVE{$dom})) && ($dom ne $probe)) {
-            $iodoms->write($domains{$dom});
-        }
-    }
-
-    # Run stamp
-    my %KEEP = stamp($tmp_probe, $tmp_doms);
-    # Add %KEEP to %HAVE
-    $HAVE{$_} = 1 for keys %KEEP;
-
-    # Sort transformations (, except probe
-    my @keep_doms = sorttrans(\%KEEP);
-
-    # If any of these domains is not the probe, results are useful
-    if (grep { $_->stampid() ne $probe } @keep_doms) {
-
-        stampprint(\@keep_doms, \@dom_ids, \*STDOUT);
-        # Count number of disjoint sets
-        $n_disjoins++ if $in_disjoint;
-    }
-
-    # Counting    
-    $TRIED{$probe}=1;
-    $probes_tried++;
-    $missing = @dom_ids - keys %HAVE;
-
-} # while
-
-printf STDOUT ("%%Summary %4d out of %4d domains linked using %4d probes giving a total of %4d trans files (when linked)\n", 
-       @DSET-$missing,scalar(@DSET),$probes_tried,$n_disjoins+1);
-
-exit;
-
-
-################################################################################
-
-
-
-
-
 
