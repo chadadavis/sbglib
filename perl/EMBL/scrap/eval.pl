@@ -31,7 +31,6 @@ sub main {
                 "ref:label:", $refcofm->label, ":id:", $refcofm->id, ":\n";
             last;
         }
-#         print STDERR $assem->cofm($c)->dom, "\n";
     }
 
     # id is the template structure used
