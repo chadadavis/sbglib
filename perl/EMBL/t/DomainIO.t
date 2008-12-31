@@ -39,7 +39,7 @@ my $outfile = "${file}.out";
 my $ioout = new EMBL::DomainIO(-file=>">$outfile");
 ok($ioout && $ioout->fh, "new(-file=>\">$outfile\")");
 foreach my $d (@doms) {
-    ok($ioout->write($d, -newline=>1), "Writing: " . $d->stampid);
+    ok($ioout->write($d), "Writing: " . $d->stampid);
 }
 system("cat $outfile");
 ok(unlink($outfile), "Removing $outfile");
