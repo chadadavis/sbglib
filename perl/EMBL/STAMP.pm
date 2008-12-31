@@ -26,12 +26,14 @@ L<EMBL::Domain>
 package EMBL::STAMP;
 use EMBL::Root -base, -XXX;
 
-our @EXPORT = qw(do_stamp stampfile string2doms doms2string reorder2 reorder);
+# TODO DES don't need all of these
+our @EXPORT = qw(do_stamp stampfile sorttrans stamp reorder pickframe next_probe do_stamp);
 
 use warnings;
 use Carp;
 use File::Temp qw(tempfile);
 use IO::String;
+use Data::Dumper;
 
 use EMBL::Transform;
 use EMBL::Domain;
@@ -40,6 +42,7 @@ use EMBL::DomainIO;
 ################################################################################
 
 
+# TODO DES
 sub transform {
     my ($transfile) = @_;
 
@@ -123,79 +126,216 @@ sub parsetrans {
 
 
 
-# Turns a string into array of EMBL::Domain, returns array ref
-sub string2doms {
-    my $str = shift;
-    my $iostr = new IO::String($str);
-    my $iodom = new EMBL::DomainIO(-fh=>$iostr);
-    my @doms;
-    while (my $dom = $iodom->next_domain) {
-        push @doms, $dom;
+sub do_stamp {
+    my ($doms) = @_;
+    unless (@$doms > 1) {
+        carp "Need at least two domains.\n";
+        return;
     }
-    return \@doms;
-}
+    # Index stampid's
+    my @dom_ids = map { $_->stampid } @$doms;
+    my %domains = map { $_->stampid => $_ } @$doms;
 
-# TODO get this working on arbitrary fields, other than stampid
-sub reorder2 {
-    my ($ordering, $objects, $func) = @_;
+    # No. domains tried as a probe
+    my %tried;
+    # Domains in current set
+    my %current;
+    # Resulting domains
+    my @all_doms;
+    # Number of disjoint domain sets
+#     my $n_disjoins=0;
+
+    # Where there are domains not-yet-tried
+    while (keys(%tried) < @dom_ids && keys(%current) < @dom_ids) {
+
+        # Get next not-yet-tried probe domain, preferably from current set
+        my ($probe, $in_disjoint) = next_probe(\@dom_ids, \%current, \%tried);
+        last unless $probe;
+        $tried{$probe}=1;
+
+        # Write probe domain to file
+        my (undef, $tmp_probe) = tempfile();
+        my $ioprobe = new EMBL::DomainIO(-file=>">$tmp_probe");
+        $ioprobe->write($domains{$probe});
+
+        # Write other domains to single file
+        my (undef, $tmp_doms) = tempfile();
+        my $iodoms = new EMBL::DomainIO(-file=>">$tmp_doms");
+        foreach my $dom (@dom_ids) {
+            if((!defined($current{$dom})) && ($dom ne $probe)) {
+                $iodoms->write($domains{$dom});
+            }
+        }
+
+        # Run stamp and add %keep to %current
+        my %keep = stamp($tmp_probe, $tmp_doms);
+        $current{$_} = 1 for keys %keep;
+
+        # Sort transformations
+        my @keep_doms = sorttrans(\%keep);
+        # Unless this only contains the probe, results are useful
+        unless ( @keep_doms == 1 && $keep_doms[0]->stampid eq $probe ) {
+            push @all_doms, @keep_doms;
+            # Count number of disjoint sets
+#             $n_disjoins++ if $in_disjoint;
+        }
+
+    } # while
+    return @all_doms;
+
+} # do_stamp
+
+
+
+#     pickframe('2nn6b', \@keep_doms);
+sub pickframe {
+    my ($key, $doms) = @_;
+    # Find the domain with the given stampid
+    my ($ref) = grep { $_->stampid eq $key } @$doms;
+    unless ($ref) {
+        carp "Cannot find domain: $key\n";
+        return;
+    }
+    # Get it's transformation matrix, the inverse that is
+    my $inv = $ref->transformation->matrix->inv;
+    # Multiply every matrix of every domain by this inverse
+    foreach (@$doms) {
+        my $m = $_->transformation->matrix;
+        $m .= $inv x $m;
+    }
+} # pickframe
+
+
+# Returns IDs of the domains to keep
+sub stamp {
+    my ($tmp_probe, $tmp_doms) = @_;
+
+    # Get config setttings
+    my $stamp = $config->val('stamp', 'executable') || 'stamp';
+    my $min_fit = $config->val('stamp', 'min_fit') || 30;
+    my $min_sc = $config->val('stamp', 'sc_cut') || 2.0;
+    my $stamp_pars = $config->val('stamp', 'params') || 
+        '-n 2 -slide 5 -s -secscreen F -opd';
+    $stamp_pars .= " -scancut $min_sc";
+    my $tmp_prefix = $config->val('stamp', 'prefix') || 'stamp_trans';
+
+
+
+    my $com = join(' ', $stamp, $stamp_pars,
+                "-l $tmp_probe",
+                "-prefix $tmp_prefix",
+                "-d $tmp_doms");
+#     print STDERR "$com\n";
+    my $fh;
+    unless (open $fh,"$com |") {
+        carp "Error running/reading $com\n";
+        return;
+    }
+
+    # Parse out the 'Scan' lines from stamp output
+    my %KEEP = ();
+    while(<$fh>) {
+        next if /skipped/ || /error/ || /missing/;
+        next unless /^Scan/;
+        chomp;
+#         print STDERR "%",$_;
+        my @t = split(/\s+/);
+        my $id1 = $t[1];
+        my $id2 = $t[2];
+        my $sc = $t[4];
+        my $nfit = $t[9];
+        if(($sc > 0.5) && (($sc>=$min_sc) || ($nfit >= $min_fit))) {
+            $KEEP{$id1}=1;
+            $KEEP{$id2}=1;
+#             print STDERR " ** ";
+        }
+#         print STDERR "\n";
+    }
+    return %KEEP;
+} # stamp
+
+
+# Run sorttrans (parse the $tmp_scan file)
+# -sort Sc
+# -cutoff 0.5
+# Returns array of L<EMBL::Domain> 
+# NB: might be just the probe. You need to check
+sub sorttrans {
+    my ($KEEP, %o) = @_;
+    $o{-sort} ||= 'Sc';
+    $o{-cutoff} ||= 0.5;
+
+    my $tmp_prefix = $config->val('stamp', 'prefix') || 'stamp_trans';
+    # File containing STAMP scan results
+    my $tmp_scan = "${tmp_prefix}.scan";
+
+    my $sorttrans = $config->val("stamp", "sorttrans") || 'sorttrans';
+    my $params = "-i";
+    my $com = join(' ', $sorttrans, $params,
+                   "-f", $tmp_scan,
+                   "-s", $o{-sort}, $o{-cutoff},
+        );
+#     print STDERR "$com\n";
+    my $fh;
+    unless (open($fh,"$com |")) {
+        carp "Failed reading:\n$com\n";
+        return;
+    }
+
+    # Read all doms
+    my $io = new EMBL::DomainIO(-fh=>$fh);
+    my @doms;
+    push(@doms, $_) while $_ = $io->next_domain;
+
+    # Remove any trailing counter (e.g. _34) from any domain IDs
+    $_->{stampid} =~ s/_\d+$// for @doms;
+
+    # Which domains are to be kept
+    my @keep_doms = grep { defined($KEEP->{$_->stampid}) } @doms;
+
+    return @keep_doms;
+
+} # sorttrans
+
+
+# Sorts objects given a pre-defined ordering.
+# Takes:
+# $objects - an arrayref of objects, in any order
+# $accessor - the name of an accessor function to call on each object, like:
+#     $_->$accessor()
+# $ordering - an arrayref of strings in the desired order
+
+sub reorder {
+    my ($objects, $ordering, $accessor) = @_;
+
     # First put the objects into a dictionary, indexed by $func
-#     my %dict = map { $_->$func() => $_ } @$objects;
-    my %dict = map { $_->stampid() => $_ } @$objects;
+    my %dict = map { $_->$accessor() => $_ } @$objects;
+#     my %dict = map { $_->stampid() => $_ } @$objects;
     # Sorted array based on given ordering of keys
     my @sorted = map { $dict{$_} } @$ordering;
     return \@sorted;
 }
 
-# Turns a array of EMBL::Domain's into string
-sub doms2string {
-    my ($doms) = @_;
-    my $outstr;
-    my $out = new EMBL::DomainIO(-fh=>new IO::String($outstr));
-    $out->write($_, -newline=>1) for @$doms;
-    return $outstr;
-}
 
-# dom_s is space-separated list of identifiers/labels
-#  This defines the desired output order
+# Returns (probe, disjoint)
+# Disjoint==1 if not-yet-tried probe could not be found in %$current
+sub next_probe {
+    my ($all, $current, $tried) = @_;
+    my $probe;
 
-# trans_s is line-separated. Series of domains (+transformations, it seems)
-#   These are read in, parsed, indexed by stampid, then sorted back to a string
-sub reorder {
-    my($trans_s, $dom_s) = @_;
+    # Get another probe from the current set, not yet tried
+    ($probe) = grep { ! defined($tried->{$_}) } keys %$current;
+    return ($probe, 0) if $probe;
 
-    my($trans_s_reordered) = "";
-    my(@T) = split(/\n/,$trans_s);
-    my(@D) = split(/\s+/,$dom_s);
-    my(%TR) = ();
-    my($id) = "";
-    my($old_count)=0;
-    my($new_count)=0;
-    for(my $i=0; $i<@T; ++$i) {
-        # A header line
-        if(($T[$i] !~ /^%/) && ($T[$i] =~ /{/)) { # end }
-            # The stampid
-            $id = (split(/\s+/,$T[$i]))[1];
-#             printf("Here assigned id %s from %s\n",$id,$T[$i]);
+    # Get another probe from anywhere (i.e. unconnected now), not yet tried
+    ($probe) = grep { ! defined($tried->{$_}) } @$all;
+    return ($probe, 1) if $probe;
 
-            # Index header lines by stampid
-            $TR{$id} = $T[$i]."\n";
-            $old_count++;
-        } elsif(($T[$i] !~ /^%/) && ($id ne "")) {
-            $TR{$id} .= $T[$i]."\n";
-        }
+    unless ($probe) {
+        carp "Out of probes\n";
     }
-
-    for(my $i=0; $i<@D; ++$i) {
-        if(defined($TR{$D[$i]})) {
-            $new_count++;
-            $trans_s_reordered .= $TR{$D[$i]};
-        }
-    }
-    if($old_count != $new_count) {
-        $trans_s_reordered .= sprintf("%% WARNING: old and new count different (%d %d)\n",$old_count,$new_count);
-    }
-    return $trans_s_reordered;
-} # reorder
+    return;
+} # next_probe
 
 
 ################################################################################
