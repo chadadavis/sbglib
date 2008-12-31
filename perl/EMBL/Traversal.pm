@@ -2,48 +2,45 @@
 
 =head1 NAME
 
-EMBL::Traversal - A recusive back-tracking traversal for Graph
+EMBL::Traversal - A recusive back-tracking traversal of a Graph
 
 =head1 SYNOPSIS
 
-use EMBL::Traversal
+ use EMBL::Traversal;
 
-# Create a new Prediction object
-my $traversal = new EMBL::Traversal($mygraph);
+ my $traversal = new EMBL::Traversal($mygraph);
 
 =head1 DESCRIPTION
 
-See also L<Graph::Traversal>
+ TODO
+  does this also work on any L<Graph> or just ProteinNet ?
 
-=head1 BUGS
+=head1 SEE ALSO
 
-None known.
-
-=head1 REVISION
-
-$Id: Prediction.pm,v 1.33 2005/02/28 01:34:35 uid1343 Exp $
-
-=head1 APPENDIX
-
-Details on functions implemented here are described below.
-Private internal functions are generally preceded with an _
+L<Graph::Traversal>
 
 =cut
 
 ################################################################################
 
 package EMBL::Traversal;
+use EMBL::Root -Base, -XXX;
 
-use strict;
+field 'graph';
+field 'consider';
+field 'next_edges' => [];
+field 'next_nodes' => [];
+
+
 use warnings;
-
 use Clone qw(clone);
 use List::Util;
 use Graph;
 use Graph::UnionFind;
 use Data::Dumper;
 
-use lib "..";
+# TODO DEL
+#   state saving object should be generic
 use EMBL::Assembly;
 
 
@@ -56,28 +53,18 @@ use EMBL::Assembly;
  Returns : 
  Args    :
 
+-graph
+-consider
+
 =cut
-
-sub new {
-    my ($class, $graph, $consider, @args) = @_;
-    my $self = bless {};
-
-    $self->{graph} = $graph;
-    $self->{consider} = $consider;
-
-    $self->{next_edges} = [];
-    $self->{next_nodes} = [];
-
+sub new () {
+    my ($class, %o) = @_;
+    my $self = { %o };
+    bless $self, $class;
+    $self->_undash;
     return $self;
-
 } # new
 
-# Convert 2D array to string list, e.g.:
-# red,blue,green,grey; alpha,beta,gamma; apples,oranges
-sub arraystr {
-    my ($a) = @_;
-    return join("; ", map { join(",", @$_) } @$a);
-}
 
 sub get_state {
     my ($self, $key) = @_;
@@ -135,7 +122,7 @@ sub traverse {
 
 }
 
-
+# TODO DES shorten this
 sub do_edges2 {
     my ($self, $uf, $assembly) = @_;
     my $current = shift @{$self->{next_edges}};
@@ -163,7 +150,7 @@ sub do_edges2 {
     }
 
     my ($src, $dest) = @$current;
-    print STDERR "Edge: $src $dest (", arraystr($self->{next_edges}), ")\n";
+    print STDERR "Edge: $src $dest (", _array2D($self->{next_edges}), ")\n";
 
 # TODO Need to swap next to blocks. Where does clone need to happen
 # If we clone, will we still iterate over templates correctly?
@@ -231,7 +218,7 @@ sub do_nodes2 {
     unless ($current) {
         print STDERR "No more nodes.\n";
         if (@{$self->{next_edges}}) {
-            print STDERR "Edges: ", arraystr($self->{next_edges}), "\n";
+            print STDERR "Edges: ", _array2D($self->{next_edges}), "\n";
             $self->do_edges2($uf, $assembly);
             return;
         } else {
@@ -347,6 +334,14 @@ sub do_node {
     return $assembly
 #     $self->do_node($uf, @nodes);
 
+}
+
+
+# Convert 2D array to string list, e.g.:
+# red,blue,green,grey; alpha,beta,gamma; apples,oranges
+sub _array2D {
+    my ($a) = @_;
+    return join("; ", map { join(",", @$_) } @$a);
 }
 
 
