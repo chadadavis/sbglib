@@ -22,7 +22,7 @@ EMBL::Domain - Represents a STAMP domain
  my $outfile = ">results.dom";
  my $ioout = new EMBL::DomainIO(-file=>">$outfile");
  foreach my $d (@doms) {
-     $ioout->write($d, 1); # Appending 1 also prints newline
+     $ioout->write($d);
  }
 
 
@@ -63,10 +63,13 @@ use EMBL::Transform;
            my $input = new EMBL::DomainIO(-fh=>\*STDIN);
  Function: Open a new input stream to a STAMP domain file
  Example : my $input = new EMBL::DomainIO(-file=>"<file.dom");
+           my $output = new EMBL::DomainIO(-file=>">file.dom");
+           my $append = new EMBL::DomainIO(-file=>">>file.dom");
  Returns : Instance of L<EMBL::DomainIO>
  Args    : -file - Path to domain file to open, including preceeding "<" or ">"
            -fh - An already opened file handle to read domains from
 
+ 
 =cut
 sub new () {
     my ($class, %o) = @_;
@@ -158,7 +161,7 @@ sub flush {
  Returns : The string that was printed to the stream
  Args    : L<EMBL::Domain> - A domain, may contain an L<EMBL::Transform>
            -id Print 'pdbid' or 'stampid' (default) as domain label
-           -newline If true, also prints a newline after the domain
+           -newline If true, also prints a newline after the domain (default)
            -fh another file handle
 
 Prints in STAMP format, along with any transform(s) that have been applied.
@@ -166,7 +169,7 @@ Prints in STAMP format, along with any transform(s) that have been applied.
  my $outfile = ">results.dom";
  my $ioout = new EMBL::DomainIO(-file=>">$outfile");
  foreach my $d (@doms) {
-     $ioout->write($d, 1); # Appending 1 also prints newline
+     $ioout->write($d);
  }
 
 =cut
@@ -177,7 +180,8 @@ sub write {
         carp "write() expected EMBL::Domain , got: " . ref($dom) . "\n";
         return;
     }
-
+    # Default to on, unless already set
+    $o{-newline} = 1 unless defined($o{-newline});
     my $fh = $self->fh;
     $fh = $o{-fh} if defined $o{-fh};
     my $id = $o{-id} || 'stampid';
@@ -191,7 +195,7 @@ sub write {
     my $transstr = $dom->transformation->ascsv;
     # Append any transformation
     $str .= $transstr ? (" \n${transstr}\}") : " \}";
-    $str .= "\n" if $o{-newline};
+    $str .= "\n" if defined($o{-newline}) && $o{-newline};
     defined($fh) and print $fh $str;
     return $str;
 
@@ -223,6 +227,7 @@ sub next_domain {
         chomp;
         # Comments and blank lines
         next if /^\s*\%/;
+        next if /^\s*\#/;
         next if /^\s*$/;
 
         # Create/parse new domain header
