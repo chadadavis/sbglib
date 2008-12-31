@@ -169,7 +169,9 @@ BEGIN {
 
     _init_dir();
     _init_ini();
-    _init_log();
+
+# TODO DES
+#     _init_log();
 }
 
 
