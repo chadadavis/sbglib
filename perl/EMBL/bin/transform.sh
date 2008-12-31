@@ -44,5 +44,6 @@ cat $SRC-$REF-FoR.trans | \
 #    egrep -v "(%|0.00000|$REF)" | \
     tr -d '}' > $SRC-$REF-FoR-s.csv
 
+# Just the transformation matrix (CSV, space-separated, 3 lines)
 echo $DIR/$SRC-$REF-FoR-s.csv
 
