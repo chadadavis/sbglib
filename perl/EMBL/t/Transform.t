@@ -25,6 +25,15 @@ print "d2uzeC:$d2uzeC:\n";
 $d2uzeC->transform($trans);
 print "d2uzeC:$d2uzeC:\n";
 
+# Test PDL::IO::Storable :
+use Storable;
+use PDL::IO::Storable;
+use File::Temp qw(tempfile);
+my (undef, $tempfile) = tempfile;
+store $trans, $tempfile;
+my $fresh = retrieve $tempfile;
+is ($fresh->matrix, $trans->matrix, "PDL::Matrix is Storable");
+
 
 # Fetching a transform from DB/cache/compute
 TODO: { 
