@@ -141,68 +141,6 @@ sub ncomponents {
     return scalar(keys %{$self->{cofm}});
 }
 
-# Dump domain IDs and their transformations in STAMP format
-# TODO DOC what do return vals mean
-sub write {
-    my $file = shift;
-
-    print STDERR "write\n";
-
-    # Unique topology identifier:
-    # For each edge, component names sorted, then edges sorted
-    my @ikeys = keys %{$self->{interaction}};
-    my @iactions = map { $self->{graph}->get_interaction_by_id($_) } @ikeys;
-    my @edges = map { join(',', sort($_->nodes)) } @iactions;
-    my $topology = join(';', sort(@edges));
-
-    our %solutions;
-    our $topoi;
-    if (! exists $solutions{$topology}) {
-        # A new topology
-        $topoi++;
-        print STDERR "New solution topology #$topoi: $topology\n";
-        $solutions{$topology} = $topoi;
-    } else {
-        print STDERR "Another solution like #$topoi: $topology\n";
-    }
-
-
-    our $solutioni;
-    $solutioni++;
-    $file ||= sprintf("assembly-%03d-%03d.dom", $topoi, $solutioni);
-
-    print STDERR 
-        "Assembly: $file\n$self\n";
-
-    open my $fh, ">out/$file" or return undef;
-
-
-
-    print $fh "\% File: $file\n";
-    print $fh "\% Assembly ID: $solutioni\n";
-    print $fh "\% Topology cluster ID: $topoi\n";
-    print $fh "\% Topology: $topology\n";
-    print $fh "\% Templates: $self\n";
-    print $fh "\n";
-
-    # Print all CofM objects (STAMP format)
-    # STAMP will number the chains alphabetically in the final output
-    my $chainid = ord 'A';
-    # $key is the component's label
-    foreach my $key (sort keys %{$self->{cofm}}) {
-        # id is the PDB ID of the template segment
-        print STDERR "\tsaving: $key ", $self->cofm($key)->id(), "\n";
-
-        print $fh "\% CHAIN ", chr($chainid++), " $key\n";
-
-        # This uses the cumulative transform, maintained by CofM itself
-        my $cofm = $self->cofm($key);
-        print $fh $cofm->dom, "\n";
-    }
-    print $fh "\n";
-    close $fh;
-    return 1;
-} # save
 
 
 sub clashes {
