@@ -55,6 +55,9 @@ sub write {
     print $fh "\% Templates: ", $assem->stringify(), "\n";
     print $fh "\n";
 
+    # TODO PROB should be OK to share the fh, right?
+    my $domio = new EMBL::DomainIO(-fh=>$fh);
+
     # Print all CofM objects (STAMP format)
     # STAMP will number the chains alphabetically in the final output
     my $chainid = ord 'A';
@@ -67,7 +70,7 @@ sub write {
 
         # This uses the cumulative transform, maintained by CofM itself
         my $cofm = $assem->cofm($key);
-        print $fh $cofm->dom, "\n";
+        $domio->write($cofm);
     }
     print $fh "\n";
     return 1;
