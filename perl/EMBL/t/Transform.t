@@ -30,5 +30,8 @@ print "d2uzeC:$d2uzeC:\n";
 TODO: { 
 
 #     ok(0, "Test fetching from DB cache");
+
+    # Test invert()
+
 }
 
