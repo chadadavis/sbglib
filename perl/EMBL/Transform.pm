@@ -136,18 +136,40 @@ sub mult {
 
 
 ################################################################################
+=head2 invert
+
+ Title   : invert
+ Usage   : $trans->invert
+ Function: Inverts the current matrix
+ Example : $trans->invert
+ Returns : $self
+ Args    : NA
+
+=cut
+sub invert {
+   my ($self) = @_;
+   return unless $self->tainted;
+   my $i = $self->matrix->inv;
+   $self->{matrix} .= $i;
+   return $self;
+
+} # invert
+
+################################################################################
 =head2 transform
 
  Title   : transform
- Usage   :
- Function:
- Example :
- Returns : 
- Args    :
+ Usage   : $trans->transform($point);
+ Function: Applies this transformation matrix to some L<PDL::Matrix>
+ Example : my $point123 = mpdl(1,2,3,1)->transpose; 
+           my $transformed = $trans->transform($p)->transpose;
+ Returns : A 4xn L<PDL::Matrix>
+ Args    : thing - a 4xn L<PDL::Matrix>
 
 Apply this transform to some point, or even a matrix (affine multiplication)
 
-If the thing needs to be transpose()'d, that is up to you to do that first.
+If the thing needs to be transpose()'d, that is up to you to do that (before and
+after).
 
 =cut
 sub transform {
