@@ -60,7 +60,6 @@ use PDL::Math;
 use PDL::Matrix;
 use File::Temp qw(tempfile);
 
-use EMBL::DB;
 use EMBL::Transform;
 
 
