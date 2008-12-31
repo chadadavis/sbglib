@@ -52,7 +52,8 @@ exit;
 ################################################################################
 
 
-
+# TODO belong in another module
+# takes any L<Graph> including L<Bio::Network::ProteinNet>
 sub graphviz {
     my ($graph, $file) = @_;
     $file ||= "mygraph.png";
