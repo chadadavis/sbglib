@@ -2,7 +2,7 @@
 
 use Test::More 'no_plan';
 
-use EMBL::DB;
+use SBG::DB;
 
 my $host = "pc-russell12";
 my $db = "trans_1_5";

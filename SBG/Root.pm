@@ -2,21 +2,21 @@
 
 =head1 NAME
 
-EMBL::Root - Base class of inheritance hierarchy, including useful tools
+SBG::Root - Base class of inheritance hierarchy, including useful tools
 
 =head1 SYNOPSIS
 
-Inherit from EMBL::Root (using L<Spiffy>)
+Inherit from SBG::Root (using L<Spiffy>)
 
- use EMBL::Root -base;
+ use SBG::Root -base;
 
 To also get the B<$self> variable automatically defined in your class methods:
 
- use EMBL::Root -Base;
+ use SBG::Root -Base;
 
 To also get the useful B<YYY> debugging function (also from L<Spiffy>), use:
 
- use EMBL::Root -Base, -XXX;
+ use SBG::Root -Base, -XXX;
 
 Then you can simply prepend B<YYY> to any line of code to debug it
 
@@ -31,7 +31,7 @@ To use the logging facility (L<Log::Log4perl>), just any of:
  $logger->error("x is $x");
  $logger->fatal("x is $x");
 
-Using an initialisation file (B<embl.ini>) (via L<Config::IniFiles>) :
+Using an initialisation file (B<config.ini>) (via L<Config::IniFiles>) :
 
  my $thresh = $config->val("MySection", "MyThreshold");
 
@@ -53,7 +53,7 @@ L<Spiffy>, L<Log::Log4perl>, L<Config::IniFiles>
 
 ################################################################################
 
-package EMBL::Root;
+package SBG::Root;
 use Spiffy -base, -XXX;
 
 use warnings;
@@ -124,7 +124,7 @@ sub _init_dir {
 
 sub _init_ini {
     our $installdir;
-    my $inifile = shift || catdir($installdir, 'embl.ini');
+    my $inifile = shift || catdir($installdir, 'config.ini');
     our $config;
     unless (-r $inifile) {
         carp "No configuration: $inifile\n";

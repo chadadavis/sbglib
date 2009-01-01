@@ -2,11 +2,11 @@
 
 =head1 NAME
 
-EMBL::CofM - Computes STAMP centre-of-mass of an EMBL::Domain
+SBG::CofM - Computes STAMP centre-of-mass of an SBG::Domain
 
 =head1 SYNOPSIS
 
- use EMBL::CofM;
+ use SBG::CofM;
 
 =head1 DESCRIPTION
 
@@ -17,14 +17,14 @@ Also fetches radius of gyration of the centre of mass.
 
 =head1 SEE ALSO
 
-L<EMBL::Domain> , L<EMBL::DomainIO>
+L<SBG::Domain> , L<SBG::DomainIO>
 
 =cut
 
 ################################################################################
 
-package EMBL::STAMP;
-use EMBL::Root -base, -XXX;
+package SBG::STAMP;
+use SBG::Root -base, -XXX;
 
 # TODO DES don't need all of these
 our @EXPORT = qw(do_stamp stampfile sorttrans stamp reorder pickframe next_probe do_stamp);
@@ -35,14 +35,14 @@ use File::Temp qw(tempfile);
 use IO::String;
 use Data::Dumper;
 
-use EMBL::Transform;
-use EMBL::Domain;
-use EMBL::DomainIO;
+use SBG::Transform;
+use SBG::Domain;
+use SBG::DomainIO;
 
 ################################################################################
 
 
-# Converts an array of L<EMBL::Domain>s to a PDB file
+# Converts an array of L<SBG::Domain>s to a PDB file
 # returns Path to PDB file, if successful
 sub transform {
     my ($doms, $pdbfile) = @_;
@@ -60,7 +60,7 @@ sub transform {
 
 
 
-# Inputs are arrayref of L<EMBL::Domain>s
+# Inputs are arrayref of L<SBG::Domain>s
 # TODO caching, based on what? (PDB/PQS ID + descriptor)
 sub do_stamp {
     my ($doms) = @_;
@@ -91,12 +91,12 @@ sub do_stamp {
 
         # Write probe domain to file
         my (undef, $tmp_probe) = tempfile();
-        my $ioprobe = new EMBL::DomainIO(-file=>">$tmp_probe");
+        my $ioprobe = new SBG::DomainIO(-file=>">$tmp_probe");
         $ioprobe->write($domains{$probe});
 
         # Write other domains to single file
         my (undef, $tmp_doms) = tempfile();
-        my $iodoms = new EMBL::DomainIO(-file=>">$tmp_doms");
+        my $iodoms = new SBG::DomainIO(-file=>">$tmp_doms");
         foreach my $dom (@dom_ids) {
             if((!defined($current{$dom})) && ($dom ne $probe)) {
                 $iodoms->write($domains{$dom});
@@ -196,7 +196,7 @@ sub stamp {
 # Run sorttrans (parse the $tmp_scan file)
 # -sort Sc
 # -cutoff 0.5
-# Returns array of L<EMBL::Domain> 
+# Returns array of L<SBG::Domain> 
 # NB: might be just the probe. You need to check
 sub sorttrans {
     my ($KEEP, %o) = @_;
@@ -221,7 +221,7 @@ sub sorttrans {
     }
 
     # Read all doms
-    my $io = new EMBL::DomainIO(-fh=>$fh);
+    my $io = new SBG::DomainIO(-fh=>$fh);
     my @doms;
     push(@doms, $_) while $_ = $io->next_domain;
 

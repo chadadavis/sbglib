@@ -4,7 +4,7 @@
 
 =head1 NAME
 
-EMBL::PBS - Quick PBS tools for the EMBL cluster(s)
+SBG::PBS - Quick PBS tools for the EMBL cluster(s)
 
 =head1 SYNOPSIS
 
@@ -27,7 +27,7 @@ Internal methods are usually preceded with a _
 
 =cut
 
-package EMBL::PBS;
+package SBG::PBS;
 
 use strict;
 use warnings;
@@ -42,7 +42,7 @@ use File::Spec;
 use File::Temp qw(tempfile);
 use File::Basename;
 
-use EMBL::File;
+use SBG::File;
 
 
 ################################################################################
@@ -61,7 +61,7 @@ use EMBL::File;
 The process_script can be any shell command. It will be given two command line
 arguments: 1) The full path to input_file and 2) a line number (0-based)
 
-See also: linei() of EMBL::File
+See also: linei() of SBG::File
 
 Submit a file and script to process each separate line of the file. Each line of
 the input file becomes one job, processed by the given script. The script will be

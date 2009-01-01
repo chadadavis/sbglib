@@ -21,15 +21,15 @@ use Bio::Root::IO;
 
 # Non-CPAN libs
 
-use EMBL::DB;
-use EMBL::Seq;
-use EMBL::Node;
-use EMBL::Interaction;
-use EMBL::CofM;
-use EMBL::Transform;
-use EMBL::STAMP; # stampfile
+use SBG::DB;
+use SBG::Seq;
+use SBG::Node;
+use SBG::Interaction;
+use SBG::CofM;
+use SBG::Transform;
+use SBG::STAMP; # stampfile
 
-use EMBL::Traversal;
+use SBG::Traversal;
 
 
 ################################################################################
@@ -43,7 +43,7 @@ my $nettemplates = read_templates(shift);
 graphviz($nettemplates, "$OUT/templates.dot");
 
 # TODO also need a callback for processing a solution
-my $t = new EMBL::Traversal($templategraph, \&try_edge);
+my $t = new SBG::Traversal($templategraph, \&try_edge);
 $t->traverse;
 
 
@@ -223,17 +223,17 @@ sub try_interaction2 {
     # This should only happen on the first edge processed
     if (! defined $assembly->transform($src)) {
         
-        my $srccofm = new EMBL::CofM();
+        my $srccofm = new SBG::CofM();
         $srccofm->label($src);
         $srccofm->fetch($srcdom);
-        $assembly->transform($src, new EMBL::Transform);
+        $assembly->transform($src, new SBG::Transform);
         $assembly->cofm($src, $srccofm);
         
         # Do the same for the $dest, as it's in the same frame of reference
-        my $destcofm = new EMBL::CofM();
+        my $destcofm = new SBG::CofM();
         $destcofm->label($dest);
         $destcofm->fetch($destdom);
-        $assembly->transform($dest, new EMBL::Transform);
+        $assembly->transform($dest, new SBG::Transform);
         $assembly->cofm($dest, $destcofm);
         
         print STDERR 
@@ -272,7 +272,7 @@ sub try_interaction2 {
 
     # Then apply that transformation to the interaction partner $dest
     # Get CofM of dest template domain (the one to be transformed)
-    my $destcofm = new EMBL::CofM();
+    my $destcofm = new SBG::CofM();
     $destcofm->label($dest);
     $destcofm->fetch($destdom);
     # Apply transform(s) to cofm of $dest
@@ -318,10 +318,10 @@ sub try_interaction3 {
 
     unless (defined $srccofm) {
         # base case: no previous structural constraint, implicitly sterically OK
-        $srccofm = new EMBL::CofM($src, $srcdom);
+        $srccofm = new SBG::CofM($src, $srcdom);
         # Save CofM object for src component in assembly, indexed by $src
         $assembly->cofm($src, $srccofm);
-        my $destcofm =  new EMBL::CofM($dest, $destdom);
+        my $destcofm =  new SBG::CofM($dest, $destdom);
         $assembly->cofm($dest, $destcofm);
         return $success = 1;
     }
@@ -340,7 +340,7 @@ sub try_interaction3 {
     # Then apply that transformation to the interaction partner $dest
     # Get CofM of dest template domain (the one to be transformed)
     # NB Any previous $assembly->cofm($dest) gets overwritten
-    my $destcofm =  new EMBL::CofM($dest, $destdom);
+    my $destcofm =  new SBG::CofM($dest, $destdom);
 
     # Product of relative with absolute transformation
     # TODO DOC order of mat. mult.

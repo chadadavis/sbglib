@@ -2,11 +2,11 @@
 
 =head1 NAME
 
-EMBL::Node - Additions to Bioperl's Bio::Network::Node
+SBG::Node - Additions to Bioperl's Bio::Network::Node
 
 =head1 SYNOPSIS
 
-use EMBL::Node;
+use SBG::Node;
 
 
 =head1 DESCRIPTION

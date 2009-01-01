@@ -2,10 +2,10 @@
 
 use Test::More 'no_plan';
 
-use EMBL::Domain;
-use EMBL::DomainIO;
-use EMBL::Transform;
-use EMBL::CofM;
+use SBG::Domain;
+use SBG::DomainIO;
+use SBG::Transform;
+use SBG::CofM;
 
 # Locally computed transform
 
@@ -14,7 +14,7 @@ my $d2okrA = pdbc('2okr', 'A')->next_domain();
 
 # Get transform to superimpose 2uzeA onto 2okrA
 my $transtxt = `../bin/transform.sh 2uzeA 2okrA`;
-my $trans = new EMBL::Transform(-file=>$transtxt);
+my $trans = new SBG::Transform(-file=>$transtxt);
 
 # Transform 2uzeC using transformation from 2uzeA => 2okrA
 # i.e. Put 2uzeC into 2okrA's frame of reference

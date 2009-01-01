@@ -2,7 +2,6 @@
 
 use Test::More 'no_plan';
 
-use EMBL::STAMP;
+use SBG::Assembly;
+use SBG::AssemblyIO;
 
-
-__END__

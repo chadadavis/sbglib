@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 
-package EMBL::List;
+package SBG::List;
 use base qw(Exporter);
 our @EXPORT = qw(
 min

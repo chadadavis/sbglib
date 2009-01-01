@@ -2,11 +2,11 @@
 
 =head1 NAME
 
-EMBL::CofM - Computes STAMP centre-of-mass of an EMBL::Domain
+SBG::CofM - Computes STAMP centre-of-mass of an SBG::Domain
 
 =head1 SYNOPSIS
 
- use EMBL::CofM;
+ use SBG::CofM;
 
 =head1 DESCRIPTION
 
@@ -17,14 +17,14 @@ Also fetches radius of gyration of the centre of mass.
 
 =head1 SEE ALSO
 
-L<EMBL::Domain>
+L<SBG::Domain>
 
 =cut
 
 ################################################################################
 
-package EMBL::CofM;
-use EMBL::Root -base, -XXX;
+package SBG::CofM;
+use SBG::Root -base, -XXX;
 
 our @EXPORT = qw(get_cofm);
 
@@ -33,9 +33,9 @@ use Carp;
 use File::Temp qw(tempfile);
 use Text::ParseWords;
 
-use EMBL::DB;
-use EMBL::Domain;
-use EMBL::DomainIO;
+use SBG::DB;
+use SBG::Domain;
+use SBG::DomainIO;
 
 
 
@@ -43,9 +43,9 @@ use EMBL::DomainIO;
 =head2 query
 
  Title   : query
- Usage   : my (@xyz, $rg, $file, $descriptor) = EMBL::CofM::query('2nn6', 'A');
+ Usage   : my (@xyz, $rg, $file, $descriptor) = SBG::CofM::query('2nn6', 'A');
  Function: Fetches centre-of-mass and radius of gyration of known PDB chains
- Example : my (@xyz, $rg, $file, $descriptor) = EMBL::CofM::query('2nn6', 'A');
+ Example : my (@xyz, $rg, $file, $descriptor) = SBG::CofM::query('2nn6', 'A');
  Returns : XYZ coordinates, radius of gyration, path to file, STAMP descriptor
  Args    : pdbid - string (not case sensitive)
            chainid - character (case sensitive)
@@ -88,15 +88,15 @@ sub query {
 =head2 run
 
  Title   : run
- Usage   : my (@xyz, $rg, $file, $descriptor) = EMBL::CofM::run($dom);
+ Usage   : my (@xyz, $rg, $file, $descriptor) = SBG::CofM::run($dom);
  Function: Computes centre-of-mass and radius of gyration of STAMP domain
- Example : my (@xyz, $rg, $file, $descriptor) = EMBL::CofM::run($dom);
+ Example : my (@xyz, $rg, $file, $descriptor) = SBG::CofM::run($dom);
  Returns : XYZ coordinates, radius of gyration, path to file, STAMP descriptor
- Args    : L<EMBL::Domain>
+ Args    : L<SBG::Domain>
 
 Runs external B<cofm> appliation. Must be in your environment's B<$PATH>
 
-'descriptor' and 'pdbid' (or 'stampid') must be defined in the L<EMBL::Domain>
+'descriptor' and 'pdbid' (or 'stampid') must be defined in the L<SBG::Domain>
 
 =cut
 sub run {
@@ -110,7 +110,7 @@ sub run {
 
     # Print the PDB ID, rather than the label, since cofm needs to find template
     my ($tfh, $path) = tempfile();
-    my $io = new EMBL::DomainIO(-fh=>$tfh);
+    my $io = new SBG::DomainIO(-fh=>$tfh);
     $io->write($dom, -id=>'pdbid');
     $io->flush;
     unless (-s $path) {
@@ -154,12 +154,12 @@ sub run {
 
  Title   : get_cofm
  Usage   : get_cofm($dom)
- Function: Sets the center of mass of an L<EMBL::Domain>
+ Function: Sets the center of mass of an L<SBG::Domain>
  Example : get_cofm($dom)
  Returns : The $dom, now containing $dom->cofm;
- Args    : L<EMBL::Domain>
+ Args    : L<SBG::Domain>
 
-Gets centre-of-mass of an EMBL::Domain.
+Gets centre-of-mass of an SBG::Domain.
 
 If the Domain is an entire chain, the database cache is queried first. Otherwise
 cofm is run locally, if available. 

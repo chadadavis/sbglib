@@ -2,11 +2,11 @@
 
 =head1 NAME
 
-EMBL::Seq - Additions to Bioperl's Bio::Seq
+SBG::Interaction - Additions to Bioperl's Bio::Network::Interaction
 
 =head1 SYNOPSIS
 
-use EMBL::Seq;
+use SBG::Interaction;
 
 
 =head1 DESCRIPTION
@@ -29,13 +29,11 @@ Private internal functions are generally preceded with an _
 
 ################################################################################
 
-package Bio::Seq;
+package Bio::Network::Interaction;
 
 use overload (
     '""' => 'stringify',
     'cmp' => 'compare',
-    'eq' => 'equal',
-
     );
 
 # Other modules in our hierarchy
@@ -51,23 +49,20 @@ use lib "..";
  Returns : 
  Args    : 
            
+
 =cut
 
 sub stringify {
     my ($self) = @_;
     my $class = ref($self) || $self;
-    return $self->accession_number;
-}
-
-sub equal {
-    my ($a, $b) = @_;
-    return 0 == compare($a, $b);
+    return $self->primary_id;
 }
 
 sub compare {
     my ($a, $b) = @_;
-    return $a->accession_number cmp $b->accession_number;
+    return $a->primary_id cmp $b->primary_id;
 }
+
 
 ###############################################################################
 

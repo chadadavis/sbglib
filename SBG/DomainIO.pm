@@ -2,14 +2,14 @@
 
 =head1 NAME
 
-EMBL::Domain - Represents a STAMP domain
+SBG::Domain - Represents a STAMP domain
 
 =head1 SYNOPSIS
 
- use EMBL::DomainIO;
+ use SBG::DomainIO;
 
  my $file = "domains.dom";
- my $io = new EMBL::DomainIO(-file=>"<$file");
+ my $io = new SBG::DomainIO(-file=>"<$file");
  
  # Read all domains from a dom file
  my @doms;
@@ -20,7 +20,7 @@ EMBL::Domain - Represents a STAMP domain
 
  # Write domains
  my $outfile = ">results.dom";
- my $ioout = new EMBL::DomainIO(-file=>">$outfile");
+ my $ioout = new SBG::DomainIO(-file=>">$outfile");
  foreach my $d (@doms) {
      $ioout->write($d);
  }
@@ -33,14 +33,14 @@ chain from a PDB entry.
 
 =head1 SEE ALSO
 
-L<EMBL::Domain> , L<EMBL::CofM>
+L<SBG::Domain> , L<SBG::CofM>
 
 =cut
 
 ################################################################################
 
-package EMBL::DomainIO;
-use EMBL::Root -base, -XXX;
+package SBG::DomainIO;
+use SBG::Root -base, -XXX;
 
 field 'fh';
 field 'file';
@@ -51,21 +51,21 @@ use warnings;
 use File::Temp qw(tempfile);
 use Carp;
 
-use EMBL::Domain;
-use EMBL::Transform;
+use SBG::Domain;
+use SBG::Transform;
 
 
 ################################################################################
 =head2 new
 
  Title   : new
- Usage   : my $input = new EMBL::DomainIO(-file=>"<file.dom");
-           my $input = new EMBL::DomainIO(-fh=>\*STDIN);
+ Usage   : my $input = new SBG::DomainIO(-file=>"<file.dom");
+           my $input = new SBG::DomainIO(-fh=>\*STDIN);
  Function: Open a new input stream to a STAMP domain file
- Example : my $input = new EMBL::DomainIO(-file=>"<file.dom");
-           my $output = new EMBL::DomainIO(-file=>">file.dom");
-           my $append = new EMBL::DomainIO(-file=>">>file.dom");
- Returns : Instance of L<EMBL::DomainIO>
+ Example : my $input = new SBG::DomainIO(-file=>"<file.dom");
+           my $output = new SBG::DomainIO(-file=>">file.dom");
+           my $append = new SBG::DomainIO(-file=>">>file.dom");
+ Returns : Instance of L<SBG::DomainIO>
  Args    : -file - Path to domain file to open, including preceeding "<" or ">"
            -fh - An already opened file handle to read domains from
 
@@ -159,7 +159,7 @@ sub flush {
  Function: Writes given domain object to the output stream
  Example : (see below)
  Returns : The string that was printed to the stream
- Args    : L<EMBL::Domain> - A domain, may contain an L<EMBL::Transform>
+ Args    : L<SBG::Domain> - A domain, may contain an L<SBG::Transform>
            -id Print 'pdbid' or 'stampid' (default) as domain label
            -newline If true, also prints a newline after the domain (default)
            -fh another file handle
@@ -167,21 +167,21 @@ sub flush {
 Prints in STAMP format, along with any transform(s) that have been applied.
 
  my $outfile = ">results.dom";
- my $ioout = new EMBL::DomainIO(-file=>">$outfile");
+ my $ioout = new SBG::DomainIO(-file=>">$outfile");
  foreach my $d (@doms) {
      $ioout->write($d);
  }
 
 Or, to just convert to a string, without any file I/O:
 
- my $str = new EMBL::DomainIO->write($dom);
+ my $str = new SBG::DomainIO->write($dom);
 
 =cut
 sub write {
     my $self = shift;
     my ($dom, %o) = @_;
-    unless (ref($dom) eq 'EMBL::Domain') {
-        carp "write() expected EMBL::Domain , got: " . ref($dom) . "\n";
+    unless (ref($dom) eq 'SBG::Domain') {
+        carp "write() expected SBG::Domain , got: " . ref($dom) . "\n";
         return;
     }
     # Default to on, unless already set
@@ -211,9 +211,9 @@ sub write {
 
  Title   : next_domain
  Usage   : my $dom = $io->next_domain();
- Function: Reads the next domain from the stream and make an L<EMBL::Domain>
+ Function: Reads the next domain from the stream and make an L<SBG::Domain>
  Example : (see below)
- Returns : An L<EMBL::Domain>
+ Returns : An L<SBG::Domain>
  Args    : NA
 
  # Read all domains from a dom file
@@ -240,7 +240,7 @@ sub next_domain {
             return undef;
         }
 
-        my $dom = new EMBL::Domain();
+        my $dom = new SBG::Domain();
         $dom->file($1);
         $dom->file2pdbid(); # Parses out PDB ID from filename
         $dom->stampid($2);
@@ -253,7 +253,7 @@ sub next_domain {
 
         # Parse transformtion
         my $transstr = $self->_read_trans;
-        my $trans = new EMBL::Transform(-string=>$transstr);
+        my $trans = new SBG::Transform(-string=>$transstr);
         $dom->transformation($trans);
         return $dom;
     }
@@ -312,7 +312,7 @@ sub _read_trans {
 
 Depending on the configuration of STAMP, domains may be searched in PQS first.
 
- my $io = new EMBL::DomainIO;
+ my $io = new SBG::DomainIO;
  $io->pdbc('2nn6');
  # Get the first domain (i.e. chain) from 2nn6
  my $dom = $io->next_domain;
@@ -331,7 +331,7 @@ sub pdbc {
         carp "Failed: $cmd : $!\n";
         return 0;
     }
-    return new EMBL::DomainIO(-file=>"<$path");
+    return new SBG::DomainIO(-file=>"<$path");
 
 } # pdbc
 

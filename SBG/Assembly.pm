@@ -2,7 +2,7 @@
 
 =head1 NAME
 
-EMBL::Assembly - 
+SBG::Assembly - 
 
 =head1 SYNOPSIS
 
@@ -28,7 +28,7 @@ Private internal functions are generally preceded with an _
 
 ################################################################################
 
-package EMBL::Assembly;
+package SBG::Assembly;
 use Spiffy -Base, -XXX;
 use base 'Clone';
 
@@ -69,9 +69,9 @@ our $thresh = 35; # Angstrom # minimum for hexameric exosome
 sub new() {
     my $self = bless {};
 
-    # Save the EMBL::CofM instances, indexed by component name
+    # Save the SBG::CofM instances, indexed by component name
     $self->{cofm} = {};
-    # Save the relative EMBL::Transform instances, indexed by component name
+    # Save the relative SBG::Transform instances, indexed by component name
     $self->{transform} = {};
     # Bio::Net::Interaction objects used in this assembly, i.e. templates
     $self->{interaction} = {};
@@ -84,7 +84,7 @@ sub eq {
     return $self && $other && ("$self" eq "$other");
 }
 
-# Index hash of EMBL::CofM, by component name
+# Index hash of SBG::CofM, by component name
 sub cofm {
     my ($label, $cofm) = @_;
     if (defined $cofm) {
@@ -93,13 +93,13 @@ sub cofm {
     return $self->{cofm}{$label};
 }
 
-# Index hash of EMBL::Transform, by component name
+# Index hash of SBG::Transform, by component name
 sub transform {
     my ($id, $transform) = @_;
     if (defined $transform) {
         $self->{transform}{$id} = $transform;
     }
-#     $self->{transform}{$id} ||= new EMBL::Transform();
+#     $self->{transform}{$id} ||= new SBG::Transform();
     return $self->{transform}{$id};
 }
 

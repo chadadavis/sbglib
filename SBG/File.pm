@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 
-package EMBL::File;
+package SBG::File;
 
 use base qw(Exporter);
 our @EXPORT = qw(

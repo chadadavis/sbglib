@@ -2,11 +2,11 @@
 
 =head1 NAME
 
-EMBL::Domain - Represents a STAMP domain
+SBG::Domain - Represents a STAMP domain
 
 =head1 SYNOPSIS
 
- use EMBL::Domain;
+ use SBG::Domain;
 
 =head1 DESCRIPTION
 
@@ -15,14 +15,14 @@ chain from a PDB entry.
 
 =head1 SEE ALSO
 
-L<EMBL::DomainIO> , L<EMBL::CofM> , L<EMBL::Transform>
+L<SBG::DomainIO> , L<SBG::CofM> , L<SBG::Transform>
 
 =cut
 
 ################################################################################
 
-package EMBL::Domain;
-use EMBL::Root -Base, -XXX;
+package SBG::Domain;
+use SBG::Root -Base, -XXX;
 
 # The centre of mass is a point (as an mpdl, from PDL::Matrix)
 # Default: (0,0,0,1). For affine multiplication, hence additional '1'
@@ -60,14 +60,14 @@ use PDL::Math;
 use PDL::Matrix;
 use File::Temp qw(tempfile);
 
-use EMBL::Transform;
+use SBG::Transform;
 
 
 ################################################################################
 =head2 new
 
  Title   : new
- Usage   : my $dom = new EMBL::Domain(-stampid=>'mydom', 
+ Usage   : my $dom = new SBG::Domain(-stampid=>'mydom', 
                                       -pdbid=>'2nn6', 
                                       -descriptor=>'CHAIN A');
  Function: Creates a new STAMP representation of segment of a protein chain
@@ -194,10 +194,10 @@ sub cofm {
  Title   : transformation
  Usage   : my $trans = $dom->transformation; # get
            $dom->transformation($trans);     # set
- Function: Accessor for 'transformation' field, which is an L<EMBL::Transform>
+ Function: Accessor for 'transformation' field, which is an L<SBG::Transform>
  Example : 
  Returns : New value of 'transformation' field;
- Args    : L<EMBL::Transform> - optional, new transformation to be assigned
+ Args    : L<SBG::Transform> - optional, new transformation to be assigned
 
 =cut
 sub transformation {
@@ -221,7 +221,7 @@ Resets the internal Transform, but not the centre of mass ('cofm');
 
 =cut
 sub reset {
-    return $self->{transformation} = new EMBL::Transform;
+    return $self->{transformation} = new SBG::Transform;
 }
 
 
@@ -272,7 +272,7 @@ sub asstring {
  Function: Applyies given transformation to the centre-of-mass, transforming it
  Example : $dom->transform($some_transformation);
  Returns : $self
- Args    : L<EMBL::Transform>
+ Args    : L<SBG::Transform>
 
 Apply a new transformation to this centre-of-mass.
 
@@ -299,10 +299,10 @@ sub transform {
 
  Title   : rmsd
  Usage   : my $linear_distance = $dom1->rmsd($dom2);
- Function: Positive distance between centres-of-mass of to L<EMBL::Domain>s
+ Function: Positive distance between centres-of-mass of to L<SBG::Domain>s
  Example : my $linear_distance = $dom1 - $dom2; # overloaded operator -
  Returns : Euclidean distance between $dom1->cofm and $dom2->cofm
- Args    : L<EMBL::Domain> - Other domain to measure distance to.
+ Args    : L<SBG::Domain> - Other domain to measure distance to.
 
 Distance between this Domain and some other, measured from their centres-of-mass
 
@@ -329,7 +329,7 @@ sub rmsd {
  Example : my $linear_overlap = $dom1->overlap($dom2);
  Returns : Positive: linear overlap along line connecting centres of spheres
            Negative: linear distance between surfaces of spheres
- Args    : Another L<EMBL::Domain>
+ Args    : Another L<SBG::Domain>
 
 =cut
 sub overlap {
@@ -351,7 +351,7 @@ sub overlap {
  Function: Whether two spheres overlap, beyond an allowed threshold (Angstrom)
  Example : if($dom1->overlaps($dom2,20.5)) { print "Clash!\n"; }
  Returns : true if L<overlap> exceeds given thresh
- Args    : L<EMBL::Domain> 
+ Args    : L<SBG::Domain> 
            thresh - default 0
 
 =cut

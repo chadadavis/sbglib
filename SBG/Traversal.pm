@@ -2,17 +2,21 @@
 
 =head1 NAME
 
-EMBL::Traversal - A recusive back-tracking traversal of a Graph
+SBG::Traversal - A recusive back-tracking traversal of a Graph
 
 =head1 SYNOPSIS
 
- use EMBL::Traversal;
+ use SBG::Traversal;
 
- my $traversal = new EMBL::Traversal($mygraph);
+ my $traversal = new SBG::Traversal($mygraph);
 
 =head1 DESCRIPTION
 
+
  TODO
+
+Similar to BFS (breadth-first search)
+
   does this also work on any L<Graph> or just ProteinNet ?
 
 =head1 SEE ALSO
@@ -23,25 +27,28 @@ L<Graph::Traversal>
 
 ################################################################################
 
-package EMBL::Traversal;
-use EMBL::Root -Base, -XXX;
+package SBG::Traversal;
+use SBG::Root -Base, -XXX;
 
+# Reference to the graph being traversed
 field 'graph';
+
+# Call back function used to determine whether an edge is traversed or not
 field 'consider';
+
+# Queues noting the edges/nodes to be processed, in a breadth-first fashion
 field 'next_edges' => [];
 field 'next_nodes' => [];
 
 
 use warnings;
 use Clone qw(clone);
-use List::Util;
 use Graph;
 use Graph::UnionFind;
-use Data::Dumper;
 
 # TODO DEL
 #   state saving object should be generic
-use EMBL::Assembly;
+use SBG::Assembly;
 
 
 ################################################################################
@@ -66,65 +73,76 @@ sub new () {
 } # new
 
 
+
+# These functions used by try_edge()
+# Should be in Assembly, which is the state object
 sub get_state {
-    my ($self, $key) = @_;
+    my ($key) = @_;
     return ${$self->{state}}{$key};
 }
 
 sub set_state {
-    my ($self, $key, $value) = @_;
+    my ($key, $value) = @_;
     ${$self->{state}}{$key} = $value;
     return ${$self->{state}}{$key};
 }
 
 
+################################################################################
+=head2 traverse
+
+ Title   : traverse
+ Usage   :
+ Function:
+ Example :
+ Returns : 
+ Args    :
+
+Each vertex in the graph as used as the starting node one time.  This is because
+different traversals could theoretically produce different results.
+
+TODO consider allowing starting node (single one) as parameter
+
+=cut
 sub traverse {
-    my ($self) = @_;
-    my $graph = $self->{graph};
+    my @nodes = $self->graph->vertices();
 
-    # Start with all vertices, independent
-    my @vertices = $self->{graph}->vertices();
+    print STDERR "Nodes:@nodes\n";
 
-    print STDERR "verts:@vertices\n";
-
-    # Shuffle them
-#     @vertices = List::Util::shuffle @vertices;
-
-    # Use all verts as starting nodes
-    # TODO DES Cannot do this, as all nodes are in separate frames of reference
-#     push @{$self->{next_nodes}}, @vertices;
-
-    # Start at a random node
-#     push @{$self->{next_nodes}}, $vertices[int rand @vertices];
-    
-#     push @{$self->{next_nodes}}, $vertices[0];
+    # NB cannot use all nodes together in one run, as they may have different
+    # frames of reference.
+#     push @{$self->next_nodes}, @nodes;
 
 
-    # TODO Starting node should be a parameter
-    foreach my $node (@vertices) {
+    # Using one different starting node in each iteration
+    foreach my $node (@nodes) {
         print STDERR ("=" x 80), "\nStart node: $node\n";
-        
-        # What was the idea here? This shortens @vertices !!
-#         $self->{next_nodes} = [ shift @vertices ];
 
-        # Should be using one different starting node in each iteration
         $self->{next_nodes} = [ $node ];
 
+        # A new disjoint set data structure, to track which nodes in same sets
         my $uf = new Graph::UnionFind;
+        # Each node is in its own set first
         $uf->add($_) for @vertices;
-        # Initial assembly is empty
-        my $ass = new EMBL::Assembly();
+
         # TODO Clean this up, should be in constructor
+        # Initial assembly is empty
+        my $ass = new SBG::Assembly();
+        
+        # How to cleanly get this graph in to the assembly?
+        #  Where is this needed?
         $ass->{graph} = $self->{graph};
-#         my $ass = new EMBL::Assembly;
+
+        # Go!
         $self->do_nodes2($uf, $ass);
     }
 
-}
+} # traverse
+
 
 # TODO DES shorten this
 sub do_edges2 {
-    my ($self, $uf, $assembly) = @_;
+    my ($uf, $assembly) = @_;
     my $current = shift @{$self->{next_edges}};
 
     # When no edges left on stack, go to next level down in BFS traversal tree
@@ -208,11 +226,11 @@ sub do_edges2 {
     $ufclone = clone($uf);
     $assclone = $assembly->clone();
     $self->do_edges2($uf, $assclone);
-}
+} # do_edges2
 
 
 sub do_nodes2 {
-    my ($self, $uf, $assembly) = @_;
+    my ($uf, $assembly) = @_;
     my $current = shift @{$self->{next_nodes}};
 
     unless ($current) {
@@ -247,9 +265,10 @@ sub do_nodes2 {
     $self->do_nodes2($uf, $assembly);
 
     print STDERR "<= Node: $current\n";
-}
+} # do_nodes2
 
 
+# TODO DOC
 sub new_neighbors {
     my ($self, $node, $uf) = @_;
 
@@ -262,79 +281,6 @@ sub new_neighbors {
     return @unseen;
 }
 
-
-sub do_set {
-    my ($self, @nodes) = @_;
-
-    # UnionFind data structure to track where we already were
-    my $uf = new Graph::UnionFind;
-    $uf->add($_) for @nodes;
-
-    foreach my $entry (@nodes) {
-        print STDERR "Entry: $entry\n";
-        my $clone = clone($uf);
-        $self->do_node($clone, $entry, []);
-
-        # TODO DEL
-        # Just do a single (random) entry point for now
-        last;
-    }
-}
-
-
-sub do_node {
-    my ($self, $uf, $start, $assembly) = @_;
-
-    print STDERR "At $start:\n";
-    my @unseen = $self->new_neighbors($start, $uf);
-
-    foreach my $neighbor (@unseen) {
-        print STDERR "\t$start -- $neighbor\n";
-
-        # Make a copy where edge is established (pass this down)
-        # TODO DES This is a lot of copying. Alternatives?
-        my $clone = clone($uf);
-
-        # In this temporary copy, union my neighbor into my set
-        $clone->union($start, $neighbor);
-
-        # As long as this edge is successful, keep 'running' it
-
-        # TODO DES this doesn't make sense because it stop on the first failure
-        # As I don't know the difference between "single failure" and "exhausted"
-
-        while (my $result = 
-               $self->{consider}($start, $neighbor, $self, $assembly)) {
-            # OK, visit the neighboring vertex
-            # Process outstanding vertices, with this edge now in place
-#             $self->do_node($clone, @nodes);
-
-            # Partial solution, pass it down traversal tree
-            push @$assembly, $result;
-            # Get the assembly that's passed back up
-            my $lowerassembly = $self->do_node($clone, $neighbor, $assembly);
-            # Undo the partial solution after backtracking
-            pop @$assembly;
-
-            # NB we don't try to combine partial solutions over the same edge
-        }
-        print STDERR "\t<= back at edge: $start -- $neighbor\n";
-    }
-    # This node is done, do rest of forest without this node
-    # This is important, as the interaction network may be disconnected
-
-    # TODO DES Of course, this also causes the whole procedure to be repeated
-    # for every possibly entry point to the graph. I.e. many duplicate
-    # solutions. But at least some of these are necessary in the case where
-    # we've picked a bad entry point. Alternative, do_node could return what
-    # nodes it has already processed.
-
-    # TODO save solution, if any (use a callback)
-    print STDERR "\tDone at $start: Assembly: @$assembly\n";
-    return $assembly
-#     $self->do_node($uf, @nodes);
-
-}
 
 
 # Convert 2D array to string list, e.g.:

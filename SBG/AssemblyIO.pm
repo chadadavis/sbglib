@@ -4,14 +4,14 @@
 
 # TODO use Spiffy
 
-package EMBL::AssemblyIO;
+package SBG::AssemblyIO;
 
 use Spiffy -Base, -XXX;
 field 'fh';
 
 use lib "..";
-use EMBL::Assembly;
-use EMBL::DomIO;
+use SBG::Assembly;
+use SBG::DomainIO;
 
 ################################################################################
 
@@ -26,9 +26,9 @@ sub new() {
 
 
 sub next_assembly {
-    my $domio = new EMBL::DomIO($self->fh);
+    my $domio = new SBG::DomIO($self->fh);
     my $dom;
-    my $assem = new EMBL::Assembly();
+    my $assem = new SBG::Assembly();
     while ($dom = $domio->next_dom) {
         # Add Dom to Assembly
         print STDERR "Dom:", $dom->label, "\n";
@@ -56,7 +56,7 @@ sub write {
     print $fh "\n";
 
     # TODO PROB should be OK to share the fh, right?
-    my $domio = new EMBL::DomainIO(-fh=>$fh);
+    my $domio = new SBG::DomainIO(-fh=>$fh);
 
     # Print all CofM objects (STAMP format)
     # STAMP will number the chains alphabetically in the final output

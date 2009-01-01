@@ -2,28 +2,28 @@
 
 =head1 NAME
 
-EMBL::Transform - Represents an affine transformation matrix (4x4)
+SBG::Transform - Represents an affine transformation matrix (4x4)
 
 =head1 SYNOPSIS
 
- use EMBL::Transform
+ use SBG::Transform
 
 =head1 DESCRIPTION
 
-An L<EMBL::Transform> can transform L<EMBL::Domain>s or L<EMBL::Assembly>s. It
+An L<SBG::Transform> can transform L<SBG::Domain>s or L<SBG::Assembly>s. It
 is compatible with STAMP transformation matrices (3x4) and reads and writes
 them.
 
 =head1 SEE ALSO
 
-L<EMBL::Domain>
+L<SBG::Domain>
 
 =cut
 
 ################################################################################
 
-package EMBL::Transform;
-use EMBL::Root -base, -XXX;
+package SBG::Transform;
+use SBG::Root -base, -XXX;
 
 our @EXPORT = qw(onto);
 
@@ -130,7 +130,7 @@ sub mult {
         return undef;
     }
     my $m = $self->matrix x $other->matrix;
-    return new EMBL::Transform(-matrix=>$m);
+    return new SBG::Transform(-matrix=>$m);
 } # mult
 
 

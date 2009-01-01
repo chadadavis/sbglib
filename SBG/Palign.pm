@@ -41,7 +41,7 @@
 # $align->{stamp}{$t} where $t is the letter
 # The data will simply be in the {post} field above (accessed by a split function)
 
-package EMBL::Palign;
+package SBG::Palign;
 require Exporter;
 @ISA = qw(Exporter);
 @EXPORT = qw(read_align get_msf write_msf get_clustal write_clustal get_block write_block get_afasta write_afasta 

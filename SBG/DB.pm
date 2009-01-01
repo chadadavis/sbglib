@@ -2,11 +2,11 @@
 
 =head1 NAME
 
-EMBL::DB - Simple database utilities
+SBG::DB - Simple database utilities
 
 =head1 SYNOPSIS
 
- use EMBL::DB;
+ use SBG::DB;
 
 Connect to DB (This is the actual DBI handle)
 
@@ -24,8 +24,8 @@ L<DBI>
 
 ################################################################################
 
-package EMBL::DB;
-use EMBL::Root -base, -XXX;
+package SBG::DB;
+use SBG::Root -base, -XXX;
 
 our @EXPORT = qw(dbconnect);
 
@@ -57,7 +57,7 @@ This does not invalidate any open handles to any other databases.
 =cut
 sub dbconnect {
     my %o = @_;
-    EMBL::Root::_undash(%o);
+    SBG::Root::_undash(%o);
     $o{host} ||= $config->val("database", "host") || "localhost";
     $o{db} ||= $config->val("database", "db");
     $o{driver} ||= $config->val("database", "driver") || "mysql";

@@ -3,7 +3,7 @@
 use warnings;
 use Carp;
 
-use EMBL::STAMP;
+use SBG::STAMP;
 
 ################################################################################
 
@@ -14,7 +14,7 @@ unless ($dom) {
     return;
 }
 # Read input domains into %DOM hash
-my $in = new EMBL::DomainIO(-file=>$dom);
+my $in = new SBG::DomainIO(-file=>$dom);
 my @doms;
 while (my $dom = $in->next_domain) {
     push @doms, $dom;
@@ -37,7 +37,7 @@ sub stampprint {
     # Reorder domains (using stampid field)
     $doms = reorder($doms, $order, 'stampid') if $order;
 
-    my $tmpout = new EMBL::DomainIO(-fh=>$fh);
+    my $tmpout = new SBG::DomainIO(-fh=>$fh);
     $tmpout->write($_) for @$doms;
 
     print $fh "%TRANS_END\n";
