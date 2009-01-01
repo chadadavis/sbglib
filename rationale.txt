@@ -1,5 +1,0 @@
-
-In the spirit of code resuse, addition functionality is best added as a
-copilable library (typically C/C++), for which small, simple interfaces can be
-provided in other languages (e.g. JNI in Java, etc.).
-
