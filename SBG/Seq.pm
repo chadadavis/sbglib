@@ -2,60 +2,51 @@
 
 =head1 NAME
 
-SBG::Seq - Additions to Bioperl's Bio::Seq
+SBG::Seq - Additions to Bioperl's L<Bio::Seq>
 
 =head1 SYNOPSIS
 
-use SBG::Seq;
+ use SBG::Seq;
 
 
 =head1 DESCRIPTION
 
+Simple extensions to L<Bio::Seq> to define stringificition, string equality and
+string comparison, all based on the B<accession_number> field.
 
-=head1 BUGS
+=head2 SEE ALSO
 
-None known.
-
-=head1 REVISION
-
-$Id: Prediction.pm,v 1.33 2005/02/28 01:34:35 uid1343 Exp $
-
-=head1 APPENDIX
-
-Details on functions implemented here are described below.
-Private internal functions are generally preceded with an _
+L<Bio::Seq>
 
 =cut
 
 ################################################################################
 
-package Bio::Seq;
+package SBG::Seq;
+use SBG::Root -base, -XXX;
+use base qw(Bio::Seq);
 
 use overload (
-    '""' => 'stringify',
+    '""' => 'asstring',
     'cmp' => 'compare',
     'eq' => 'equal',
 
     );
 
-# Other modules in our hierarchy
-use lib "..";
-
-
 ################################################################################
-=head2 
 
- Title   : 
- Usage   : 
- Function: 
- Returns : 
- Args    : 
-           
-=cut
+sub new () {
+    my $class = shift;
+    # Delegate to parent class
+    my $self = new Bio::Seq(@_);
+    # And add our ISA spec
+    bless $self, $class;
+    # Is now both a Bio::Seq and an SBG::Seq
+    return $self;
+}
 
-sub stringify {
+sub asstring {
     my ($self) = @_;
-    my $class = ref($self) || $self;
     return $self->accession_number;
 }
 
@@ -69,8 +60,9 @@ sub compare {
     return $a->accession_number cmp $b->accession_number;
 }
 
+
 ###############################################################################
 
 1;
 
-__END__
+

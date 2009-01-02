@@ -2,57 +2,49 @@
 
 =head1 NAME
 
-SBG::Interaction - Additions to Bioperl's Bio::Network::Interaction
+SBG::Interaction - Additions to Bioperl's L<Bio::Network::Interaction>
 
 =head1 SYNOPSIS
 
-use SBG::Interaction;
+ use SBG::Interaction;
 
 
 =head1 DESCRIPTION
 
+Additions for stringification and string comparison. Based on B<primary_id>
+field of L<Bio::Network::Interaction> .
 
-=head1 BUGS
+=head1 SEE ALSO
 
-None known.
-
-=head1 REVISION
-
-$Id: Prediction.pm,v 1.33 2005/02/28 01:34:35 uid1343 Exp $
-
-=head1 APPENDIX
-
-Details on functions implemented here are described below.
-Private internal functions are generally preceded with an _
+L<Bio::Network::Interaction> , L<Bio::Network::Node> , L<SBG::Node>
 
 =cut
 
 ################################################################################
 
-package Bio::Network::Interaction;
+package SBG::Interaction;
+use SBG::Root -base, -XXX;
+use base qw(Bio::Network::Interaction);
 
 use overload (
-    '""' => 'stringify',
+    '""' => 'asstring',
     'cmp' => 'compare',
     );
 
-# Other modules in our hierarchy
-use lib "..";
-
 
 ################################################################################
-=head2 
 
- Title   : 
- Usage   : 
- Function: 
- Returns : 
- Args    : 
-           
+sub new () {
+    my $class = shift;
+    # Delegate to parent class
+    my $self = new Bio::Network::Interaction(@_);
+    # And add our ISA spec
+    bless $self, $class;
+    # Is now both a Bio::Network::Interaction and an SBG::Interaction
+    return $self;
+}
 
-=cut
-
-sub stringify {
+sub asstring {
     my ($self) = @_;
     my $class = ref($self) || $self;
     return $self->primary_id;

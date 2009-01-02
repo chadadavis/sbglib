@@ -11,61 +11,51 @@ use SBG::Node;
 
 =head1 DESCRIPTION
 
+A node in a protein interaction network (L<Bio::Network::ProteinNet>)
 
-=head1 BUGS
+Derived from L<Bio::Network::Node> . It is extended simply to add some simple
+stringification and comparison operators.
 
-None known.
+=head1 SEE ALSO
 
-=head1 REVISION
-
-$Id: Prediction.pm,v 1.33 2005/02/28 01:34:35 uid1343 Exp $
-
-=head1 APPENDIX
-
-Details on functions implemented here are described below.
-Private internal functions are generally preceded with an _
+L<Bio::Network::Node> , L<Bio::Network::ProteinNet> , L<Bio::Network::Interaction>
 
 =cut
 
 ################################################################################
 
-package Bio::Network::Node;
+package SBG::Node;
+use SBG::Root -base, -XXX;
+use base qw(Bio::Network::Node);
 
 
 use overload (
-    '""' => 'stringify',
+    '""' => 'asstring',
     'cmp' => 'compare',
     'eq' => 'equal',
     );
 
-# Other modules in our hierarchy
-use lib "..";
-
-use Data::Dumper; 
 
 ################################################################################
-=head2 
 
- Title   : 
- Usage   : 
- Function: 
- Returns : 
- Args    : 
-           
-
-=cut
-
-sub stringify {
-    my ($self) = @_;
-    my $class = ref($self) || $self;
-    return join(",", $self->proteins);
+sub new () {
+    my $class = shift;
+    # Delegate to parent class
+    my $self = new Bio::Network::Node(@_);
+    # And add our ISA spec
+    bless $self, $class;
+    # Is now both a Bio::Network::Node and an SBG::Node
+    return $self;
 }
+
+sub asstring {
+    my ($self) = @_;
+    return join(",", $self->proteins);
+} # asstring
+
 
 sub equal {
     my ($a, $b) = @_;
-
-
-
     return 0 == compare($a, $b);
 }
 
@@ -73,7 +63,7 @@ sub equal {
 sub compare {
     my ($a, $b) = @_;
 
-    return undef unless ref($b) eq "Bio::Network::Node";
+    return undef unless ref($b) && $b->isa("Bio::Network::Node");
 
     # If all A's are less than all B's, then A < B, and vice versa
     # If results are mixed, return 0 (equivalent)
@@ -96,7 +86,6 @@ sub tally {
     # Compare all against all.
     # Store all comparisons
     my %cmp = (-1 => 0, 0 => 0, +1 => 0);
-
 
     my @a = $a && $a->proteins;
     my @b = $b && $b->proteins;
