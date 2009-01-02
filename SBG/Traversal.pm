@@ -2,7 +2,7 @@
 
 =head1 NAME
 
-SBG::Traversal - A recusive back-tracking traversal of a Graph
+SBG::Traversal - A recusive back-tracking traversal of a L<Graph>
 
 =head1 SYNOPSIS
 
@@ -15,28 +15,28 @@ SBG::Traversal - A recusive back-tracking traversal of a Graph
 
  TODO
 
-Similar to BFS (breadth-first search)
+Similar to BFS (breadth-first search), but specifically for multigraphs in which
+each the many edges between two nodes represent mutually exclusive alternatives.
 
-  does this also work on any L<Graph> or just ProteinNet ?
 
 =head1 SEE ALSO
 
-L<Graph::Traversal>
+L<Graph::Traversal> 
 
 =cut
 
 ################################################################################
 
 package SBG::Traversal;
-use SBG::Root -Base, -XXX;
+use SBG::Root -base, -XXX;
 
 # Reference to the graph being traversed
 field 'graph';
 
 # Call back function used to determine whether an edge is traversed or not
-field 'consider';
+field 'test';
 
-# Queues noting the edges/nodes to be processed, in a breadth-first fashion
+# Queues that note the edges/nodes to be processed, in a breadth-first fashion
 field 'next_edges' => [];
 field 'next_nodes' => [];
 
@@ -61,7 +61,17 @@ use SBG::Assembly;
  Args    :
 
 -graph
--consider
+-test Reference to a callback function.
+-state An object (hash ref) that will maintain state information (default: {})
+
+The $test function should return true if an edge is to be used in the
+traversal. It is called as:
+
+ $test($src, $dest, $self, $stateclone);
+
+src and dest are the source and destination nodes of the edge being
+considered. $self is this L<SBG::Traversal> and $stateclone is a object that
+must implement the Perl L<Clone> interface.
 
 =cut
 sub new () {
@@ -74,18 +84,6 @@ sub new () {
 
 
 
-# These functions used by try_edge()
-# Should be in Assembly, which is the state object
-sub get_state {
-    my ($key) = @_;
-    return ${$self->{state}}{$key};
-}
-
-sub set_state {
-    my ($key, $value) = @_;
-    ${$self->{state}}{$key} = $value;
-    return ${$self->{state}}{$key};
-}
 
 
 ################################################################################
@@ -98,21 +96,23 @@ sub set_state {
  Returns : 
  Args    :
 
-Each vertex in the graph as used as the starting node one time.  This is because
+Each vertex in the graph is used as the starting node one time.  This is because
 different traversals could theoretically produce different results.
 
 TODO consider allowing starting node (single one) as parameter
 
+Under what circumstances will solutions be redundant. When can we spare
+ourselves of the extra computation?
+
 =cut
 sub traverse {
+    my $self = shift;
     my @nodes = $self->graph->vertices();
-
     print STDERR "Nodes:@nodes\n";
 
     # NB cannot use all nodes together in one run, as they may have different
     # frames of reference.
 #     push @{$self->next_nodes}, @nodes;
-
 
     # Using one different starting node in each iteration
     foreach my $node (@nodes) {
@@ -142,7 +142,7 @@ sub traverse {
 
 # TODO DES shorten this
 sub do_edges2 {
-    my ($uf, $assembly) = @_;
+    my ($self, $uf, $assembly) = @_;
     my $current = shift @{$self->{next_edges}};
 
     # When no edges left on stack, go to next level down in BFS traversal tree
@@ -160,7 +160,7 @@ sub do_edges2 {
 #                     "Duplicate Assembly: $assembly\n";
                 # Skip dup
             } else {
-                $assembly->write() if $assembly->ncomponents() > 2;
+                $assembly->write() if $assembly->size() > 2;
                 $self->{lastass} = $assembly;
             }
             return undef;
@@ -177,8 +177,7 @@ sub do_edges2 {
     my $ufclone = clone($uf);
     my $assclone = $assembly->clone();
 
-#     my $result = $self->{consider}($src, $dest, $self, $assembly);
-    my $result = $self->{consider}($src, $dest, $self, $assclone);
+    my $result = $self->test()($src, $dest, $self, $assclone);
 
     if (!defined $result) {
         # No more templates left for edge: $src,$dest
@@ -202,8 +201,7 @@ sub do_edges2 {
         $self->do_edges2($ufclone, $assclone);
 
         # Backtracking, undo intermediate solution by one edge
-        # Don't need this, as we already cloned
-#         $assembly->remove($result);
+        # Don't need to change any data, as we already cloned
     }
 
     print STDERR "<= Edge: $src $dest\n";
@@ -230,7 +228,7 @@ sub do_edges2 {
 
 
 sub do_nodes2 {
-    my ($uf, $assembly) = @_;
+    my ($self, $uf, $assembly) = @_;
     my $current = shift @{$self->{next_nodes}};
 
     unless ($current) {
@@ -246,7 +244,7 @@ sub do_nodes2 {
                 # Skip dup
             } else {
                 # Partial solution
-                $assembly->write() if $assembly->ncomponents() > 2;
+                $assembly->write() if $assembly->size() > 2;
                 # Note this, so as not to duplicate it
                 $self->{lastass} = $assembly;
             }
@@ -256,7 +254,7 @@ sub do_nodes2 {
 
     print STDERR "Node: $current (@{$self->{next_nodes}})\n";
 
-    my @unseen = $self->new_neighbors($current, $uf);
+    my @unseen = $self->_new_neighbors($current, $uf);
     for my $neighbor (@unseen) {
         # push edges onto stack
         print STDERR "\tpush'ing edge: $current,$neighbor\n";
@@ -268,8 +266,9 @@ sub do_nodes2 {
 } # do_nodes2
 
 
-# TODO DOC
-sub new_neighbors {
+# Uses a L<Graph::UnionFind> to keep track of nodes in the graph (the
+# other graph, the one being traversed), that are still to be visited.
+sub _new_neighbors {
     my ($self, $node, $uf) = @_;
 
     my @adj = $self->{graph}->neighbors($node);
@@ -277,10 +276,8 @@ sub new_neighbors {
     my @unseen = grep { ! $uf->same($node, $_) } @adj;
 
     print STDERR "\tadj: @adj; unseen: @unseen\n";
-
     return @unseen;
 }
-
 
 
 # Convert 2D array to string list, e.g.:
@@ -288,6 +285,22 @@ sub new_neighbors {
 sub _array2D {
     my ($a) = @_;
     return join("; ", map { join(",", @$_) } @$a);
+}
+
+
+# TODO DEL
+
+# These functions used by try_edge()
+# Should be in Assembly, which is the state object
+sub get_state {
+    my ($self, $key) = @_;
+    return ${$self->{state}}{$key};
+}
+
+sub set_state {
+    my ($self, $key, $value) = @_;
+    ${$self->{state}}{$key} = $value;
+    return ${$self->{state}}{$key};
 }
 
 
