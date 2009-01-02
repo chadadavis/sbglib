@@ -2,57 +2,40 @@
 
 =head1 NAME
 
-SBG::Assembly - 
+SBG::Assembly - Represents one solution to the problem of assembling a complex
 
 =head1 SYNOPSIS
+
+ use SBG::Assembly;
 
 
 =head1 DESCRIPTION
 
 
 
-=head1 BUGS
+=SEE ALSO
 
-None known.
-
-=head1 REVISION
-
-$Id: Prediction.pm,v 1.33 2005/02/28 01:34:35 uid1343 Exp $
-
-=head1 APPENDIX
-
-Details on functions implemented here are described below.
-Private internal functions are generally preceded with an _
+L<SBG::AssemblyIO> , L<SBG::Domain>
 
 =cut
 
 ################################################################################
 
 package SBG::Assembly;
-use Spiffy -Base, -XXX;
-use base 'Clone';
+use SBG::Root -Base, -XXX;
 
-use overload (
-    '""' => 'stringify',
-    '==' => 'eq',
-    'eq' => 'eq',
-    );
-
-use lib "..";
-
-use Data::Dumper;
-
+# This object is clonable
+use base qw(Clone);
 
 # Allowed (linear) overlap between the spheres, that represent the proteins
 # Centre-of-mass + Radius-of-gyration
-# TODO IniFile
+field 'clash';
 
-# our $thresh = 20; # Angstrom
-# our $thresh = 25; # Angstrom
-# our $thresh = 30; # Angstrom
-# our $thresh = 33; # Angstrom
-our $thresh = 35; # Angstrom # minimum for hexameric exosome
 
+use overload (
+    '""' => 'asstring',
+    'eq' => 'eq',
+    );
 
 
 ################################################################################
@@ -62,107 +45,134 @@ our $thresh = 35; # Angstrom # minimum for hexameric exosome
  Usage   : 
  Function: 
  Returns : 
- Args    :
+ Args    : -clash Tolerance (angstrom) for overlaping radii of gyration
 
 =cut
+sub new () {
+    my ($class, %o) = @_;
+    my $self = { %o };
+    bless $self, $class;
+    $self->_undash;
 
-sub new() {
-    my $self = bless {};
+    $self->{clash} = $config->val('assembly', 'clash') || '30';
 
-    # Save the SBG::CofM instances, indexed by component name
-    $self->{cofm} = {};
-    # Save the relative SBG::Transform instances, indexed by component name
-    $self->{transform} = {};
-    # Bio::Net::Interaction objects used in this assembly, i.e. templates
-    $self->{interaction} = {};
+    # Component L<SBG::Domain>s in this Assembly
+    my $comp = {};
+    # L<SBG::Interaction>s used in this Assembly
+    my $iaction = {};
 
     return $self;
 } # new
 
+
+sub asstring {
+    join ",", sort keys %{$self->{iaction}};
+}
+
 sub eq {
     my $other = shift;
-    return $self && $other && ("$self" eq "$other");
-}
-
-# Index hash of SBG::CofM, by component name
-sub cofm {
-    my ($label, $cofm) = @_;
-    if (defined $cofm) {
-        $self->{cofm}{$label} = $cofm;
-    }
-    return $self->{cofm}{$label};
-}
-
-# Index hash of SBG::Transform, by component name
-sub transform {
-    my ($id, $transform) = @_;
-    if (defined $transform) {
-        $self->{transform}{$id} = $transform;
-    }
-#     $self->{transform}{$id} ||= new SBG::Transform();
-    return $self->{transform}{$id};
-}
-
-# Add a chosen interaction template
-sub add {
-    my $ix = shift;
-    $self->{interaction}{$ix} = $ix;
-    return $self->{interaction}{$ix};
-}
-
-# Remove a node or an interaction
-sub remove {
-    my $id = shift;
-    delete $self->{interaction}{$id};
-    delete $self->{transform}{$id};
-    delete $self->{cofm}{$id};
+    return "$self" eq "$other";
 }
 
 
-# A shallow copy, copies hashes and their pointers.
-# Doesn't copy referenced CofM/Transform objects.
-# This is necessary, as backtracking graph traversal creates many Assembly's
-# Depth 2 means: copy assembly (1) and the hashes/objects in assembly (2).
-# Does not copy what is referenced in/from the hashes/objects (3).
-# I.e. Assembly can efficiently contain references to other objects without
-#   incurring a cloning copy penalty.
+################################################################################
+=head2 clone
+
+ Title   : clone
+ Usage   :
+ Function:
+ Example :
+ Returns : 
+ Args    :
+
+A shallow copy, copies hashes and their pointers.  Doesn't copy referenced
+Domain/Transform objects.  This is necessary, as backtracking graph traversal
+creates many Assemblys.
+
+Depth 2 means: copy assembly (1) and the hashes/objects in Assembly (2).  Does
+not copy what is referenced in/from the hashes/objects (3).
+
+I.e. Assembly can efficiently contain references to other objects without
+incurring a cloning copy penalty.
+
+=cut
 sub clone {
-    super(2);
-}
-
-# TODO DOC the interaction field
-sub stringify {
-    join ",", keys %{$self->{interaction}};
-}
+    super(shift || 2);
+} # clone
 
 
 # Number of components in this assembly
-sub ncomponents {
-    return scalar(keys %{$self->{cofm}});
+sub size {
+    return scalar(keys %{$self->{comp}});
 }
 
 
+################################################################################
+=head2 comp
 
+ Title   : comp
+ Usage   :
+ Function:
+ Example :
+ Returns : 
+ Args    :
+
+The component L<SBG::Domain> objects collected in this Assembly.  NB These also
+contain centres-of-mass as well as Transform's
+
+The return value of this method can be assigned to, e.g.:
+
+ $assem->comp('mylabel') = $domainobject;
+
+NB Spiffy doesn't magically create $self here, probably due to the attribute
+=cut
+sub comp : lvalue {
+    my ($self,$key) = @_;
+    # Do not use 'return' with 'lvalue'
+    $self->{comp}{$key};
+} # comp
+
+sub iaction : lvalue {
+    my ($self,$key) = @_;
+    # Do not use 'return' with 'lvalue'
+    $self->{iaction}{$key};
+}
+
+################################################################################
+=head2 clashes
+
+ Title   : clashes
+ Usage   :
+ Function:
+ Example :
+ Returns : 
+ Args    :
+
+Determine whether a given L<SBG::Domain> (containing a centre-of-mass with a
+radius of gyration), would create a clash/overlap in space with any of the
+L<SBG::Domain>s in this Assembly.
+
+=cut
 sub clashes {
-    my $newcofm = shift;
+    my $newdom = shift;
 
-    # TODO configurable Config::IniFiles
-    our $thresh;
-
-    # $self->cofm is a hash of CofM objects
-    # If any of them clashes with the to-be-added CofM, then disallow
-    foreach my $key (keys %{$self->{cofm}}) {
-        my $overlap = $newcofm->overlap($self->cofm($key));
+    # Get all of the objects in this assembly. 
+    # If any of them clashes with the to-be-added objects, then disallow
+    foreach my $key (keys %{$self->{comp}}) {
+        # Measure the overlap between $newdom and each component
+        my $overlap = $newdom->overlap($self->comp($key));
         print STDERR 
-            "\toverlap: ", $newcofm->id, "/", $self->cofm($key)->id, 
+            "\toverlap: ", $newdom->id, "/", $self->comp($key)->id, 
             " $overlap\n";
-        if ($overlap > $thresh) {
+        if ($overlap > $self->clash) {
+            print STDERR "\t$newdom clashes\n";
             return 1;
         }
     }
-    print STDERR "\t$newcofm fits\n";
+    print STDERR "\t$newdom fits\n";
     return 0;
-}
+} # clashes
+
 
 ################################################################################
 1;
