@@ -13,10 +13,13 @@ SBG::Domain - Represents a STAMP domain
 Represents a single STAMP Domain, being a chain or sub-segment of a protein
 chain from a PDB entry.
 
+Can include multiple segments from multiple chains of a single file.
+
 =head1 SEE ALSO
 
 L<SBG::DomainIO> , L<SBG::CofM> , L<SBG::Transform>
 
+http://www.compbio.dundee.ac.uk/manuals/stamp.4.2/node29.html
 =cut
 
 ################################################################################
@@ -32,13 +35,17 @@ use SBG::Root -Base, -XXX;
 # Radius of gyration
 field 'rg' => 0;
 
-# STAMP domain identifier (any label)
+# STAMP domain identifier.  This can be any label, but STAMP like it the first
+# four characters correspond to a PDB ID (case insensitive).
 field 'stampid' => '';
 
 # Source PDB ID of structure (without any chain ID)
+# Does not need to be explicitly set
 field 'pdbid' => '';
 
+
 # Path to PDB/MMol file
+# This can be blank and STAMP will look for thas file based on its 'stampid'
 field 'file' => '';
 
 # STAMP descriptor (e.g. "A 125 _ to A 555 _" or "CHAIN A")
