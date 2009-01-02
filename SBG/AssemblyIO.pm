@@ -1,79 +1,94 @@
 #!/usr/bin/env perl
 
-# TODO POD
+=head1 NAME
 
-# TODO use Spiffy
+SBG::AssemblyIO - Reads L<SBG::Assembly>s using L<SBG::DomainIO>
+
+=head1 SYNOPSIS
+
+ use SBG::AssemblyIO;
+
+
+=head1 DESCRIPTION
+
+
+
+=SEE ALSO
+
+L<SBG::Assembly> , L<SBG::DomainIO> , L<SBG::IO>
+
+=cut
 
 package SBG::AssemblyIO;
+use SBG::Root -Base, -XXX;
+use base qw(SBG::IO);
 
-use Spiffy -Base, -XXX;
-field 'fh';
+use IO::String;
 
-use lib "..";
 use SBG::Assembly;
 use SBG::DomainIO;
 
+
 ################################################################################
 
-# TODO DOC
-sub new() {
-    my $self = {};
-    bless $self, shift;
-    my $fh = shift;
-    $self->{fh} = $fh;
+sub new () {
+    my $class = shift;
+    # Delegate to parent class
+    my $self = new SBG::IO(@_);
+    # And add our ISA spec
+    bless $self, $class;
     return $self;
-}
+} # new
 
 
-sub next_assembly {
-    my $domio = new SBG::DomIO($self->fh);
+sub read {
+    my $domio = new SBG::DomainIO(-fh=>$self->fh);
     my $dom;
     my $assem = new SBG::Assembly();
-    while ($dom = $domio->next_dom) {
+    while ($dom = $domio->read) {
         # Add Dom to Assembly
-        print STDERR "Dom:", $dom->label, "\n";
-        $assem->cofm($dom->label, $dom);
+        $assem->comp($dom->stampid) = $dom;
     }
     return $assem;
 }
 
+# Returns the string that was printed to the file
+# Add a newline by default as well
 sub write {
     my $assem = shift;
-    # TODO DES needs to be in constructor
-    my $fh = shift;
-
-    print STDERR "AssemblyIO::write\n";
+    my $fh = $self->fh;
+    my $str;
+    my $strfh = new IO::String($str);
 
     # Unique topology identifier:
     # For each edge, component names sorted, then edges sorted
-    my @ikeys = keys %{$assem->{interaction}};
+    my @ikeys = keys %{$assem->{iaction}};
     my @iactions = map { $assem->{graph}->get_interaction_by_id($_) } @ikeys;
     my @edges = map { join(',', sort($_->nodes)) } @iactions;
     my $topology = join(';', sort(@edges));
 
-    print $fh "\% Topology: $topology\n";
-    print $fh "\% Templates: ", $assem->stringify(), "\n";
-    print $fh "\n";
+    print $strfh "\% Topology: $topology\n";
+    print $strfh "\% Templates: ", $assem, "\n";
+    print $strfh "\n";
 
-    # TODO PROB should be OK to share the fh, right?
-    my $domio = new SBG::DomainIO(-fh=>$fh);
+    my $domio = new SBG::DomainIO(-fh=>$strfh);
 
-    # Print all CofM objects (STAMP format)
+    # Print all Domain objects (STAMP format)
     # STAMP will number the chains alphabetically in the final output
     my $chainid = ord 'A';
     # $key is the component's label
-    foreach my $key (sort keys %{$assem->{cofm}}) {
+    foreach my $key (sort keys %{$assem->{comp}}) {
         # id is the PDB ID of the template segment
-        print STDERR "\tsaving: $key ", $assem->cofm($key)->id(), "\n";
-
-        print $fh "\% CHAIN ", chr($chainid++), " $key\n";
-
+        print STDERR "\tsaving: $key ", $assem->comp($key)->pdbid(), "\n";
+        print $strfh "\% CHAIN ", chr($chainid++), " $key\n";
         # This uses the cumulative transform, maintained by CofM itself
-        my $cofm = $assem->cofm($key);
-        $domio->write($cofm);
+        my $comp = $assem->comp($key);
+        $domio->write($comp);
     }
-    print $fh "\n";
-    return 1;
+    print $strfh "\n";
+    print $fh $str if $fh;
+    return $str;
+
 } # save
 
 ################################################################################

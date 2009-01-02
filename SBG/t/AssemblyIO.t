@@ -1,22 +1,45 @@
 #!/usr/bin/env perl
 
-use lib "../..";
+use Test::More 'no_plan';
 
 use SBG::AssemblyIO;
 use SBG::Assembly;
+use SBG::DomainIO;
 
-my $file = shift or die;
+use File::Temp qw(tempfile);
+use FindBin;
+my $dir = $FindBin::RealBin;
 
-open my $fh, "<$file" or die;
+my $file = "$dir/2nn6.dom";
 
-my $io = new SBG::AssemblyIO($fh);
+# Read all domains from a dom file
+open my $fh, "<$file";
+my $iofh = new SBG::AssemblyIO(-fh=>$fh);
+my $assem = $iofh->read;
+is($assem->size, 9, "Read in " . $assem->size . " domains");
 
-# TODO BUG while doesn't work because $assem is not true. DEL stringify()
-# while (my $assem = $io->next_assembly) {
-my $assem = $io->next_assembly;
+# Write domains
+my $outfile = "${file}.copy";
+my $ioout = new SBG::AssemblyIO(-file=>">$outfile");
+ok($ioout && $ioout->fh, "new(-file=>\">$outfile\")");
+ok($ioout->write($assem), "Writing: $outfile :");
+system("cat $outfile");
+ok(unlink($outfile), "Removing $outfile");
 
-open my $out, ">copy.dom";
+# Test pdbc
+my $domio = pdbc('2nn6');
+my $assemio = new SBG::AssemblyIO(-fh=>$domio->fh);
+my $pdbcassem = $assemio->read;
+is($assem->size, 9, "DomainIO::pdbc(2nn6): " . $assem->size . " domains");
 
-$io->write($assem, $out);
+
+__END__
+
+
+
+
+
+
+
 
 

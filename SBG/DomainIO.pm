@@ -2,7 +2,7 @@
 
 =head1 NAME
 
-SBG::Domain - Represents a STAMP domain
+SBG::DomainIO - Represents a STAMP domain reader/writer
 
 =head1 SYNOPSIS
 
@@ -33,7 +33,7 @@ chain from a PDB entry.
 
 =head1 SEE ALSO
 
-L<SBG::Domain> , L<SBG::CofM>
+L<SBG::Domain> , L<SBG::CofM> , L<SBG::IO>
 
 =cut
 
@@ -41,9 +41,7 @@ L<SBG::Domain> , L<SBG::CofM>
 
 package SBG::DomainIO;
 use SBG::Root -base, -XXX;
-
-field 'fh';
-field 'file';
+use base qw(SBG::IO);
 
 our @EXPORT = qw(pdbc);
 
@@ -56,99 +54,15 @@ use SBG::Transform;
 
 
 ################################################################################
-=head2 new
 
- Title   : new
- Usage   : my $input = new SBG::DomainIO(-file=>"<file.dom");
-           my $input = new SBG::DomainIO(-fh=>\*STDIN);
- Function: Open a new input stream to a STAMP domain file
- Example : my $input = new SBG::DomainIO(-file=>"<file.dom");
-           my $output = new SBG::DomainIO(-file=>">file.dom");
-           my $append = new SBG::DomainIO(-file=>">>file.dom");
- Returns : Instance of L<SBG::DomainIO>
- Args    : -file - Path to domain file to open, including preceeding "<" or ">"
-           -fh - An already opened file handle to read domains from
-
- 
-=cut
 sub new () {
-    my ($class, %o) = @_;
-    my $self = { %o };
+    my $class = shift;
+    # Delegate to parent class
+    my $self = new SBG::IO(@_);
+    # And add our ISA spec
     bless $self, $class;
-    $self->_undash;
-
-    if ($self->file) {
-        $self->_open() or return undef;
-    }
-
     return $self;
 } # new
-
-
-################################################################################
-=head2 _open
-
- Title   : _open
- Usage   : $self->_open("<file.dom");
- Function: Opens the internal file handle on the file path given
- Example : $self->_open("<file.dom");
- Returns : $self
- Args    : file - Path to file to open for reading, including the  "<" or ">"
-
-=cut
-sub _open {
-    my $self = shift;
-    my $file = shift || $self->file;
-    if ($self->fh) {
-        close $self->fh;
-        delete $self->{'fh'};
-    }
-    my $fh;
-    unless (open($fh, $file)) {
-        carp "Cannot read $file: $!\n";
-        return undef;
-    }
-    $self->fh($fh);
-    return $self;
-} # _open
-
-
-################################################################################
-=head2 close
-
- Title   : close
- Usage   : $domainio->close;
- Function: Closes the internal file handle
- Example : $domainio->close;
- Returns : result of close()
- Args    : NA
-
-Should not generally need to be explicitly called.
-
-=cut
-sub close {
-    my $self = shift;
-    return $self->fh()->close;
-}
-
-
-################################################################################
-=head2 flush
-
- Title   : flush
- Usage   : $domainio->flush;
- Function: Flushes the internal file handle
- Example : $domainio->flush;
- Returns : result of flush()
- Args    : NA
-
-Should not generally need to be explicitly called.
-
-=cut
-sub flush {
-    my $self = shift;
-    return $self->fh()->flush;
-}
 
 
 ################################################################################
@@ -166,7 +80,7 @@ sub flush {
 
 Prints in STAMP format, along with any transform(s) that have been applied.
 
- my $outfile = ">results.dom";
+ my $outfile = "results.dom";
  my $ioout = new SBG::DomainIO(-file=>">$outfile");
  foreach my $d (@doms) {
      $ioout->write($d);
@@ -207,10 +121,10 @@ sub write {
 
 
 ################################################################################
-=head2 next_domain
+=head2 read
 
- Title   : next_domain
- Usage   : my $dom = $io->next_domain();
+ Title   : read
+ Usage   : my $dom = $io->read();
  Function: Reads the next domain from the stream and make an L<SBG::Domain>
  Example : (see below)
  Returns : An L<SBG::Domain>
@@ -218,13 +132,13 @@ sub write {
 
  # Read all domains from a dom file
  my @doms;
- while (my $dom = $io->next_domain) {
+ while (my $dom = $io->read) {
      push @doms, $dom;
  }
  print "Read in " . scalar(@doms) . " domains\n";
 
 =cut
-sub next_domain {
+sub read {
     my $self = shift;
     my $fh = $self->fh;
     while (<$fh>) {
@@ -259,7 +173,7 @@ sub next_domain {
     }
     # End of file
     return undef;
-} # next_domain
+} # read
 
 
 
@@ -292,7 +206,7 @@ sub _read_trans {
         last if $transstr =~ s/}//g;
     }
     return $transstr;
-}
+} # _read_trans
 
 
 ################################################################################
@@ -304,9 +218,9 @@ sub _read_trans {
            pdbc('2nn6A', 'F');
  Function: Runs STAMP's pdbc and opens its output as the internal input stream.
  Example : my $domio = pdbc('2nn6');
-           my $dom = $domio->next_domain();
+           my $dom = $domio->read();
            # or all in one:
-           my $first_dom = pdbc(-pdbid=>'2nn6')->next_domain();
+           my $first_dom = pdbc(-pdbid=>'2nn6')->read();
  Returns : $self (success) or undef (failure)
  Args    : @ids - begins with one PDB ID, followed by any number of chain IDs
 
@@ -315,7 +229,7 @@ Depending on the configuration of STAMP, domains may be searched in PQS first.
  my $io = new SBG::DomainIO;
  $io->pdbc('2nn6');
  # Get the first domain (i.e. chain) from 2nn6
- my $dom = $io->next_domain;
+ my $dom = $io->read;
 
 =cut
 sub pdbc {
