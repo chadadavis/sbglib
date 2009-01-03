@@ -24,14 +24,19 @@ $trav->traverse;
 
 
 sub lastnode {
-    my ($state, $g) = @_;
-    print "lastnode:", Dumper($state->{solutions}), "\n";
+    my ($state, $g, @templates) = @_;
+#     print "lastnode:", Dumper($state->{solutions}), "\n";
+#     print "lastnode:", Dumper(\@templates), "\n";
+    print "lastnode: @templates\n";
     $state->{solutions} = [];
 }
 
 sub lastedge {
-    my ($state, $g) = @_;
-    print "lastedge:", Dumper($state->{solutions}), "\n";
+    my ($state, $g, @templates) = @_;
+#     print "lastedge:", Dumper($state->{solutions}), "\n";
+#     print "lastedge:", Dumper(\@templates), "\n";
+    print "lastedge: @templates\n";
+
     $state->{solutions} = [];
 
 }

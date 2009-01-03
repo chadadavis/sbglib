@@ -20,6 +20,11 @@ The gist is, since we have multigraphs, an edge is not traversed one time, and
 edge is traversed as many times as possible. We rely on a callback function to
 tell us when to stop traversing a given edge. 
 
+Works on Graph, but assumes that multiple edges are stored as attributes of a
+single edge between unique nodes. This is the pattern used by
+L<Bio::Network::ProteinNet>. It does not strictly require
+L<Bio::Network::ProteinNet> but will work best in that case.
+
 =head1 SEE ALSO
 
 L<Graph::Traversal> 
@@ -42,6 +47,10 @@ field 'lastedge';
 # Queues that note the edges/nodes to be processed, in a breadth-first fashion
 field 'next_edges' => [];
 field 'next_nodes' => [];
+
+# Keep track of edges in the covering at every moment
+field 'covering' => {};
+
 
 use warnings;
 use Clone qw(clone);
@@ -102,6 +111,8 @@ sub new () {
 } # new
 
 
+# TODO DOC
+# Keeps tracks of indexes on alternatives for edges, indexed by an edge ID
 sub alt : lvalue {
     my ($self,$key) = @_;
     $self->{alt} ||= {};
@@ -109,6 +120,14 @@ sub alt : lvalue {
     $self->{alt}{$key};
 } # comp
 
+
+# Keeps track of what complete graph coverings have already been created
+sub solution : lvalue {
+    my ($self,$key) = @_;
+    $self->{solution} ||= {};
+    # Do not use 'return' with 'lvalue'
+    $self->{solution}{$key};
+} # comp
 
 
 ################################################################################
@@ -153,6 +172,7 @@ sub traverse {
 
     # Using one different starting node in each iteration
     foreach my $node (@nodes) {
+
         # Starting node for this iteraction
         $self->{next_nodes} = [ $node ];
         _d0 "=" x 80, "\nStart node: $node";
@@ -197,11 +217,24 @@ sub no_nodes {
         _d $d, "Edges: ", _array2D($self->{next_edges});
         $self->do_edges($uf, $state, $d+1);
     } else {
-        # Partial solution
-        $self->{lastedge}($state, $self->graph) if $self->lastedge;
+        $self->do_solution($state, $self->lastedge, $d);
     }
 } # no_nodes
 
+
+# Partial solution
+sub do_solution {
+    my ($self, $state, $callback, $d) = @_;
+    my @alts = sort keys %{$self->covering};
+    my $cover = join(',', @alts);
+    if ($self->solution($cover)) {
+#         _d $d, "Dup";
+        _d0 "== Dup";
+    } else {
+        $self->solution($cover) = 1;
+        $callback->($state, $self->graph, @alts) if defined $callback;
+    }
+} # do_solution
 
 # Processing any outstanding edges
 # For each, gets the next alternative
@@ -242,6 +275,7 @@ sub do_edges {
     } else {
         # Edge alternative succeeded. 
         _d $d, "Succeeded";
+        $self->covering->{$alt_id} = 1;
         # Consider the destination node neighbor to have been visited now.
         # These are now in the same connected component. 
         # But clone this first, to be able to undo/backtrack afterward
@@ -253,6 +287,8 @@ sub do_edges {
         # Continue using the same state, in case the success must be remembered
         $self->do_edges($ufclone, $stateclone, $d);
         # And then 'fall through' to repeat this edge's alternatives too
+        # Undo
+        delete $self->covering->{$alt_id};
     }
 
     _d $d, "<= Edge: $src $dest";
@@ -280,7 +316,7 @@ sub no_edges {
         $self->do_nodes($uf, $state, $d+1);
     } else {
         # Partial solution
-        $self->{lastnode}($state, $self->graph) if $self->lastnode;
+        $self->do_solution($state, $self->lastnode, $d);
     }
 } # no_edges
 
