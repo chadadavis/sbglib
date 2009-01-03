@@ -38,7 +38,6 @@ sub new () {
     my $self = Bio::Network::ProteinNet->new(refvertexed=>1,@_);
     # And add our ISA spec
     bless $self, $class;
-    # Is now both a Bio::Network::Node and an SBG::Node
     return $self;
 }
 
