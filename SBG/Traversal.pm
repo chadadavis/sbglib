@@ -43,13 +43,14 @@ field 'lastedge';
 field 'next_edges' => [];
 field 'next_nodes' => [];
 
-
 use warnings;
 use Clone qw(clone);
 use Graph;
 use Graph::UnionFind;
 
-
+# Debug print
+sub _d;
+sub _d0;
 
 ################################################################################
 =head2 new
@@ -71,7 +72,7 @@ that can be used to store state information. It is cloned as necessary.
 The $test function should return true if an edge is to be used in the
 traversal. It is called as:
 
- $test($src, $dest, $state, $traversal);
+ $test($state, $traversal, $src, $dest);
 
 src and dest are the source and destination nodes of the edge being
 considered. 
@@ -101,6 +102,12 @@ sub new () {
 } # new
 
 
+sub alt : lvalue {
+    my ($self,$key) = @_;
+    $self->{alt} ||= {};
+    # Do not use 'return' with 'lvalue'
+    $self->{alt}{$key};
+} # comp
 
 
 
@@ -129,6 +136,8 @@ TODO Under what circumstances will solutions be redundant. When can we spare
 ourselves of the extra computation?
 
 =cut
+
+
 sub traverse {
     my $self = shift;
     # If no state object provide, use an empty hashref, Clone'able
@@ -136,7 +145,7 @@ sub traverse {
     bless($state, 'Clone');
 
     my @nodes = $self->graph->vertices();
-    print STDERR "Nodes:@nodes\n";
+    _d0 "Nodes:@nodes";
 
     # NB cannot use all nodes together in one run, as they may have different
     # 'frames of reference'.
@@ -146,7 +155,7 @@ sub traverse {
     foreach my $node (@nodes) {
         # Starting node for this iteraction
         $self->{next_nodes} = [ $node ];
-        print STDERR ("=" x 80), "\nStart node: $node\n";
+        _d0 "=" x 80, "\nStart node: $node";
 
         # A new disjoint set data structure, to track which nodes in same sets
         my $uf = new Graph::UnionFind;
@@ -154,104 +163,124 @@ sub traverse {
         $uf->add($_) for @nodes;
 
         # Go!
-        $self->do_nodes($uf, $state);
+        $self->do_nodes($uf, $state, 0);
     }
 } # traverse
 
 
-# TODO DOC
+# Looks for any edges on any outstanding nodes
 sub do_nodes {
-    my ($self, $uf, $state) = @_;
+    my ($self, $uf, $state, $d) = @_;
     my $current = shift @{$self->next_nodes};
 
-    return $self->no_nodes($uf,$state) unless $current;
+    return $self->no_nodes($uf,$state, $d) unless $current;
 
     # Which adjacent nodes have not yet been visited
-    my @unseen = $self->_new_neighbors($current, $uf);
-    print STDERR "Node: $current (@{$self->{next_nodes}})\n";
+    _d $d, "Node: $current (@{$self->{next_nodes}})";
+    my @unseen = $self->_new_neighbors($current, $uf, $d);
     for my $neighbor (@unseen) {
         # push edges onto stack
-        print STDERR "\tpush'ing edge: $current,$neighbor\n";
+        _d $d, "push'ing edge: $current,$neighbor";
         push(@{$self->{next_edges}}, [$current, $neighbor]);
     }
-    $self->do_nodes($uf, $state);
-    print STDERR "<= Node: $current\n";
+    # Continue processing all outstanding nodes before moving to edges
+    $self->do_nodes($uf, $state, $d);
+    _d $d, "<= Node: $current";
 } # do_nodes
 
 
+# Called when no nodes left, switches to edges, if any
 sub no_nodes {
-    my ($self, $uf, $state) = @_;
-    print STDERR "No more nodes.\n";
+    my ($self, $uf, $state, $d) = @_;
+    _d $d, "No more nodes";
     if (@{$self->next_edges}) {
-        print STDERR "Edges: ", _array2D($self->{next_edges}), "\n";
-        $self->do_edges($uf, $state);
+        _d $d, "Edges: ", _array2D($self->{next_edges});
+        $self->do_edges($uf, $state, $d+1);
     } else {
         # Partial solution
-        $self->{lastedge}($state, $self) if $self->lastedge;
+        $self->{lastedge}($state, $self->graph) if $self->lastedge;
     }
 } # no_nodes
 
 
-# TODO DES shorten this
-# TODO DOC
+# Processing any outstanding edges
+# For each, gets the next alternative
+# Try to validate the alternative based on the provided callback function
+# Recurses to exhaust all possibilities
 sub do_edges {
-    my ($self, $uf, $state) = @_;
+    my ($self, $uf, $state, $d) = @_;
     my $current = shift @{$self->{next_edges}};
 
-    return $self->no_edges($uf, $state) unless $current;
+    return $self->no_edges($uf, $state, $d) unless $current;
 
     my ($src, $dest) = @$current;
-    print STDERR "Edge: $src $dest (", _array2D($self->{next_edges}), ")\n";
+    _d $d, "Edge: $src $dest (", _array2D($self->{next_edges}), ")";
+
+    # ID of next alternative to try on this edge, if any
+    my $alt_id = $self->next_alt($src, $dest, $d);
+    unless ($alt_id) {
+        # No more unprocessed multiedges remain between these nodes: $src,$dest
+        _d $d, "No more alternative edges for $src $dest";
+        # Try any other outstanding edges at this level first, though
+        $self->do_edges($uf, $state, $d);
+        return;
+    }
 
     # As child nodes in traversal may change partial solutions, clone these
     # This implicitly allow us to backtrack later if $self->test() fails, etc
-    my $ufclone = clone($uf);
     my $stateclone = $state->clone();
     # Do we want to go ahead and traverse this edge?
-    my $result = $self->{test}($src, $dest, $self, $stateclone);
+    my $success = $self->{test}($stateclone, $self->graph, $src, $dest, $alt_id);
 
-    # Was traversing this edge possible this time?
-    if (!defined $result) {
-        # No more unprocessed multiedges remain between these nodes: $src,$dest
-        print STDERR "\tNo more alternative edges for $src $dest\n";
-        return undef;
-    } elsif (-1 == $result) {
+    if (! $success) {
         # Current edge was rejected, but alternative multiedges may remain
-        # Carry on with any other outstanding edges, using same state.
-        push @{$self->{next_edges}}, $current;
-        $self->do_edges($ufclone, $stateclone);
-    } elsif (1 == $result) {
-        # Traversing this multiedge succeeded, but may be alternative multiedges
-        # Consider the destination node neighbor to have been visited now
-        print STDERR "\tpush'ing node $dest\n";
-        push @{$self->{next_nodes}}, $dest;
-        # These are now in the same connected component
-        $ufclone->union($src, $dest);
-        # Recursive call to try other multiedges between $src,$dest
-        push @{$self->{next_edges}}, $current;
-        # NB No backtracking/undoing needed now, as we cloned $uf and $state
-        $self->do_edges($ufclone, $stateclone);
+        _d $d, "Failed";
+        # Carry on with any other outstanding edges.
+        # Continue using the same state, in case the failure must be remembered
+        $self->do_edges($uf, $stateclone, $d);
+        # And then 'fall through' to repeat this edge's alternatives too
     } else {
-        carp $self->test . " must return: -1,0,+1 . Got: $result\n";
-        return undef;
+        # Edge alternative succeeded. 
+        _d $d, "Succeeded";
+        # Consider the destination node neighbor to have been visited now.
+        # These are now in the same connected component. 
+        # But clone this first, to be able to undo/backtrack afterward
+        my $ufclone = clone($uf);
+        $ufclone->union($src, $dest);
+        _d $d, "Node $dest reachable";
+        push @{$self->{next_nodes}}, $dest;
+        # Recursive call to try other multiedges between $src,$dest
+        # Continue using the same state, in case the success must be remembered
+        $self->do_edges($ufclone, $stateclone, $d);
+        # And then 'fall through' to repeat this edge's alternatives too
     }
-    print STDERR "<= Edge: $src $dest\n";
+
+    _d $d, "<= Edge: $src $dest";
+    # 2nd recursion here. This is because we wait for the previous round to
+    # finish, with all of it's chosen edges, before retrying alternatives on any
+    # of the edges. Assumption is that multi-edges are incompatible. That's why
+    # we wait until now to re-push them.
+    push @{$self->{next_edges}}, $current;
+
+    # Go back to using the state that we had before this alternative
+    $self->do_edges($uf, $state, $d);
 } # do_edges
 
 
+# Called when no edges left, switches to processing nodes, if any
 sub no_edges {
-    my ($self, $uf, $state) = @_;
+    my ($self, $uf, $state, $d) = @_;
 
     # When no edges left on stack, go to next level down in BFS traversal tree
     # I.e. process outstanding nodes
-    print STDERR "No more edges.\n";
+    _d $d, "No more edges";
     if (@{$self->{next_nodes}}) {
-        print STDERR "Nodes: @{$self->{next_nodes}}\n";
+        _d $d, "Nodes: @{$self->{next_nodes}}";
         # Also give the progressive solution to peripheral nodes
-        $self->do_nodes($uf, $state);
+        $self->do_nodes($uf, $state, $d+1);
     } else {
         # Partial solution
-        $self->{lastnode}($state, $self) if $self->lastnode;
+        $self->{lastnode}($state, $self->graph) if $self->lastnode;
     }
 } # no_edges
 
@@ -259,15 +288,50 @@ sub no_edges {
 # Uses a L<Graph::UnionFind> to keep track of nodes in the graph (the
 # other graph, the one being traversed), that are still to be visited.
 sub _new_neighbors {
-    my ($self, $node, $uf) = @_;
+    my ($self, $node, $uf, $d) = @_;
 
     my @adj = $self->{graph}->neighbors($node);
     # Only adjacent vertices not already in same traversal set (i.e. the unseen)
     my @unseen = grep { ! $uf->same($node, $_) } @adj;
 
-    print STDERR "\tadj: @adj; unseen: @unseen\n";
+    _d $d, "adj: @adj; unseen: @unseen";
     return @unseen;
 }
+
+
+# Get ID of next alternative for a given edge $u,$v
+sub next_alt {
+    my ($self, $u, $v, $d) = @_;
+
+    # IDs of edge attributes (the alternatives on this edge)
+    # Sort, to make indexes unique between invocations of this method
+    my @alt_ids = sort $self->graph->get_edge_attribute_names($u, $v);
+    _d $d, join ", ", @alt_ids;
+
+    # A label for the current edge, regardless of alternative
+    my $edge_id = "$u--$v";
+
+    # Tells us which alternative to try next
+    my $alt_idx = $self->alt($edge_id) || 0;
+
+    # If no alternatives (left) to try, cannot use this edge
+    unless ($alt_idx < @alt_ids) {
+        _d $d, "No more templates";
+        # Now reset, for any subsequent, independent attempts on this edge
+        $self->alt($edge_id) = 0;
+        return undef;
+    }
+
+    # The ID of the chosen alternative
+    my $alt_id = $alt_ids[$alt_idx];
+    _d $d,  "Template ", 1+$alt_idx, "/" . @alt_ids;
+
+    # Next time, take the next one;
+    $self->alt($edge_id) += 1;
+
+    return $alt_id;
+
+} # next_alt
 
 
 # Convert 2D array to string list, e.g.:
@@ -293,7 +357,11 @@ sub set_state {
     return ${$self->{state}}{$key};
 }
 
-
+sub _d0 { _d(0,@_); }
+sub _d {
+    my $d = shift;
+    print STDERR ("\t" x $d), @_, "\n";
+}
 ###############################################################################
 
 1;
