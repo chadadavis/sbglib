@@ -6,14 +6,11 @@ use File::Temp qw(tempfile);
 
 use SBG::IO;
 
-use FindBin;
-my $dir = $FindBin::RealBin;
-
 my $io = new SBG::IO;
 ok(defined $io, "new()");
 isa_ok($io, "SBG::IO");
 
-my $file = "$dir/2nn6.dom";
+my $file = "$installdir/t/2nn6.dom";
 
 # Open a not-yet-opened file
 my $iofile = new SBG::IO(-file=>"<$file");
