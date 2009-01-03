@@ -20,3 +20,7 @@ ok($i2 ge $i1, "String comparison: ge");
 my $i3 = new SBG::Interaction(-id=>$label2, -weight => 99.9);
 is($i2, $i3, "String equality, between unique objects");
 
+# TODO
+# Test Interaction->template("key") = $domain
+
+

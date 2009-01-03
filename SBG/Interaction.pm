@@ -55,6 +55,41 @@ sub compare {
     return $a->primary_id cmp $b->primary_id;
 }
 
+################################################################################
+=head2 template
+
+ Title   : template
+ Usage   : $interaction->template($node1) = $dom1;
+ Function: Sets the L<SBG::Domain> used to model one of the L<SBG::Nodes>
+ Example : (see below)
+ Returns : 
+ Args    : L<SBG::Node>
+
+my ($node1, $node2) = $interaction->nodes;
+$interaction->template($node1) = $dom1;
+$interaction->template($node2) = $dom2;
+
+
+
+# Given a component label/accession as key, returns the L<SBG::Domain> used to
+# model it in this interaction.
+field 'template' => {};
+
+The component L<SBG::Domain> objects collected in this Assembly.  NB These also
+contain centres-of-mass as well as Transform's
+
+The return value of this method can be assigned to, e.g.:
+
+ $assem->template('mylabel') = $domainobject;
+
+NB Spiffy doesn't magically create $self here, probably due to the attribute
+=cut
+sub template : lvalue {
+    my ($self,$node) = @_;
+    # Do not use 'return' with 'lvalue'
+    $self->{template}{$key};
+} # template
+
 
 ###############################################################################
 
