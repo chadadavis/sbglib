@@ -108,7 +108,7 @@ sub read {
 
         # Get the stuff in { brackets } first: the STAMP domain descriptors
         my ($head, $descr1, $templ2, $descr2, $score) = 
-            parse_line('\s+[{}]\s+', 0, $_);
+            parse_line('\s*[{}]\s*', 0, $_);
         # Then parse out everything else from the beginning, just on whitespace
         my ($comp1, $comp2, $templ1) = 
             parse_line('\s+', 0, $head);
