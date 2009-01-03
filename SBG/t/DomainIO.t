@@ -8,7 +8,6 @@ use SBG::DomainIO;
 
 use FindBin;
 my $dir = $FindBin::RealBin;
-
 my $file = "$dir/2nn6.dom";
 
 # Read all domains from a dom file
