@@ -52,10 +52,13 @@ package SBG::NetworkIO;
 use SBG::Root -base, -XXX;
 use base qw(SBG::IO);
 
+our @EXPORT_OK = qw(graphviz);
+
 use warnings;
 use Carp;
 use Text::ParseWords;
 use Bio::Network::ProteinNet;
+use Graph::Writer::GraphViz;
 
 use SBG::Interaction;
 use SBG::Node;
@@ -153,34 +156,31 @@ sub read {
 =head2 graphviz
 
  Title   : graphviz
- Usage   : $io->graphviz($somegraph);
- Function:
- Example : my $io = new SBG::NetworkIO(-file=>"picture.png"); $io->graphviz($g);
+ Usage   : SBG::NetworkIO::graphviz($somegraph,"mygraph.png");
+ Function: Uses L<Graph::Writer::GraphViz> to write a L<Graph> as an image
+ Example : SBG::NetworkIO::graphviz($somegraph,"mygraph.png",
+               -rankstep=>1.5,
+               -fontsize=>8,
+               );
  Returns : NA
- Args    : A L<Graph> e.g. a L<Bio::Network::ProteinNet>
-
-Note: file format is determined by filename extension (by graphviz itself)
-
+ Args    : 
+           graph - A L<Graph> e.g. a L<Bio::Network::ProteinNet>
+           file - A path to a file to create/write
+           %options - Options passed on to L<Graph::Writer::GraphViz> 
 =cut
 sub graphviz {
-    my ($self,$graph,$format) = @_;
-    my $file = $self->file || "graph.png";
-    # File extension (everything after last . )
-    unless ($format) {
-        ($format) = $file =~ /\.([^\/]+?)$/;
-        $format ||= 'png';
+    my $graph = shift;
+    my $file = shift;
+    return unless $graph && $file;
+    my %ops = @_;
+
+    unless (defined $ops{-format}) {
+        ($ops{-format}) = $file =~ /\.([^\/]+?)$/;
+        $ops{-format} ||= 'png';
     }
-    print STDERR "graphviz: $file:$format:\n";
-    my $writer = Graph::Writer::GraphViz->new(
-        -format => $format,
-#         -layout => 'twopi',
-#         -layout => 'fdp',
-        -ranksep => 1.5,
-        -fontsize => 8,
-        -edge_color => 'grey',
-        -node_color => 'black',
-        );
-    $writer->write_graph($self, $file);
+
+    my $writer = Graph::Writer::GraphViz->new(-format => $format, %ops);
+    $writer->write_graph($graph, $file);
 
 } # graphviz
 
