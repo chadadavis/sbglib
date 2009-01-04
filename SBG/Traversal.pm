@@ -36,30 +36,66 @@ L<Graph::Traversal>
 package SBG::Traversal;
 use SBG::Root -base, -XXX;
 
-# Reference to the graph being traversed
-field 'graph';
-
-# Call back functions
-field 'test';
-field 'lastnode';
-field 'lastedge';
-
-# Queues that note the edges/nodes to be processed, in a breadth-first fashion
-field 'next_edges' => [];
-field 'next_nodes' => [];
-
-# Keep track of edges in the covering at every moment
-field 'covering' => {};
-
 
 use warnings;
 use Clone qw(clone);
 use Graph;
 use Graph::UnionFind;
 
-# Debug print
-sub _d;
-sub _d0;
+
+################################################################################
+
+# Debug printing (to trace recursion and it's unwinding)
+sub _d {
+    my $d = shift;
+    print STDERR ("\t" x $d), @_, "\n";
+}
+sub _d0 { _d(0,@_); }
+
+
+################################################################################
+# Fields and accessors
+
+# TODO _prefix _private _fields
+
+# Reference to the graph being traversed
+field 'graph';
+
+# Call back functions
+field 'test';
+field 'partial';
+
+# Queues that note the edges/nodes to be processed, in a breadth-first fashion
+field 'next_edges' => [];
+field 'next_nodes' => [];
+
+# Keep track of what's in the partial solution at every moment. Edges and nodes.
+# Reset for each differen starting node
+field 'altcover' => {};
+field 'nodecover' => {};
+
+# Keeps tracks of indexes on alternatives for edges, indexed by an edge ID
+# Resets itself when appropriate
+sub alt : lvalue {
+    my ($self,$key) = @_;
+    $self->{alt} ||= {};
+    # Do not use 'return' with 'lvalue'
+    $self->{alt}{$key};
+}
+
+# Keeps track of what complete graph coverings have already been created
+# Tracked across different starting nodes
+sub solution : lvalue {
+    my ($self,$key) = @_;
+    $self->{solution} ||= {};
+    # Do not use 'return' with 'lvalue'
+    $self->{solution}{$key};
+}
+
+
+################################################################################
+# Public
+
 
 ################################################################################
 =head2 new
@@ -81,7 +117,7 @@ that can be used to store state information. It is cloned as necessary.
 The $test function should return true if an edge is to be used in the
 traversal. It is called as:
 
- $test($state, $traversal, $src, $dest);
+ $test($state, $graph, $src, $dest, $alt_id);
 
 src and dest are the source and destination nodes of the edge being
 considered. 
@@ -90,15 +126,14 @@ $test() must return: -1/0/1
 0: Exhausted all possibilities for traversing this edge in any way
 +1: Succeeded in traversing this edges this time, though other multiedges remain
 
--lastnode : (optional)
-The last node has just been processed and there are no edges left.
+-partial : (optional)
+A partial solution
 
- $lastnode($state, $traversal)
+ $partial($state, $graph, $node_cover, $alt_cover)
 
--lastedge : (optional)
-The last edge has just been processed and there are no nodes left
-
- $lastedge($state, $traversal)
+@$node_cover - the node names in the solution
+  This allows you to test whether the solution is a full cover
+@$alt_cover - The alternative edge IDs contained
 
 
 =cut
@@ -111,23 +146,6 @@ sub new () {
 } # new
 
 
-# TODO DOC
-# Keeps tracks of indexes on alternatives for edges, indexed by an edge ID
-sub alt : lvalue {
-    my ($self,$key) = @_;
-    $self->{alt} ||= {};
-    # Do not use 'return' with 'lvalue'
-    $self->{alt}{$key};
-} # comp
-
-
-# Keeps track of what complete graph coverings have already been created
-sub solution : lvalue {
-    my ($self,$key) = @_;
-    $self->{solution} ||= {};
-    # Do not use 'return' with 'lvalue'
-    $self->{solution}{$key};
-} # comp
 
 
 ################################################################################
@@ -155,8 +173,6 @@ TODO Under what circumstances will solutions be redundant. When can we spare
 ourselves of the extra computation?
 
 =cut
-
-
 sub traverse {
     my $self = shift;
     # If no state object provide, use an empty hashref, Clone'able
@@ -181,19 +197,21 @@ sub traverse {
         my $uf = new Graph::UnionFind;
         # Each node is in its own set first
         $uf->add($_) for @nodes;
-
+        # Rest
+        $self->{altcover} = {};
+        $self->{nodecover} = {};
         # Go!
-        $self->do_nodes($uf, $state, 0);
+        $self->_do_nodes($uf, $state, 0);
     }
 } # traverse
 
 
 # Looks for any edges on any outstanding nodes
-sub do_nodes {
+sub _do_nodes {
     my ($self, $uf, $state, $d) = @_;
     my $current = shift @{$self->next_nodes};
 
-    return $self->no_nodes($uf,$state, $d) unless $current;
+    return $self->_no_nodes($uf,$state, $d) unless $current;
 
     # Which adjacent nodes have not yet been visited
     _d $d, "Node: $current (@{$self->{next_nodes}})";
@@ -204,58 +222,44 @@ sub do_nodes {
         push(@{$self->{next_edges}}, [$current, $neighbor]);
     }
     # Continue processing all outstanding nodes before moving to edges
-    $self->do_nodes($uf, $state, $d);
+    $self->_do_nodes($uf, $state, $d);
     _d $d, "<= Node: $current";
-} # do_nodes
+} # _do_nodes
 
 
 # Called when no nodes left, switches to edges, if any
-sub no_nodes {
+sub _no_nodes {
     my ($self, $uf, $state, $d) = @_;
     _d $d, "No more nodes";
     if (@{$self->next_edges}) {
         _d $d, "Edges: ", _array2D($self->{next_edges});
-        $self->do_edges($uf, $state, $d+1);
+        $self->_do_edges($uf, $state, $d+1);
     } else {
-        $self->do_solution($state, $self->lastedge, $d);
+        $self->_do_solution($state, $uf, $d);
     }
-} # no_nodes
+} # _no_nodes
 
-
-# Partial solution
-sub do_solution {
-    my ($self, $state, $callback, $d) = @_;
-    my @alts = sort keys %{$self->covering};
-    my $cover = join(',', @alts);
-    if ($self->solution($cover)) {
-#         _d $d, "Dup";
-        _d0 "== Dup";
-    } else {
-        $self->solution($cover) = 1;
-        $callback->($state, $self->graph, @alts) if defined $callback;
-    }
-} # do_solution
 
 # Processing any outstanding edges
 # For each, gets the next alternative
 # Try to validate the alternative based on the provided callback function
 # Recurses to exhaust all possibilities
-sub do_edges {
+sub _do_edges {
     my ($self, $uf, $state, $d) = @_;
     my $current = shift @{$self->{next_edges}};
 
-    return $self->no_edges($uf, $state, $d) unless $current;
+    return $self->_no_edges($uf, $state, $d) unless $current;
 
     my ($src, $dest) = @$current;
     _d $d, "Edge: $src $dest (", _array2D($self->{next_edges}), ")";
 
     # ID of next alternative to try on this edge, if any
-    my $alt_id = $self->next_alt($src, $dest, $d);
+    my $alt_id = $self->_next_alt($src, $dest, $d);
     unless ($alt_id) {
         # No more unprocessed multiedges remain between these nodes: $src,$dest
         _d $d, "No more alternative edges for $src $dest";
         # Try any other outstanding edges at this level first, though
-        $self->do_edges($uf, $state, $d);
+        $self->_do_edges($uf, $state, $d);
         return;
     }
 
@@ -270,28 +274,32 @@ sub do_edges {
         _d $d, "Failed";
         # Carry on with any other outstanding edges.
         # Continue using the same state, in case the failure must be remembered
-        $self->do_edges($uf, $stateclone, $d);
+        $self->_do_edges($uf, $stateclone, $d);
         # And then 'fall through' to repeat this edge's alternatives too
     } else {
         # Edge alternative succeeded. 
         _d $d, "Succeeded";
-        $self->covering->{$alt_id} = 1;
+        $self->altcover->{$alt_id} = 1;
         # Consider the destination node neighbor to have been visited now.
         # These are now in the same connected component. 
         # But clone this first, to be able to undo/backtrack afterward
         my $ufclone = clone($uf);
         $ufclone->union($src, $dest);
         _d $d, "Node $dest reachable";
+        $self->nodecover->{$src} = $src;
+        $self->nodecover->{$dest} = $dest;
         push @{$self->{next_nodes}}, $dest;
         # Recursive call to try other multiedges between $src,$dest
         # Continue using the same state, in case the success must be remembered
-        $self->do_edges($ufclone, $stateclone, $d);
+        $self->_do_edges($ufclone, $stateclone, $d);
         # And then 'fall through' to repeat this edge's alternatives too
         # Undo
-        delete $self->covering->{$alt_id};
+        delete $self->altcover->{$alt_id};
+        delete $self->nodecover->{$dest};
     }
 
     _d $d, "<= Edge: $src $dest";
+    _d $d, "Node cover: ", join(' ', sort keys %{$self->nodecover});
     # 2nd recursion here. This is because we wait for the previous round to
     # finish, with all of it's chosen edges, before retrying alternatives on any
     # of the edges. Assumption is that multi-edges are incompatible. That's why
@@ -299,12 +307,12 @@ sub do_edges {
     push @{$self->{next_edges}}, $current;
 
     # Go back to using the state that we had before this alternative
-    $self->do_edges($uf, $state, $d);
-} # do_edges
+    $self->_do_edges($uf, $state, $d);
+} # _do_edges
 
 
 # Called when no edges left, switches to processing nodes, if any
-sub no_edges {
+sub _no_edges {
     my ($self, $uf, $state, $d) = @_;
 
     # When no edges left on stack, go to next level down in BFS traversal tree
@@ -313,12 +321,12 @@ sub no_edges {
     if (@{$self->{next_nodes}}) {
         _d $d, "Nodes: @{$self->{next_nodes}}";
         # Also give the progressive solution to peripheral nodes
-        $self->do_nodes($uf, $state, $d+1);
+        $self->_do_nodes($uf, $state, $d+1);
     } else {
         # Partial solution
-        $self->do_solution($state, $self->lastnode, $d);
+        $self->_do_solution($state, $uf, $d);
     }
-} # no_edges
+} # _no_edges
 
 
 # Uses a L<Graph::UnionFind> to keep track of nodes in the graph (the
@@ -336,7 +344,7 @@ sub _new_neighbors {
 
 
 # Get ID of next alternative for a given edge $u,$v
-sub next_alt {
+sub _next_alt {
     my ($self, $u, $v, $d) = @_;
 
     # IDs of edge attributes (the alternatives on this edge)
@@ -367,7 +375,25 @@ sub next_alt {
 
     return $alt_id;
 
-} # next_alt
+} # _next_alt
+
+# Partial solution
+sub _do_solution {
+    my ($self, $state, $uf, $d) = @_;
+
+    my @nodes = sort keys %{$self->nodecover};
+    my @alts = sort keys %{$self->altcover};
+    return unless @alts;
+    my $ac = join(',', @alts);
+    if ($self->solution($ac)) {
+#         _d $d, "Dup";
+        _d0 "== Dup";
+    } else {
+        $self->solution($ac) = 1;
+        my $callback = $self->partial;
+        $callback->($state, $self->graph, \@nodes, \@alts) if defined $callback;
+    }
+} # _do_solution
 
 
 # Convert 2D array to string list, e.g.:
@@ -378,26 +404,7 @@ sub _array2D {
 }
 
 
-# TODO DEL
 
-# These functions used by Assembly::try_edge()
-# Should be in Assembly, which is the state object
-sub get_state {
-    my ($self, $key) = @_;
-    return ${$self->{state}}{$key};
-}
-
-sub set_state {
-    my ($self, $key, $value) = @_;
-    ${$self->{state}}{$key} = $value;
-    return ${$self->{state}}{$key};
-}
-
-sub _d0 { _d(0,@_); }
-sub _d {
-    my $d = shift;
-    print STDERR ("\t" x $d), @_, "\n";
-}
 ###############################################################################
 
 1;
