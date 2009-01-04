@@ -27,7 +27,8 @@ package SBG::STAMP;
 use SBG::Root -base, -XXX;
 
 # TODO DES don't need all of these
-our @EXPORT = qw(do_stamp stampfile sorttrans stamp reorder pickframe next_probe do_stamp);
+our @EXPORT = qw(do_stamp sorttrans stamp pickframe transform);
+our @EXPORT_OK = qw(reorder)
 
 use warnings;
 use Carp;
@@ -85,7 +86,7 @@ sub do_stamp {
     while (keys(%tried) < @dom_ids && keys(%current) < @dom_ids) {
 
         # Get next not-yet-tried probe domain, preferably from current set
-        my ($probe, $in_disjoint) = next_probe(\@dom_ids, \%current, \%tried);
+        my ($probe, $in_disjoint) = _next_probe(\@dom_ids, \%current, \%tried);
         last unless $probe;
         $tried{$probe}=1;
 
@@ -144,7 +145,7 @@ sub pickframe {
 } # pickframe
 
 
-# Returns IDs of the domains to keep
+# Returns IDs of the domains to keep, based on Sc cutoff
 sub stamp {
     my ($tmp_probe, $tmp_doms) = @_;
 
@@ -268,7 +269,7 @@ sub reorder {
 
 # Returns (probe, disjoint)
 # Disjoint==1 if not-yet-tried probe could not be found in %$current
-sub next_probe {
+sub _next_probe {
     my ($all, $current, $tried) = @_;
     my $probe;
 
@@ -284,7 +285,7 @@ sub next_probe {
         carp "Out of probes\n";
     }
     return;
-} # next_probe
+} # _next_probe
 
 
 ################################################################################
