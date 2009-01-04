@@ -199,28 +199,36 @@ sub graphvizmulti {
     my ($graph, $file) = @_;
     return unless $graph && $file;
 
+    my $pdb = "http://www.rcsb.org/pdb/explore/explore.do?structureId=";
+
     my $str = join("\n",
                    "graph {",
-                   "\tgraph [bb=\"0,0,400,400\"];",
-                   "\tnode [fontsize=7];",
-                   "\tedge [fontsize=8];",
+                   "\tnode [fontsize=6];",
+                   "\tedge [fontsize=8, color=grey];",
                    ,"");
     # For each connection between two nodes, get all of the templates
     foreach my $e ($graph->edges) {
-        my ($u, $v) = @$e;
+        # Don't ask me why u and v are reversed here. But it's correct.
+        my ($v, $u) = @$e;
         # Names of templates for this edge
         my @templ_ids = $graph->get_edge_attribute_names($u, $v);
         foreach my $t (@templ_ids) {
             # The actual interaction object for this template
             my $ix = $graph->get_interaction_by_id($t);
             # Look up what domains model which halves of this interaction
-            my $ut = $ix->template($u)->stampid;
-            my $vt = $ix->template($v)->stampid;
+            my $udom = $ix->template($u);
+            my $vdom = $ix->template($v);
             # Don't ask me why u and v are reversed here. But it's correct.
-#             $str .= "\t$u -- $v [label=\"$t\"]\n";
-#             $str .= "\t$u -- $v [headlabel=\"$v\", taillabel=\"$u\"];\n";
-#             $str .= "\t$u -- $v [label=\"$t\", headlabel=\"$vt\", taillabel=\"$ut\"];\n";
-            $str .= "\t$u -- $v [headlabel=\"$vt\", taillabel=\"$ut\"];\n";
+            $str .= "\t$u -- $v [" . 
+                join(', ', 
+                     "label=\"" . $ix->weight . "\"",
+                     "headlabel=\"" . $udom->stampid . "\"",
+                     "taillabel=\"" . $vdom->stampid . "\"",
+                     "headtooltip=\"" . $udom->descriptor . "\"",
+                     "tailtooltip=\"" . $vdom->descriptor . "\"",
+                     "headURL=\"" . $pdb . $udom->pdbid . "\"",
+                     "tailURL=\"" . $pdb . $vdom->pdbid . "\"",
+                     "];\n");
         }
     }
 
