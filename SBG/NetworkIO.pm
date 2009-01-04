@@ -52,7 +52,7 @@ package SBG::NetworkIO;
 use SBG::Root -base, -XXX;
 use base qw(SBG::IO);
 
-our @EXPORT_OK = qw(graphviz);
+our @EXPORT_OK = qw(graphviz graphvizmulti);
 
 use warnings;
 use Carp;
@@ -119,7 +119,8 @@ sub read {
         }
 
         # Unique (in the whole network) interaction label/id
-        my $iactionid = "$comp1($templ1 $descr1)--$comp2($templ2 $descr2)";
+#         my $iactionid = "$comp1($templ1 $descr1)--$comp2($templ2 $descr2)";
+        my $iactionid = "$comp1($templ1)--$comp2($templ2)";
         print STDERR "Interaction:$iactionid $score\n";
 
         # Create Seq objects, using accession; and Node objects contain a Seq
@@ -128,6 +129,7 @@ sub read {
             new SBG::Node(new SBG::Seq(-accession_number=>$comp1));
         $nodes{$comp2} ||= 
             new SBG::Node(new SBG::Seq(-accession_number=>$comp2));
+
         # Template domains.
         # Will be created, even if they are equivalent to previously created dom
         # Because the template domains are specific to an interaction template
@@ -167,6 +169,11 @@ sub read {
            graph - A L<Graph> e.g. a L<Bio::Network::ProteinNet>
            file - A path to a file to create/write
            %options - Options passed on to L<Graph::Writer::GraphViz> 
+
+You can also import the function:
+use SBG::NetworkIO qw(graphviz);
+graphviz($somegraph,"mygraph.png");
+
 =cut
 sub graphviz {
     my $graph = shift;
@@ -179,12 +186,48 @@ sub graphviz {
         $ops{-format} ||= 'png';
     }
 
-    my $writer = Graph::Writer::GraphViz->new(-format => $format, %ops);
+    my $writer = Graph::Writer::GraphViz->new(%ops);
     $writer->write_graph($graph, $file);
 
 } # graphviz
 
 
+# Do output from scratch in order to accomodate multiple edges
+# TODO DOC
+# TODO options? Can GraphViz module still be used to parse these out?
+sub graphvizmulti {
+    my ($graph, $file) = @_;
+    return unless $graph && $file;
+
+    my $str = join("\n",
+                   "graph {",
+                   "\tgraph [bb=\"0,0,400,400\"];",
+                   "\tnode [fontsize=7];",
+                   "\tedge [fontsize=8];",
+                   ,"");
+    # For each connection between two nodes, get all of the templates
+    foreach my $e ($graph->edges) {
+        my ($u, $v) = @$e;
+        # Names of templates for this edge
+        my @templ_ids = $graph->get_edge_attribute_names($u, $v);
+        foreach my $t (@templ_ids) {
+            # The actual interaction object for this template
+            my $ix = $graph->get_interaction_by_id($t);
+            # Look up what domains model which halves of this interaction
+            my $ut = $ix->template($u)->stampid;
+            my $vt = $ix->template($v)->stampid;
+            # Don't ask me why u and v are reversed here. But it's correct.
+#             $str .= "\t$u -- $v [label=\"$t\"]\n";
+#             $str .= "\t$u -- $v [headlabel=\"$v\", taillabel=\"$u\"];\n";
+#             $str .= "\t$u -- $v [label=\"$t\", headlabel=\"$vt\", taillabel=\"$ut\"];\n";
+            $str .= "\t$u -- $v [headlabel=\"$vt\", taillabel=\"$ut\"];\n";
+        }
+    }
+
+    $str .= "}\n";
+    open my $fh, ">$file";
+    print $fh $str;
+}
 
 ################################################################################
 1;
