@@ -27,8 +27,8 @@ use SBG::Root -base, -XXX;
 use base qw(Bio::Network::Interaction);
 
 use overload (
-    '""' => 'asstring',
-    'cmp' => 'compare',
+    '""' => '_asstring',
+    'cmp' => '_compare',
     );
 
 
@@ -44,13 +44,13 @@ sub new () {
     return $self;
 }
 
-sub asstring {
+sub _asstring {
     my ($self) = @_;
     my $class = ref($self) || $self;
     return $self->primary_id;
 }
 
-sub compare {
+sub _compare {
     my ($a, $b) = @_;
     return $a->primary_id cmp $b->primary_id;
 }
@@ -85,7 +85,8 @@ The return value of this method can be assigned to, e.g.:
 NB Spiffy doesn't magically create $self here, probably due to the attribute
 =cut
 sub template : lvalue {
-    my ($self,$node) = @_;
+    my ($self,$key) = @_;
+    $self->{template} ||= {};
     # Do not use 'return' with 'lvalue'
     $self->{template}{$key};
 } # template
