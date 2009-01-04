@@ -100,13 +100,10 @@ Runs external B<cofm> appliation. Must be in your environment's B<$PATH>
 
 =cut
 sub run {
-    my $dom = shift or return;
-    return unless $dom;
+    my $dom = shift;
     # $dom->descriptor and $dom->pdbid must exist
-    # Try to parse out of the filename, or STAMP label
-    $dom->file2pdbid;
-    $dom->stampid2pdbid;
-    return unless $dom->pdbid && $dom->descriptor;
+    # Call ->pdbid first, as it might figure out and set the descriptor too
+    return unless $dom && $dom->pdbid && $dom->descriptor;
 
     # Print the PDB ID, rather than the label, since cofm needs to find template
     my ($tfh, $path) = tempfile();
@@ -171,12 +168,9 @@ The DB cache stores uppercase PDB IDs. The B<cofm> program will accept any case.
 =cut
 sub get_cofm {
     my $dom = shift;
-    return unless $dom;
     # $dom->descriptor and $dom->pdbid must exist
-    # Try to parse out of the filename, or STAMP label
-    $dom->file2pdbid;
-    $dom->stampid2pdbid;
-    return unless $dom->pdbid && $dom->descriptor;
+    # Call ->pdbid first, as it might figure out and set the descriptor too
+    return unless $dom && $dom->pdbid && $dom->descriptor;
 
     my @fields;
     my $pdbid = uc $dom->pdbid;

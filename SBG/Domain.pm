@@ -27,34 +27,6 @@ http://www.compbio.dundee.ac.uk/manuals/stamp.4.2/node29.html
 package SBG::Domain;
 use SBG::Root -Base, -XXX;
 
-# The centre of mass is a point (as an mpdl, from PDL::Matrix)
-# Default: (0,0,0,1). For affine multiplication, hence additional '1'
-# Prefer to use accessor
-# field 'cofm';
-
-# Radius of gyration
-field 'rg' => 0;
-
-# STAMP domain identifier.  This can be any label, but STAMP like it the first
-# four characters correspond to a PDB ID (case insensitive).
-field 'stampid' => '';
-
-# Source PDB ID of structure (without any chain ID)
-# Does not need to be explicitly set
-field 'pdbid' => '';
-
-
-# Path to PDB/MMol file
-# This can be blank and STAMP will look for thas file based on its 'stampid'
-field 'file' => '';
-
-# STAMP descriptor (e.g. "A 125 _ to A 555 _" or "CHAIN A")
-field 'descriptor' => '';
-
-# Ref to Transform object, product of all Transform's ever applied
-# Prefer to use an accessor method here
-# field 'transformation';
-
 use overload (
     '""' => '_asstring',
     '-' => 'rmsd',
@@ -71,100 +43,46 @@ use SBG::Transform;
 
 
 ################################################################################
-=head2 new
-
- Title   : new
- Usage   : my $dom = new SBG::Domain(-stampid=>'mydom', 
-                                      -pdbid=>'2nn6', 
-                                      -descriptor=>'CHAIN A');
- Function: Creates a new STAMP representation of segment of a protein chain
- Returns : Object handle
- Args    : -stampid - Any label to identify this structure (no whitespace)
-           -pdbid - PDB ID of original structure (not case-sensitive)
-           -file - Path to PDB file or original structure
-           -descriptor - STAMP descriptor. See:
-           http://www.compbio.dundee.ac.uk/manuals/stamp.4.2/node29.html
-
-=cut 
-sub new () {
-    my ($class, %o) = @_;
-    my $self = { %o };
-    bless $self, $class;
-    $self->_undash;
-
-    $self->{cofm} ||= mpdl (0,0,0,1);
-    # Set the default transformation to the identity
-    $self->reset();
-
-    return $self;
-} # new
+# Fields and accessors
 
 
+# The centre of mass is a point (as an mpdl, from PDL::Matrix)
+# Default: (0,0,0,1). For affine multiplication, hence additional '1'
+# Prefer to use accessor
+# field 'cofm';
 
-################################################################################
-=head2 file2pdbid
+# Radius of gyration
+field 'rg' => 0;
 
- Title   : file2pdbid
- Usage   : $dom->file2pdbid
- Function: Sets the internal $dom->pdbid based on $dom->file
- Example : $dom->file2id
- Returns : The parsed out PDB ID
- Args    : filename, optional, otherwise $self->file is used
+# STAMP domain identifier.  This can be any label, but STAMP like it the first
+# four characters correspond to a PDB ID (case insensitive).
+field 'stampid' => '';
 
-Parses out the original PDB ID / CHAIN ID, from the file name
-
-If there is no existing 'descriptor' it is set to 'CHAIN <chainid>', if a chain
-identifier can also be parsed out of the filename.
-
-Overwrites any existing 'pdbid' if a PDB ID can be parsed from filename.
-
-=cut
-sub file2pdbid {
-    my $file = shift || $self->file;
-    return 0 unless $file;
-    my (undef,$pdbid,$chid) = m|.*/(pdb)?(.{4})([a-zA-Z_])?\.?.*|;
-    # Overwrite any previous PDB ID, as the file name is more authoritative
-    $self->pdbid($pdbid) if $pdbid;
-    # Don't overwrite the descriptor, if we were just looking for the PDB ID
-    if ($chid && ! $self->descriptor) {
-        $self->descriptor("CHAIN $chid");
-    }
-    return $pdbid;
-} 
+# Source PDB ID of structure (without any chain ID)
+# Does not need to be explicitly set
+# field 'pdbid' => '';
 
 
-################################################################################
-=head2 stampid2pdbid
+# Path to PDB/MMol file
+# This can be blank and STAMP will look for thas file based on its 'stampid'
+field 'file' => '';
 
- Title   : stampid2pdbid
- Usage   : $dom->stampid2pdbid
- Function: Sets the internal $dom->pdbid based on $dom->stampid
- Example : $dom->stampid2pdbid
- Returns : The parsed out PDB ID, if any
- Args    : overwrite - if true, erase current pdbid if parsable from stampid
+# STAMP descriptor (e.g. "A 125 _ to A 555 _" or "CHAIN A")
+field 'descriptor' => '';
 
-Parses out the original PDB ID / CHAIN ID, from the STAMP label, if any
+# Ref to Transform object, product of all Transform's ever applied
+# Prefer to use an accessor method here
+# field 'transformation';
 
-A STAMP label is generally just the concatenated PDB ID with the chain ID,
-lowercase, e.g. 2nn6a.
-
-If there is no existing 'descriptor' it is set to 'CHAIN <chainid>', if a chain
-identifier can also be parsed out of the label.
-
-=cut
-sub stampid2pdbid {
-    my $overwrite = shift || 0;
-    my $stampid = $self->stampid;
-    return 0 unless $stampid;
-    my ($pdbid,$chid) = $stampid =~ m|^(.{4})([a-zA-Z_])?$|;
-    # Don't overwrite an existing pdbid, unless forced
-    if ($pdbid && ($overwrite || ! $self->pdbid)) {
-        $self->pdbid($pdbid);
-    }
-    if ($chid && ! $self->descriptor) {
-        $self->descriptor("CHAIN $chid");
-    }
-    return $pdbid;
+# Sets the PDB ID to given value
+# Otherwise, tries to extract if from STAMP label or frome any associated file
+# TODO DOC
+sub pdbid {
+    my ($newid) = shift;
+    if ($newid) { return $self->{pdbid} = $newid; }
+    return $self->{pdbid} if $self->_stampid2pdbid;
+    return $self->{pdbid} if $self->_file2pdbid;
+    return undef;
 }
 
 
@@ -216,60 +134,37 @@ sub transformation {
 
 
 ################################################################################
-=head2 reset
-
- Title   : reset
- Usage   : $dom->reset;
- Function: Resets the 'transformation' to the identity;
- Example : $dom->reset;
- Returns : The new value of 'transformation', i.e. an identity.
- Args    : NA
-
-Resets the internal Transform, but not the centre of mass ('cofm');
-
-=cut
-sub reset {
-    return $self->{transformation} = new SBG::Transform;
-}
+# Public
 
 
 ################################################################################
-=head2 cofm2array
+=head2 new
 
- Title   : cofm2array
- Usage   : my @xyz = $dom->cofm2array();
- Function: Converts internal centre-of-mass ('cofm' field) to a 3-tuple
- Example : print "centre-of-mass is: " . $dom->cofm2array() . "\n";
- Returns : 3-tuple (array of 3 elements)
- Args    : NA
+ Title   : new
+ Usage   : my $dom = new SBG::Domain(-stampid=>'mydom', 
+                                      -pdbid=>'2nn6', 
+                                      -descriptor=>'CHAIN A');
+ Function: Creates a new STAMP representation of segment of a protein chain
+ Returns : Object handle
+ Args    : -stampid - Any label to identify this structure (no whitespace)
+           -pdbid - PDB ID of original structure (not case-sensitive)
+           -file - Path to PDB file or original structure
+           -descriptor - STAMP descriptor. See:
+           http://www.compbio.dundee.ac.uk/manuals/stamp.4.2/node29.html
 
-=cut
-sub cofm2array {
-    my @a = 
-        ($self->{cofm}->at(0,0), 
-         $self->{cofm}->at(0,1), 
-         $self->{cofm}->at(0,2)); 
-    return @a;
-}
+=cut 
+sub new () {
+    my ($class, %o) = @_;
+    my $self = { %o };
+    bless $self, $class;
+    $self->_undash;
 
+    $self->{cofm} ||= mpdl (0,0,0,1);
+    # Set the default transformation to the identity
+    $self->reset();
 
-################################################################################
-=head2 _asstring
-
- Title   : _asstring
- Usage   : my $str = $dom->_asstring;
- Function: Resturns a string representation of this domain.
- Example : print "Domain is $dom"; # automatic stringification
- Returns : string
- Args    : NA
-
-Contains space-separated fields: stampid, pdbid, cofm, rg
-
-=cut
-sub _asstring {
-    my @a = ($self->stampid, $self->pdbid, $self->cofm2array, $self->rg);
-    return "@a";
-}
+    return $self;
+} # new
 
 
 ################################################################################
@@ -303,6 +198,24 @@ sub transform {
 
 
 ################################################################################
+=head2 reset
+
+ Title   : reset
+ Usage   : $dom->reset;
+ Function: Resets the 'transformation' to the identity;
+ Example : $dom->reset;
+ Returns : The new value of 'transformation', i.e. an identity.
+ Args    : NA
+
+Resets the internal Transform, but not the centre of mass ('cofm');
+
+=cut
+sub reset {
+    return $self->{transformation} = new SBG::Transform;
+}
+
+
+################################################################################
 =head2 rmsd
 
  Title   : rmsd
@@ -325,7 +238,7 @@ sub rmsd {
     my $squared = $diff ** 2;
     my $mean = sumover($squared) / nelem($squared);
     return $mean;
-}
+} # rmsd
 
 
 ################################################################################
@@ -368,6 +281,120 @@ sub overlaps {
     $thresh ||= 0;
     return $self->overlap($obj) - $thresh > 0;
 }
+
+
+################################################################################
+# Private
+
+
+################################################################################
+=head2 _asstring
+
+ Title   : _asstring
+ Usage   : my $str = $dom->_asstring;
+ Function: Resturns a string representation of this domain.
+ Example : print "Domain is $dom"; # automatic stringification
+ Returns : string
+ Args    : NA
+
+Contains space-separated fields: stampid, pdbid, cofm, rg
+
+=cut
+sub _asstring {
+    my @a = ($self->stampid, $self->pdbid, $self->_cofm2array, $self->rg);
+    return "@a";
+}
+
+
+
+################################################################################
+=head2 _cofm2array
+
+ Title   : _cofm2array
+ Usage   : my @xyz = $dom->_cofm2array();
+ Function: Converts internal centre-of-mass ('cofm' field) to a 3-tuple
+ Example : print "centre-of-mass is: " . $dom->_cofm2array() . "\n";
+ Returns : 3-tuple (array of 3 elements)
+ Args    : NA
+
+=cut
+sub _cofm2array {
+    my @a = 
+        ($self->{cofm}->at(0,0), 
+         $self->{cofm}->at(0,1), 
+         $self->{cofm}->at(0,2)); 
+    return @a;
+} # _cofm2array
+
+
+
+################################################################################
+=head2 _file2pdbid
+
+ Title   : _file2pdbid
+ Usage   : $dom->_file2pdbid
+ Function: Sets the internal $dom->pdbid based on $dom->file
+ Example : $dom->file2id
+ Returns : The parsed out PDB ID, if any
+ Args    : filename, optional, otherwise $self->file is used
+
+Parses out the original PDB ID / CHAIN ID, from the file name
+
+If there is no existing 'descriptor' it is set to 'CHAIN <chainid>', if a chain
+identifier can also be parsed out of the filename.
+
+Overwrites any existing 'pdbid' if a PDB ID can be parsed from filename.
+
+=cut
+sub _file2pdbid {
+    my $file = shift || $self->file;
+    return 0 unless $file;
+    my (undef,$pdbid,$chid) = m|.*/(pdb)?(.{4})([a-zA-Z_])?\.?.*|;
+    return unless $pdbid;
+    # Overwrite any previous PDB ID, as the file name is more authoritative
+    $self->pdbid($pdbid) if $pdbid;
+    # Don't overwrite the descriptor, if we were just looking for the PDB ID
+    if ($chid && ! $self->descriptor) {
+        $self->descriptor("CHAIN $chid");
+    }
+    return $pdbid;
+} # _file2pdbid
+
+
+################################################################################
+=head2 _stampid2pdbid
+
+ Title   : _stampid2pdbid
+ Usage   : $dom->_stampid2pdbid
+ Function: Sets the internal $dom->pdbid based on $dom->stampid
+ Example : $dom->_stampid2pdbid
+ Returns : The parsed out PDB ID, if any
+ Args    : overwrite - if true, erase current pdbid if parsable from stampid
+
+Parses out the original PDB ID / CHAIN ID, from the STAMP label, if any
+
+A STAMP label is generally just the concatenated PDB ID with the chain ID,
+lowercase, e.g. 2nn6a.
+
+If there is no existing 'descriptor' it is set to 'CHAIN <chainid>', if a chain
+identifier can also be parsed out of the label.
+
+=cut
+sub _stampid2pdbid {
+    my $overwrite = shift || 0;
+    my $stampid = $self->stampid;
+    return 0 unless $stampid;
+    my ($pdbid,$chid) = $stampid =~ m|^(.{4})([a-zA-Z_])?$|;
+    return unless $pdbid;
+    # Don't overwrite an existing pdbid, unless forced
+    if ($pdbid && ($overwrite || ! $self->{pdbid})) {
+        $self->pdbid($pdbid);
+    }
+    if ($chid && ! $self->descriptor) {
+        $self->descriptor("CHAIN $chid");
+    }
+    return $pdbid;
+} # _stampid2pdbid
 
 
 ################################################################################
