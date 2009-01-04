@@ -27,16 +27,59 @@ use SBG::Root -Base, -XXX;
 # This object is clonable
 use base qw(Clone);
 
-# Allowed (linear) overlap between the spheres, that represent the proteins
-# Centre-of-mass + Radius-of-gyration
-field 'clash';
-
 
 use overload (
     '""' => '_asstring',
     'eq' => '_eq',
     );
 
+
+################################################################################
+# Fields and accessors
+
+
+# Allowed (linear) overlap between the spheres, that represent the proteins
+# Centre-of-mass + Radius-of-gyration
+field 'clash';
+
+
+################################################################################
+=head2 comp
+
+ Title   : comp
+ Usage   :
+ Function:
+ Example :
+ Returns : 
+ Args    :
+
+The component L<SBG::Domain> objects collected in this Assembly.  NB These also
+contain centres-of-mass as well as Transform's
+
+The return value of this method can be assigned to, e.g.:
+
+ $assem->comp('mylabel') = $domainobject;
+
+NB Spiffy doesn't magically create $self here, probably due to the attribute
+=cut
+sub comp : lvalue {
+    my ($self,$key) = @_;
+    $self->{comp} ||= {};
+    # Do not use 'return' with 'lvalue'
+    $self->{comp}{$key};
+} # comp
+
+
+sub iaction : lvalue {
+    my ($self,$key) = @_;
+    $self->{iaction} ||= {};
+    # Do not use 'return' with 'lvalue'
+    $self->{iaction}{$key};
+}
+
+
+################################################################################
+# Public
 
 ################################################################################
 =head2 new
@@ -103,39 +146,6 @@ sub size {
 }
 
 
-################################################################################
-=head2 comp
-
- Title   : comp
- Usage   :
- Function:
- Example :
- Returns : 
- Args    :
-
-The component L<SBG::Domain> objects collected in this Assembly.  NB These also
-contain centres-of-mass as well as Transform's
-
-The return value of this method can be assigned to, e.g.:
-
- $assem->comp('mylabel') = $domainobject;
-
-NB Spiffy doesn't magically create $self here, probably due to the attribute
-=cut
-sub comp : lvalue {
-    my ($self,$key) = @_;
-    $self->{comp} ||= {};
-    # Do not use 'return' with 'lvalue'
-    $self->{comp}{$key};
-} # comp
-
-
-sub iaction : lvalue {
-    my ($self,$key) = @_;
-    $self->{iaction} ||= {};
-    # Do not use 'return' with 'lvalue'
-    $self->{iaction}{$key};
-}
 
 
 ################################################################################
@@ -174,6 +184,9 @@ sub clashes {
 } # clashes
 
 
+################################################################################
+# Private
+
 sub _asstring {
     join ",", sort keys %{$self->{iaction}};
 }
@@ -187,25 +200,14 @@ sub _eq {
 
 
 
+# TODO HERE
 
 
 
 
-sub lastedge {
-    my ($self, $traversal) = @_;
-    my $io = new AssemblIO();
-    $io->write($self) if $self->size() > 2;
-}
 
 
-sub lastnode {
-    my ($self, $traversal) = @_;
-    my $io = new AssemblIO();
-    $io->write($self) if $self->size() > 2;
-}
-
-
-
+# TODO NB most of this is now in Traversal::next_alt
 
 # Callback for attempting to add a new interaction template
 # Gets an assembly object as a status object

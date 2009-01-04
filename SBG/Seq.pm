@@ -27,9 +27,9 @@ use SBG::Root -base, -XXX;
 use base qw(Bio::Seq);
 
 use overload (
-    '""' => 'asstring',
-    'cmp' => 'compare',
-    'eq' => 'equal',
+    '""' => '_asstring',
+    'cmp' => '_compare',
+    'eq' => '_equal',
 
     );
 
@@ -45,17 +45,17 @@ sub new () {
     return $self;
 }
 
-sub asstring {
+sub _asstring {
     my ($self) = @_;
     return $self->accession_number;
 }
 
-sub equal {
+sub _equal {
     my ($a, $b) = @_;
-    return 0 == compare($a, $b);
+    return 0 == _compare($a, $b);
 }
 
-sub compare {
+sub _compare {
     my ($a, $b) = @_;
     return $a->accession_number cmp $b->accession_number;
 }

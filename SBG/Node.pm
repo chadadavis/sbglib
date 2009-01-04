@@ -30,9 +30,9 @@ use base qw(Bio::Network::Node);
 
 
 use overload (
-    '""' => 'asstring',
-    'cmp' => 'compare',
-    'eq' => 'equal',
+    '""' => '_asstring',
+    'cmp' => '_compare',
+    'eq' => '_equal',
     );
 
 
@@ -48,19 +48,19 @@ sub new () {
     return $self;
 }
 
-sub asstring {
+sub _asstring {
     my ($self) = @_;
     return join(",", $self->proteins);
-} # asstring
+} # _asstring
 
 
-sub equal {
+sub _equal {
     my ($a, $b) = @_;
-    return 0 == compare($a, $b);
+    return 0 == _compare($a, $b);
 }
 
 # Setwise comparison
-sub compare {
+sub _compare {
     my ($a, $b) = @_;
 
     return undef unless ref($b) && $b->isa("Bio::Network::Node");

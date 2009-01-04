@@ -28,13 +28,14 @@ use SBG::Root -base, -XXX;
 our @EXPORT = qw(onto);
 
 field 'matrix';
-field 'string';
-field 'file';
-field 'tainted';
+
+field '_string';
+field '_file';
+field '_tainted';
 
 use overload (
-    '*' => 'mult',
-    '""' => 'asstring',
+    '*' => '_mult',
+    '""' => '_asstring',
     );
 
 use PDL;
@@ -59,13 +60,13 @@ sub new () {
     bless $self, $class;
     $self->_undash;
 
-    if (defined $self->{string}) {
+    if (defined $self->{_string}) {
         $self->_from_string;
-    } elsif (defined $self->{file}) {
+    } elsif (defined $self->{_file}) {
         $self->_from_file;
     } elsif (defined $self->{matrix}) {
         # Note that matrix is set
-        $self->tainted(1);
+        $self->_tainted(1);
     } else {
         $self->reset();
     }
@@ -88,7 +89,7 @@ Resets the internal matrix
 =cut
 sub reset {
     my $self = shift;
-    $self->tainted(0);
+    $self->_tainted(0);
     return $self->matrix(idtransform());
 }
 
@@ -111,9 +112,9 @@ sub idtransform {
 
 
 ################################################################################
-=head2 mult
+=head2 _mult
 
- Title   : mult
+ Title   : _mult
  Usage   :
  Function:
  Example :
@@ -123,15 +124,15 @@ sub idtransform {
 Matrix multiplication. Order of operations mattters.
 
 =cut
-sub mult {
+sub _mult {
     my ($self, $other) = @_;
     unless (ref($other) eq __PACKAGE__) {
-        carp "Need to mult() objects of own type: " . __PACKAGE__ . "\n";
+        carp "Need to _mult() objects of own type: " . __PACKAGE__ . "\n";
         return undef;
     }
     my $m = $self->matrix x $other->matrix;
     return new SBG::Transform(-matrix=>$m);
-} # mult
+} # _mult
 
 
 ################################################################################
@@ -147,7 +148,7 @@ sub mult {
 =cut
 sub invert {
    my ($self) = @_;
-   return unless $self->tainted;
+   return unless $self->_tainted;
    my $i = $self->matrix->inv;
    $self->{matrix} .= $i;
    return $self;
@@ -178,9 +179,9 @@ sub transform {
 
 
 ################################################################################
-=head2 asstring
+=head2 _asstring
 
- Title   : asstring
+ Title   : _asstring
  Usage   :
  Function:
  Example :
@@ -189,10 +190,10 @@ sub transform {
 
 
 =cut
-sub asstring {
+sub _asstring {
     my ($self) = @_;
     return $self->{matrix};
-} # asstring
+} # _asstring
 
 
 ################################################################################
@@ -210,7 +211,7 @@ For saving, CSV format
 =cut
 sub ascsv {
     my ($self, %o) = @_;
-    return "" unless $self->tainted || defined $o{-explicit};
+    return "" unless $self->_tainted || defined $o{-explicit};
 
     my $mat = $self->matrix;
     my ($n,$m) = $mat->dims;
@@ -241,7 +242,7 @@ See L<_from_string>
 =cut
 sub _from_file {
     my ($self) = @_;
-    my $filepath = $self->file;
+    my $filepath = $self->_file;
     chomp $filepath;
     unless (-s $filepath) {
         carp "Cannot load transformation: $filepath\n";
@@ -255,7 +256,7 @@ sub _from_file {
 
     # Finally, make it an mpdl, 
     $self->{matrix} = mpdl $rasc;
-    $self->tainted(1);
+    $self->_tainted(1);
     return $self;
 } # _from_file
 
@@ -280,7 +281,7 @@ I.e. it's CSV format, whitespace-separated, one row per line.
 =cut
 sub _from_string {
     my ($self) = @_;
-    my $str = $self->string;
+    my $str = $self->_string;
     my $rasc = zeroes(4,4);
     # Overwrite with 3x4 from string
     my @lines = split /\n/, $str;
@@ -301,7 +302,7 @@ sub _from_string {
 
     # Finally, make it an mpdl, 
     $self->{matrix} = mpdl $rasc;
-    $self->tainted(1);
+    $self->_tainted(1);
     return $self;
 } # _from_string
 

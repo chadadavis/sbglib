@@ -56,7 +56,7 @@ field 'descriptor' => '';
 # field 'transformation';
 
 use overload (
-    '""' => 'asstring',
+    '""' => '_asstring',
     '-' => 'rmsd',
     );
 
@@ -174,6 +174,7 @@ sub stampid2pdbid {
  Title   : cofm
  Usage   : my $cofm = $dom->cofm; # get
            $dom->cofm($cofm);     # set
+           $dom->cofm(12.2343, 66.122, 233.122); # set XYZ
  Function: Accessor for 'cofm' field, which is an L<PDL::Matrix>
  Example : 
  Returns : New value of 'cofm' field.
@@ -253,10 +254,10 @@ sub cofm2array {
 
 
 ################################################################################
-=head2 asstring
+=head2 _asstring
 
- Title   : asstring
- Usage   : my $str = $dom->asstring;
+ Title   : _asstring
+ Usage   : my $str = $dom->_asstring;
  Function: Resturns a string representation of this domain.
  Example : print "Domain is $dom"; # automatic stringification
  Returns : string
@@ -265,7 +266,7 @@ sub cofm2array {
 Contains space-separated fields: stampid, pdbid, cofm, rg
 
 =cut
-sub asstring {
+sub _asstring {
     my @a = ($self->stampid, $self->pdbid, $self->cofm2array, $self->rg);
     return "@a";
 }
