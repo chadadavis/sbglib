@@ -11,96 +11,130 @@ my $file = "$installdir/t/simple_network.csv";
 my $io = new SBG::NetworkIO(-file=>$file);
 my $net = $io->read;
 
+# GraphViz
+my $graphout = "$installdir/t/graph.dot";
+SBG::NetworkIO::graphviz($net, $graphout,-edge_color=>'grey');
+ok(-r $graphout, "GraphViz creation: $graphout");
+
+# For the sake of testing, define some incompatible sets of templates.  Anything
+# in the same set is all not compatible.  NB alternative templates for a single
+# edge are implicitly mutually incompatible.
+
+# Set of sets of templates
+my $uf = new Graph::UnionFind; 
+# In this simple example, each template has a numeric index
+my @templ;
+foreach my $e ($net->edges) {
+    my ($u, $v) = @$e;
+    # Names of templates for this edge
+    my @templ_ids = sort $net->get_edge_attribute_names($u, $v);
+    # Assign a numeric ID to each template (extracted from name), for simplicity
+    foreach my $t (@templ_ids) {
+        my ($id) = $t =~ /(\d+)/;
+        $templ[$id] = $t;
+        # Put each template into the union-find data structure. 
+        # Initially each is in its own set, i.e. no incompatibilities yet
+        $uf->add($t);
+    }
+}
+
+# Define some arbitrary incompatibilities by putting templates into same set
+$uf->union($templ[1], $templ[5]); 
+$uf->union($templ[2], $templ[5]);
+$uf->union($templ[1], $templ[6]);
+$uf->union($templ[2], $templ[6]);
+
+$uf->union($templ[4], $templ[7]);
+$uf->union($templ[4], $templ[8]); 
+$uf->union($templ[4], $templ[9]); 
+$uf->union($templ[3], $templ[9]); 
+
+# Track answers
+my %answers;
+# my %expect = "A B 1;A B 2;A B C 1 3;A B C 2 3;A B C 3 5;A B D 1 4;A B D 2 4;B C 5;B C 6;B C D 4 6;B D 4";
+
+my %expected = (
+    "A B 1" => 1,
+    "A B 2" => 1,
+    "A B C 1 3" => 1,
+    "A B C 2 3" => 1,
+    "A B C 3 5" => 1,
+    "A B D 1 4" => 1,
+    "A B D 2 4" => 1,
+    "B C 5" => 1,
+    "B C 6" => 1,
+    "B C D 4 6" => 1,
+    "B D 4" => 1,
+    );
 
 # Create a traversal
 my $trav = new SBG::Traversal(-graph=>$net, 
-#                               -test=>\&try_edge,
-                              -test=>\&try_edge_shorter,
-                              -lastnode=>\&lastnode,
-                              -lastedge=>\&lastedge,
+                              -test=>\&try_template,
+                              -partial=>\&got_an_answer,
     );
 
 $trav->traverse;
 
+is(11, scalar(keys %answers), "11 Covering solutions from traversal");
+# is($expect, join(";", sort keys %answers), "Exactly the right 11 coverings");
 
-sub lastnode {
-    my ($state, $g, @templates) = @_;
-#     print "lastnode:", Dumper($state->{solutions}), "\n";
-#     print "lastnode:", Dumper(\@templates), "\n";
-    print "lastnode: @templates\n";
+foreach (sort keys %answers) {
+    ok($expected{$_}, "Solution was expected: $_");
+    delete $expected{$_};
+}
+is(0, scalar(keys %expected), 
+   "(No) missing solutions: " . join(' ', keys %expected));
+
+exit;
+
+################################################################################
+
+sub got_an_answer {
+    my ($state, $g, $nodecover, $templates) = @_;
+    my @ids;
+    foreach my $t (@$templates) {
+        push @ids, ex_id($t);
+    }
+    @$nodecover = sort @$nodecover;
+    @ids = sort @ids;
+    @$templates = sort @$templates;
+    print STDERR 
+        "Solution: ",
+        "Nodes @$nodecover, Templates: @ids : @$templates\n";
     $state->{solutions} = [];
+    $answers{"@$nodecover @ids"} = 1;
 }
 
-sub lastedge {
-    my ($state, $g, @templates) = @_;
-#     print "lastedge:", Dumper($state->{solutions}), "\n";
-#     print "lastedge:", Dumper(\@templates), "\n";
-    print "lastedge: @templates\n";
 
-    $state->{solutions} = [];
+sub try_template {
+    my ($state, $graph, $u, $v, $alt_id) = @_;
+    # Our test index of this template
+    my $templ_id = ex_id($alt_id);
 
-}
+    # Fetch the actual Interaction object, given the ID
+#     my $ix = $graph->get_interaction_by_id($alt_id);
 
-sub try_edge_shorter {
-    my ($state, $g, $u, $v, $alt_id) = @_;
-
-    my $ix = $g->get_interaction_by_id($alt_id);
-    print STDERR "== Template $ix\n";
-
-    # Structural compatibility test (backtrack on failure)
-    my $success = (0,1)[rand(2)];
-
+    my $success = 0;
+    # What other templates already being used
+    foreach my $other (@{$state->{'solutions'}}) {
+        my $other_id = ex_id($other);
+        print STDERR "== $templ_id vs $other_id\n";
+        if ($uf->same($templ[$templ_id], $templ[$other_id])) {
+            print STDERR "== Incompatible with $other_id\n";
+            return $success = 0;
+        }
+    }
+    $success = 1;
     if ($success) {
-        # Add this template to progressive solution
+        # Add this template to progressive solution (list of templates used)
         push @{$state->{'solutions'}}, $alt_id;
     }
     return $success;
 }
 
-sub try_edge {
-    my ($state, $g, $u, $v) = @_;
-
-    # Network's IDs of Interaction's (templates) in this Edge
-    my @ix_ids = $g->get_edge_attribute_names($u, $v);
-    print STDERR "== ix_ids:@ix_ids:\n";
-    # Make the order unique, so that indexing is deterministic
-    @ix_ids = sort @ix_ids;
-
-    # My own name for this edge (regardless of template)
-    my $edge_id = "$u--$v";
-
-    # Which of the interaction templates, for this edge, to try (next)
-    my $ix_index = $state->{'eidx'}{$edge_id} || 0;
-
-    # If no templates (left) to try, cannot use this edge
-    unless ($ix_index < @ix_ids) {
-        print STDERR "== No more templates\n";
-        # Now reset, for any subsequent, independent attempts on this edge
-        $state->{'eidx'}{$edge_id} = 0;
-        return undef;
-    }
-
-    # Try next interaction template, using the Network's ID for the interaction
-    my $ix_id = $ix_ids[$ix_index];
-
-    my $ix = $g->get_interaction_by_id($ix_id);
-    print STDERR "== template ", 1+$ix_index, "/" . @ix_ids, " $ix\n";
-
-    # Structural compatibility test (backtrack on failure)
-    my $success = (-1,0,1)[rand(3)];
-
-    # Next interaction iface to try on this edge
-    $state->{'eidx'}{$edge_id} = $ix_index+1;
-
-    if ($success) {
-        # Add this template to progressive solution
-        push @{$state->{'solutions'}}, $ix_id;
-        return 1;
-    } else {
-        # This means failure, 
-        return -1;
-    }
-
-} # try_edge
-
+sub ex_id {
+    my $name = shift;
+    $name =~ /(\d+)/;
+    my $id = $1;
+}
 
