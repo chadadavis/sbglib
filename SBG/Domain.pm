@@ -101,6 +101,8 @@ sub pdbid {
 The 'cofm' field represents the centre-of-mass of this domain.
 The L<PDL::Matrix> is a 1x4 affine matrix (i.e. the last cell is always 1.0);
 
+This is always defined. By default it is the the 4-tuple 0,0,0,1
+
 =cut
 sub cofm {
     my ($x, $y, $z) = @_;
@@ -232,12 +234,15 @@ sub rmsd {
     my $other = shift;
     return undef unless $self->cofm->dims == $other->cofm->dims;
     my $diff = $self->cofm - $other->cofm;
+    
     # Remove dimension 0 of matrix, producing a 1-D list. 
     # And remove the last field (just a 1, for affine multiplication)
     $diff = $diff->slice('(0),0:2');
     my $squared = $diff ** 2;
     my $mean = sumover($squared) / nelem($squared);
-    return $mean;
+    my $sqrt = sqrt $mean;
+
+    return $sqrt;
 } # rmsd
 
 
@@ -260,7 +265,8 @@ sub overlap {
     # Radii of two spheres
     my $sum_radii = $self->rg + $obj->rg;
     # Overlaps when distance between centres < sum of two radii
-    return $sum_radii - $dist;
+    my $diff = $sum_radii - $dist;
+    return $diff;
 }
 
 
@@ -302,6 +308,7 @@ Contains space-separated fields: stampid, pdbid, cofm, rg
 =cut
 sub _asstring {
     my @a = ($self->stampid, $self->pdbid, $self->_cofm2array, $self->rg);
+    @a = map { $_ || "" } @a;
     return "@a";
 }
 
@@ -349,7 +356,7 @@ Overwrites any existing 'pdbid' if a PDB ID can be parsed from filename.
 sub _file2pdbid {
     my $file = shift || $self->file;
     return 0 unless $file;
-    my (undef,$pdbid,$chid) = m|.*/(pdb)?(.{4})([a-zA-Z_])?\.?.*|;
+    my (undef,$pdbid,$chid) = $file =~ m|.*/(pdb)?(.{4})([a-zA-Z_])?\.?.*|;
     return unless $pdbid;
     # Overwrite any previous PDB ID, as the file name is more authoritative
     $self->pdbid($pdbid) if $pdbid;
