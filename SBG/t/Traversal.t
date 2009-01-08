@@ -100,7 +100,7 @@ sub got_an_answer {
     @$templates = sort @$templates;
     print STDERR 
         "Solution: ",
-        "Nodes @$nodecover, Templates: @ids : @$templates\n";
+        "Nodes @$nodecover, Templates: @ids : \n@$templates\n";
     $state->{solutions} = [];
     $answers{"@$nodecover @ids"} = 1;
 }
@@ -118,9 +118,9 @@ sub try_template {
     # What other templates already being used
     foreach my $other (@{$state->{'solutions'}}) {
         my $other_id = ex_id($other);
-        print STDERR "== $templ_id vs $other_id\n";
+#         print STDERR "== $templ_id vs $other_id\n";
         if ($uf->same($templ[$templ_id], $templ[$other_id])) {
-            print STDERR "== Incompatible with $other_id\n";
+#             print STDERR "== Incompatible with $other_id\n";
             return $success = 0;
         }
     }
