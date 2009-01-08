@@ -153,7 +153,7 @@ A generic implementation is provided here.
 sub write {
     my $self = shift;
     my ($obj, %o) = @_;
-
+    return unless $obj;
     # Default to on, unless already set
     $o{-newline} = 1 unless defined($o{-newline});
     my $fh = $self->fh;
