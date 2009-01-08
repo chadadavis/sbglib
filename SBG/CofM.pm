@@ -57,6 +57,7 @@ Only appropriate for full-chain queries. Otherwise, see L<run>
 =cut
 sub query {
     my ($pdbid, $chainid) = @_;
+    $logger->trace("$pdbid,$chainid");
     my $db = $config->val('cofm', 'db') || "trans_1_5";
     my $dbh = dbconnect(-db=>$db) or return undef;
     # Static handle, prepare it only once
@@ -96,7 +97,7 @@ sub query {
 
 Runs external B<cofm> appliation. Must be in your environment's B<$PATH>
 
-'descriptor' and 'pdbid' (or 'stampid') must be defined in the L<SBG::Domain>
+'descriptor' and 'pdbid' (or 'label') must be defined in the L<SBG::Domain>
 
 =cut
 sub run {
@@ -108,7 +109,7 @@ sub run {
     # Print the PDB ID, rather than the label, since cofm needs to find template
     my ($tfh, $path) = tempfile();
     my $io = new SBG::DomainIO(-fh=>$tfh);
-    $io->write($dom, -id=>'pdbid');
+    $io->write($dom, -id=>'stampid');
     $io->flush;
     unless (-s $path) {
         carp "Failed to write Domain to $path\n";
@@ -174,14 +175,13 @@ sub get_cofm {
 
     my @fields;
     my $pdbid = uc $dom->pdbid;
+    my $chainid = $dom->chainid;
     my $desc = $dom->descriptor;
 
     # If descriptor contains just a chain, try the cache first;
-    if ($desc =~ /^CHAIN ([a-zA-Z_])$/) {
-        my $chainid = $1;
+    if ($chainid) {
         @fields = query($pdbid, $chainid);
     }
-
     # Couldn't get from DB, try running computation locally
     @fields or @fields = run($dom);
 
@@ -198,7 +198,7 @@ sub get_cofm {
     $dom->file || $dom->file($file);
     # Should be equal already 
     unless ($dom->descriptor eq $descriptor) { 
-        carp "$descriptor != " . $dom->descriptor . "\n";
+        $logger->error("$descriptor != " . $dom->descriptor);
     }
     return $dom;
 

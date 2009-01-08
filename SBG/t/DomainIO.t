@@ -24,28 +24,23 @@ my $outfile = "${file}.out";
 my $ioout = new SBG::DomainIO(-file=>">$outfile");
 ok($ioout && $ioout->fh, "new(-file=>\">$outfile\")");
 foreach my $d (@doms) {
-    ok($ioout->write($d), "Writing: " . $d->stampid);
+    ok($ioout->write($d), "Writing: $d");
 }
 system("cat $outfile");
 ok(unlink($outfile), "Removing $outfile");
 
 # Test pdbc
 my $dom = pdbc('2nn6', 'A')->read();
-is($dom->stampid, '2nn6a', 'pdbc');
+is($dom->label, '2nn6a', 'pdbc');
 
 # Domain without a file
-my $stampid = '2nn6A';
-my $domnofile = new SBG::Domain(-stampid=>$stampid);
-$domnofile->stampid2pdbid;
+my $label = '2nn6A';
+my $domnofile = new SBG::Domain(-label=>$label);
 my $ghostio = new SBG::DomainIO;
 my $str = $ghostio->write($domnofile);
 my $desc = $domnofile->descriptor;
 # Header line must begin with whitespace when no filename (STAMP handles this)
-ok($str =~ /^\s+${stampid}\s+\{\s+${desc}\s+\}\s*$/, "Output format correct");
-
-
-
-
+ok($str =~ /^\s+${label}\s+\{\s+${desc}\s+\}\s*$/, "Output format correct");
 
 
 __END__

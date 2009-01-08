@@ -30,11 +30,14 @@ use SBG::Root -Base, -XXX;
 use overload (
     '""' => '_asstring',
     '-' => 'rmsd',
+    '==' => '_equal',
+    'eq' => '_equal',
+    'cmp' => '_cmp',
     );
 
 use warnings;
-use Carp;
 use PDL;
+use PDL::Ufunc;
 use PDL::Math;
 use PDL::Matrix;
 use File::Temp qw(tempfile);
@@ -52,20 +55,13 @@ use SBG::Transform;
 # field 'cofm';
 
 # Radius of gyration
+=head2 rg
+ 
+Radius of gyration of this domain
+
+=cut
 field 'rg' => 0;
 
-# STAMP domain identifier.  This can be any label, but STAMP like it the first
-# four characters correspond to a PDB ID (case insensitive).
-field 'stampid' => '';
-
-# Source PDB ID of structure (without any chain ID)
-# Does not need to be explicitly set
-# field 'pdbid' => '';
-
-
-# Path to PDB/MMol file
-# This can be blank and STAMP will look for thas file based on its 'stampid'
-field 'file' => '';
 
 # STAMP descriptor (e.g. "A 125 _ to A 555 _" or "CHAIN A")
 field 'descriptor' => '';
@@ -80,10 +76,54 @@ field 'descriptor' => '';
 sub pdbid {
     my ($newid) = shift;
     if ($newid) { return $self->{pdbid} = $newid; }
-    return $self->{pdbid} if $self->_stampid2pdbid;
+    return $self->{pdbid} if $self->{pdbid};
+    # Or try parsing out of filename or label
     return $self->{pdbid} if $self->_file2pdbid;
+    return $self->{pdbid} if $self->_label2pdbid;
     return undef;
 }
+
+# Name of domain (or STAMP domain ID).  STAMP likes it the first four characters
+# correspond to a PDB ID (case insensitive).
+sub label {
+    my ($newlabel) = shift;
+    return $self->{label} unless $newlabel;
+    $self->{label} = $newlabel;
+    # Try to extract any PDB ID at beginning of label
+    $self->_label2pdbid();
+    return $self->{label};
+}
+
+
+# Path to PDB/MMol file
+# This can be blank and STAMP will look for thas file based on its 'label'
+sub file {
+    my ($newfile) = shift;
+    return $self->{file} unless $newfile;
+    $self->{file} = $newfile;
+    # Try to extract any PDB ID from file name
+    $self->_file2pdbid();
+    return $self->{file};
+}
+
+
+sub chainid {
+    $self->descriptor =~ /^\s*CHAIN\s+([a-zA-Z_])\s*$/i;
+    return $1;
+}
+
+
+# A label suitable for STAMP (unique), prefixed with PDBID/chain ID
+sub stampid {
+    my $stampid;
+    $stampid .= $self->pdbid || '';
+    $stampid .= $self->chainid || '';
+    $stampid .= '-' . $self->label if $self->label;
+    # Don't duplicate into something like 2br2A-2br2A
+    return $self->{label} if $self->{label} =~ /^$self->{pdbid}/;
+    return $stampid;
+}
+
 
 
 ################################################################################
@@ -143,12 +183,12 @@ sub transformation {
 =head2 new
 
  Title   : new
- Usage   : my $dom = new SBG::Domain(-stampid=>'mydom', 
+ Usage   : my $dom = new SBG::Domain(-label=>'mydom', 
                                       -pdbid=>'2nn6', 
                                       -descriptor=>'CHAIN A');
  Function: Creates a new STAMP representation of segment of a protein chain
  Returns : Object handle
- Args    : -stampid - Any label to identify this structure (no whitespace)
+ Args    : -label - Any label to identify this structure (no whitespace)
            -pdbid - PDB ID of original structure (not case-sensitive)
            -file - Path to PDB file or original structure
            -descriptor - STAMP descriptor. See:
@@ -161,9 +201,14 @@ sub new () {
     bless $self, $class;
     $self->_undash;
 
+    # Parse out PDB ID from label or filename, if given
+    $self->_file2pdbid();
+    $self->_label2pdbid();
+
+    # Init centre-of-mass
     $self->{cofm} ||= mpdl (0,0,0,1);
     # Set the default transformation to the identity
-    $self->reset();
+    $self->{transformation} ||= new SBG::Transform;
 
     return $self;
 } # new
@@ -266,6 +311,9 @@ sub overlap {
     my $sum_radii = $self->rg + $obj->rg;
     # Overlaps when distance between centres < sum of two radii
     my $diff = $sum_radii - $dist;
+    my $apt = join(' ', $self->_cofm2array, $self->rg);
+    my $bpt = join(' ', $obj->_cofm2array, $obj->rg);
+    $logger->debug("$diff = $self($apt) - $obj($bpt)");
     return $diff;
 }
 
@@ -284,6 +332,10 @@ sub overlap {
 =cut
 sub overlaps {
     my ($obj, $thresh) = @_;
+    if ($self->_equal($obj)) {
+        $logger->info("Identical domain, overlaps");
+        return 1;
+    }
     $thresh ||= 0;
     return $self->overlap($obj) - $thresh > 0;
 }
@@ -303,15 +355,38 @@ sub overlaps {
  Returns : string
  Args    : NA
 
-Contains space-separated fields: stampid, pdbid, cofm, rg
-
 =cut
 sub _asstring {
-    my @a = ($self->stampid, $self->pdbid, $self->_cofm2array, $self->rg);
-    @a = map { $_ || "" } @a;
-    return "@a";
+    my $s = $self->label || "";
+    if ($self->pdbid) {
+        $s .= "(" . $self->pdbid . " " . $self->descriptor . ")";
+    }
+    return $s;
 }
 
+
+# Are two domains effectively equal, other than their label
+# This includes centre-of-mass
+sub _equal {
+    my ($other) = @_;
+
+    # Fields, from most general to more specific
+    my @fields = qw(pdbid descriptor file);
+    foreach (@fields) {
+        return 0 if $self->{$_} && $other->{$_} && 
+            $self->{$_} ne $other->{$_};
+    }
+    # But has one maybe already been transformed?
+    return 0 unless all($self->cofm == $other->cofm);
+    # OK, everything's the same, apart from the label, which is allowed
+    return 1;
+}
+
+
+sub _cmp {
+    my ($other) = @_;
+    return $self->label cmp $other->label;
+}
 
 
 ################################################################################
@@ -354,7 +429,8 @@ Overwrites any existing 'pdbid' if a PDB ID can be parsed from filename.
 
 =cut
 sub _file2pdbid {
-    my $file = shift || $self->file;
+    my $overwrite = shift || 0;
+    my $file = $self->file;
     return 0 unless $file;
     my (undef,$pdbid,$chid) = $file =~ m|.*/(pdb)?(.{4})([a-zA-Z_])?\.?.*|;
     return unless $pdbid;
@@ -369,14 +445,14 @@ sub _file2pdbid {
 
 
 ################################################################################
-=head2 _stampid2pdbid
+=head2 _label2pdbid
 
- Title   : _stampid2pdbid
- Usage   : $dom->_stampid2pdbid
- Function: Sets the internal $dom->pdbid based on $dom->stampid
- Example : $dom->_stampid2pdbid
+ Title   : _label2pdbid
+ Usage   : $dom->_label2pdbid
+ Function: Sets the internal $dom->pdbid based on $dom->label
+ Example : $dom->_label2pdbid
  Returns : The parsed out PDB ID, if any
- Args    : overwrite - if true, erase current pdbid if parsable from stampid
+ Args    : overwrite - if true, erase current pdbid if parsable from label
 
 Parses out the original PDB ID / CHAIN ID, from the STAMP label, if any
 
@@ -387,21 +463,23 @@ If there is no existing 'descriptor' it is set to 'CHAIN <chainid>', if a chain
 identifier can also be parsed out of the label.
 
 =cut
-sub _stampid2pdbid {
+sub _label2pdbid {
     my $overwrite = shift || 0;
-    my $stampid = $self->stampid;
-    return 0 unless $stampid;
-    my ($pdbid,$chid) = $stampid =~ m|^(.{4})([a-zA-Z_])?$|;
-    return unless $pdbid;
-    # Don't overwrite an existing pdbid, unless forced
-    if ($pdbid && ($overwrite || ! $self->{pdbid})) {
-        $self->pdbid($pdbid);
-    }
-    if ($chid && ! $self->descriptor) {
-        $self->descriptor("CHAIN $chid");
-    }
-    return $pdbid;
-} # _stampid2pdbid
+    return 0 unless $self->{label};
+    # Remove any trailing _3434 increment
+    $self->{label} =~ s/_\d+$//;
+    my $label = $self->label;
+
+    # Looking for labels like: 2br2 2br2A 2br2-RRP43 2br2A-RRP43 RRP43
+    # Could have: (<pdbid><chainid>?)?-<label>?
+    return 0 unless $label =~ /^((\d\S{3})([a-zA-Z_])?)(-(\S+))?$/;
+
+    $self->{pdbid} = $2 if $overwrite || ! defined $self->{pdbid};
+    $self->{label} = $5 || $1 || $self->{label};
+    $self->descriptor("CHAIN $3") if $3 && ! defined $self->{descriptor};
+
+    return $self->{pdbid};
+} # _label2pdbid
 
 
 ################################################################################

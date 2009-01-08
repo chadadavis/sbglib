@@ -13,7 +13,7 @@ SBG::DomainIO - Represents a STAMP domain reader/writer
  
  # Read all domains from a dom file
  my @doms;
- while (my $dom = $io->next_domain) {
+ while (my $dom = $io->read) {
      push @doms, $dom;
  }
  print "Read in " . scalar(@doms) . " domains\n";
@@ -59,6 +59,7 @@ sub new () {
     my $class = shift;
     # Delegate to parent class
     my $self = new SBG::IO(@_);
+    return unless $self;
     # And add our ISA spec
     bless $self, $class;
     return $self;
@@ -74,7 +75,7 @@ sub new () {
  Example : (see below)
  Returns : The string that was printed to the stream
  Args    : L<SBG::Domain> - A domain, may contain an L<SBG::Transform>
-           -id Print 'pdbid' or 'stampid' (default) as domain label
+           -id Print 'pdbid' or 'label' (default) or 'stampid' as label
            -newline If true, also prints a newline after the domain (default)
            -fh another file handle
 
@@ -94,6 +95,7 @@ Or, to just convert to a string, without any file I/O:
 sub write {
     my $self = shift;
     my ($dom, %o) = @_;
+    return unless $dom;
     unless (ref($dom) eq 'SBG::Domain') {
         carp "write() expected SBG::Domain , got: " . ref($dom) . "\n";
         return;
@@ -102,13 +104,13 @@ sub write {
     $o{-newline} = 1 unless defined($o{-newline});
     my $fh = $self->fh;
     $fh = $o{-fh} if defined $o{-fh};
-    my $id = $o{-id} || 'stampid';
+    my $id = $o{-id} || 'label';
     my $str = 
         join(" ",
-             $dom->file,
-             $dom->{$id},
+             $dom->file  || '',
+             $dom->$id() || '',
              '{',
-             $dom->descriptor,
+             $dom->descriptor || '',
         );
     my $transstr = $dom->transformation->ascsv;
     # Append any transformation
@@ -149,16 +151,13 @@ sub read {
         next if /^\s*$/;
 
         # Create/parse new domain header
-        unless (/^(\S+)\s+(\S+)\s+\{ ([^}]+)\s+/) {
-            carp "Cannot parse:$_:\n";
+        # May not always have a file name
+        unless (/^(\S*)\s+(\S+)\s+\{\s*([^}]*)(\s+\})?\s*$/) {
+            $logger->error("Cannot parse:$_:");
             return undef;
         }
 
-        my $dom = new SBG::Domain();
-        $dom->file($1);
-        $dom->file2pdbid(); # Parses out PDB ID from filename
-        $dom->stampid($2);
-        $dom->descriptor($3);
+        my $dom = new SBG::Domain(-file=>$1,-label=>$2,-descriptor=>$3);
 
         # Header ends, i.e. contains no transformation
         if (/\}\s*$/) { 
@@ -238,6 +237,7 @@ sub pdbc {
     my (undef, $path) = tempfile();
     my $cmd;
     $cmd = "pdbc -d $str > ${path}";
+    $logger->trace($cmd);
     # NB checking system()==0 fails, even when successful
     system($cmd);
     # So, just check that file was written to instead
