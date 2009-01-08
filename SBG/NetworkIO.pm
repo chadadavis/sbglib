@@ -71,6 +71,7 @@ sub new () {
     my $class = shift;
     # Delegate to parent class
     my $self = new SBG::IO(@_);
+    return unless $self;
     # And add our ISA spec
     bless $self, $class;
     return $self;
@@ -87,6 +88,11 @@ sub new () {
  Returns : L<Bio::Network::ProteinNet>
  Args    : NA
 
+E.g.:
+
+RRP41 RRP42  2br2 { CHAIN A } 2br2 { CHAIN B } 69.70 
+# or
+RRP41 RRP42  2br2 { A 5 _ to A 220 _ } 2br2 { B 1 _ to B 55 _ } 69.70 
 
 =cut
 sub read {
@@ -107,21 +113,16 @@ sub read {
         chomp;
 
         # Get the stuff in { brackets } first: the STAMP domain descriptors
-        my ($head, $descr1, $templ2, $descr2, $score) = 
+        my ($head, $descr1, $pdbid2, $descr2, $score) = 
             parse_line('\s*[{}]\s*', 0, $_);
         # Then parse out everything else from the beginning, just on whitespace
-        my ($comp1, $comp2, $templ1) = 
+        my ($comp1, $comp2, $pdbid1) = 
             parse_line('\s+', 0, $head);
         $score ||= 0;
-        unless ($comp1 && $comp2 && $templ1 && $templ2) {
-            carp "Cannot parse interaction:\n$_\n";
-            return;
+        unless ($comp1 && $comp2 && $pdbid1 && $pdbid2) {
+            $logger->error("Cannot parse interaction:\n$_");
+            next;
         }
-
-        # Unique (in the whole network) interaction label/id
-#         my $iactionid = "$comp1($templ1 $descr1)--$comp2($templ2 $descr2)";
-        my $iactionid = "$comp1($templ1)--$comp2($templ2)";
-        print STDERR "Interaction:$iactionid $score\n";
 
         # Create Seq objects, using accession; and Node objects contain a Seq
         # Only if we have not already seen these component Nodes, else reuse
@@ -133,8 +134,14 @@ sub read {
         # Template domains.
         # Will be created, even if they are equivalent to previously created dom
         # Because the template domains are specific to an interaction template
-        my $dom1 = new SBG::Domain(-stampid=>$templ1,-descriptor=>$descr1);
-        my $dom2 = new SBG::Domain(-stampid=>$templ2,-descriptor=>$descr2);
+        my $dom1 = new SBG::Domain(
+            -label=>$comp1,-pdbid=>$pdbid1,-descriptor=>$descr1);
+        my $dom2 = new SBG::Domain(
+            -label=>$comp2,-pdbid=>$pdbid2,-descriptor=>$descr2);
+
+        # Unique (in the whole network) interaction label/id
+        my $iactionid = "$comp1($pdbid1 $descr1)--$comp2($pdbid2 $descr2)";
+        $logger->trace("Interaction:$iactionid $score");
 
         # Interaction object.
         my $interaction = new SBG::Interaction(-id=>$iactionid,-weight=>$score);
@@ -222,8 +229,8 @@ sub graphvizmulti {
             $str .= "\t$u -- $v [" . 
                 join(', ', 
                      "label=\"" . $ix->weight . "\"",
-                     "headlabel=\"" . $udom->stampid . "\"",
-                     "taillabel=\"" . $vdom->stampid . "\"",
+                     "headlabel=\"" . $udom->label . "\"",
+                     "taillabel=\"" . $vdom->label . "\"",
                      "headtooltip=\"" . $udom->descriptor . "\"",
                      "tailtooltip=\"" . $vdom->descriptor . "\"",
                      "headURL=\"" . $pdb . $udom->pdbid . "\"",
