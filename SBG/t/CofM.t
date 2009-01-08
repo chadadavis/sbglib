@@ -54,7 +54,7 @@ print "\tfile: $file\n";
 
 $dom2->descriptor("A 50 _ to A 120 _");
 get_cofm($dom2);
-my ($x, $y, $z, $rg) = ($dom2->_cofm2array, $dom2->rg);
+ ($x, $y, $z, $rg) = ($dom2->_cofm2array, $dom2->rg);
 ($tx, $ty, $tz, $trg) = (83.495, 17.452, 114.562, 15.246);
 ok($x >= $tx-$tol  && $x <= $tx+$tol,  "x ~ $tx +/- $tol");
 ok($y >= $ty-$tol  && $y <= $ty+$tol,  "y ~ $ty +/- $tol");
