@@ -25,23 +25,25 @@ L<SBG::Domain>
 package SBG::Transform;
 use SBG::Root -base, -XXX;
 
-our @EXPORT = qw(onto);
+our @EXPORT = qw(idtransform);
 
 field 'matrix';
 
-field '_string';
-field '_file';
+field 'string';
+field 'file';
 field '_tainted';
 
 use overload (
     '*' => '_mult',
-    '""' => '_asstring',
+#     '""' => '_asstring',
+    '""' => 'ascsv',
+    '==' => '_equal',
     );
 
 use PDL;
 use PDL::Matrix;
 use PDL::IO::Storable;
-use Carp;
+use PDL::Ufunc;
 
 
 ################################################################################
@@ -53,6 +55,10 @@ use Carp;
  Returns : 
  Args    : -matrix
 
+-string
+-file
+-matrix
+
 =cut
 sub new () {
     my ($class, %o) = @_;
@@ -60,9 +66,9 @@ sub new () {
     bless $self, $class;
     $self->_undash;
 
-    if (defined $self->{_string}) {
+    if (defined $self->{string}) {
         $self->_from_string;
-    } elsif (defined $self->{_file}) {
+    } elsif (defined $self->{file}) {
         $self->_from_file;
     } elsif (defined $self->{matrix}) {
         # Note that matrix is set
@@ -112,30 +118,6 @@ sub idtransform {
 
 
 ################################################################################
-=head2 _mult
-
- Title   : _mult
- Usage   :
- Function:
- Example :
- Returns : 
- Args    :
-
-Matrix multiplication. Order of operations mattters.
-
-=cut
-sub _mult {
-    my ($self, $other) = @_;
-    unless (ref($other) eq __PACKAGE__) {
-        carp "Need to _mult() objects of own type: " . __PACKAGE__ . "\n";
-        return undef;
-    }
-    my $m = $self->matrix x $other->matrix;
-    return new SBG::Transform(-matrix=>$m);
-} # _mult
-
-
-################################################################################
 =head2 invert
 
  Title   : invert
@@ -154,6 +136,13 @@ sub invert {
    return $self;
 
 } # invert
+
+# TODO DOC
+sub inverse {
+    my ($self) = @_;
+    return new SBG::Transform unless $self->_tainted;
+    return new SBG::Transform(-matrix=>$self->matrix->inv);
+}
 
 ################################################################################
 =head2 transform
@@ -242,10 +231,10 @@ See L<_from_string>
 =cut
 sub _from_file {
     my ($self) = @_;
-    my $filepath = $self->_file;
+    my $filepath = $self->file;
     chomp $filepath;
     unless (-s $filepath) {
-        carp "Cannot load transformation: $filepath\n";
+        $logger->error("Cannot load transformation: $filepath");
         return undef;
     }
     my $rasc = zeroes(4,4);
@@ -281,7 +270,7 @@ I.e. it's CSV format, whitespace-separated, one row per line.
 =cut
 sub _from_string {
     my ($self) = @_;
-    my $str = $self->_string;
+    my $str = $self->string;
     my $rasc = zeroes(4,4);
     # Overwrite with 3x4 from string
     my @lines = split /\n/, $str;
@@ -307,6 +296,37 @@ sub _from_string {
 } # _from_string
 
 
+
+################################################################################
+=head2 _mult
+
+ Title   : _mult
+ Usage   :
+ Function:
+ Example :
+ Returns : 
+ Args    :
+
+Matrix multiplication. Order of operations mattters.
+
+=cut
+sub _mult {
+    my ($self, $other) = @_;
+    unless (ref($other) eq __PACKAGE__) {
+        $logger->error("Need type: " . __PACKAGE__ . " Got: ", ref $other);
+        return undef;
+    }
+    # Don't waste time multiplying identities
+    return $self unless $other->_tainted;
+    my $m = $self->matrix x $other->matrix;
+    return new SBG::Transform(-matrix=>$m);
+} # _mult
+
+
+sub _equal {
+    my ($self, $other) = @_;
+    return all($self->matrix == $other->matrix);
+}
 ###############################################################################
 
 1;

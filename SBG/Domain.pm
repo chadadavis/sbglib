@@ -115,14 +115,20 @@ sub chainid {
 
 # A label suitable for STAMP (unique), prefixed with PDBID/chain ID
 sub stampid {
-    my $stampid;
-    $stampid .= $self->pdbid || '';
-    $stampid .= $self->chainid || '';
-    $stampid .= '-' . $self->label if $self->label;
-    # Don't duplicate into something like 2br2A-2br2A
-    return $self->{label} if $self->{label} =~ /^$self->{pdbid}/;
-    return $stampid;
-}
+    my $pdbid = $self->pdbid;
+    if ($pdbid && $self->label) {
+        # Just return the label if it already begins with the PDB ID
+        return $self->label if $self->label =~ /^$pdbid/;        
+        # Otherwise concatenate
+        return $pdbid . ($self->chainid||'') . '-' . $self->label;
+    } elsif ($pdbid) {
+        return $pdbid . ($self->chainid||'');
+    } elsif ($self->label) {
+        return $self->label;
+    } else {
+        return 'UNK';
+    }
+} # stampid
 
 
 
@@ -472,7 +478,7 @@ sub _label2pdbid {
 
     # Looking for labels like: 2br2 2br2A 2br2-RRP43 2br2A-RRP43 RRP43
     # Could have: (<pdbid><chainid>?)?-<label>?
-    return 0 unless $label =~ /^((\d\S{3})([a-zA-Z_])?)(-(\S+))?$/;
+    return 0 unless $label =~ /^((\d\S{3})([a-zA-Z_])?)(-?(\S+))?$/;
 
     $self->{pdbid} = $2 if $overwrite || ! defined $self->{pdbid};
     $self->{label} = $5 || $1 || $self->{label};
