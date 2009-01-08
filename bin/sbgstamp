@@ -16,11 +16,11 @@ unless ($dom) {
 # Read input domains into %DOM hash
 my $in = new SBG::DomainIO(-file=>$dom);
 my @doms;
-while (my $dom = $in->next_domain) {
+while (my $dom = $in->read) {
     push @doms, $dom;
 }
 
-my @stamped = do_stamp(\@doms);
+my @stamped = do_stamp(@doms);
 
 stampprint(\@stamped);
 
@@ -34,7 +34,7 @@ sub stampprint {
 
     print $fh "%TRANS_BEGIN\n";
 
-    # Reorder domains (using stampid field)
+    # Reorder domains (using given label field)
     $doms = reorder($doms, $order, 'stampid') if $order;
 
     my $tmpout = new SBG::DomainIO(-fh=>$fh);
