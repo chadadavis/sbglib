@@ -2,11 +2,11 @@
 
 =head1 NAME
 
-SBG::AssemblyIO - Reads L<SBG::Assembly>s using L<SBG::DomainIO>
+SBG::ComplexIO - Reads L<SBG::Complex>s using L<SBG::DomainIO>
 
 =head1 SYNOPSIS
 
- use SBG::AssemblyIO;
+ use SBG::ComplexIO;
 
 
 =head1 DESCRIPTION
@@ -15,17 +15,17 @@ SBG::AssemblyIO - Reads L<SBG::Assembly>s using L<SBG::DomainIO>
 
 =SEE ALSO
 
-L<SBG::Assembly> , L<SBG::DomainIO> , L<SBG::IO>
+L<SBG::Complex> , L<SBG::DomainIO> , L<SBG::IO>
 
 =cut
 
-package SBG::AssemblyIO;
-use SBG::Root -Base, -XXX;
+package SBG::ComplexIO;
+use SBG::Root -Base;
 use base qw(SBG::IO);
 
 use IO::String;
 
-use SBG::Assembly;
+use SBG::Complex;
 use SBG::DomainIO;
 
 
@@ -35,6 +35,7 @@ sub new () {
     my $class = shift;
     # Delegate to parent class
     my $self = new SBG::IO(@_);
+    return unless $self;
     # And add our ISA spec
     bless $self, $class;
     return $self;
@@ -44,10 +45,10 @@ sub new () {
 sub read {
     my $domio = new SBG::DomainIO(-fh=>$self->fh);
     my $dom;
-    my $assem = new SBG::Assembly();
+    my $assem = new SBG::Complex();
     while ($dom = $domio->read) {
         # Add Dom to Assembly
-        $assem->comp($dom->stampid) = $dom;
+        $assem->comp($dom->label) = $dom;
     }
     return $assem;
 }
@@ -78,12 +79,14 @@ sub write {
     my $chainid = ord 'A';
     # $key is the component's label
     foreach my $key (sort keys %{$assem->{comp}}) {
+        my $dom = $assem->comp($key);
         # id is the PDB ID of the template segment
-        print STDERR "\tsaving: $key ", $assem->comp($key)->pdbid(), "\n";
+        $logger->info("Saving $key($dom)");
         print $strfh "\% CHAIN ", chr($chainid++), " $key\n";
         # This uses the cumulative transform, maintained by CofM itself
-        my $comp = $assem->comp($key);
-        $domio->write($comp);
+        # Use the component name as the STAMP label now
+        $dom->label($key);
+        $domio->write($dom,-id=>'stampid');
     }
     print $strfh "\n";
     print $fh $str if $fh;

@@ -2,7 +2,7 @@
 
 package SBG::List;
 use base qw(Exporter);
-our @EXPORT = qw(
+our @EXPORT_OK = qw(
 min
 max
 sum
@@ -12,6 +12,9 @@ sequence
 rearrange
 thresh
 put
+which
+whicheval
+whichfield
 );
 
 use File::Temp qw(tempfile);
@@ -117,6 +120,28 @@ sub put {
     }
     close $fh;
     return $out;
+}
+
+# Simple which, based on eq
+# Returns index
+sub which {
+    my ($val, @a) = @_;
+    my @t = grep { $a[$_] eq $val } 0..$#a;
+    return wantarray ? @t : shift @t;
+}
+
+# Return indices i for which $exp is true, foreach $_ in @a
+sub whicheval {
+    my ($exp, @a) = @_;
+    # Use temporary index placeholder
+    my @t = grep { $i=$_; $_=$a[$_]; $_=$i if eval($exp) } 0..$#a;
+    return wantarray ? @t : shift @t;
+}
+
+# Return indices i for which $exp is true when $_ = $a[$i]
+sub whichfield {
+    my ($field, $val, @a) = @_;
+    return whicheval("\$_->{$field} eq \"$val\"", @a);
 }
 
 ################################################################################

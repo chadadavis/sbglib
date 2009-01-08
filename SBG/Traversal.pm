@@ -48,7 +48,8 @@ use Graph::UnionFind;
 # Debug printing (to trace recursion and it's unwinding)
 sub _d {
     my $d = shift;
-    print STDERR ("\t" x $d), @_, "\n";
+#     print STDERR ("\t" x $d), @_, "\n";
+    $logger->debug("\t" x $d, @_);
 }
 sub _d0 { _d(0,@_); }
 
@@ -173,11 +174,14 @@ TODO Under what circumstances will solutions be redundant. When can we spare
 ourselves of the extra computation?
 
 =cut
+
+use Data::Dumper;
 sub traverse {
-    my $self = shift;
+    my ($self, $state) = @_;
     # If no state object provide, use an empty hashref, Clone'able
-    my $state = shift || {};
-    bless($state, 'Clone');
+    unless (defined $state) {
+        $state = bless {}, 'Clone';
+    }
 
     my @nodes = $self->graph->vertices();
     _d0 "Nodes:@nodes";
@@ -200,8 +204,10 @@ sub traverse {
         # Rest
         $self->{altcover} = {};
         $self->{nodecover} = {};
+        # Start with a fresh state object, not defiled from previous rounds
+        my $clone = $state->clone();
         # Go!
-        $self->_do_nodes($uf, $state, 0);
+        $self->_do_nodes($uf, $clone, 0);
     }
 } # traverse
 
@@ -251,7 +257,7 @@ sub _do_edges {
     return $self->_no_edges($uf, $state, $d) unless $current;
 
     my ($src, $dest) = @$current;
-    _d $d, "Edge: $src $dest (", _array2D($self->{next_edges}), ")";
+    _d $d, "Edge: $src--$dest (", _array2D($self->{next_edges}), ")";
 
     # ID of next alternative to try on this edge, if any
     my $alt_id = $self->_next_alt($src, $dest, $d);
@@ -267,7 +273,8 @@ sub _do_edges {
     # This implicitly allow us to backtrack later if $self->test() fails, etc
     my $stateclone = $state->clone();
     # Do we want to go ahead and traverse this edge?
-    my $success = $self->{test}($stateclone, $self->graph, $src, $dest, $alt_id);
+    my $callback = $self->test;
+    my $success = $callback->($stateclone, $self->graph, $src, $dest, $alt_id);
 
     if (! $success) {
         # Current edge was rejected, but alternative multiedges may remain
@@ -387,7 +394,7 @@ sub _do_solution {
     my $ac = join(',', @alts);
     if ($self->solution($ac)) {
 #         _d $d, "Dup";
-        _d0 "== Dup";
+        _d $d, "Duplicate";
     } else {
         $self->solution($ac) = 1;
         my $callback = $self->partial;
@@ -400,7 +407,7 @@ sub _do_solution {
 # red,blue,green,grey; alpha,beta,gamma; apples,oranges
 sub _array2D {
     my ($a) = @_;
-    return join("; ", map { join(",", @$_) } @$a);
+    return join("; ", map { join("--", @$_) } @$a);
 }
 
 
