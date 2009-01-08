@@ -57,19 +57,24 @@ package SBG::Root;
 use Spiffy -base, -XXX;
 
 use warnings;
-use Log::Log4perl qw(get_logger :levels);
+
+# Comment out this one line to stop all loggin
+use Log::Log4perl qw(:levels :resurrect);
+
 use Log::Dispatch;
 use FindBin;
 use File::Spec::Functions;
 use File::Basename;
 use Config::IniFiles;
-use Carp;
 
+# (Re-)export these
+use Carp;
+use Data::Dumper;
 our $installdir;
 our $logger;
 our $config;
 
-our @EXPORT = qw($installdir $logger $config);
+our @EXPORT = qw(carp Dumper $installdir $logger $config);
 
 
 ################################################################################
@@ -137,13 +142,16 @@ sub _init_ini {
 
 sub _init_log {
 
-    # In the working directory
-    my $logfile = $config->val('log','file') || 'log.log';
+    # Default logging level
+    my $level = $config->val('log', 'level') || '$INFO';
+    # Log file written in the working directory
+    my $logfile = $config->val('log','file') || (lc $level) . '.log';
+    $logfile =~ s/^\$//;
 
     # Initialize system logger
-    $logger = get_logger("embl");
+    $logger = Log::Log4perl->get_logger("sbg");
     # Default logging level (of: trace debug info warn error fatal)
-    $logger->level($INFO);
+    $logger->level(eval $level);
     
     # Log appenders (i.e. where the logs get sent)
     my $appender = Log::Log4perl::Appender->
@@ -154,13 +162,19 @@ sub _init_log {
     
     # Define log format for appender
     my $layout = Log::Log4perl::Layout::PatternLayout->
-        new("%d %H $ENV{USER} PID:%P %5p> %M (%F{1}) Line: %L - %m%n");
+#         new("%d %H $ENV{USER} PID:%P %5p> %M (%F{1}) Line: %L - %m%n");
+#         new("%5p %15F{1} %4L %-25M - %m%n");
+        new("%5p %-25M - %m%n");
     # Set the layout of the appender
     $appender->layout($layout);
     # Register the appender with the logger
     $logger->add_appender($appender);
+
+    # Keep this going to STDERR, so we know where to look for the log
+#     print STDERR "Logging to: $logfile\n";
+
     # First log message is the banner
-    $logger->info("\n", "=" x 80);
+    $logger->debug("\n\n", "=" x 80);
 
 }
 
@@ -170,9 +184,25 @@ BEGIN {
     _init_dir();
     _init_ini();
 
-# TODO DES
-#     _init_log();
+    # Only called when logging enabled
+###l4p    _init_log();
+###l4p     return;
+
+    print STDERR "No logging\n";
+    # Otherwise make $logger a dummy object
+    $logger = bless {}, "SBG::_Dummy";
 }
+
+# Object of this class accept any method calls and always do nothing
+package SBG::_Dummy;
+use AutoLoader;
+# Error messages diverted to STDERR
+# Any other level messages (e.g. $DEBUG, etc) just get ignored
+sub error {
+    my $self = shift;
+    return print STDERR "@_\n";
+}
+sub AUTOLOAD { return 1; }
 
 
 ################################################################################
