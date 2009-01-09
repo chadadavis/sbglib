@@ -16,6 +16,9 @@ use SBG::Assembler;
 
 my $templates = shift or die;
 
+# Min components in complex
+my $minsize = shift || 3;
+
 # A L<Bio::Network::ProteinNet> of L<SBG::Interaction> templates
 my $network = new SBG::NetworkIO(-file=>$templates)->read;
 
@@ -31,6 +34,7 @@ my $state = new SBG::Complex;
 my $t = new SBG::Traversal(-graph=>$network, 
                            -test=>\&SBG::Assembler::try_interaction, 
                            -partial=>\&SBG::Assembler::got_solution,
+                           -minsize=>$minsize,
     );
 
 $t->traverse($state);
