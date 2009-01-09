@@ -15,6 +15,29 @@ chain from a PDB entry.
 
 Can include multiple segments from multiple chains of a single file.
 
+Each domain has a unique name, called a B<label>. When this is read from STAMP DOM files, these may take the form:
+
+ 2br2 (pdbid=2br2)
+ 2br2A (pdbid=2br2, chainid=A0
+ 2br2-RRP43 (pdbid=2br2, label=RRP43)
+ 2br2A-RRP43 (pdbid=2br2, chainid=A, label=RRP43)
+ RRP43 (label=RRP43)
+ 2br2A2 (pdbid=2br2, chainid=A, and it's had 2 transforms applied)
+ 2br2A_3 (pdbid=2br2, chainid=A, the '_3' is discarded)
+
+The label (part after the '-') must be unique within any L<SBG::Complex>
+
+If a label contains a dash, only the bit after the - will be the actual label. I.e. 
+
+ my $d = new SBG::Domain(-label=>"2br2d-myprot");
+ print $d->label;
+
+... will print "myprot". If you want the whole thing back, use :
+
+ print $d->stampid;
+
+
+
 =head1 SEE ALSO
 
 L<SBG::DomainIO> , L<SBG::CofM> , L<SBG::Transform>
@@ -25,7 +48,7 @@ http://www.compbio.dundee.ac.uk/manuals/stamp.4.2/node29.html
 ################################################################################
 
 package SBG::Domain;
-use SBG::Root -Base, -XXX;
+use SBG::Root -Base;
 
 use overload (
     '""' => '_asstring',
@@ -76,7 +99,7 @@ field 'descriptor' => '';
 sub pdbid {
     my ($newid) = shift;
     if ($newid) { return $self->{pdbid} = $newid; }
-    return $self->{pdbid} if $self->{pdbid};
+    if ($self->{pdbid}) { return $self->{pdbid}; }
     # Or try parsing out of filename or label
     return $self->{pdbid} if $self->_file2pdbid;
     return $self->{pdbid} if $self->_label2pdbid;
@@ -158,6 +181,8 @@ sub cofm {
     } else {
         $self->{cofm} = mpdl ($x, $y, $z, 1);
     }
+    # If this is the first call
+    $self->{cofm_orig} = $self->{cofm} unless defined $self->{cofm_orig};
     return $self->{cofm};
 }
 
@@ -211,6 +236,7 @@ sub new () {
     $self->_file2pdbid();
     $self->_label2pdbid();
 
+    $self->{opcount} ||= 0;
     # Init centre-of-mass
     $self->{cofm} ||= mpdl (0,0,0,1);
     # Set the default transformation to the identity
@@ -244,8 +270,18 @@ sub transform {
     # Transpose back
     $self->cofm($newcofm->transpose);
 
+    $self->{opcount}++;
+
     # Update the cumulative transformation
+    $logger->debug("previous:\n", $self->transformation);
+    $logger->debug("applying:\n", $newtrans);
+    my $prod = $self->transformation * $newtrans;
     $self->transformation($self->transformation * $newtrans);
+    $logger->debug("prod: $self(", $self->{opcount}, ") transformation(",
+                   $self->transformation->{opcount}, ")\n", $prod);
+
+
+
     return $self;
 }
 
@@ -264,7 +300,9 @@ Resets the internal Transform, but not the centre of mass ('cofm');
 
 =cut
 sub reset {
-    return $self->{transformation} = new SBG::Transform;
+    $self->{transformation} = new SBG::Transform;
+    $self->{opcount} = 0;
+    $self->{cofm} = $self->{cofm_orig} || mpdl (0,0,0,1);
 }
 
 

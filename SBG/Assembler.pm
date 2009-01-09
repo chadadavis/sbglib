@@ -44,7 +44,7 @@ our @EXPORT_OK = qw(linker);
 our $solution = 1;
 our $step = 1;
 # TODO permanent solution to output filenames
-our $dir = "./out";
+our $dir = ".";
 mkdir $dir;
 our $base = $dir . '/solution-%04d';
 
@@ -104,17 +104,15 @@ sub try_interaction {
     unless (defined $srcrefdom) {
         # Base case: no previous structural constraint.
         # I.e. We're in a new frame of reference: implicitly sterically OK
-        get_cofm($srcdom);
-        # Save this domain as the refence domain for the $src component
-        $complex->comp($src) = $srcdom;
+        # Initialize new object, based on previous
+        $complex->comp($src) = SBG::CofM::cofm($srcdom);
         # dest domain also has no explicit transformation
-        get_cofm($destdom);
-        $complex->comp($dest) = $destdom;
+        $complex->comp($dest) = SBG::CofM::cofm($destdom);
         return $success = 1;
     }
 
-    linker($srcrefdom, $srcdom, $destdom) or 
-        return $success = 0;
+    $destdom = linker($srcrefdom, $srcdom, $destdom);
+    return $success = 0 unless $destdom;
 
     # Check new coords of destdom for clashes across currently assembly
     $success = ! $complex->clashes($destdom);
@@ -136,21 +134,27 @@ sub try_interaction {
 # Transform $destdom via the linking transformation that puts src onto srcref
 sub linker { 
     my ($srcrefdom, $srcdom, $destdom) = @_;
-    $logger->trace("linking $srcdom onto $srcrefdom, to position $destdom");
+    $logger->trace("linking $srcdom onto $srcrefdom, ",
+                   "in order to orient $destdom");
     # Superpose $srcdom into prev frame of reference from $src component
-    # This defines the (additionaly) transform we need to apply to $destdom
+    # This defines the (additional) transform we need to apply to $destdom
     my $xform = superpose($srcdom, $srcrefdom);
     unless (defined($xform)) {
         $logger->error("Cannot link via: superpose($srcdom,$srcrefdom)");
         return;
     }
     # Get CofM of dest template domain (the one to be transformed)
-    get_cofm($destdom);
+    $destdom = SBG::CofM::cofm($destdom);
+
     # Then apply that transformation to the interaction partner $dest
     # Product of relative with absolute transformation
     # Any previous transformation (reference domain) has to also be included
+    $logger->debug("reference:\n", $srcrefdom->transformation);
+    $logger->debug("xform:\n", $xform);
+    my $prod = $srcrefdom->transformation * $xform;
+    $logger->debug("prod: (", $prod->{opcount}, ")\n", $prod);
     $destdom->transform($srcrefdom->transformation * $xform);
-    return 1;
+    return $destdom;
 }
 
 

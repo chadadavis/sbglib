@@ -71,12 +71,12 @@ is($dom4->pdbid, '2nn6', 'file2pdbid sets pdbid');
 is($dom4->descriptor, 'CHAIN A', 'file2pdbid sets descriptor: CHAIN A');
 
 # Test rmsd on real cofm's
-my $dom5 = new SBG::Domain(-label=>'2br2A');
-get_cofm($dom5);
-my $dom6 = new SBG::Domain(-label=>'2br2D');
-get_cofm($dom6);
+my $dom5 = SBG::CofM::cofm('2br2', 'CHAIN A');
+my $dom6 = SBG::CofM::cofm('2br2', 'CHAIN D');
+
 my $rmsd = $dom5-$dom6;
 my $o = $dom5->overlap($dom6);
+
 # TODO test overlap result
 
 

@@ -10,6 +10,9 @@ use FindBin;
 my $dir = $FindBin::RealBin;
 my $file = "$dir/2nn6.dom";
 
+
+# TODO test _read_trans
+
 # Read all domains from a dom file
 open my $fh, "<$file";
 my $iofh = new SBG::DomainIO(-fh=>$fh);
@@ -29,9 +32,6 @@ foreach my $d (@doms) {
 system("cat $outfile");
 ok(unlink($outfile), "Removing $outfile");
 
-# Test pdbc
-my $dom = pdbc('2nn6', 'A')->read();
-is($dom->label, '2nn6a', 'pdbc');
 
 # Domain without a file
 my $label = '2nn6A';

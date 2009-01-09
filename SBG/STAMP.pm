@@ -27,7 +27,7 @@ package SBG::STAMP;
 use SBG::Root -base, -XXX;
 
 # TODO DES don't need all of these
-our @EXPORT = qw(do_stamp sorttrans stamp pickframe relativeto transform superpose pdb2img);
+our @EXPORT = qw(do_stamp sorttrans stamp pickframe relativeto transform superpose pdb2img pdbc);
 our @EXPORT_OK = qw(reorder);
 
 use warnings;
@@ -474,6 +474,48 @@ sub _next_probe {
     $logger->error("Out of probes");
     return;
 } # _next_probe
+
+
+################################################################################
+=head2 pdbc
+
+ Title   : pdbc
+ Usage   : pdbc('2nn6');
+           pdbc('2nn6', 'A', 'B');
+           pdbc('2nn6A', 'F');
+ Function: Runs STAMP's pdbc and opens its output as the internal input stream.
+ Example : my $domio = pdbc('2nn6');
+           my $dom = $domio->read();
+           # or all in one:
+           my $first_dom = pdbc(-pdbid=>'2nn6')->read();
+ Returns : $self (success) or undef (failure)
+ Args    : @ids - begins with one PDB ID, followed by any number of chain IDs
+
+Depending on the configuration of STAMP, domains may be searched in PQS first.
+
+ my $io = new SBG::DomainIO;
+ $io->pdbc('2nn6');
+ # Get the first domain (i.e. chain) from 2nn6
+ my $dom = $io->read;
+
+=cut
+sub pdbc {
+    my $str = join("", @_);
+    return unless $str;
+    my (undef, $path) = tempfile();
+    my $cmd;
+    $cmd = "pdbc -d $str > ${path}";
+    $logger->trace($cmd);
+    # NB checking system()==0 fails, even when successful
+    system($cmd);
+    # So, just check that file was written to instead
+    unless (-s $path) {
+        carp "Failed: $cmd : $!\n";
+        return 0;
+    }
+    return new SBG::DomainIO(-file=>"<$path");
+
+} # pdbc
 
 
 ################################################################################

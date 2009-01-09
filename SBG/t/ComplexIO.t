@@ -5,6 +5,7 @@ use Test::More 'no_plan';
 use SBG::ComplexIO;
 use SBG::Complex;
 use SBG::DomainIO;
+use SBG::STAMP;
 
 use File::Temp qw(tempfile);
 use FindBin;

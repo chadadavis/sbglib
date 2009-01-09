@@ -1,5 +1,7 @@
 #!/usr/bin/env perl
 
+use Test::More 'no_plan';
+
 use warnings;
 
 use SBG::STAMP;
@@ -25,28 +27,29 @@ my @templates = (
     );
 
 my ($firstsrc, $firstdest) = @{shift @templates};
-get_cofm($firstsrc);
-get_cofm($firstdest);
+$firstsrc = SBG::CofM::cofm($firstsrc);
+$firstdest = SBG::CofM::cofm($firstdest);
 push @doms, $firstsrc, $firstdest;
 my $ref = $firstdest;
 
 foreach my $t (@templates) {
     my ($srcdom, $destdom) = @$t;
-    get_cofm($srcdom);
-    get_cofm($destdom);
-    linker($ref, $srcdom, $destdom);
+    $srcdom = SBG::CofM::cofm($srcdom);
+    $destdom = SBG::CofM::cofm($destdom);
+    $destdom = linker($ref, $srcdom, $destdom);
     push @doms, $destdom;
     $ref = $destdom;
 }
 
-use File::Temp qw(tempfile);
-use SBG::DomainIO;
-my (undef, $domfile) = tempfile();
-my $io = new SBG::DomainIO(-file=>">$domfile");
-$io->write($_) for @doms;
-print "dom: $domfile\n";
-# my $pdbfile = transform(-doms=>[@doms]);
-# print "pdb: $pdbfile\n";
+# use File::Temp qw(tempfile);
+# use SBG::DomainIO;
+# my (undef, $domfile) = tempfile();
+# my $io = new SBG::DomainIO(-file=>">$domfile");
+# $io->write($_) for @doms;
+# print "dom: $domfile\n";
+my $pdbfile = transform(-doms=>\@doms);
+ok($pdbfile, "transform() created a PDB file");
+`rasmol $pdbfile` if $pdbfile;
 
 __END__
 

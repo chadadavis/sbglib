@@ -136,6 +136,7 @@ A partial solution
   This allows you to test whether the solution is a full cover
 @$alt_cover - The alternative edge IDs contained
 
+$minsize - minimum number of nodes in any partial solution, before using callback function
 
 =cut
 sub new () {
@@ -159,6 +160,8 @@ sub new () {
  Returns : 
  Args    : $state - An optional object (hashref) to store state information.
 
+
+
 If no $state is provided, an empty hashref is used. You can later put your own
 data into this when it is provided to your callback functions.
 
@@ -175,9 +178,9 @@ ourselves of the extra computation?
 
 =cut
 
-use Data::Dumper;
 sub traverse {
     my ($self, $state) = @_;
+
     # If no state object provide, use an empty hashref, Clone'able
     unless (defined $state) {
         $state = bless {}, 'Clone';
@@ -192,6 +195,7 @@ sub traverse {
 
     # Using one different starting node in each iteration
     foreach my $node (@nodes) {
+
 
         # Starting node for this iteraction
         $self->{next_nodes} = [ $node ];
@@ -391,6 +395,7 @@ sub _do_solution {
     my @nodes = sort keys %{$self->nodecover};
     my @alts = sort keys %{$self->altcover};
     return unless @alts;
+    return if $self->{minsize} && $self->{minsize} > @nodes;
     my $ac = join(',', @alts);
     if ($self->solution($ac)) {
 #         _d $d, "Dup";

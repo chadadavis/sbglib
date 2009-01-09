@@ -66,6 +66,8 @@ sub new () {
     bless $self, $class;
     $self->_undash;
 
+    $self->{opcount} ||= 0;
+
     if (defined $self->{string}) {
         $self->_from_string;
     } elsif (defined $self->{file}) {
@@ -96,6 +98,7 @@ Resets the internal matrix
 sub reset {
     my $self = shift;
     $self->_tainted(0);
+    $self->{opcount} = 0;
     return $self->matrix(idtransform());
 }
 
@@ -318,8 +321,10 @@ sub _mult {
     }
     # Don't waste time multiplying identities
     return $self unless $other->_tainted;
+    return $other unless $self->_tainted;
     my $m = $self->matrix x $other->matrix;
-    return new SBG::Transform(-matrix=>$m);
+    return new SBG::Transform(-matrix=>$m, 
+                              -opcount=>1+$self->{opcount}+$other->{opcount});
 } # _mult
 
 

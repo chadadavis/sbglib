@@ -43,14 +43,13 @@ package SBG::DomainIO;
 use SBG::Root -base, -XXX;
 use base qw(SBG::IO);
 
-our @EXPORT = qw(pdbc);
 
 use warnings;
 use File::Temp qw(tempfile);
-use Carp;
 
 use SBG::Domain;
 use SBG::Transform;
+use SBG::DB;
 
 
 ################################################################################
@@ -165,7 +164,7 @@ sub read {
         }
 
         # Parse transformtion
-        my $transstr = $self->_read_trans;
+        my $transstr = _read_trans $self->fh;
         my $trans = new SBG::Transform(-string=>$transstr);
         $dom->transformation($trans);
         return $dom;
@@ -191,8 +190,7 @@ Matrix is 3x4 (3 rows, 4 cols).
 
 =cut
 sub _read_trans {
-    my $self = shift;
-    my $fh = shift || $self->fh;
+    my $fh = shift;
     my $transstr;
     while (<$fh>) {
         # No chomp, keep this as CSV formatted text
@@ -208,46 +206,6 @@ sub _read_trans {
 } # _read_trans
 
 
-################################################################################
-=head2 pdbc
-
- Title   : pdbc
- Usage   : pdbc('2nn6');
-           pdbc('2nn6', 'A', 'B');
-           pdbc('2nn6A', 'F');
- Function: Runs STAMP's pdbc and opens its output as the internal input stream.
- Example : my $domio = pdbc('2nn6');
-           my $dom = $domio->read();
-           # or all in one:
-           my $first_dom = pdbc(-pdbid=>'2nn6')->read();
- Returns : $self (success) or undef (failure)
- Args    : @ids - begins with one PDB ID, followed by any number of chain IDs
-
-Depending on the configuration of STAMP, domains may be searched in PQS first.
-
- my $io = new SBG::DomainIO;
- $io->pdbc('2nn6');
- # Get the first domain (i.e. chain) from 2nn6
- my $dom = $io->read;
-
-=cut
-sub pdbc {
-    my $str = join("", @_);
-    return unless $str;
-    my (undef, $path) = tempfile();
-    my $cmd;
-    $cmd = "pdbc -d $str > ${path}";
-    $logger->trace($cmd);
-    # NB checking system()==0 fails, even when successful
-    system($cmd);
-    # So, just check that file was written to instead
-    unless (-s $path) {
-        carp "Failed: $cmd : $!\n";
-        return 0;
-    }
-    return new SBG::DomainIO(-file=>"<$path");
-
-} # pdbc
 
 
 ################################################################################

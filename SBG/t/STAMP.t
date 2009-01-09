@@ -11,13 +11,14 @@ use SBG::Complex;
 
 # TODO test do_stamp alone (i.e. on a family of domains)
 
+# Test pdbc
+my $dom = pdbc('2nn6', 'A')->read();
+is($dom->label, '2nn6a', 'pdbc');
 
 # Get domains for two chains of interest
-my $doma = new SBG::Domain(-label=>'2br2A');
-my $domd = new SBG::Domain(-label=>'2br2D');
-# Set centres-of-mass
-get_cofm($doma);
-get_cofm($domd);
+my $doma = SBG::CofM::cofm('2br2', 'CHAIN A');
+my $domd = SBG::CofM::cofm('2br2', 'CHAIN D');
+
 # Get superposition, in both directions
 my $tt;
 $tt = superpose($doma, $domd);
@@ -111,7 +112,8 @@ if (ok(-r $file, "transform() created PDB file: $file")) {
     # Convert to IMG
     # And highlight clashes from domain $d2br2d1
     # Which index in the array is occupied by 2br2d1 ?
-    my $chi = whichfield('label', '2br2d-1', @doms);
+    # NB the actual label is just 'd1' not '2br2d-d1'
+    my $chi = whichfield('label', 'd1', @doms);
     # This is the chain that will display the domain 2br2d1 in the complex
     my $chain = chr(ord('A') + $chi);
 
