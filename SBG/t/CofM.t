@@ -66,6 +66,10 @@ ok($z >= $tz-$tol  && $z <= $tz+$tol,  "z ~ $tz +/- $tol");
 ok($rg >= $trg-$tol  && $rg <= $trg+$tol,  "rad. gyr. ~ $trg +/- $tol");
 
 
+my $dom3 = SBG::CofM::cofm('2br2', "A 104 _ to A 200 _");
+
+print $dom3->cofm;
+
 __END__
 
 

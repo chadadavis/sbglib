@@ -164,7 +164,7 @@ sub read {
         }
 
         # Parse transformtion
-        my $transstr = _read_trans $self->fh;
+        my $transstr = $self->_read_trans;
         my $trans = new SBG::Transform(-string=>$transstr);
         $dom->transformation($trans);
         return $dom;
@@ -190,7 +190,8 @@ Matrix is 3x4 (3 rows, 4 cols).
 
 =cut
 sub _read_trans {
-    my $fh = shift;
+    my $self = shift;
+    my $fh = shift || $self->fh;
     my $transstr;
     while (<$fh>) {
         # No chomp, keep this as CSV formatted text

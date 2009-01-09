@@ -6,6 +6,7 @@ use warnings;
 
 use SBG::STAMP;
 use SBG::Domain;
+use SBG::DomainIO;
 use SBG::CofM;
 use SBG::Complex;
 
@@ -127,6 +128,12 @@ if (ok(-r $file, "transform() created PDB file: $file")) {
 #         ok(ask("You saw the same hexamer"), "Confirmed image conversion");
     }
 }
+
+
+# Get domains for two chains of interest
+my $dombseg = SBG::CofM::cofm('2br2', 'B 104 _ to B 200 _');
+my $domdseg = SBG::CofM::cofm('2br2', 'D 104 _ to B 200 _');
+my $trans = superpose($dombseg, $domdseg);
 
 
 ################################################################################

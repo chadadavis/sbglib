@@ -271,7 +271,6 @@ sub do_stamp {
             if((!defined($current{$dom})) && ($dom ne $probe)) {
                 $iodoms->write($domains{$dom},-id=>'stampid');
                 $logger->debug("a domain:$dom (",
-                               $domains{$dom}->label . ' ' . 
                                $domains{$dom}->stampid . ')');
             }
         }
@@ -510,7 +509,7 @@ sub pdbc {
     system($cmd);
     # So, just check that file was written to instead
     unless (-s $path) {
-        carp "Failed: $cmd : $!\n";
+        $logger->error("Failed:\n\t$cmd\n\t$!");
         return 0;
     }
     return new SBG::DomainIO(-file=>"<$path");
