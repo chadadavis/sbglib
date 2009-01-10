@@ -10,6 +10,10 @@ use SBG::DomainIO;
 use SBG::CofM;
 use SBG::Complex;
 
+# Tolerate rounding differences between clib (STAMP) and PDL (SBG)
+use PDL::Ufunc;
+my $toler = 0.25;
+
 # TODO test do_stamp alone (i.e. on a family of domains)
 
 # Test pdbc
@@ -45,9 +49,6 @@ STOP
 my $dtoa_ans = new SBG::Transform(-string=>$dtoa_transstr)->matrix;
 my $atod_ans = new SBG::Transform(-string=>$atod_transstr)->matrix;
 
-# Tolerate rounding differences between clib (STAMP) and PDL (SBG)
-use PDL::Ufunc;
-my $toler = 0.25;
 
 unless(
     ok(all($aontod >= $atod_ans - $toler) && all($aontod <= $atod_ans + $toler),
@@ -107,7 +108,7 @@ use SBG::List qw(whichfield);
 # Finally, transform() the whole thing into a coordinate file, a la STAMP
 my $file = transform(-doms=>\@doms);
 if (ok(-r $file, "transform() created PDB file: $file")) {
-    `rasmol $file 2>/dev/null`;
+#     `rasmol $file 2>/dev/null`;
 #     ok(ask("You saw a hexameric ring"), "Confirmed hexamer");
     
     # Convert to IMG
@@ -124,16 +125,41 @@ if (ok(-r $file, "transform() created PDB file: $file")) {
         print 
             "Now showing an image of the same\n",
             "(with clashes from the red chain highlighted in white)\n";
-        `display $img`;
+#         `display $img`;
 #         ok(ask("You saw the same hexamer"), "Confirmed image conversion");
     }
 }
 
 
+# Test querying transformations from database
 # Get domains for two chains of interest
-my $dombseg = SBG::CofM::cofm('2br2', 'B 104 _ to B 200 _');
-my $domdseg = SBG::CofM::cofm('2br2', 'D 104 _ to B 200 _');
+my $domb5 = SBG::CofM::cofm('2br2', 'CHAIN B');
+my $domd5 = SBG::CofM::cofm('2br2', 'CHAIN D');
+my $trans5 = SBG::STAMP::superpose_query($domb5, $domd5);
+ok($trans5, "Got transform from database cache");
+my $btod_transstr = <<STOP;
+   0.11085    0.04257    0.99292         9.31432  
+   0.99240   -0.05858   -0.10828       -10.07972  
+   0.05357    0.99738   -0.04873        -0.08447
+STOP
+# Convert this into PDL matrixes
+my $btod_ans = new SBG::Transform(-string=>$btod_transstr)->matrix;
+# Get the underlying PDL
+$trans5 = $trans5->matrix;
+unless(
+    ok(all($trans5 >= $btod_ans - $toler) && all($trans5 <= $btod_ans + $toler),
+       "Database transformation verified, to within $toler A")
+    ) {
+    print STDERR "Expected:\n$btod_ans\nGot:\n$trans5\n";
+}
+
+
+# TODO  Test sub-segments of chains
+# Get domains for two chains of interest
+my $dombseg = SBG::CofM::cofm('2br2', 'B 8 _ to B 248 _');
+my $domdseg = SBG::CofM::cofm('2br2', 'D 8 _ to D 248 _');
 my $trans = superpose($dombseg, $domdseg);
+print "Superposing segments:\n$trans\n";
 
 
 ################################################################################

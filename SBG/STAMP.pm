@@ -27,11 +27,10 @@ package SBG::STAMP;
 use SBG::Root -base, -XXX;
 
 # TODO DES don't need all of these
-our @EXPORT = qw(do_stamp sorttrans stamp pickframe relativeto transform superpose pdb2img pdbc);
+our @EXPORT = qw(do_stamp sorttrans stamp pickframe transform superpose pdb2img pdbc);
 our @EXPORT_OK = qw(reorder);
 
 use warnings;
-use Carp;
 use File::Temp qw(tempfile tempdir);
 use IO::String;
 use Data::Dumper;
@@ -39,6 +38,7 @@ use Data::Dumper;
 use SBG::Transform;
 use SBG::Domain;
 use SBG::DomainIO;
+use SBG::DB;
 
 ################################################################################
 
@@ -128,20 +128,22 @@ sub transform {
 
 
 # TODO DOC
-# Puts $fromdom into frame of reference of $ontodom
-# Returns $fromdom, which now contains a new transformation
+# Returns Transformation required to put $fromdom onto $ontodom
 sub superpose {
     my ($fromdom, $ontodom) = @_;
     $logger->trace("$fromdom onto $ontodom");
 
     if ($fromdom->pdbid eq $ontodom->pdbid &&
         $fromdom->descriptor eq $ontodom->descriptor) {
-        $fromdom->transformation(new SBG::Transform);
         $logger->trace("Identity");
         return new SBG::Transform();
     }
 
-    # Check cache
+    # Check database cache
+    my $trydb = superpose_query($fromdom, $ontodom);
+    return $trydb if $trydb;
+
+    # Check local disk cache
     my $cached = cacheget($fromdom, $ontodom);
     if (defined $cached) {
         if ($cached) {
@@ -153,6 +155,16 @@ sub superpose {
         }
     }
 
+    # Otherwise, try locally
+    return superpose_local($fromdom, $ontodom);
+
+} # superpose
+
+
+sub superpose_local {
+    my ($fromdom, $ontodom) = @_;
+    $logger->trace("$fromdom onto $ontodom");
+
     my @doms = do_stamp($fromdom, $ontodom);
     unless (@doms) {
         # Cannot be STAMP'd. Add to negative cache
@@ -160,21 +172,68 @@ sub superpose {
         return;
     }
 
-    # Variant using pickframe
-#     pickframe($ontodom->stampid, @doms);
-    # Return the domain having the same id as original (now transformed)
-#     ($fromdom) = grep { $_->stampid eq $fromdom->stampid } @doms;
-
-    # Using reorder and relativeto
+    # Reorder @doms based on the order of $fromdom, $ontodom
     my $ordered = reorder(\@doms, [ $fromdom->stampid, $ontodom->stampid]);
     # Get the SBG::Transform that puts fromdom relative to $ontodom
-    my $trans = relativeto($ordered->[0], $ordered->[1]);
+    my $trans = SBG::Transform::relativeto($ordered->[0]->transformation,
+                                           $ordered->[1]->transformation);
     $logger->debug("Transformation:\n$trans");    
 
     # Positive cache
     cachepos($fromdom,$ontodom,$trans);
     return $trans;
-} # superpose
+
+} # superpose_local
+
+
+# Takes two domain objects
+sub superpose_query {
+    my ($fromdom, $ontodom) = @_;
+    $logger->trace("$fromdom onto $ontodom");
+    return unless 
+        $fromdom && $fromdom->pdbid && $fromdom->chainid &&
+        $ontodom && $ontodom->pdbid && $ontodom->chainid;
+
+    my $db = $config->val('trans', 'db') || "trans_1_4";
+    my $dbh = dbconnect(-db=>$db) or return undef;
+    # Static handle, prepare it only once
+    our $trans_sth;
+    $trans_sth ||= $dbh->prepare(
+        "SELECT trans.id_domset, trans.trans " .
+        "FROM trans, entity where " .
+        "trans.id_entity=entity.id and " .
+        "entity.acc=?"
+        );
+    unless ($trans_sth) {
+        $logger->error($dbh->errstr);
+        return undef;
+    }
+
+    my $pdbstr1 = 'pdb|' . uc($fromdom->pdbid) . '|' . $fromdom->chainid;
+    my $pdbstr2 = 'pdb|' . uc($ontodom->pdbid) . '|' . $ontodom->chainid;
+
+    if (! $trans_sth->execute($pdbstr1)) {
+        $logger->error($trans_sth->errstr);
+        return undef;
+    }
+    my ($domset1, $transstr1) = $trans_sth->fetchrow_array();
+    if (! $trans_sth->execute($pdbstr2)) {
+        $logger->error($trans_sth->errstr);
+        return undef;
+    }
+    my ($domset2, $transstr2) = $trans_sth->fetchrow_array();
+    unless ($domset1 && $domset2 && $domset1 == $domset2) {
+        $logger->info("No transform between ",
+                      "$pdbstr1($domset1) and $pdbstr2($domset2)");
+        return;
+    }
+
+    my $trans1 = new SBG::Transform(-string=>$transstr1);
+    my $trans2 = new SBG::Transform(-string=>$transstr2);
+    return SBG::Transform::relativeto($trans1, $trans2);
+
+} # superpose_query
+
 
 sub _cache_file {
     my ($fromdom, $ontodom) = @_;
@@ -322,18 +381,6 @@ sub pickframe {
     }
 } # pickframe
 
-
-# Get the transformation of A, relative to B
-# REturn SBG::Transform
-sub relativeto {
-    my ($tofind, $ref) = @_;
-    return unless $tofind && $ref;
-    $logger->trace("$tofind relative to $ref");
-    my $t = $ref->transformation->inverse * $tofind->transformation;
-    $logger->trace("\n$t");
-    return $t;
-
-} # relativeto
 
 
 # Returns IDs of the domains to keep, based on Sc cutoff

@@ -147,6 +147,21 @@ sub inverse {
     return new SBG::Transform(-matrix=>$self->matrix->inv);
 }
 
+
+# Get the transformation of A (or $self), relative to B
+# Takes two Transform objects
+# Returns a *new* SBG::Transform
+sub relativeto {
+    my ($tofind, $ref) = @_;
+    return unless $tofind && $ref;
+    $logger->trace();
+    my $t = $ref->inverse * $tofind;
+    $logger->trace("\n$t");
+    return $t;
+
+} # relativeto
+
+
 ################################################################################
 =head2 transform
 
@@ -168,24 +183,6 @@ sub transform {
     my ($self, $thing) = @_;
     return $self->{matrix} x $thing;
 } # transform
-
-
-################################################################################
-=head2 _asstring
-
- Title   : _asstring
- Usage   :
- Function:
- Example :
- Returns : 
- Args    :
-
-
-=cut
-sub _asstring {
-    my ($self) = @_;
-    return $self->{matrix};
-} # _asstring
 
 
 ################################################################################
@@ -216,7 +213,25 @@ sub ascsv {
         $str .= "\n";
     }
     return $str;
-} # print
+} # ascsv
+
+
+################################################################################
+=head2 _asstring
+
+ Title   : _asstring
+ Usage   :
+ Function:
+ Example :
+ Returns : 
+ Args    :
+
+
+=cut
+sub _asstring {
+    my ($self) = @_;
+    return $self->{matrix};
+} # _asstring
 
 
 ################################################################################
