@@ -235,6 +235,11 @@ sub asarray {
 } # asarray
 
 
+sub names {
+   my ($self,@args) = @_;
+   return sort keys %{$self->{comp}};
+}
+
 ################################################################################
 # Private
 

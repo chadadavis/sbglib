@@ -130,6 +130,8 @@ sub file {
 }
 
 
+# Only returns value when this Domain corresponds to an entire chain
+# Otherwise, check the 'descriptor' field
 sub chainid {
     $self->descriptor =~ /^\s*CHAIN\s+([a-zA-Z_])\s*$/i;
     return $1;
@@ -273,15 +275,12 @@ sub transform {
     $self->{opcount}++;
 
     # Update the cumulative transformation
-    $logger->debug("previous:\n", $self->transformation);
-    $logger->debug("applying:\n", $newtrans);
+#     $logger->debug("previous:\n", $self->transformation);
+#     $logger->debug("applying:\n", $newtrans);
     my $prod = $self->transformation * $newtrans;
     $self->transformation($self->transformation * $newtrans);
-    $logger->debug("prod: $self(", $self->{opcount}, ") transformation(",
-                   $self->transformation->{opcount}, ")\n", $prod);
-
-
-
+#     $logger->debug("prod: $self(", $self->{opcount}, ") transformation(",
+#                    $self->transformation->{opcount}, ")\n", $prod);
     return $self;
 }
 
@@ -514,12 +513,13 @@ sub _label2pdbid {
     $self->{label} =~ s/_\d+$//;
     my $label = $self->label;
 
-    # Looking for labels like: 2br2 2br2A 2br2-RRP43 2br2A-RRP43 RRP43
-    # Could have: (<pdbid><chainid>?)?-<label>?
-    return 0 unless $label =~ /^((\d\S{3})([a-zA-Z_])?)(-?(\S+))?$/;
+    # Looking for labels like: 2br2 2br2A 2br2-RRP43 2br2A_test-RRP43 RRP43
+    # E.g.: 2br2A_test-RRP43_5
+    # Then: $1: 2br2A_test $2: 2br2 $3: A $4: _test $5: -RRP43 $6: RRP43  
+    return 0 unless $label =~ /^((\d\S{3})([a-zA-Z_])?([^-]*))(-?(\S+))?$/;
 
     $self->{pdbid} = $2 if $overwrite || ! defined $self->{pdbid};
-    $self->{label} = $5 || $1 || $self->{label};
+    $self->{label} = $6 || $1 || $self->{label};
     $self->descriptor("CHAIN $3") if $3 && ! defined $self->{descriptor};
 
     return $self->{pdbid};

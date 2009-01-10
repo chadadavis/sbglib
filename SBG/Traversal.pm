@@ -278,7 +278,12 @@ sub _do_edges {
     my $stateclone = $state->clone();
     # Do we want to go ahead and traverse this edge?
     my $callback = $self->test;
-    my $success = $callback->($stateclone, $self->graph, $src, $dest, $alt_id);
+    my $success;
+    if (defined $callback) {
+        $success = $callback->($stateclone, $self->graph, $src, $dest, $alt_id);
+    } else {
+        $success = 1;
+    }
 
     if (! $success) {
         # Current edge was rejected, but alternative multiedges may remain
