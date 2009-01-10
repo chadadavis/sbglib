@@ -24,13 +24,14 @@ foreach my $file (@files) {
     print STDERR "$file :\n";
 
     while (my $d = $io->read) {
+        my $label = $d->label;
         my $n = 0;
-        if ($d->label =~ /^(.*)(\d+)$/) {
+        if ($label =~ /^(.*)(\d+)$/) {
             $n = $2;
             $d->label($1);
         }
         $n++;
-        $d->label($d->label . $n);
+        $d->label($label . $n);
         print STDERR "\t$d";
         $d->transform($t);
         print STDERR "\n";
