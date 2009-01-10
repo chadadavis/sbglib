@@ -122,13 +122,16 @@ sub cofm_query {
     my $db = $config->val('cofm', 'db') || "trans_1_5";
     my $dbh = dbconnect(-db=>$db) or return undef;
     # Static handle, prepare it only once
-    our $sth;
-    $sth ||= $dbh->prepare("select cofm.Cx,cofm.Cy,cofm.Cz," .
-                           "cofm.Rg,entity.file,entity.description " .
-                           "from cofm, entity " .
-                           "where cofm.id_entity=entity.id and " .
-                           "(entity.acc=? or entity.acc=?)");
-    unless ($sth) {
+    our $cofm_sth;
+    $cofm_sth ||= $dbh->prepare("select cofm.Cx,cofm.Cy,cofm.Cz," .
+                                "cofm.Rg,entity.file,entity.description " .
+                                "from cofm, entity " .
+                                "where " .
+                                "bad = 0 and " .
+                                "cofm.id_entity=entity.id and " .
+                                "(entity.acc=? or entity.acc=?)"
+        );
+    unless ($cofm_sth) {
         $logger->error($dbh->errstr);
         return undef;
     }
@@ -136,14 +139,16 @@ sub cofm_query {
     $pdbid = uc $pdbid;
     # Check PDB and PQS structures
     my $pdbstr = "pdb|$pdbid|$chainid";
-    my $pqsstr = "pqs|$pdbid|$chainid";
-    if (! $sth->execute($pdbstr, $pqsstr)) {
-        $logger->error($sth->errstr);
+#     my $pqsstr = "pqs|$pdbid|$chainid";
+    # NB don't naively check PQS as the chain ID might be different
+    my $pqsstr = "pdb|$pdbid|$chainid";
+    if (! $cofm_sth->execute($pdbstr, $pqsstr)) {
+        $logger->error($cofm_sth->errstr);
         return undef;
     }
 
     # ($x, $y, $z, $rg, $file, $descriptor);
-    return $sth->fetchrow_array();
+    return $cofm_sth->fetchrow_array();
 } # cofm_query
 
 
