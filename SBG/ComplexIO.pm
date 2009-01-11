@@ -27,6 +27,8 @@ use IO::String;
 
 use SBG::Complex;
 use SBG::DomainIO;
+use SBG::CofM;
+use SBG::Transform;
 
 
 ################################################################################
@@ -45,12 +47,18 @@ sub new () {
 sub read {
     my $domio = new SBG::DomainIO(-fh=>$self->fh);
     my $dom;
-    my $assem = new SBG::Complex();
+    my $complex = new SBG::Complex();
     while ($dom = $domio->read) {
-        # Add Dom to Assembly
-        $assem->comp($dom->label) = $dom;
+        # Get any centre-of-mass
+        my $cdom = SBG::CofM::cofm($dom);
+        # Update it:
+        # TODO DES
+        # Apply saved transformation to native CofM point
+        $cdom->transform($dom->transformation);
+        # Add Dom to complex
+        $complex->add($cdom);
     }
-    return $assem;
+    return $complex;
 }
 
 # Returns the string that was printed to the file

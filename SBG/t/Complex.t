@@ -33,3 +33,7 @@ for (my $i = 0; $i < @doms; $i++) {
 
 # TODO test: if ($comp->clashes($dom)) { ... }
 
+# TODO Test Complex::rmsd()
+
+
+

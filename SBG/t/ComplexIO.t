@@ -33,6 +33,16 @@ my $assemio = new SBG::ComplexIO(-fh=>$domio->fh);
 my $pdbcassem = $assemio->read;
 is($assem->size, 9, "DomainIO::pdbc(2nn6): " . $assem->size . " domains");
 
+# Including transformations
+# TODO test _read_trans
+my $io5 = new SBG::ComplexIO(-file=>"$dir/model.dom");
+my $comp = $io5->read;
+my @transes;
+foreach my $name ($comp->names) {
+    my $dom = $comp->comp($name);
+    push @transes, $dom->transformation if $dom->transformation;
+}
+is(4, @transes, "4/6 Domains have explicit transformation");
 
 __END__
 

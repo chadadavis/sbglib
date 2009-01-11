@@ -31,7 +31,6 @@ our @EXPORT = qw(dbconnect);
 
 use warnings;
 use DBI;
-use Carp;
 
 
 ################################################################################
@@ -72,7 +71,7 @@ sub dbconnect {
     if ($dbh) {
         $dbh{ $o{host} }{ $o{db} } = $dbh;
     } else {
-        carp "Cannot connect to DB '$o{db}' on host '$o{host}'\n";
+        $logger->error("Cannot connect to DB $o{db} on host $o{host}");
     }
     return $dbh;
 

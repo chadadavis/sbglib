@@ -160,7 +160,8 @@ sub superpose {
 
 } # superpose
 
-
+# NB STAMP doesn't work on Domains that already have a Transform
+# This is for computing transforms on the native, not-yet-transformed PDB data
 sub superpose_local {
     my ($fromdom, $ontodom) = @_;
     $logger->trace("$fromdom onto $ontodom");
@@ -174,9 +175,12 @@ sub superpose_local {
 
     # Reorder @doms based on the order of $fromdom, $ontodom
     my $ordered = reorder(\@doms, [ $fromdom->stampid, $ontodom->stampid]);
-    # Get the SBG::Transform that puts fromdom relative to $ontodom
-    my $trans = SBG::Transform::relativeto($ordered->[0]->transformation,
-                                           $ordered->[1]->transformation);
+
+    # Want transformation relative to $ontodom
+    # I.e. applying the resulting transformation to $fromdom results in $ontodom
+    # The *absolute* transformation, that puts [0] into frame-of-ref of [1]
+    my ($from, $to) = @$ordered;
+    my $trans = $from->transformation->relativeto($to->transformation);
     $logger->debug("Transformation:\n$trans");    
 
     # Positive cache
@@ -230,7 +234,8 @@ sub superpose_query {
 
     my $trans1 = new SBG::Transform(-string=>$transstr1);
     my $trans2 = new SBG::Transform(-string=>$transstr2);
-    return SBG::Transform::relativeto($trans1, $trans2);
+    # Returns a new Transform
+    return $trans1->relativeto($trans2);
 
 } # superpose_query
 
@@ -290,6 +295,8 @@ sub cacheget {
 
 # Inputs are arrayref of L<SBG::Domain>s
 # TODO caching, based on what? (PDB/PQS ID + descriptor)
+# L<SBG::Domain> objects returned are newly created
+# Original L<SBG::Domain>s not modified
 sub do_stamp {
     my (@doms) = @_;
     $logger->trace("@doms");

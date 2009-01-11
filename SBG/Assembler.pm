@@ -149,11 +149,8 @@ sub linker {
     # Then apply that transformation to the interaction partner $dest
     # Product of relative with absolute transformation
     # Any previous transformation (reference domain) has to also be included
-    $logger->debug("reference:\n", $srcrefdom->transformation);
-    $logger->debug("xform:\n", $xform);
-    my $prod = $srcrefdom->transformation * $xform;
-    $logger->debug("prod: (", $prod->{opcount}, ")\n", $prod);
-    $destdom->transform($srcrefdom->transformation * $xform);
+    $destdom->transform($srcrefdom->transformation);
+    $destdom->transform($xform);
     return $destdom;
 }
 

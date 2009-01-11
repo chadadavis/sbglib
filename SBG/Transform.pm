@@ -149,14 +149,16 @@ sub inverse {
 
 
 # Get the transformation of A (or $self), relative to B
-# Takes two Transform objects
 # Returns a *new* SBG::Transform
+# Does not modify the current Transform
+# Take two L<SBG::Transform>s
+# NB this is the cumulative transformation, i.e. absolute
 sub relativeto {
-    my ($tofind, $ref) = @_;
-    return unless $tofind && $ref;
+    my ($self, $ref) = @_;
+    return unless $self && $ref;
     $logger->trace();
-    my $t = $ref->inverse * $tofind;
-    $logger->trace("\n$t");
+    # Always apply transform on the left
+    my $t = $ref->inverse * $self;
     return $t;
 
 } # relativeto
@@ -181,6 +183,7 @@ after).
 =cut
 sub transform {
     my ($self, $thing) = @_;
+    return $thing unless $self->_tainted;
     return $self->{matrix} x $thing;
 } # transform
 

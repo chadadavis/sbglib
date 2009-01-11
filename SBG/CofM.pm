@@ -35,7 +35,7 @@ use Text::ParseWords;
 use SBG::DB;
 use SBG::Domain;
 use SBG::DomainIO;
-
+use SBG::Complex;
 
 
 ################################################################################
@@ -61,7 +61,9 @@ The DB cache stores uppercase PDB IDs. The B<cofm> program will accept any case.
 sub cofm {
     my ($thing, $descriptor, $label) = @_;
     my $pdbid;
-    if (ref($thing) eq 'SBG::Domain') {
+    if (ref($thing) eq 'SBG::Complex') {
+        return cofm_complex($thing);
+    } elsif (ref($thing) eq 'SBG::Domain') {
         # Get fields from existing object
         $pdbid = $thing->pdbid;
         $descriptor ||= $thing->descriptor;
@@ -70,6 +72,7 @@ sub cofm {
         # Assume it is just the PDB ID
         $pdbid = $thing
     }
+
     my @fields;
 
     # If descriptor contains just one full chain, try the cache first;
@@ -96,6 +99,15 @@ sub cofm {
     return $dom;
 
 } # cofm
+
+
+sub cofm_complex {
+    my ($complex) = shift;
+    foreach my $name ($complex->names) {
+        $complex->comp($name) = cofm($complex->comp($name))
+    }
+    return $complex;
+}
 
 
 ################################################################################

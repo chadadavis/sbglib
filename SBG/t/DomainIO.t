@@ -11,8 +11,6 @@ my $dir = $FindBin::RealBin;
 my $file = "$dir/2nn6.dom";
 
 
-# TODO test _read_trans
-
 # Read all domains from a dom file
 open my $fh, "<$file";
 my $iofh = new SBG::DomainIO(-fh=>$fh);
@@ -41,6 +39,15 @@ my $str = $ghostio->write($domnofile);
 my $desc = $domnofile->descriptor;
 # Header line must begin with whitespace when no filename (STAMP handles this)
 ok($str =~ /^\s+${label}\s+\{\s+${desc}\s+\}\s*$/, "Output format correct");
+
+
+# TODO test _read_trans
+my $iomixed = new SBG::DomainIO(-file=>"$dir/model.dom");
+my @transes;
+while (my $dom = $iomixed->read) {
+    push @transes, $dom->transformation if $dom->transformation;
+}
+is(4, @transes, "4/6 Domains have explicit transformation");
 
 
 __END__

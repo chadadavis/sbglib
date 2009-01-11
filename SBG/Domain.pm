@@ -52,7 +52,7 @@ use SBG::Root -Base;
 
 use overload (
     '""' => '_asstring',
-    '-' => 'rmsd',
+    '-' => 'dist',
     '==' => '_equal',
     'eq' => '_equal',
     'cmp' => '_cmp',
@@ -240,7 +240,7 @@ sub new () {
 
     $self->{opcount} ||= 0;
     # Init centre-of-mass
-    $self->{cofm} ||= mpdl (0,0,0,1);
+#     $self->{cofm} ||= mpdl (0,0,0,1);
     # Set the default transformation to the identity
     $self->{transformation} ||= new SBG::Transform;
 
@@ -265,7 +265,7 @@ Any previously saved 'transformation' is updated with the product of the two.
 =cut
 sub transform {
     my $newtrans = shift;
-    return $self unless (defined $newtrans);
+    return $self unless defined($newtrans) && defined($self->cofm);
     # Need to transpose row vector to a column vector first. 
     # Then let Transform do the work.
     my $newcofm = $newtrans->transform($self->cofm->transpose);
@@ -275,14 +275,12 @@ sub transform {
     $self->{opcount}++;
 
     # Update the cumulative transformation
-#     $logger->debug("previous:\n", $self->transformation);
-#     $logger->debug("applying:\n", $newtrans);
-    my $prod = $self->transformation * $newtrans;
-    $self->transformation($self->transformation * $newtrans);
-#     $logger->debug("prod: $self(", $self->{opcount}, ") transformation(",
-#                    $self->transformation->{opcount}, ")\n", $prod);
+    my $prod = $newtrans * $self->transformation;
+    $self->transformation($prod);
+
     return $self;
 }
+
 
 
 ################################################################################
@@ -306,10 +304,10 @@ sub reset {
 
 
 ################################################################################
-=head2 rmsd
+=head2 dist
 
- Title   : rmsd
- Usage   : my $linear_distance = $dom1->rmsd($dom2);
+ Title   : dist
+ Usage   : my $linear_distance = $dom1->dist($dom2);
  Function: Positive distance between centres-of-mass of to L<SBG::Domain>s
  Example : my $linear_distance = $dom1 - $dom2; # overloaded operator -
  Returns : Euclidean distance between $dom1->cofm and $dom2->cofm
@@ -318,20 +316,48 @@ sub reset {
 Distance between this Domain and some other, measured from their centres-of-mass
 
 =cut
-sub rmsd { 
+sub dist { 
+    $logger->trace;
     my $other = shift;
-    return undef unless $self->cofm->dims == $other->cofm->dims;
-    my $diff = $self->cofm - $other->cofm;
-    
+    $logger->debug("$self $other");
+    $logger->trace($self->_cofm2string, " - ", $other->_cofm2string);
+    $logger->trace("self") unless defined $self;
+    $logger->trace("other") unless defined $other;
+    $logger->trace("self cofm") unless defined($self->cofm);
+    $logger->trace("other cofm") unless defined($other->cofm);
+    $logger->trace("==") unless $self->cofm->dims == $other->cofm->dims;
+    return undef unless 
+        defined($self) && defined($other) && 
+        defined($self->cofm) && defined($other->cofm) &&
+        $self->cofm->dims == $other->cofm->dims;
+    $logger->trace($self->_cofm2string, " - ", $other->_cofm2string);
+    return sqrt(sqdist($self->cofm, $other->cofm));
+} # dist
+
+
+################################################################################
+=head2 sqdist
+
+ Title   : sqdist
+ Usage   :
+ Function:
+ Example :
+ Returns : 
+ Args    :
+
+Squared distance between two centres of mass
+Takes two PDL objects
+=cut
+sub sqdist {
+    my $other = shift;
+    my $diff = $self - $other;
     # Remove dimension 0 of matrix, producing a 1-D list. 
     # And remove the last field (just a 1, for affine multiplication)
     $diff = $diff->slice('(0),0:2');
     my $squared = $diff ** 2;
-    my $mean = sumover($squared) / nelem($squared);
-    my $sqrt = sqrt $mean;
-
-    return $sqrt;
-} # rmsd
+    my $sum = sumover($squared);
+    return $sum;
+}
 
 
 ################################################################################
@@ -444,6 +470,7 @@ sub _cmp {
 
 =cut
 sub _cofm2array {
+    return unless defined $self->cofm;
     my @a = 
         ($self->{cofm}->at(0,0), 
          $self->{cofm}->at(0,1), 
@@ -451,6 +478,11 @@ sub _cofm2array {
     return @a;
 } # _cofm2array
 
+
+sub _cofm2string {
+    my @a = $self->_cofm2array;
+    return sprintf("%10.5f %10.5f %10.5f", @a);
+} # _cofm2string
 
 
 ################################################################################

@@ -9,11 +9,6 @@ use SBG::CofM;
 use PDL;
 use PDL::Matrix;
 
-
-# new()
-my $dom1 = new SBG::Domain();
-isa_ok($dom1, "SBG::Domain");
-
 # Label parsing
 my $dom0;
 my $id = '2br2A-RRP43_3'; 
@@ -25,36 +20,48 @@ is('2br2A-RRP43', $dom0->stampid, "Parsed stampid");
 $dom0->label('2br2A');
 is('2br2A', $dom0->stampid, "Parsed stampid without label");
 
+# new()
+my $dom1 = new SBG::Domain();
+$dom1->cofm(qw(-6.61  -32.62  -53.18));
+isa_ok($dom1, "SBG::Domain");
+
 # cofm()
+# TODO update test based on new assumption: cofm not always defined
 isa_ok($dom1->cofm, "PDL::Matrix");
-is($dom1->cofm, mpdl (0,0,0,1), 'Identity 3-tuple centre-of-mass, affine');
+is($dom1->cofm, mpdl (-6.61,-32.62,-53.18,1), 
+   'Identity 3-tuple centre-of-mass, affine');
 # transformation()
 isa_ok($dom1->transformation, "SBG::Transform");
+# Default transform is the identity transform
 is_deeply($dom1->transformation, new SBG::Transform, 'Identity Tranform');
 
 # _cofm2array()
 my $dom2 = new SBG::Domain();
-my @abc = (1,2,3);
+my @abc = qw(80.86   12.45  122.08);
 my $p = mpdl (@abc,1);
 $dom2->cofm($p);
 my @a = $dom2->_cofm2array;
 is_deeply(\@a, [@abc], 'cofm2array');
 
 # rmsd()
-my $expectdiff = sqrt(4+2/3);
-is($dom1-$dom2, $expectdiff, "rmsd between centres");
+my $toler = 0.1;
+my $expectdiff = 200.99;
+my $diff = $dom1-$dom2;
+ok($diff < $expectdiff + $toler, "rmsd between centres");
+ok($diff > $expectdiff - $toler, "rmsd between centres");
 
 # overlap()
 $dom1->rg(3);
 $dom2->rg(5);
 my $expectoverlap = 3+5-$expectdiff;
-is($dom1->overlap($dom2), $expectoverlap, 'overlap between spheres');
+ok($dom1->overlap($dom2) < $expectoverlap + $toler, 'overlap between spheres');
+ok($dom1->overlap($dom2) > $expectoverlap - $toler, 'overlap between spheres');
 
 # overlaps()
-my $toler = 0.01;
-ok($dom1->overlaps($dom2, $expectoverlap-$toler), 
+my $delta = 0.01;
+ok($dom1->overlaps($dom2, $expectoverlap-$delta), 
    'overlaps lower thresh');
-ok(! $dom1->overlaps($dom2, $expectoverlap+$toler), 
+ok(! $dom1->overlaps($dom2, $expectoverlap+$delta), 
    'overlaps not at upper thresh');
 
 # label2pdbid()
@@ -77,12 +84,14 @@ my $dom6 = SBG::CofM::cofm('2br2', 'CHAIN D');
 my $rmsd = $dom5-$dom6;
 my $o = $dom5->overlap($dom6);
 
-# TODO test overlap result
 
+
+# TODO test overlap result
 
 # TODO test applying non-trivial transformation to CofM
 
 # TODO test Storable
+
 
 __END__
 

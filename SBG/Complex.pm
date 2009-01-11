@@ -29,13 +29,14 @@ use SBG::Root -base;
 # This object is clonable
 use base qw(Clone);
 
-use SBG::Domain;
+use SBG::Domain qw(sqdist);
 use SBG::CofM;
 use SBG::STAMP;
 
 use overload (
     '""' => '_asstring',
     'eq' => '_eq',
+    '-'  => 'rmsd',
     );
 
 
@@ -217,6 +218,27 @@ sub clashes {
 
 
 ################################################################################
+=head2 transform
+
+ Title   : transform
+ Usage   :
+ Function: Transforms each component L<SBG::Domain> by a given L<SBG::Transform>
+ Example :
+ Returns : 
+ Args    :
+
+
+=cut
+sub transform {
+   my ($self,$trans) = @_;
+   foreach my $name ($self->names) {
+       $self->comp($name)->transform($trans);
+   }
+
+} # transform
+
+
+################################################################################
 =head2 asarray
 
  Title   : asarray
@@ -235,10 +257,58 @@ sub asarray {
 } # asarray
 
 
+################################################################################
+=head2 names
+
+ Title   : names
+ Usage   :
+ Function:
+ Example :
+ Returns : Names (i.e. 'label') of all component L<SBG::Domain>s, sorted
+ Args    :
+
+
+=cut
 sub names {
    my ($self,@args) = @_;
    return sort keys %{$self->{comp}};
 }
+
+
+################################################################################
+=head2 rmsd
+
+ Title   : rmsd
+ Usage   :
+ Function:
+ Example :
+ Returns : 
+ Args    :
+
+Average RMSD between mapped (by label) component Domains
+Undefined when no common component domains.
+
+=cut
+sub rmsd {
+   my ($self,$other) = @_;
+   my $count;
+   my $sum;
+   foreach my $name ($self->names) {
+       my $c1 = $self->comp($name);
+       my $c2 = $other->comp($name);
+       next unless defined($c1) && defined($c2);
+       $cofm1 = $c1->cofm;
+       $cofm2 = $c2->cofm;
+       next unless 
+           defined($cofm1) && defined($cofm2) && $cofm1->dims == $cofm2->dims;
+
+       my $sqdist = SBG::Domain::sqdist($cofm1, $cofm2);
+       $sum += $sqdist;
+       $count++;
+   }
+   return sqrt($sum / $count);
+}
+
 
 ################################################################################
 # Private
