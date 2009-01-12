@@ -122,6 +122,16 @@ sub put {
     return $out;
 }
 
+# Returns unique elements from list(s)
+# Not sorted
+# NB if these are objects, they will be subjected to stringification
+sub unique {
+    my %names = map { $_ => $_ } @_;
+    # Return values, rather than keys.
+    # values are unmodified, whereas keys have been stringified
+    return values %names;
+}
+
 # Simple which, based on eq
 # Returns index
 sub which {
