@@ -18,5 +18,7 @@ my %h = ( -thing => 2, -stuff => 3 );
 SBG::Root::_undash(%h);
 is($h{'thing'}, 2, "_undash on hash keys");
 
+# TODO test reorder()
+
 
 __END__

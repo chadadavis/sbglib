@@ -75,6 +75,50 @@ our $logger;
 our $config;
 
 our @EXPORT = qw(carp Dumper $installdir $logger $config);
+our @EXPORT_OK = qw(reorder);
+
+################################################################################
+=head2 reorder
+
+ Title   : reorder
+ Usage   :
+ Function:
+ Example :
+ Returns : 
+ Args    :
+
+The Perl sort() is fine for sorting things alphabeticall/numerically.
+  This is for sorting objects in a pre-defined order, based on some attribute
+Sorts objects, given a pre-defined ordering.
+Takes:
+$objects - an arrayref of objects, in any order
+$accessor - the name of an accessor function to call on each object, like:
+    $_->$accessor()
+Otherwise, standard Perl stringification is used on the objects, i.e. "$obj"
+$ordering - an arrayref of keys (as strings) in the desired order
+  If no ordering given, sorts lexically
+E.g.: 
+NB: duplicate $objects (having the same key) are removed
+
+=cut
+sub reorder {
+    my ($objects, $ordering, $accessor) = @_;
+    # First put the objects into a dictionary, indexed by $accessor
+    my %dict;
+    if ($accessor) {
+        %dict = map { $_->$accessor() => $_ } @$objects;
+    } else {
+        %dict = map { $_ => $_ } @$objects;
+    }
+    # Sort lexically by default
+    $ordering ||= [ sort keys %dict ];
+    $logger->trace("order by: @$ordering");
+    $logger->trace("with accessor: $accessor") if $accessor;
+    # Sorted array (of values) based on given ordering (of keys)
+    my @sorted = map { $dict{$_} } @$ordering;
+    $logger->debug("reorder'ed: @sorted");
+    return \@sorted;
+}
 
 
 ################################################################################

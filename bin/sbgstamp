@@ -35,7 +35,7 @@ sub stampprint {
     print $fh "%TRANS_BEGIN\n";
 
     # Reorder domains (using given label field)
-    $doms = reorder($doms, $order, 'stampid') if $order;
+    $doms = SBG::Root::reorder($doms, $order, 'stampid') if $order;
 
     my $tmpout = new SBG::DomainIO(-fh=>$fh);
     $tmpout->write($_) for @$doms;

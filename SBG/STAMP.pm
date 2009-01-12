@@ -28,7 +28,6 @@ use SBG::Root -base, -XXX;
 
 # TODO DES don't need all of these
 our @EXPORT = qw(do_stamp sorttrans stamp pickframe transform superpose pdb2img pdbc);
-our @EXPORT_OK = qw(reorder);
 
 use warnings;
 use File::Temp qw(tempfile tempdir);
@@ -174,7 +173,9 @@ sub superpose_local {
     }
 
     # Reorder @doms based on the order of $fromdom, $ontodom
-    my $ordered = reorder(\@doms, [ $fromdom->stampid, $ontodom->stampid]);
+    my $ordered = SBG::Root::reorder(\@doms, 
+                                     [ $fromdom->stampid, $ontodom->stampid],
+                                     'stampid');
 
     # Want transformation relative to $ontodom
     # I.e. applying the resulting transformation to $fromdom results in $ontodom
@@ -476,38 +477,6 @@ sub sorttrans {
     return @keep_doms;
 
 } # sorttrans
-
-
-# The Perl sort() is fine for sorting things alphabeticall/numerically.
-#   This is for sorting objects in a pre-defined order, based on some attribute
-# Sorts objects, given a pre-defined ordering.
-# Takes:
-# $objects - an arrayref of objects, in any order
-# $accessor - the name of an accessor function to call on each object, like:
-#     $_->$accessor()
-# Otherwise, standard Perl stringification is used on the objects, i.e. "$obj"
-# $ordering - an arrayref of keys (as strings) in the desired order
-#   If no ordering given, sorts lexically
-# E.g.: 
-sub reorder {
-    my ($objects, $ordering, $accessor) = @_;
-    $accessor ||= 'stampid';
-    $logger->trace("With: $accessor, order by: @$ordering");
-    # First put the objects into a dictionary, indexed by $func
-    my %dict;
-    if ($accessor) {
-        %dict = map { $_->$accessor() => $_ } @$objects;
-    } else {
-        %dict = map { $_ => $_ } @$objects;
-    }
-
-    # Sort lexically by default
-    $ordering ||= [ sort keys %dict ];
-    # Sorted array based on given ordering of keys
-    my @sorted = map { $dict{$_} } @$ordering;
-    $logger->debug("reorder'ed: @sorted");
-    return \@sorted;
-}
 
 
 # Returns (probe, disjoint)
