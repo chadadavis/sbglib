@@ -239,6 +239,58 @@ sub transform {
 
 
 ################################################################################
+=head2 min_rmsd
+
+ Title   : min_rmsd
+ Usage   :
+ Function:
+ Example :
+ Returns : minrmsd, mintrans, minname
+ Args    :
+
+NB; this will only work if the $truth hasn't yet been transformed.
+
+Because it relies on being able to put the complex $truth into the frame of
+reference of the template domains used to build the $model complex. 
+
+=cut
+sub min_rmsd {
+    my ($model, $truth) = @_;
+    my $minrmsd;
+    my $mintrans;
+    my $minname;
+    my $names = SBG::Root::reorder([$model->names, $truth->names]);
+    foreach my $name (@$names) {
+        # Only consider common components
+        my $mdom = $model->comp($name);
+        my $tdom = $truth->comp($name);
+        $logger->info("Missing $name from model") unless $mdom;
+        $logger->info("Additional $name in model") unless $tdom;
+        next unless $mdom && $tdom;
+        $logger->trace("Joining on: $name");
+        my $trans = superpose($tdom, $mdom);
+        # Product of these transformations: (applying $trans, then from $mdom)
+        $trans = $mdom->transformation * $trans;
+        $truth->transform($trans);
+        $logger->debug("Resulting RMSD on $name: ", $mdom - $tdom);
+        my $rmsd = $model - $truth;
+        $logger->debug("Resulting RMSD on complex: $rmsd");
+        # Don't forget to reset back to original frame of reference
+        $truth->transform($trans->inverse);
+
+        if (!defined($mindrmsd) || $rmsd < $minrmsd) {
+            $minrmsd = $rmsd;
+            $mintrans = $trans;
+            $minname = $name;
+        }
+    }
+    $logger->debug("Min RMSD: $mindrmsd ($minname)");
+    return $minrmsd unless wantarray;
+    return $minrmsd, $mintrans, $minname
+} # min_rmsd
+
+
+################################################################################
 =head2 asarray
 
  Title   : asarray

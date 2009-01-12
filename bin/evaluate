@@ -1,0 +1,47 @@
+#!/usr/bin/env perl
+
+use strict;
+
+use File::Basename;
+use SBG::Domain;
+use SBG::DomainIO;
+use SBG::Complex;
+use SBG::ComplexIO;
+
+my ($modelfile, $truthfile) = @ARGV;
+die unless $modelfile && $truthfile;
+my $modelbase = basename $modelfile, '.dom';
+my $truthbase = basename $truthfile, '.dom';
+my $concat = "$truthbase-$modelbase";
+
+my $model = new SBG::ComplexIO(-file=>$modelfile)->read;
+my $truth = new SBG::ComplexIO(-file=>$truthfile)->read;
+
+my ($rmsd, $trans, $joiner) = $model->min_rmsd($truth);
+unless ($rmsd) {
+    print STDERR 
+        "Couldn't join complexes. Probably no common component label\n",
+        "E.g. component 2br2D-RRP42 in one file and 2nn6A-RRP42 in the other\n";
+    exit;
+}
+printf STDERR "RMSD: %10.5f via $joiner\n", $rmsd;
+
+exit unless @ARGV > 2;
+
+my $tfile = "${truthbase}-${joiner}.trans";
+my $tdom = new SBG::Domain(-label=>"t-${truthbase}-${joiner}", 
+                           -transformation=>$trans);
+new SBG::DomainIO(-file=>">$tfile")->write($tdom,-id=>'label');
+print STDERR "Transformation $tfile\n";
+
+$truth->transform($trans);
+my $cfile = $concat . '.dom';
+my $io = new SBG::ComplexIO(-file=>">$cfile");
+$io->write($truth);
+$io->write($model);
+print STDERR "Superposed $cfile\n";
+
+
+
+
+

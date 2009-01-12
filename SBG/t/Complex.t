@@ -35,5 +35,5 @@ for (my $i = 0; $i < @doms; $i++) {
 
 # TODO Test Complex::rmsd()
 
-
+# TODO test ($rmsd, $trans) = $model_complex->min_rmsd($truth)
 

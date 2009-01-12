@@ -37,7 +37,6 @@ $traversal->traverse(new SBG::Complex);
 
 
 
-
 ################################################################################
 
 sub take2 {
@@ -66,54 +65,6 @@ sub take2 {
     ($rmsd, $trans) = min_rmsd($complex, $truth);
     print "RMSD reread $counter pre: $rmsd\n";
 
-}
-
-# NB; this will only work if the $complex2 hasn't yet been transformed
-sub min_rmsd {
-    my ($model, $truth) = @_;
-    my $minrmsd = "Infinity";
-    my $mintrans;
-    my $minname;
-    my %names;
-    $names{$_} = 1 for $model->names;
-    $names{$_} = 1 for $truth->names;
-    foreach my $name (keys %names) {
-        # Only consider common components
-        my $mdom = $model->comp($name);
-        my $tdom = $truth->comp($name);
-        $logger->info("Missing $name from model") unless $mdom;
-        $logger->info("Additional $name in model") unless $tdom;
-        next unless $mdom && $tdom;
-        print 
-            "Joining on: $name\n", 
-            "\t", $mdom->_cofm2string, " vs ", $tdom->_cofm2string, "\n";
-        my $trans = superpose($tdom, $mdom);
-        # Product of these transformations:
-        $trans = $mdom->transformation * $trans;
-        print  "\tpre complex RMSD: ", $model - $truth, "\n";
-
-        $truth->transform($trans);
-
-        my $rmsd = $model - $truth;
-        print "\tpost complex RMSD: $rmsd\n";
-        print "\tcomponent $name RMSD: ", $mdom - $tdom, "\n";
-
-
-        # Don't forget to reset back to original frame of reference
-        $truth->transform($trans->inverse);
-
-        if ($rmsd < $minrmsd) {
-            $minrmsd = $rmsd;
-            $mintrans = $trans;
-            $minname = $name;
-            print "\t(new min)";
-        }
-        print "\n";
-        print "\t", new SBG::DomainIO()->write($mdom), "\n";
-    }
-    print "Min RMSD: $minrmsd (via $minname)\n";
-    return $minrmsd unless wantarray;
-    return $minrmsd, $mintrans;
 }
 
 
