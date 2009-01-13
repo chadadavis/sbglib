@@ -15,13 +15,14 @@ my $base2 = basename $file2, '.dom';
 my $dom1 = new SBG::DomainIO(-file=>$file1)->read;
 my $dom2 = new SBG::DomainIO(-file=>$file2)->read;
 
+print "$dom1\n$dom2\n";
 my $trans = superpose($dom1, $dom2);
 
 my $concat = "$base1-$base2";
 my $d = new SBG::Domain(-label=>"t-$concat",-transformation=>$trans);
 
 my $tfile = "${concat}.trans";
-new SBG::DomainIO(-file=>">$tfile")->write($d,-id=>'label');
-print STDERR "$tfile\n";
+my $str = new SBG::DomainIO(-file=>">$tfile")->write($d,-id=>'label');
+print STDERR "\n$tfile\n\n$str";
 
 
