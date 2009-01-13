@@ -1,3 +1,14 @@
 #!/usr/bin/env bash
 
-pdbc -d $1 | grep -v '^%' > $1.dom
+id=$1
+name=$2
+label=
+if [ -n "$name" ]; then
+    label=$id-$name
+else
+    label=$id
+fi
+file=$label.dom
+pdbc -d $id | grep -v '^%' | sed "s/$id/$label/i" > $file
+echo $file
+cat $file
