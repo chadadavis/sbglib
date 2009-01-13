@@ -27,8 +27,8 @@ foreach my $file (@files) {
         # Apply any saved transformation to native CofM point
         $d->transform($d->transformation);
 
-#         my $label = label_incr($d->label);
-#         $d->label($label);
+        my $label = label_incr($d->label);
+        $d->label($label);
         print STDERR "\t$d\n";
         $d->transform($t);
         push @doms, $d;
@@ -53,12 +53,12 @@ sub file_incr {
 sub label_incr {
     my $label = shift;
     my $n = 0;
-    if ($label =~ /^(.*)(\d+)$/) {
+    if ($label =~ /^(.*?)-?t(\d+)$/) {
         $n = $2;
         $label = $1;
     }
     $n++;
-    $label = $label . $n;
+    $label = ($label ? $label . '-t' : 't') . sprintf("%03d",$n);
     return $label;
 }
 
