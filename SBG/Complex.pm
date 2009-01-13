@@ -269,6 +269,7 @@ sub min_rmsd {
         next unless $mdom && $tdom;
         $logger->trace("Joining on: $name");
         my $trans = superpose($tdom, $mdom);
+        next unless $trans;
         # Product of these transformations: (applying $trans, then from $mdom)
         $trans = $mdom->transformation * $trans;
         $truth->transform($trans);
