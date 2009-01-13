@@ -133,6 +133,15 @@ sub file {
 # Only returns value when this Domain corresponds to an entire chain
 # Otherwise, check the 'descriptor' field
 sub chainid {
+    my ($newid) = shift;
+    if ($newid) { return $self->{chainid} = $newid; }
+    if ($self->{chainid}) { return $self->{chainid}; }
+    return $self->onechain;
+}
+
+
+# True when this domain consists of only one chain, and that entire chain
+sub onechain {
     $self->descriptor =~ /^\s*CHAIN\s+([a-zA-Z_])\s*$/i;
     return $1;
 }
@@ -321,11 +330,6 @@ sub dist {
     my $other = shift;
     $logger->debug("$self $other");
     $logger->trace($self->_cofm2string, " - ", $other->_cofm2string);
-    $logger->trace("self") unless defined $self;
-    $logger->trace("other") unless defined $other;
-    $logger->trace("self cofm") unless defined($self->cofm);
-    $logger->trace("other cofm") unless defined($other->cofm);
-    $logger->trace("==") unless $self->cofm->dims == $other->cofm->dims;
     return undef unless 
         defined($self) && defined($other) && 
         defined($self->cofm) && defined($other->cofm) &&
@@ -512,8 +516,9 @@ sub _file2pdbid {
     # Overwrite any previous PDB ID, as the file name is more authoritative
     $self->pdbid($pdbid) if $pdbid;
     # Don't overwrite the descriptor, if we were just looking for the PDB ID
-    if ($chid && ! $self->descriptor) {
-        $self->descriptor("CHAIN $chid");
+    if ($chid) {
+        $self->chainid($chid);
+        $self->descriptor("CHAIN $chid") unless $self->descriptor;
     }
     return $pdbid;
 } # _file2pdbid
@@ -539,6 +544,7 @@ identifier can also be parsed out of the label.
 
 =cut
 sub _label2pdbid {
+    $logger->trace($self->label) if $self->label;
     my $overwrite = shift || 0;
     return 0 unless $self->{label};
     # Remove any trailing _3434 increment
@@ -552,6 +558,7 @@ sub _label2pdbid {
 
     $self->{pdbid} = $2 if $overwrite || ! defined $self->{pdbid};
     $self->{label} = $6 || $1 || $self->{label};
+    $self->{chainid} = $3;
     $self->descriptor("CHAIN $3") if $3 && ! defined $self->{descriptor};
 
     return $self->{pdbid};

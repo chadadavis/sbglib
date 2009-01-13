@@ -61,13 +61,16 @@ The DB cache stores uppercase PDB IDs. The B<cofm> program will accept any case.
 sub cofm {
     my ($thing, $descriptor, $label) = @_;
     my $pdbid;
+    my $chainid;
     if (ref($thing) eq 'SBG::Complex') {
         return cofm_complex($thing);
     } elsif (ref($thing) eq 'SBG::Domain') {
         # Get fields from existing object
         $pdbid = $thing->pdbid;
+        $chainid = $thing->onechain;
         $descriptor ||= $thing->descriptor;
         $label ||= $thing->label;
+
     } else {
         # Assume it is just the PDB ID
         $pdbid = $thing
@@ -76,10 +79,10 @@ sub cofm {
     my @fields;
 
     # If descriptor contains just one full chain, try the cache first;
-    if ($descriptor =~ /^\s*CHAIN\s+([a-zA-Z_])\s*$/i) {
-        @fields = cofm_query($pdbid, $1);
+    if ($chainid) {
+        @fields = cofm_query($pdbid, $chainid);
     } else {
-        # Couldn't get from DB, try running computation locally
+        # Couldn't get from DB, try running computation locally, on descriptor
         @fields = cofm_run($pdbid, $descriptor);
     }
 

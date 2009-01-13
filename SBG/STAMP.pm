@@ -196,8 +196,8 @@ sub superpose_query {
     my ($fromdom, $ontodom) = @_;
     $logger->trace("$fromdom onto $ontodom");
     return unless 
-        $fromdom && $fromdom->pdbid && $fromdom->chainid &&
-        $ontodom && $ontodom->pdbid && $ontodom->chainid;
+        $fromdom && $fromdom->onechain &&
+        $ontodom && $ontodom->onechain;
 
     my $db = $config->val('trans', 'db') || "trans_1_4";
     my $dbh = dbconnect(-db=>$db) or return undef;
@@ -227,6 +227,7 @@ sub superpose_query {
         return undef;
     }
     my ($domset2, $transstr2) = $trans_sth->fetchrow_array();
+    $logger->debug("domset $domset1 == domset $domset2 ?");
     unless ($domset1 && $domset2 && $domset1 == $domset2) {
         $logger->info("No transform between ",
                       "$pdbstr1($domset1) and $pdbstr2($domset2)");
@@ -276,6 +277,7 @@ sub cachepos {
 # pos hit: Domain with Transform
 sub cacheget {
     my ($fromdom, $ontodom) = @_;
+    $logger->trace("$fromdom onto $ontodom");
     my $file = _cache_file($fromdom, $ontodom);
     my $io;
     if (-r $file) {
@@ -308,7 +310,7 @@ sub do_stamp {
     # Index label's
     my @dom_ids = map { $_->stampid } @doms;
     my %domains = map { $_->stampid => $_ } @doms;
-
+    $logger->debug("Domain IDs:@dom_ids");
     # No. domains tried as a probe
     my %tried;
     # Domains in current set
