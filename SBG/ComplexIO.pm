@@ -64,43 +64,44 @@ sub read {
 # Returns the string that was printed to the file
 # Add a newline by default as well
 sub write {
-    my $assem = shift;
-    my $fh = $self->fh;
+    my $complex = shift;
     my $str;
     my $strfh = new IO::String($str);
 
-    # Unique topology identifier:
-    # For each edge, component names sorted, then edges sorted
-    my @ikeys = keys %{$assem->{iaction}};
-    my @iactions = map { $assem->{graph}->get_interaction_by_id($_) } @ikeys;
+    my @alphabet = ('A' .. 'Z');
+    my @names = $complex->names;
+    my @chains = @alphabet[0..@names];
+    # Unique topology identifier: (i.e. connectivity, not templates used)
+    my @iactions = values %{$complex->{iaction}};
+    # Sort the nodes in a single edge. 
     my @edges = map { join(',', sort($_->nodes)) } @iactions;
+    # Then sort over all these edge labels
     my $topology = join(';', sort(@edges));
 
+    print $strfh "\% Components: ", join(" ", @names), "\n";
+    print $strfh "\% Chains: ", join(" ", @chains), "\n";
     print $strfh "\% Topology: $topology\n";
-    print $strfh "\% Templates: ", $assem, "\n";
-    print $strfh "\n";
-
-    my $domio = new SBG::DomainIO(-fh=>$strfh);
-
-    # Print all Domain objects (STAMP format)
-    # STAMP will number the chains alphabetically in the final output
-    my $chainid = ord 'A';
-    # $key is the component's label
-    foreach my $key (sort keys %{$assem->{comp}}) {
-        my $dom = $assem->comp($key);
-        # id is the PDB ID of the template segment
-        $logger->info("Saving $key($dom)");
-        print $strfh "\% CHAIN ", chr($chainid++), " $key\n";
-        # This uses the cumulative transform, maintained by CofM itself
-        # Use the component name as the STAMP label now
-        $dom->label($key);
-        $domio->write($dom,-id=>'stampid');
+    print $strfh "\% Templates:\n";
+    foreach my $iaction (sort @iactions) {
+        print $strfh "\% ", $iaction->regurgitate, "\n";
     }
     print $strfh "\n";
+
+    # Print all Domain objects (STAMP format)
+    my $domio = new SBG::DomainIO(-fh=>$strfh);
+    my $chainid = 0;
+    foreach my $key (@names) {
+        my $dom = $complex->comp($key);
+        print $strfh "\% CHAIN ", $chains[$chainid++], " $key\n";
+        $domio->write($dom,-id=>'stampid');
+    }
+
+    print $strfh "\n";
+    my $fh = $self->fh;
     print $fh $str if $fh;
     return $str;
 
-} # save
+} # write
 
 ################################################################################
 

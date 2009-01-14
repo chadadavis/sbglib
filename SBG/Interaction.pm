@@ -55,6 +55,17 @@ sub _compare {
     return $a->primary_id cmp $b->primary_id;
 }
 
+# Spits out the same interaction format that we read in 
+# See L<SBG::NetworkIO>
+sub regurgitate {
+    my $self = shift;
+    my ($node1, $node2) = sort $self->nodes;
+    my ($dom1, $dom2) = map { $self->template($_) } ($node1, $node2);
+    my ($pdb1, $pdb2) = map { $_->pdbid } ($dom1, $dom2);
+    my ($descr1, $descr2) = map { $_->descriptor } ($dom1, $dom2);
+    return "$node1\t$node2\t$pdb1 { $descr1 } $pdb2 { $descr2 }";
+}
+
 ################################################################################
 =head2 template
 

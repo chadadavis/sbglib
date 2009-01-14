@@ -122,7 +122,9 @@ sub try_interaction {
 #     step2dom($destdom, $complex);
 
     return unless $success;
-
+    
+    $complex->iaction($ix) = $ix;
+    
     # Update frame-of-reference of interaction partner ($dest)
     # NB Any previous $assembly->comp($dest) gets overwritten
     # This is compatible with the backtracking of SBG::Traversal

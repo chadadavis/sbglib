@@ -94,65 +94,30 @@ RRP41 RRP42  2br2 { CHAIN A } 2br2 { CHAIN B } 69.70
 # or
 RRP41 RRP42  2br2 { A 5 _ to A 220 _ } 2br2 { B 1 _ to B 55 _ } 69.70 
 
+Set 'extract' to true to try to get interactions out of comment lines too
 =cut
 sub read {
-    my $self = shift;
+    my ($self, $extract) = @_;
     my $fh = $self->fh;
 
     # refvertexed because the nodes are object refs, rather than strings or so
     my $net = Bio::Network::ProteinNet->new(refvertexed=>1);
 
-    # Components can participate in multiple interactions
-    # But the nodes themselves are unique
-    my %nodes;
-    # NB you cannot do this with Domain's, even if they are effectively equal.
-    # Because a Domain can be later transformed, but those are all independent
-
     while (<$fh>) {
-        next if /^\s*\#/ || /^\s*\%/ || /^\s*$/;
+        next if !$extract && (/^\s*\#/ || /^\s*\%/ || /^\s*$/);
         chomp;
 
-        # Get the stuff in { brackets } first: the STAMP domain descriptors
-        my ($head, $descr1, $pdbid2, $descr2, $score) = 
-            parse_line('\s*[{}]\s*', 0, $_);
-        # Then parse out everything else from the beginning, just on whitespace
-        my ($comp1, $comp2, $pdbid1) = 
-            parse_line('\s+', 0, $head);
-        $score ||= 0;
-        unless ($comp1 && $comp2 && $pdbid1 && $pdbid2) {
-            $logger->error("Cannot parse interaction:\n$_");
-            next;
-        }
+        my ($comp1, $comp2, $pdbid1, $descr1, $pdbid2, $descr2, $score) = 
+            _parse_line($_) or next;
 
-        # Create Seq objects, using accession; and Node objects contain a Seq
-        # Only if we have not already seen these component Nodes, else reuse
-        $nodes{$comp1} ||= 
-            new SBG::Node(new SBG::Seq(-accession_number=>$comp1));
-        $nodes{$comp2} ||= 
-            new SBG::Node(new SBG::Seq(-accession_number=>$comp2));
-
-        # Template domains.
-        # Will be created, even if they are equivalent to previously created dom
-        # Because the template domains are specific to an interaction template
-        my $dom1 = new SBG::Domain(
-            -label=>$comp1,-pdbid=>$pdbid1,-descriptor=>$descr1);
-        my $dom2 = new SBG::Domain(
-            -label=>$comp2,-pdbid=>$pdbid2,-descriptor=>$descr2);
-
-        # Unique (in the whole network) interaction label/id
-        my $iactionid = "$comp1($pdbid1 $descr1)--$comp2($pdbid2 $descr2)";
-        $logger->trace("Interaction:$iactionid $score");
-
-        # Interaction object.
-        my $interaction = new SBG::Interaction(-id=>$iactionid,-weight=>$score);
-        # The Interaction notes which Domain models which Node
-        $interaction->template($nodes{$comp1}) = $dom1;
-        $interaction->template($nodes{$comp2}) = $dom2;
+        my $interaction = $self->_make_iaction(
+            $comp1, $comp2, $pdbid1, $descr1, $pdbid2, $descr2, $score);
 
         # Now put it all into the ProteinNet. 
         # Now there is a formal association beteen Interaction and it's Node's
         $net->add_interaction(
-            -nodes => [$nodes{$comp1}, $nodes{$comp2}], 
+#             -nodes => [$nodes{$comp1}, $nodes{$comp2}], 
+            -nodes => [$self->node($comp1), $self->node($comp2)], 
             -interaction => $interaction,
             );
     }
@@ -160,6 +125,92 @@ sub read {
     return $net;
 } # read
 
+
+################################################################################
+=head2 _parse_line
+
+ Title   : _parse_line
+ Usage   :
+ Function:
+ Example :
+ Returns : 
+ Args    :
+
+
+=cut
+sub _parse_line {
+   my ($line) = @_;
+
+   # Get the stuff in { brackets } first: the STAMP domain descriptors
+   my ($head, $descr1, $pdbid2, $descr2, $score) = 
+       parse_line('\s*[{}]\s*', 0, $line);
+   # Then parse out everything else from the beginning, just on whitespace
+   my @fields = parse_line('\s+', 0, $head);
+   # Take the last three "words", ignoring any preceeding comments or junk
+   my ($comp1, $comp2, $pdbid1) = @fields[-3,-2,-1];
+
+   $score ||= 0;
+   unless ($comp1 && $comp2 && $pdbid1 && $pdbid2) {
+       $logger->warn("Cannot parse interaction line:\n", $line);
+       return;
+   }
+   return ($comp1, $comp2, $pdbid1, $descr1, $pdbid2, $descr2, $score);
+
+} # _parse_line
+
+
+# Components can participate in multiple interactions
+# But the nodes themselves are unique
+# NB you cannot do this with Domain's, even if they are effectively equal.
+# Because a Domain can be later transformed, but those are all independent
+sub node : lvalue {
+    my ($self,$key) = @_;
+    $self->{node} ||= {};
+    # Do not use 'return' with 'lvalue'
+    $self->{node}{$key};
+}
+
+################################################################################
+=head2 _make_iaction
+
+ Title   : _make_iaction
+ Usage   :
+ Function:
+ Example :
+ Returns : 
+ Args    :
+
+
+=cut
+sub _make_iaction {
+    my ($self, $comp1, $comp2, $pdbid1, $descr1, $pdbid2, $descr2, $score) = @_;
+
+    # Create Seq objects, using accession; and Node objects contain a Seq
+    # Only if we have not already seen these component Nodes, else reuse
+    $self->node($comp1) ||= 
+            new SBG::Node(new SBG::Seq(-accession_number=>$comp1));
+    $self->node($comp2) ||= 
+            new SBG::Node(new SBG::Seq(-accession_number=>$comp2));
+
+    # Template domains.
+    # Will be created, even if they are equivalent to previously created dom
+    # Because the template domains are specific to an interaction template
+    my $dom1 = new SBG::Domain(
+        -label=>$comp1,-pdbid=>$pdbid1,-descriptor=>$descr1);
+    my $dom2 = new SBG::Domain(
+        -label=>$comp2,-pdbid=>$pdbid2,-descriptor=>$descr2);
+    
+    # Unique (in the whole network) interaction label/id
+    my $iactionid = "$comp1($pdbid1 $descr1)--$comp2($pdbid2 $descr2)";
+    $logger->trace("Interaction:$iactionid $score");
+
+    # Interaction object.
+    my $interaction = new SBG::Interaction(-id=>$iactionid,-weight=>$score);
+    # The Interaction notes which Domain models which Node
+    $interaction->template($self->node($comp1)) = $dom1;
+    $interaction->template($self->node($comp2)) = $dom2;
+    return $interaction;
+} # _make_iaction
 
 ################################################################################
 =head2 graphviz
@@ -225,12 +276,11 @@ sub graphvizmulti {
             # Look up what domains model which halves of this interaction
             my $udom = $ix->template($u);
             my $vdom = $ix->template($v);
-            # Don't ask me why u and v are reversed here. But it's correct.
-            $str .= "\t$u -- $v [" . 
+             $str .= "\t\"" . $udom->label . "\" -- \"" . $vdom->label . "\" [" . 
                 join(', ', 
-                     "label=\"" . $ix->weight . "\"",
-                     "headlabel=\"" . $udom->label . "\"",
-                     "taillabel=\"" . $vdom->label . "\"",
+#                      "label=\"" . $ix->weight . "\"",
+                     "headlabel=\"" . $udom->pdbid . "\"",
+                     "taillabel=\"" . $vdom->pdbid . "\"",
                      "headtooltip=\"" . $udom->descriptor . "\"",
                      "tailtooltip=\"" . $vdom->descriptor . "\"",
                      "headURL=\"" . $pdb . $udom->pdbid . "\"",
