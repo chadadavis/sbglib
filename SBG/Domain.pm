@@ -85,6 +85,7 @@ Radius of gyration of this domain
 =cut
 field 'rg' => 0;
 
+field 'scopid';
 
 # STAMP descriptor (e.g. "A 125 _ to A 555 _" or "CHAIN A")
 field 'descriptor' => '';
@@ -150,19 +151,36 @@ sub onechain {
 # A label suitable for STAMP (unique), prefixed with PDBID/chain ID
 sub stampid {
     my $pdbid = $self->pdbid;
-    if ($pdbid && $self->label) {
+    my $label = $self->label;
+    my $descriptor = $self->_descriptor_short;
+    my $id = $pdbid . $descriptor;
+
+    if ($id && $label) {
         # Just return the label if it already begins with the PDB ID
-        return $self->label if $self->label =~ /^$pdbid/;        
+        return $label if $label =~ /^$id/;
         # Otherwise concatenate
-        return $pdbid . ($self->chainid||'') . '-' . $self->label;
-    } elsif ($pdbid) {
-        return $pdbid . ($self->chainid||'');
-    } elsif ($self->label) {
-        return $self->label;
+        $id .= '-' . $label if $label;
+    } elsif ($id) {
+        return $id;
+    } elsif ($label) {
+        return $label;
     } else {
-        return 'UNK';
+        return "UNK";
     }
 } # stampid
+
+
+# Converts: first line to second:
+# 'B 234 _ to B 333 _ CHAIN D E 5 _ to E 123 _';
+# 'B234B333DE5E123';
+sub _descriptor_short {
+    my $descriptor = $self->descriptor;
+    $descriptor =~ s/CHAIN//g;
+    $descriptor =~ s/_//g;
+    $descriptor =~ s/to//gi;
+    $descriptor =~ s/\s+//g;
+    return $descriptor;
+}
 
 
 
@@ -511,16 +529,12 @@ sub _file2pdbid {
     my $overwrite = shift || 0;
     my $file = $self->file;
     return 0 unless $file;
-    my (undef,$pdbid,$chid) = $file =~ m|.*/(pdb)?(.{4})([a-zA-Z_])?\.?.*|;
+    my (undef,$pdbid) = $file =~ m|.*/(pdb)?(\d.{3})|;
     return unless $pdbid;
-    # Overwrite any previous PDB ID, as the file name is more authoritative
-    $self->pdbid($pdbid) if $pdbid;
-    # Don't overwrite the descriptor, if we were just looking for the PDB ID
-    if ($chid) {
-        $self->chainid($chid);
-        $self->descriptor("CHAIN $chid") unless $self->descriptor;
+    if ($overwrite || ! defined $self->{pdbid}) {
+        $self->pdbid($pdbid);
     }
-    return $pdbid;
+    return $self->pdbid;
 } # _file2pdbid
 
 
@@ -542,6 +556,7 @@ lowercase, e.g. 2nn6a.
 If there is no existing 'descriptor' it is set to 'CHAIN <chainid>', if a chain
 identifier can also be parsed out of the label.
 
+
 =cut
 sub _label2pdbid {
     $logger->trace($self->label) if $self->label;
@@ -558,8 +573,10 @@ sub _label2pdbid {
 
     $self->{pdbid} = $2 if $overwrite || ! defined $self->{pdbid};
     $self->{label} = $6 || $1 || $self->{label};
-    $self->{chainid} = $3;
-    $self->descriptor("CHAIN $3") if $3 && ! defined $self->{descriptor};
+    if ($overwrite || ! defined $self->{descriptor}) {
+        $self->{chainid} = $3;
+        $self->descriptor("CHAIN $3");
+    }
 
     return $self->{pdbid};
 } # _label2pdbid
