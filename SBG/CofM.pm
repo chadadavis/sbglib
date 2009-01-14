@@ -75,16 +75,15 @@ sub cofm {
         # Assume it is just the PDB ID
         $pdbid = $thing
     }
+    $logger->trace("pdb:$pdbid:descriptor:$descriptor:");
 
     my @fields;
 
     # If descriptor contains just one full chain, try the cache first;
-    if ($chainid) {
-        @fields = cofm_query($pdbid, $chainid);
-    } else {
-        # Couldn't get from DB, try running computation locally, on descriptor
-        @fields = cofm_run($pdbid, $descriptor);
-    }
+    @fields = cofm_query($pdbid, $chainid) if $chainid;
+
+    # Couldn't get from DB, try running computation locally, on descriptor
+    @fields = cofm_run($pdbid, $descriptor) unless @fields;
 
     unless (@fields) {
         $logger->error("Cannot get centre-of-mass for ${pdbid} ${descriptor}");
@@ -181,6 +180,27 @@ Runs external B<cofm> appliation. Must be in your environment's B<$PATH>
 
 'descriptor' and 'pdbid' (or 'label') must be defined in the L<SBG::Domain>
 
+E.g. 
+
+ Domain   1 /g/russell3/pqs/1li4.mmol 1li4A
+        chain A 430 CAs =>  430 CAs in total
+
+ Domain   1 /g/russell3/pqs/1li4.mmol 1li4a
+        chain A 430 CAs  chain B 430 CAs =>  860 CAs in total
+or: 
+
+ Domain   1 /g/russell3/pqs/1li4.mmol 1li4A-single
+        from A    3   to A  189   187 CAs =>  187 CAs in total
+
+or:
+ Domain   1 /g/russell3/pqs/1li4.mmol 1li4A-double
+        from A    3   to A  189   187 CAs  from A  353   to A  432    80 CAs =>  267 CAs in total
+
+And then, a few lines later:
+
+ REMARK Domain 1 Id 1li4a N = 860 Rg = 34.441 Rmax = 58.412 Ro = 44.760 0.000 85.323
+
+
 =cut
 sub cofm_run {
     my ($pdbid, $descriptor) = @_;
@@ -204,6 +224,7 @@ sub cofm_run {
         $logger->error("Failed:\n\t$cmd\n\t$!");
         return undef;
     }
+    $logger->trace($cmd);
 
     my ($x, $y, $z);
     my $rg;
@@ -212,18 +233,28 @@ sub cofm_run {
     while (<$cofmfh>) {
         if (/^Domain\s+\S+\s+(\S+)/i) {
             $file = $1;
-        } elsif (/^\s+chain\s+(\S+)/i) {
-            $found_descriptor = "CHAIN $1";
-        } elsif (/^\s+from\s+([a-zA-Z_])\s+(\d+)\s+to\s+([a-zA-Z_])\s+(\d+)/i) {
-            $found_descriptor = "$1 $2 _ to $3 $4 _";
+        } elsif (my @chs = /chain\s+(\S+)/ig) {
+            my @tchs = map { "CHAIN $_" } @chs;
+            $found_descriptor = join(' ', @tchs);
+        } elsif (my @descrs = /from\s+(\S+)\s+(\S+)\s+to\s+\1\s+(\S+)/ig) {
+            my @groupdescrs;
+            while (@descrs) {
+                # Chain, start, end
+                my @reg = (shift(@descrs), shift(@descrs), shift(@descrs));
+                push @groupdescrs, \@reg if @reg == 3;
+            }
+            my @regions = 
+                map { my ($c,$s,$e) = @$_; "$c $s _ to $c $e _" } @groupdescrs;
+            $found_descriptor = join(' ', @regions);
         } elsif (/^REMARK Domain/) {
             my @a = quotewords('\s+', 0, $_);
+            # Extract coords for radius-of-gyration and xyz of centre-of-mass
             ($rg, $x, $y, $z) = ($a[10], $a[16], $a[17], $a[18]);
         }
     }
 
     # Check that $descriptor eq $found_descriptor 
-    $logger->error("Descriptors unequal: $descriptor, $found_descriptor") unless
+    $logger->error("Descriptors unequal:$descriptor:$found_descriptor:") unless
         $descriptor eq $found_descriptor;
 
     return ($x, $y, $z, $rg, $file, $found_descriptor);

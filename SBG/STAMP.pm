@@ -245,10 +245,9 @@ sub superpose_query {
 sub _cache_file {
     my ($fromdom, $ontodom) = @_;
     my $file = "$cachedir/" . 
-        join('-', $fromdom->pdbid, $fromdom->descriptor,
-             $ontodom->pdbid, $ontodom->descriptor) .
+        join('-', $fromdom->pdbid, $fromdom->_descriptor_short,
+             $ontodom->pdbid, $ontodom->_descriptor_short) .
              ".trans";
-    $file =~ s/\s+/-/g;
     $logger->trace("Cache: $file");
     return $file;
 }
@@ -300,6 +299,9 @@ sub cacheget {
 # TODO caching, based on what? (PDB/PQS ID + descriptor)
 # L<SBG::Domain> objects returned are newly created
 # Original L<SBG::Domain>s not modified
+# NB this superposes native PDB structures, or segments of them. 
+# If a Domain has already been transformed to a new location in space, that will
+# *not* be taken into consideration here.
 sub do_stamp {
     my (@doms) = @_;
     $logger->trace("@doms");
