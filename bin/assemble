@@ -23,7 +23,7 @@ my $minsize = shift || 3;
 my $network = new SBG::NetworkIO(-file=>$templates)->read;
 
 # Print input graph
-# graphviz($network, "templates.dot");
+graphviz($network, "templates.dot");
 
 # Each result is a complex
 my $state = new SBG::Complex;
