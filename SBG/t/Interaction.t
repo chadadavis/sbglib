@@ -23,4 +23,8 @@ is($i2, $i3, "String equality, between unique objects");
 # TODO
 # Test Interaction->template("key") = $domain
 
+# TODO test creatign an interation using SBG::Node and SBG::Domain
+
+# TODO test regurgitate()
+
 

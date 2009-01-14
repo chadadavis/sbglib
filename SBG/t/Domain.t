@@ -20,6 +20,9 @@ is('2br2A-RRP43', $dom0->stampid, "Parsed stampid");
 $dom0->label('2br2A');
 is('2br2A', $dom0->stampid, "Parsed stampid without label");
 
+# TODO Test parsing of double-char chain IDs
+
+
 # new()
 my $dom1 = new SBG::Domain();
 $dom1->cofm(qw(-6.61  -32.62  -53.18));

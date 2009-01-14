@@ -70,6 +70,8 @@ my $dom3 = SBG::CofM::cofm('2br2', "A 104 _ to A 200 _");
 
 print $dom3->cofm;
 
+# TODO test on multi-chain or multi-segment domains
+
 __END__
 
 
