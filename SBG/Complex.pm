@@ -30,7 +30,6 @@ use SBG::Root -base;
 use base qw(Clone);
 
 use SBG::Domain qw(sqdist);
-use SBG::CofM;
 use SBG::STAMP;
 
 use overload (
