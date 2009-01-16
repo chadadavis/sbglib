@@ -184,7 +184,11 @@ after).
 sub transform {
     my ($self, $thing) = @_;
     return $thing unless $self->_tainted;
-    return $self->{matrix} x $thing;
+    if ($thing->isa('SBG::Transform')) {
+        return _mult($self, $thing);
+    } else {
+        return $self->{matrix} x $thing;
+    }
 } # transform
 
 
