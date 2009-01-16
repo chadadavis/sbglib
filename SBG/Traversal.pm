@@ -187,7 +187,7 @@ sub traverse {
     }
 
     my @nodes = $self->graph->vertices();
-    _d0 "Nodes:@nodes";
+    _d0 "All nodes:@nodes";
 
     # NB cannot use all nodes together in one run, as they may have different
     # 'frames of reference'.

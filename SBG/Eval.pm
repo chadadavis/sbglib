@@ -31,7 +31,7 @@ use SBG::Domain;
 
 # TODO config.ini
 # Needs to be in MySQL
-my $scopdb = "/home/davis/proj/complexassembly/data/scop_1.73_sorted.dom";
+my $scopdb = "/g/russell1/data/pdbrep/scop_1.73.dom";
 
 
 ################################################################################

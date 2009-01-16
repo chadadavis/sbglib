@@ -75,10 +75,10 @@ sub cofm {
         # Assume it is just the PDB ID
         $pdbid = $thing
     }
+    return unless $pdbid && $descriptor;
     $logger->trace("pdb:$pdbid:descriptor:$descriptor:");
 
     my @fields;
-
     # If descriptor contains just one full chain, try the cache first;
     @fields = cofm_query($pdbid, $chainid) if $chainid;
 

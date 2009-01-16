@@ -153,7 +153,7 @@ sub stampid {
     my $pdbid = $self->pdbid;
     my $label = $self->label;
     my $descriptor = $self->_descriptor_short;
-    my $id = $pdbid . $descriptor;
+    my $id = $pdbid . $descriptor if $pdbid && $descriptor;
 
     if ($id && $label) {
         # Just return the label if it already begins with the PDB ID

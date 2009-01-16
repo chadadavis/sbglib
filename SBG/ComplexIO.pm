@@ -65,11 +65,13 @@ sub read {
 # Add a newline by default as well
 sub write {
     my $complex = shift;
+    my $names = shift || [$complex->names];
+    my @names = sort @$names;
+    # Save output in string, to return it as well
     my $str;
     my $strfh = new IO::String($str);
 
     my @alphabet = ('A' .. 'Z');
-    my @names = $complex->names;
     my @chains = @alphabet[0..@names];
     # Unique topology identifier: (i.e. connectivity, not templates used)
     my @iactions = values %{$complex->{iaction}};
