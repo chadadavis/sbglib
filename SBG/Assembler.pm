@@ -55,7 +55,8 @@ sub got_solution {
 #     return unless @$templates > 1;     
 #     return unless $complex->size > 3;
     return unless $complex->size > 2;
-
+    our $solution;
+    our $step;
     my $file = sprintf("${base}.dom", $solution);
     $logger->info("Solution $solution: @$nodecover\n",
                   "\t@$templates\n\t$file");
@@ -92,6 +93,7 @@ sub got_solution {
 sub try_interaction {
     my ($complex, $graph, $src, $dest, $templ_id) = @_;
     my $success = 0;
+    our $step;
 
     # Interaction object from ID
     my $ix = $graph->get_interaction_by_id($templ_id);
@@ -117,9 +119,10 @@ sub try_interaction {
     # Check new coords of destdom for clashes across currently assembly
     $success = ! $complex->clashes($destdom);
 
-    $step++;
+
 #     step2img($destdom, $complex);
 #     step2dom($destdom, $complex);
+    $step++;
 
     return unless $success;
     
@@ -151,14 +154,20 @@ sub linker {
     # Then apply that transformation to the interaction partner $dest
     # Product of relative with absolute transformation
     # Any previous transformation (reference domain) has to also be included
-    $destdom->transform($srcrefdom->transformation);
+
+# TODO explain order of ops here
     $destdom->transform($xform);
+    $destdom->transform($srcrefdom->transformation);
+
     return $destdom;
 }
 
 
 sub step2dom {
     my ($destdom, $complex) = @_;
+    our $solution;
+    our $step;
+    $logger->trace(sprintf("step-%04d-%05d", $solution, $step));
     my @doms = ($destdom, $complex->asarray);
     my $file = sprintf($dir . "/step-%04d-%05d.dom", $solution, $step);
     my $io = new SBG::DomainIO(-file=>">$file");

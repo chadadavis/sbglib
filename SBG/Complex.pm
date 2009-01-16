@@ -29,6 +29,7 @@ use SBG::Root -base;
 # This object is clonable
 use base qw(Clone);
 
+use SBG::List qw(union intersection);
 use SBG::Domain qw(sqdist);
 use SBG::STAMP;
 
@@ -258,14 +259,11 @@ sub min_rmsd {
     my $minrmsd;
     my $mintrans;
     my $minname;
-    my $names = SBG::Root::reorder([$model->names, $truth->names]);
-    foreach my $name (@$names) {
-        # Only consider common components
+    # Only consider common components
+    my @cnames = intersection([$model->names], [$truth->names]);
+    foreach my $name (@cnames) {
         my $mdom = $model->comp($name);
         my $tdom = $truth->comp($name);
-        $logger->info("Missing $name from model") unless $mdom;
-        $logger->info("Additional $name in model") unless $tdom;
-        next unless $mdom && $tdom;
         $logger->trace("Joining on: $name");
         my $trans = superpose($tdom, $mdom);
         next unless $trans;
@@ -278,13 +276,13 @@ sub min_rmsd {
         # Don't forget to reset back to original frame of reference
         $truth->transform($trans->inverse);
 
-        if (!defined($mindrmsd) || $rmsd < $minrmsd) {
+        if (!defined($minrmsd) || $rmsd < $minrmsd) {
             $minrmsd = $rmsd;
             $mintrans = $trans;
             $minname = $name;
         }
     }
-    $logger->debug("Min RMSD: $mindrmsd ($minname)");
+    $logger->debug("Min RMSD: $minrmsd ($minname)");
     return $minrmsd unless wantarray;
     return $minrmsd, $mintrans, $minname
 } # min_rmsd
@@ -349,8 +347,8 @@ sub rmsd {
        my $c1 = $self->comp($name);
        my $c2 = $other->comp($name);
        next unless defined($c1) && defined($c2);
-       $cofm1 = $c1->cofm;
-       $cofm2 = $c2->cofm;
+       my $cofm1 = $c1->cofm;
+       my $cofm2 = $c2->cofm;
        next unless 
            defined($cofm1) && defined($cofm2) && $cofm1->dims == $cofm2->dims;
 
