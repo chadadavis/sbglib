@@ -9,9 +9,11 @@ sum
 avg
 stddev
 sequence
+nsort
+union
+intersection
 rearrange
 thresh
-put
 which
 whicheval
 whichfield
@@ -109,28 +111,49 @@ sub thresh {
     }
 }
 
-# Prints an arry with indices in tabular form in a temp text file
-# (This is also comprehensible to gnuplot)
-sub put {
-    my ($array) = @_;
-#     my ($fh, $out) = tempfile("/tmp/disoconsXXXXXXXXXX", UNLINK=>!$::DEBUG);
-    my ($fh, $out) = tempfile("/tmp/disoconsXXXXXXXXXX", UNLINK=>1);
-    for (my $i = 1; $i < @$array; $i++) {
-        print $fh "$i ", $array->[$i], "\n";
-    }
-    close $fh;
-    return $out;
+sub nsort {
+    return sort { $a <=> $b } @_;
 }
+
+# Recursivel flattens an array (nested array of arrays) into one long array
+sub _expand_array { 
+    my @a;
+    foreach (@_) {
+        push @a, ref($_) ? _expand_array(@$_) : $_;
+    }
+    return @a;
+}
+
 
 # Returns unique elements from list(s)
 # Not sorted
-# NB if these are objects, they will be subjected to stringification
-sub unique {
-    my %names = map { $_ => $_ } @_;
+# NB if these are objects, string equality is used to determine uniqueness
+sub union {
+    my @a = _expand_array @_;
+    my %names = map { $_ => $_ } @a;
     # Return values, rather than keys.
     # values are unmodified, whereas keys have been stringified
     return values %names;
 }
+
+# Input an array of arrays, i.e. intersection([1..5],[3..7],...)
+# Works with any numbers of arrays
+# Objects are compared with string equality, 
+# but objects, rather than strings, are returned, if given as input
+sub intersection {
+    my $n = @_;
+    my %counts;
+    my %things;
+    foreach my $a (@_) {
+        $counts{$_}++ for @$a;
+        # Overwrites an string-equal objects previously seen
+        $things{$_} = $_ for @$a;
+    }
+    my @common = grep { $counts{$_} == $n } keys %counts;
+    my @objs = map { $things{$_} } @common;
+    return @objs;
+}
+
 
 # Simple which, based on eq
 # Returns index
