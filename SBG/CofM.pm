@@ -254,7 +254,7 @@ sub cofm_run {
     }
 
     # Check that $descriptor eq $found_descriptor 
-    $logger->error("Descriptors unequal:$descriptor:$found_descriptor:") unless
+    $logger->warn("Descriptors unequal:$descriptor:$found_descriptor:") unless
         $descriptor eq $found_descriptor;
 
     return ($x, $y, $z, $rg, $file, $found_descriptor);
