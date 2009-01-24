@@ -21,6 +21,7 @@ my ($x, $y, $z, $rg, $file, $desc) = @a;
 my ($tx, $ty, $tz, $trg) = (80.860, 12.450, 122.080, 26.738);
 
 ok($x >= $tx-$tol  && $x <= $tx+$tol,  "x ~ $tx +/- $tol");
+# float_is($x, $tx, 5); # ok($x >= $tx-$tol  && $x <= $tx+$tol,  "x ~ $tx +/- $tol");
 ok($y >= $ty-$tol  && $y <= $ty+$tol,  "y ~ $ty +/- $tol");
 ok($z >= $tz-$tol  && $z <= $tz+$tol,  "z ~ $tz +/- $tol");
 ok($rg >= $trg-$tol  && $rg <= $trg+$tol,  "rad. gyr. ~ $trg +/- $tol");
@@ -72,6 +73,18 @@ print $dom3->cofm;
 
 # TODO test on multi-chain or multi-segment domains
 
+
+
+
+sub float_is ($$;$$) {
+   my ($val1, $val2, $precision, $msg) = @_;
+   $precision ||= '';
+   # after some routine checks
+   print ("val1:$val1:val2:$val2\n");
+   my $sval1 = sprintf("%.${precision}g",$val1);
+   my $sval2 = sprintf("%.${precision}g",$val2);
+   print ("sval1:$sval1:sval2:$sval2\n");
+   is(sprintf("%.${precision}g",$val1), sprintf("%.${precision}g",$val2), "float_is:$msg");
+}
+
 __END__
-
-
