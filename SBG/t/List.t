@@ -19,4 +19,5 @@ is_deeply(\@un, [1..15], "union()");
 my @in = nsort intersection(\@a,\@b,\@c);
 is_deeply(\@in, [7..10], "intersection()");
 
+# TODO test reorder()
 

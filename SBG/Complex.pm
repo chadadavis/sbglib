@@ -29,9 +29,10 @@ use SBG::Root -base;
 # This object is clonable
 use base qw(Clone);
 
-use SBG::List qw(union intersection);
+use SBG::List qw(intersection);
 use SBG::Domain qw(sqdist);
 use SBG::STAMP;
+use List::Utils qw(min);
 
 use overload (
     '""' => '_asstring',
@@ -46,7 +47,7 @@ use overload (
 
 # Allowed (linear) overlap between the spheres, that represent the proteins
 # Centre-of-mass + Radius-of-gyration
-field 'overlapthresh';
+field 'lin_thresh';
 
 
 ################################################################################
@@ -96,7 +97,7 @@ sub iaction : lvalue {
  Usage   : 
  Function: 
  Returns : 
- Args    : -overlapthresh Tolerance (angstrom) for overlaping radii of gyration
+ Args    : -lin_thresh Tolerance (angstrom) for overlaping radii of gyration
 
 =cut
 sub new () {
@@ -105,7 +106,7 @@ sub new () {
     bless $self, $class;
     $self->_undash;
 
-    $self->{overlapthresh} = $config->val('assembly', 'overlapthresh') || '30';
+    $self->{lin_thresh} = $config->val('assembly', 'lin_thresh') || '15';
 
     return $self;
 } # new
@@ -199,7 +200,9 @@ L<SBG::Domain>s in this Assembly.
 =cut
 sub clashes {
     my ($self, $newdom) = @_;
-    $logger->trace("Checking $newdom at thresh: ", $self->overlapthresh);
+    my $thresh = $config->val("assembly", "lin_thresh");
+#     my $thresh = $config->val("assembly", "vol_thresh");
+    $logger->trace("Checking $newdom at thresh: ", $thresh);
     # Get all of the objects in this assembly. 
     # If any of them clashes with the to-be-added objects, then disallow
     foreach my $key (keys %{$self->{comp}}) {
@@ -207,8 +210,17 @@ sub clashes {
         my $existingdom = $self->comp($key);
         $logger->trace("$newdom vs $existingdom");
         
-        if ($newdom->overlaps($existingdom, $self->overlapthresh)) {
-            $logger->info("$newdom clashes w/ existing $existingdom");
+
+#         my $raw = $newdom->voverlap($existingdom);
+#         my $overlap = $raw / min($newdom->volume, $existingdom->volume);
+        my $raw = $newdom->overlap($existingdom);
+        my $overlap = $raw / (2 * min($newdom->rg,$existingdom->rg));
+        if ($overlap > $thresh) {
+            $logger->info(sprintf
+                          "%s (%6.2f) clashes w/ existing %s (%6.2f) by %6.2f",
+                          $newdom, $newdom->volume, 
+                          $existingdom, $existingdom->volume,
+                          $overlap);
             return 1;
         }
     }

@@ -84,6 +84,13 @@ is($dom4->descriptor, 'CHAIN A', 'file2pdbid sets descriptor: CHAIN A');
 my $dom5 = SBG::CofM::cofm('2br2', 'CHAIN A');
 my $dom6 = SBG::CofM::cofm('2br2', 'CHAIN D');
 
+print "dom5 volume:", $dom5->volume, "\n";
+print "dom6 volume:", $dom6->volume, "\n";
+my $vo = $dom5->voverlap($dom6);
+
+my $frac = $vo / ($dom5->volume + $dom6->volume);
+print "Overlap as fraction of sum of volumes: $frac\n";
+
 my $rmsd = $dom5-$dom6;
 my $o = $dom5->overlap($dom6);
 
@@ -94,6 +101,10 @@ my $o = $dom5->overlap($dom6);
 # TODO test applying non-trivial transformation to CofM
 
 # TODO test Storable
+
+# TODO Another test for Domain. Validate that the raw cofm times the cumulative
+# transform is the cum. cofm But still, should maintain current cofm, for sake
+# of overlap detection
 
 
 __END__

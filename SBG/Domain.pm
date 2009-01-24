@@ -65,6 +65,8 @@ use PDL::Math;
 use PDL::Matrix;
 use File::Temp qw(tempfile);
 
+use Math::Trig qw(:pi);
+
 use SBG::Transform;
 
 
@@ -261,7 +263,9 @@ sub new () {
     bless $self, $class;
     $self->_undash;
 
+
     # Parse out PDB ID from label or filename, if given
+    $self->{descriptor} =~ s/\s+/ /g if $self->{descriptor};
     $self->_file2pdbid();
     $self->_label2pdbid();
 
@@ -347,7 +351,6 @@ sub dist {
     $logger->trace;
     my $other = shift;
     $logger->debug("$self $other");
-    $logger->trace($self->_cofm2string, " - ", $other->_cofm2string);
     return undef unless 
         defined($self) && defined($other) && 
         defined($self->cofm) && defined($other->cofm) &&
@@ -399,7 +402,7 @@ sub overlap {
     # Distance between centres
     my $dist = $self - $obj;
     # Radii of two spheres
-    my $sum_radii = $self->rg + $obj->rg;
+    my $sum_radii = ($self->rg + $obj->rg);
     # Overlaps when distance between centres < sum of two radii
     my $diff = $sum_radii - $dist;
     my $apt = join(' ', $self->_cofm2array, $self->rg);
@@ -408,6 +411,86 @@ sub overlap {
     return $diff;
 }
 
+
+
+sub volume {
+    return (4.0/3.0) * pi * $self->rg ** 3;
+}
+
+# Volume of a 'cap' of the Sphere. Calculates integral to get volume of sphere's
+# cap. Thee cap is the shape created by slicing off the top of a sphere using a
+# plane.
+# http://www.russell.embl.de/wiki/index.php/Collision_Detection
+# http://www.ugrad.math.ubc.ca/coursedoc/math101/notes/applications/volume.html
+sub cap {
+    my ($overlap) = @_;
+    return pi * ($overlap**2 * $self->rg - $overlap**3 / 3.0);
+}
+
+# Volume overlap
+sub voverlap {
+    my ($obj) = @_;
+    # Linear overlap (sum of radii vs dist. between centres)
+    my $c = $self->overlap($obj);
+
+    # Special cases: no overlap, or completely enclosed:
+    if ($c < 0 ) {
+        # If distance is negative, there is no overlapping volume
+        return $c;
+    } elsif ($c + $self->rg < $obj->rg) {
+        # $self is completely within $obj
+        return $self->volume();
+    } elsif ($c + $obj->rg < $self->rg) {
+        # $obj is completely within $self
+        return $obj->volume();
+    }
+
+    my ($a, $b) = ($self->rg, $obj->rg);
+    # Need to find the plane (a circle) of intersection between spheres
+    # Law of cosines to get one angle of triangle created by intersection
+    my $alpha = acos( ($b**2 + $c**2 - $a**2) / (2 * $b * $c) );
+    my $beta  = acos( ($a**2 + $c**2 - $b**2) / (2 * $a * $c) );
+
+    # The *length* of $obj that is inside $self
+    my $overb;
+    # The *length* of $self that is inside $obj
+    my $overa;
+    # Check whether angles are acute to determine length of overlap
+    if ($alpha < pi / 2) {
+        $overb = $b - $b * cos($alpha);
+    } else {
+        $overb = $b + $b * cos(pi - $alpha);
+    }
+    if ($beta < pi / 2) {
+        $overa = $a - $a * cos($beta);
+    } else {
+        $overa = $a + $a * cos(pi - $beta);
+    }
+
+    # These volumes only count what is beyond the intersection plane
+    # (i.e. this is *not* double counting) 
+    # Volume of sb inside of sa:
+    my $overbvol = $obj->cap($overb);
+    # Volume of sa inside of sb;
+    my $overavol = $self->cap($overa);
+    # Total overlap volume
+    my $sum = $overbvol + $overavol;
+    $logger->trace($sum);
+    return $sum;
+
+} # voverlap
+
+
+# Does the volume of the overlap exceed .50 of the sum of the 2 volumes?
+sub voverlaps {
+    my ($obj, $fracthresh) = @_;
+    $fracthresh ||= $config->val("assembly","vol_thresh") || .5;
+    if ($self->_equal($obj)) {
+        $logger->info("Identical domain, overlaps");
+        return 1;
+    }
+    return $self->voverlap($obj) / ($self->volume + $obj->volume) > $fracthresh;
+}
 
 ################################################################################
 =head2 overlaps
