@@ -46,7 +46,7 @@ our $step = 1;
 # TODO permanent solution to output filenames
 our $dir = ".";
 mkdir $dir;
-our $base = $dir . '/solution-%04d';
+our $base = $dir . '/solution-%05d';
 
 # Callback for printing
 sub got_solution {
@@ -92,6 +92,7 @@ sub got_solution {
 # $complex->comp() = $dom; and $complex->iaction($key) = $ix;
 sub try_interaction {
     my ($complex, $graph, $src, $dest, $templ_id) = @_;
+    $logger->trace(join('|',$src,$dest,$templ_id));
     my $success = 0;
     our $step;
 
@@ -110,6 +111,7 @@ sub try_interaction {
         $complex->comp($src) = SBG::CofM::cofm($srcdom);
         # dest domain also has no explicit transformation
         $complex->comp($dest) = SBG::CofM::cofm($destdom);
+        $complex->iaction($ix) = $ix;
         return $success = 1;
     }
 
