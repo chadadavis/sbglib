@@ -85,7 +85,7 @@ sub write {
     print $strfh "\% Topology: $topology\n";
     print $strfh "\% Templates:\n";
     foreach my $iaction (sort @iactions) {
-        print $strfh "\% ", $iaction->regurgitate, "\n";
+        print $strfh "\% Template: ", $iaction->regurgitate, "\n";
     }
     print $strfh "\n";
 
