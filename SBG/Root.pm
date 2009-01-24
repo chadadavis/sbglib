@@ -54,11 +54,12 @@ L<Spiffy>, L<Log::Log4perl>, L<Config::IniFiles>
 ################################################################################
 
 package SBG::Root;
-use Spiffy -base, -XXX;
+use Spiffy -base;
+use base qw(Storable);
 
 use warnings;
 
-# Comment out this one line to stop all loggin
+# Comment out this one line to stop all logging
 use Log::Log4perl qw(:levels :resurrect);
 
 use Log::Dispatch;
@@ -66,59 +67,56 @@ use FindBin;
 use File::Spec::Functions;
 use File::Basename;
 use Config::IniFiles;
-
-# (Re-)export these
+use Storable;
 use Carp;
 use Data::Dumper;
+
 our $installdir;
 our $logger;
 our $config;
 
+# Export a couple global vars
+# (Re-)export a few really handy functions
 our @EXPORT = qw(carp Dumper $installdir $logger $config);
-our @EXPORT_OK = qw(reorder);
+our @EXPORT_OK = qw();
+
 
 ################################################################################
-=head2 reorder
+=head2 dump
 
- Title   : reorder
+ Title   : dump
  Usage   :
- Function:
+ Function: prints $self to given file handle, or STDOUT, via L<Data::Dumper>
  Example :
  Returns : 
  Args    :
 
-The Perl sort() is fine for sorting things alphabeticall/numerically.
-  This is for sorting objects in a pre-defined order, based on some attribute
-Sorts objects, given a pre-defined ordering.
-Takes:
-$objects - an arrayref of objects, in any order
-$accessor - the name of an accessor function to call on each object, like:
-    $_->$accessor()
-Otherwise, standard Perl stringification is used on the objects, i.e. "$obj"
-$ordering - an arrayref of keys (as strings) in the desired order
-  If no ordering given, sorts lexically
-E.g.: 
-NB: duplicate $objects (having the same key) are removed
 
 =cut
-sub reorder {
-    my ($objects, $ordering, $accessor) = @_;
-    # First put the objects into a dictionary, indexed by $accessor
-    my %dict;
-    if ($accessor) {
-        %dict = map { $_->$accessor() => $_ } @$objects;
-    } else {
-        %dict = map { $_ => $_ } @$objects;
-    }
-    # Sort lexically by default
-    $ordering ||= [ sort keys %dict ];
-    $logger->trace("order by: @$ordering");
-    $logger->trace("with accessor: $accessor") if $accessor;
-    # Sorted array (of values) based on given ordering (of keys)
-    my @sorted = map { $dict{$_} } @$ordering;
-    $logger->debug("reorder'ed: @sorted");
-    return \@sorted;
-}
+sub dump {
+   my ($self,$fh) = @_;
+   $fh ||= \*STDOUT;
+   print $fh Dumper $self;
+} # dump
+
+
+################################################################################
+=head2 asstring
+
+ Title   : asstring
+ Usage   :
+ Function: Stringifies $self
+ Example :
+ Returns : 
+ Args    :
+
+Subclasses define what stringification means. See L<overload>
+
+=cut
+sub asstring {
+   my ($self,@args) = @_;
+   return "$self";
+} # asstring
 
 
 ################################################################################

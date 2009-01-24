@@ -38,6 +38,7 @@ use SBG::Transform;
 use SBG::Domain;
 use SBG::DomainIO;
 use SBG::DB;
+use SBG::List qw(reorder);
 
 ################################################################################
 
@@ -173,10 +174,10 @@ sub superpose_local {
     }
 
     # Reorder @doms based on the order of $fromdom, $ontodom
-    my $ordered = SBG::Root::reorder(\@doms, 
-                                     [ $fromdom->stampid, $ontodom->stampid],
-                                     'stampid');
-
+    my $ordered = reorder(\@doms, 
+                          [ $fromdom->stampid, $ontodom->stampid],
+                          'stampid');
+    
     # Want transformation relative to $ontodom
     # I.e. applying the resulting transformation to $fromdom results in $ontodom
     # The *absolute* transformation, that puts [0] into frame-of-ref of [1]

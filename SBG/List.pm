@@ -2,64 +2,46 @@
 
 package SBG::List;
 use base qw(Exporter);
+
+our @EXPORT = qw(
+nsort
+);
+
 our @EXPORT_OK = qw(
-min
-max
-sum
+argmax
+argmin
+mean
 avg
+variance
 stddev
 sequence
 nsort
-union
 intersection
+union
 rearrange
+reorder
 thresh
-which
-whicheval
-whichfield
+flatten
 );
 
-use File::Temp qw(tempfile);
-use File::Basename;
-use File::Spec::Functions qw/rel2abs catdir/;
+use List::Util qw(sum);
+use List::MoreUtils qw(uniq);
+
+# TODO CHECK CPAN
+# TODO find stdev mean
 
 ################################################################################
 
 
-# Minimum of a list
-sub min {
-    my $x = shift @_;
-    $x = $_ < $x ? $_ : $x for @_;
-    return $x;
-}
-
-# Maximum of a list
-sub max {
-    my $x = shift @_;
-    $x = $_ > $x ? $_ : $x for @_;
-    return $x;
-}
-
-# Sum of a list
-sub sum {
-    my $x = 0;
-    $x += $_ for @_;
-    return $x;
-}
-
 # Average of a list
-sub avg {
-    # Check if we were given a reference
-    my $r = $_[0];
-    my @list = (ref $r) ? @$r : @_;
-    return 0 unless @list;
-    my $sum = 0;
-    $sum += $_ for @list;
-    return $sum / @list;
+sub mean {
+    return unless @_;
+    return sum(@_) / @_;
 }
+sub avg { return mean @_ }
 
-# Stddev of a list
-sub stddev {
+# Variance of a list 
+sub variance {
     # Check if we were given a reference
     my $r = $_[0];
     my @list = (ref $r) ? @$r : @_;
@@ -69,7 +51,11 @@ sub stddev {
     for (my $i = 0; $i < @list; $i++) {
         $sum += ($list[$i] - $avg)**2;
     }
-    return sqrt($sum/(@list - 1));
+    return ($sum/(@list - 1));
+}
+# Stddev of a list
+sub stddev {
+    return sqrt variance @_;
 }
 
 # Creates a sequence of numbers (similar to in R)
@@ -82,7 +68,7 @@ sub sequence {
     return @a;
 }
 
-# Support for named function parameters. E.g.:
+# One way to support named function parameters. E.g.:
 # func(-param1=>2, -param3=>"house");
 sub rearrange  {
     # The array ref. specifiying the desired order of the parameters
@@ -102,6 +88,51 @@ sub rearrange  {
     return @param{@$order};
 } # rearrange
 
+
+################################################################################
+=head2 reorder
+
+ Title   : reorder
+ Usage   :
+ Function:
+ Example :
+ Returns : 
+ Args    :
+
+The Perl sort() is fine for sorting things alphabeticall/numerically.
+  This is for sorting objects in a pre-defined order, based on some attribute
+Sorts objects, given a pre-defined ordering.
+Takes:
+$objects - an arrayref of objects, in any order
+$accessor - the name of an accessor function to call on each object, like:
+    $_->$accessor()
+Otherwise, standard Perl stringification is used on the objects, i.e. "$obj"
+$ordering - an arrayref of keys (as strings) in the desired order
+  If no ordering given, sorts lexically
+E.g.: 
+NB: duplicate $objects (having the same key) are removed
+
+=cut
+sub reorder {
+    my ($objects, $ordering, $accessor) = @_;
+    # First put the objects into a dictionary, indexed by $accessor
+    my %dict;
+    if ($accessor) {
+        %dict = map { $_->$accessor() => $_ } @$objects;
+    } else {
+        %dict = map { $_ => $_ } @$objects;
+    }
+    # Sort lexically by default
+    $ordering ||= [ sort keys %dict ];
+    $logger->trace("order by: @$ordering");
+    $logger->trace("with accessor: $accessor") if $accessor;
+    # Sorted array (of values) based on given ordering (of keys)
+    my @sorted = map { $dict{$_} } @$ordering;
+    $logger->debug("reorder'ed: @sorted");
+    return \@sorted;
+} # reorder
+
+
 # Converts analogue values to binary, given a threshold
 # Something like this is probably already provided by the PDL
 sub thresh {
@@ -115,26 +146,6 @@ sub nsort {
     return sort { $a <=> $b } @_;
 }
 
-# Recursivel flattens an array (nested array of arrays) into one long array
-sub _expand_array { 
-    my @a;
-    foreach (@_) {
-        push @a, ref($_) ? _expand_array(@$_) : $_;
-    }
-    return @a;
-}
-
-
-# Returns unique elements from list(s)
-# Not sorted
-# NB if these are objects, string equality is used to determine uniqueness
-sub union {
-    my @a = _expand_array @_;
-    my %names = map { $_ => $_ } @a;
-    # Return values, rather than keys.
-    # values are unmodified, whereas keys have been stringified
-    return values %names;
-}
 
 # Input an array of arrays, i.e. intersection([1..5],[3..7],...)
 # Works with any numbers of arrays
@@ -146,35 +157,53 @@ sub intersection {
     my %things;
     foreach my $a (@_) {
         $counts{$_}++ for @$a;
-        # Overwrites an string-equal objects previously seen
+        # Overwrites any string-equal objects previously seen
         $things{$_} = $_ for @$a;
     }
+    # Which elements exist in each input array
     my @common = grep { $counts{$_} == $n } keys %counts;
+    # Get the corresponding values
     my @objs = map { $things{$_} } @common;
     return @objs;
 }
 
 
-# Simple which, based on eq
-# Returns index
-sub which {
-    my ($val, @a) = @_;
-    my @t = grep { $a[$_] eq $val } 0..$#a;
-    return wantarray ? @t : shift @t;
+sub union {
+    return uniq flatten @_;
+}
+    
+
+# Recursively flattens an array (nested array of arrays) into one long array
+sub flatten { 
+    my @a;
+    foreach (@_) {
+        push @a, ref($_) ? flatten(@$_) : $_;
+    }
+    return @a;
 }
 
-# Return indices i for which $exp is true, foreach $_ in @a
-sub whicheval {
-    my ($exp, @a) = @_;
-    # Use temporary index placeholder
-    my @t = grep { $i=$_; $_=$a[$_]; $_=$i if eval($exp) } 0..$#a;
-    return wantarray ? @t : shift @t;
+sub argmax(&@) {
+  return() unless @_ > 1;
+  my $block = shift;
+  my $index = shift;
+  my $max = $block->($index);
+  for (@_) {
+    my $val = $block->($_);
+    ($max, $index) = ($val, $_) if $val > $max;
+  }
+  return wantarray ? ($index, $max) : $index;
 }
 
-# Return indices i for which $exp is true when $_ = $a[$i]
-sub whichfield {
-    my ($field, $val, @a) = @_;
-    return whicheval("\$_->{$field} eq \"$val\"", @a);
+sub argmin(&@) {
+  return() unless @_ > 1;
+  my $block = shift;
+  my $index = shift;
+  my $min = $block->($index);
+  for (@_) {
+    my $val = $block->($_);
+    ($min, $index) = ($val, $_) if $val < $min;
+  }
+  return wantarray ? ($index, $min) : $index;
 }
 
 ################################################################################
