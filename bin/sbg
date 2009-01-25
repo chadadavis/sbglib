@@ -1,0 +1,58 @@
+#!/usr/bin/env perl
+
+=head1 NAME
+
+B<sbg> - Interface to cached objects 
+
+=head1 SYNOPSIS
+
+sbg file.stor
+
+=head1 DESCRIPTION
+
+
+=head1 OPTIONS
+
+=head2 -h Print this help page
+
+=head1 SEE ALSO
+
+
+
+=cut
+
+################################################################################
+
+# CPAN
+use Getopt::Long;
+use Pod::Usage;
+use Storable;
+
+# Things (i.e. data structures) that make sense to serialize
+use SBG::Domain;
+use SBG::Transform;
+use SBG::Interaction;
+use SBG::Complex;
+
+
+my %ops;
+my $result = GetOptions(\%ops, 
+                        'h|help',
+    );
+if ($ops{'h'}) { pod2usage(-exitval=>1, -verbose=>2); }
+
+my ($file,$method,@args) = @ARGV;
+$file or pod2usage(-exitval=>2);
+my $obj = retrieve $file;
+
+my $class = ref $obj;
+# print STDERR "Class: ", ref($obj), "\n";
+$method ||= '_asstring';
+
+my $res = $obj->$method(@args);
+print $res;
+print "\n" unless $res =~ /\n$/;
+
+
+
+

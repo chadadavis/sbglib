@@ -5,6 +5,7 @@
 use Test::More 'no_plan';
 
 use SBG::Root -base, -XXX;
+use File::Temp qw(tempfile);
 
 ok(defined $installdir, "Installation directory: $installdir");
 ok(defined $config, "Ini \$config hash");
@@ -19,6 +20,3 @@ SBG::Root::_undash(%h);
 is($h{'thing'}, 2, "_undash on hash keys");
 
 
-
-
-__END__

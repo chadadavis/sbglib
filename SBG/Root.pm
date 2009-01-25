@@ -77,7 +77,7 @@ our $config;
 
 # Export a couple global vars
 # (Re-)export a few really handy functions
-our @EXPORT = qw(carp Dumper $installdir $logger $config);
+our @EXPORT = qw(carp Dumper $installdir $logger $config want);
 our @EXPORT_OK = qw();
 
 
@@ -99,6 +99,24 @@ sub dump {
    print $fh Dumper $self;
 } # dump
 
+
+sub ref {
+    return CORE::ref shift;
+}
+
+sub want {
+    my ($thing, $wantclass) = @_;
+    if (-r $thing) {
+        # If it's a file, suck it up
+        $thing = retrieve $thing;
+    }
+    my $gotclass = CORE::ref($thing);
+    if ($wantclass && $wantclass ne $gotclass) {
+        carp "Wanted $wantclass object, got a : $gotclass\n";
+        return;
+    }
+    return $thing;
+}
 
 ################################################################################
 =head2 asstring

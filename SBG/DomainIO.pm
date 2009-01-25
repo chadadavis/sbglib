@@ -94,27 +94,11 @@ Or, to just convert to a string, without any file I/O:
 sub write {
     my $self = shift;
     my ($dom, %o) = @_;
+    $dom = want($dom, 'SBG::Domain');
     return unless $dom;
-    unless (ref($dom) eq 'SBG::Domain') {
-        carp "write() expected SBG::Domain , got: " . ref($dom) . "\n";
-        return;
-    }
-    # Default to on, unless already set
-    $o{-newline} = 1 unless defined($o{-newline});
-    my $fh = $self->fh;
-    $fh = $o{-fh} if defined $o{-fh};
-    my $id = $o{-id} || 'label';
-    my $str = 
-        join(" ",
-             $dom->file  || '',
-             $dom->$id() || '',
-             '{',
-             $dom->descriptor || '',
-        );
-    my $transstr = $dom->transformation->ascsv;
-    # Append any transformation
-    $str .= $transstr ? (" \n${transstr}\}") : " \}";
-    $str .= "\n" if defined($o{-newline}) && $o{-newline};
+
+    my $fh = $o{-fh} || $self->fh;
+    my $str = $dom->asstamp(%o);
     defined($fh) and print $fh $str;
     return $str;
 

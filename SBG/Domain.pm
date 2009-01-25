@@ -515,6 +515,28 @@ sub overlaps {
 }
 
 
+sub asstamp {
+#     my $self = shift;
+    my (%o) = @_;
+    # Default to on, unless already set
+    $o{-newline} = 1 unless defined($o{-newline});
+    my $id = $o{-id} || 'label';
+    my $str = 
+        join(" ",
+             $self->file  || '',
+             $self->$id() || '',
+             '{',
+             $self->descriptor || '',
+        );
+    my $transstr = $self->transformation->ascsv;
+    # Append any transformation
+    $str .= $transstr ? (" \n${transstr}\}") : " \}";
+    $str .= "\n" if defined($o{-newline}) && $o{-newline};
+    return $str;
+
+} # asstamp
+
+
 ################################################################################
 # Private
 
