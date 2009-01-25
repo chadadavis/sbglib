@@ -124,11 +124,11 @@ sub reorder {
     }
     # Sort lexically by default
     $ordering ||= [ sort keys %dict ];
-    $logger->trace("order by: @$ordering");
-    $logger->trace("with accessor: $accessor") if $accessor;
+#     $logger->trace("order by: @$ordering");
+#     $logger->trace("with accessor: $accessor") if $accessor;
     # Sorted array (of values) based on given ordering (of keys)
     my @sorted = map { $dict{$_} } @$ordering;
-    $logger->debug("reorder'ed: @sorted");
+#     $logger->debug("reorder'ed: @sorted");
     return \@sorted;
 } # reorder
 
@@ -169,7 +169,7 @@ sub intersection {
 
 
 sub union {
-    return uniq flatten @_;
+    return uniq(flatten(@_));
 }
     
 

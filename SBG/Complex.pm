@@ -32,7 +32,7 @@ use base qw(Clone);
 use SBG::List qw(intersection);
 use SBG::Domain qw(sqdist);
 use SBG::STAMP;
-use List::Utils qw(min);
+use List::Util qw(min);
 
 use overload (
     '""' => '_asstring',
