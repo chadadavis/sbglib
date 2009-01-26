@@ -1,0 +1,42 @@
+#!/usr/bin/env perl
+
+use strict;
+
+use File::Basename;
+use SBG::Domain;
+use SBG::DomainIO;
+use SBG::CofM;
+
+my (@files) = @ARGV;
+exit unless @files;
+my @doms;
+foreach my $file (@files) {
+    my $io = new SBG::DomainIO(-file=>$file);
+    while (my $d = $io->read) {
+        # Make sure points are defined in space first
+        $d = SBG::CofM::cofm($d);
+        push @doms, $d;
+    }
+}
+@doms = sort @doms;
+
+for (my $i = 0; $i < @doms; $i++) {
+    for (my $j = $i+1; $j < @doms; $j++) {
+        my $ivol = $doms[$i]->volume;
+        my $jvol = $doms[$j]->volume;
+        my $lin_over = $doms[$i]->overlap($doms[$j]);
+        my $vol_over = $doms[$i]->voverlap($doms[$j]);
+
+        printf "%10s %9.3f %10s %9.3f %6.2f %6.2f%% %6.2f %6.2f%%\n",
+        $doms[$i]->label, $ivol,
+        $doms[$j]->label, $jvol,
+        $lin_over, 100.0 * $lin_over / ($doms[$i]->rg + $doms[$j]->rg),
+        $vol_over, 100.0 * $vol_over / ($ivol + $jvol),
+        ;
+    }
+}
+    
+__END__
+
+
+

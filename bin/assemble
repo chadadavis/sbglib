@@ -3,7 +3,7 @@
 use strict;
 
 # Input
-use SBG::NetworkIO qw(graphviz);
+use SBG::NetworkIO qw(graphviz graphvizmulti);
 # Output
 use SBG::Complex;
 # Algorithm
@@ -11,19 +11,27 @@ use SBG::Traversal;
 # Callback functions
 use SBG::Assembler;
 
+use Getopt::Long;
+
+my %ops;
+# GetOptions(\%ops,
+#            't|thresh=i',    
+#     );
 
 ################################################################################
 
 my $templates = shift or die;
 
-# Min components in complex
-my $minsize = shift || 3;
-
 # A L<Bio::Network::ProteinNet> of L<SBG::Interaction> templates
 my $network = new SBG::NetworkIO(-file=>$templates)->read;
 
+# Min components in complex
+my $minsize = shift || 3;
+# my $minsize = $network->vertices;
+
 # Print input graph
 graphviz($network, "templates.dot");
+graphvizmulti($network, "templates-multi.dot");
 
 # Each result is a complex
 my $state = new SBG::Complex;

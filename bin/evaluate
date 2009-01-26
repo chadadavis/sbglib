@@ -7,39 +7,64 @@ use SBG::Domain;
 use SBG::DomainIO;
 use SBG::Complex;
 use SBG::ComplexIO;
+use SBG::List qw(intersection);
 
 my ($modelfile, $truthfile) = @ARGV;
-die unless $modelfile && $truthfile;
+die unless -s $modelfile && -s $truthfile;
 my $modelbase = basename $modelfile, '.dom';
 my $truthbase = basename $truthfile, '.dom';
-my $concat = "$truthbase-$modelbase";
+my $concat = "${truthbase}-${modelbase}";
 
 my $model = new SBG::ComplexIO(-file=>$modelfile)->read;
 my $truth = new SBG::ComplexIO(-file=>$truthfile)->read;
 
+my @mnames = $model->names;
+my @tnames = $truth->names;
+printf "$modelfile ( %2d / %2d ) ", scalar(@mnames), scalar(@tnames);
+
 my ($rmsd, $trans, $joiner) = $model->min_rmsd($truth);
+
 unless ($rmsd) {
     print STDERR 
         "Couldn't join complexes. Probably no common component label\n",
         "E.g. component 2br2D-RRP42 in one file and 2nn6A-RRP42 in the other\n";
     exit;
 }
-printf STDERR "RMSD: %10.5f via $joiner\n", $rmsd;
+
+printf "RMSD: %10.5f , via %s\n", $rmsd, $joiner;
 
 exit unless @ARGV > 2;
 
-my $tfile = "${truthbase}-${joiner}.trans";
+# Print transformation used
+my $tfile = "${concat}-${joiner}.trans";
+# print STDERR "Transformation $tfile\n";
 my $tdom = new SBG::Domain(-label=>"t-${truthbase}-${joiner}", 
                            -transformation=>$trans);
 new SBG::DomainIO(-file=>">$tfile")->write($tdom,-id=>'label');
-print STDERR "Transformation $tfile\n";
 
+# Apply transform and output complete/partial benchmark complex
+my @cnames = intersection([$model->names], [$truth->names]);
 $truth->transform($trans);
-my $cfile = $concat . '.dom';
-my $io = new SBG::ComplexIO(-file=>">$cfile");
+my $io;
+
+# Complex benchmark complex, 
+# in the frame-of-reference of the solution
+my $btfile = sprintf "%s-x.dom", $concat;
+printf STDERR "Benchmark transformed: $btfile\n";
+$io = new SBG::ComplexIO(-file=>">$btfile");
 $io->write($truth);
-$io->write($model);
-print STDERR "Superposed $cfile\n";
+
+# Benchmark complex, only matched components,
+# in the frame-of-reference of the solution
+my $btofile = sprintf "%s-x-%02d.dom", $concat, scalar(@cnames);
+printf STDERR "Benchmark transformed: $btofile (%d matched chains only)\n",
+    scalar(@cnames);
+$io = new SBG::ComplexIO(-file=>">$btofile");
+$io->write($truth, \@cnames);
+
+
+
+
 
 
 
