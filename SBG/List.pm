@@ -15,9 +15,12 @@ avg
 variance
 stddev
 sequence
+lcp
 nsort
 intersection
 union
+pairs
+retrieve_files
 rearrange
 reorder
 thresh
@@ -26,8 +29,8 @@ flatten
 
 use List::Util qw(sum);
 use List::MoreUtils qw(uniq);
+use Storable;
 
-# TODO CHECK CPAN
 # TODO find stdev mean
 
 ################################################################################
@@ -42,17 +45,15 @@ sub avg { return mean @_ }
 
 # Variance of a list 
 sub variance {
-    # Check if we were given a reference
-    my $r = $_[0];
-    my @list = (ref $r) ? @$r : @_;
+    my @list = flatten(@_);
     return 0 unless @list > 1;
     my $sum = 0;
     my $avg = avg(\@list);
-    for (my $i = 0; $i < @list; $i++) {
-        $sum += ($list[$i] - $avg)**2;
-    }
-    return ($sum/(@list - 1));
+    my $sumsqdiff = sum map { ($_ - $avg)**2 } @list;
+    # One degree of freedom
+    return $sumsqdiff / (@list - 1);
 }
+
 # Stddev of a list
 sub stddev {
     return sqrt variance @_;
@@ -67,6 +68,20 @@ sub sequence {
     }
     return @a;
 }
+
+
+# Get all the objects from all the Stor'ed arrays in all the given files
+# use Storable
+sub retrieve_files {
+    my @files = @_;
+    my @allobjs;
+    foreach my $file (@files) {
+        # Might be an array, expand/flatten it.
+        push @allobjs, flatten(retrieve $file);
+    }
+    return @allobjs;
+}
+
 
 # One way to support named function parameters. E.g.:
 # func(-param1=>2, -param3=>"house");
@@ -142,6 +157,7 @@ sub thresh {
     }
 }
 
+
 sub nsort {
     return sort { $a <=> $b } @_;
 }
@@ -171,16 +187,41 @@ sub intersection {
 sub union {
     return uniq(flatten(@_));
 }
-    
+
+
+# All one-directional combinations of two lists:
+# pairs(a,b,c) => ([a,b],[a,c],[b,c])
+sub pairs {
+    # For all indices 0 through $#_ of the @_ array:
+    #   And then for all indices $_+1 through $#_ of the @_ array:
+    #     Makes a pair, returning an array of 2-tuples
+    return map { my $a=$_[$_]; map { [ $a , $_[$_] ]} ($_+1)..$#_ } 0..$#_
+}    
+
 
 # Recursively flattens an array (nested array of arrays) into one long array
 sub flatten { 
     my @a;
     foreach (@_) {
-        push @a, ref($_) ? flatten(@$_) : $_;
+        push @a, (ref($_) eq 'ARRAY') ? flatten(@$_) : $_;
     }
     return @a;
 }
+
+
+# longest_common_prefix 
+sub lcp {
+    # Start with the shortest prefix
+    my @strings = sort { length $a <=> length $b } @_;
+    my $prefix = shift @strings;
+    for (@strings) {
+        # For each other string, shorten prefix, until it matches
+        # The \Q is necessary to quotemeta() any non-alphanum chars in $prefix
+        chop $prefix while (! /^\Q$prefix/);
+    }
+    return $prefix;
+}
+
 
 sub argmax(&@) {
   return() unless @_ > 1;
@@ -194,6 +235,7 @@ sub argmax(&@) {
   return wantarray ? ($index, $max) : $index;
 }
 
+
 sub argmin(&@) {
   return() unless @_ > 1;
   my $block = shift;
@@ -205,6 +247,7 @@ sub argmin(&@) {
   }
   return wantarray ? ($index, $min) : $index;
 }
+
 
 ################################################################################
 1;
