@@ -37,6 +37,7 @@ my $scopdb = "/g/russell1/data/pdbrep/scop_1.73.dom";
 ################################################################################
 
 # Returns PDBid,chainid,scop_classification
+# TODO DES move to SCOP
 sub parse_scopid {
     my $scopid = shift;
     unless ($scopid =~ /^(\d.{3})(.*?)\.(.*?)$/) {
@@ -49,6 +50,7 @@ sub parse_scopid {
 
 
 # Returns filepath,scopid,stamp_descriptor
+# TODO DES move to SCOP
 sub get_descriptor {
     my $scopid = shift;
     # Static opened file handle
@@ -62,7 +64,7 @@ sub get_descriptor {
     return;
 }
 
-
+# TODO DES move to SCOP
 sub mk_dom {
     my ($str) = @_;
     my ($pdbid, $chainid, $scopid) = parse_scopid($str);
