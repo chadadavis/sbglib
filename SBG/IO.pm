@@ -25,10 +25,11 @@ use SBG::Root -base, -XXX;
 
 field 'fh';
 field 'file';
+field 'string';
 
 use warnings;
 use File::Temp qw(tempfile);
-use Carp;
+use IO::String;
 
 
 ################################################################################
@@ -53,8 +54,10 @@ sub new () {
     bless $self, $class;
     $self->_undash;
 
-    if ($self->file) {
+    if (-r $self->file) {
         $self->_open() or return undef;
+    } elsif (defined $self->{string}) {
+        $self->fh(new IO::String($self->{'string'}));
     }
 
     return $self;
@@ -62,69 +65,35 @@ sub new () {
 
 
 ################################################################################
-=head2 _open
+=head2 read
 
- Title   : _open
- Usage   : $self->_open("<file.dom");
- Function: Opens the internal file handle on the file path given
- Example : $self->_open("<file.dom");
- Returns : $self
- Args    : file - Path to file to open for reading, including the  "<" or ">"
-
-=cut
-sub _open {
-    my $self = shift;
-    my $file = shift || $self->file;
-    if ($self->fh) {
-        close $self->fh;
-        delete $self->{'fh'};
-    }
-    my $fh;
-    unless (open($fh, $file)) {
-        carp "Cannot read $file: $!\n";
-        return undef;
-    }
-    $self->fh($fh);
-    return $self;
-} # _open
-
-
-################################################################################
-=head2 close
-
- Title   : close
- Usage   : $io->close;
- Function: Closes the internal file handle
- Example : $io->close;
- Returns : result of close()
+ Title   : read
+ Usage   : my $dom = $io->read();
+ Function: Reads the next object from the stream.
+ Example : (see below)
+ Returns : 
  Args    : NA
 
-Should not generally need to be explicitly called.
+Should generally be overriden by sub-classes.
+
+This simple implementation reads line by line
+
+ # Read all lines from a file
+ my @lines;
+ while (my $l = $io->read) {
+     push @lines, $l;
+ }
+ print "Read in " . scalar(@lines) . " lines\n";
 
 =cut
-sub close {
+sub read {
     my $self = shift;
-    return $self->fh()->close;
-}
-
-
-################################################################################
-=head2 flush
-
- Title   : flush
- Usage   : $io->flush;
- Function: Flushes the internal file handle
- Example : $io->flush;
- Returns : result of flush()
- Args    : NA
-
-Should not generally need to be explicitly called.
-
-=cut
-sub flush {
-    my $self = shift;
-    return $self->fh()->flush;
-}
+    my $fh = $self->fh;
+    my $l = <$fh>;
+    return unless defined $l;
+    chomp $l;
+    return $l;
+} # read
 
 
 ################################################################################
@@ -165,36 +134,70 @@ sub write {
 
 
 ################################################################################
-=head2 read
+=head2 close
 
- Title   : read
- Usage   : my $dom = $io->read();
- Function: Reads the next object from the stream.
- Example : (see below)
- Returns : 
+ Title   : close
+ Usage   : $io->close;
+ Function: Closes the internal file handle
+ Example : $io->close;
+ Returns : result of close()
  Args    : NA
 
-Should generally be overriden by sub-classes.
-
-This simple implementation reads line by line
-
- # Read all lines from a file
- my @lines;
- while (my $l = $io->read) {
-     push @lines, $l;
- }
- print "Read in " . scalar(@lines) . " lines\n";
+Should not generally need to be explicitly called.
 
 =cut
-sub read {
+sub close {
     my $self = shift;
-    my $fh = $self->fh;
-    my $l = <$fh>;
-    return unless defined $l;
-    chomp $l;
-    return $l;
-} # read
+    return $self->fh()->close;
+}
 
+
+################################################################################
+=head2 flush
+
+ Title   : flush
+ Usage   : $io->flush;
+ Function: Flushes the internal file handle
+ Example : $io->flush;
+ Returns : result of flush()
+ Args    : NA
+
+Should not generally need to be explicitly called.
+
+=cut
+sub flush {
+    my $self = shift;
+    return $self->fh()->flush;
+}
+
+
+
+################################################################################
+=head2 _open
+
+ Title   : _open
+ Usage   : $self->_open("<file.dom");
+ Function: Opens the internal file handle on the file path given
+ Example : $self->_open("<file.dom");
+ Returns : $self
+ Args    : file - Path to file to open for reading, including the  "<" or ">"
+
+=cut
+sub _open {
+    my $self = shift;
+    my $file = shift || $self->file;
+    if ($self->fh) {
+        $self->close;
+        delete $self->{'fh'};
+    }
+    my $fh;
+    unless (open($fh, $file)) {
+        $logger->error("Cannot read $file: $!");
+        return undef;
+    }
+    $self->fh($fh);
+    return $self;
+} # _open
 
 
 ################################################################################
