@@ -64,6 +64,7 @@ use SBG::Interaction;
 use SBG::Node;
 use SBG::Seq;
 use SBG::Domain;
+use SBG::List qw(pairs);
 
 ################################################################################
 
@@ -124,6 +125,109 @@ sub read {
     # End of file
     return $net;
 } # read
+
+
+################################################################################
+=head2 search
+
+ Title   : search
+ Usage   :
+ Function:
+ Example :
+ Returns : 
+ Args    :
+
+# TODO doesn't belong here
+=cut
+sub search {
+   my ($self, @components) = @_;
+
+   # refvertexed because the nodes are object refs, rather than strings or so
+   my $net = Bio::Network::ProteinNet->new(refvertexed=>1);
+
+   # For all pairs
+   foreach my $pair (pairs(@components)) {
+       my ($comp1, $comp2) = @$pair;
+
+       my @interactions = $self->grep_db($comp1, $comp2);
+
+       foreach my $iaction (@interactions) {
+           $net->add_interaction(
+               -nodes => [$self->node($comp1), $self->node($comp2)], 
+               -interaction => $iaction);
+       }
+   }
+
+   return $net;
+
+} # search
+
+
+# Greps the benchmark text file from Rob for templates
+# Parse:
+
+#  -- 
+# Can model 
+# 1ir2                #pdb
+# 1ir2A.c.1.14.1-1    #true1
+# 1ir2A.d.58.9.1-1    #true2
+# on 
+# 1svdA.c.1.14.1-1    #templ1
+# 1svdA.d.58.9.1-1    #templ2
+# 1.000e-150          #eval1
+# 77.00               #id1
+# 1.000e-44           #eval2
+# 70.00               #id2
+# 64/129              # 1ir2 has 129 components, 1svd has 64 of them
+# 0.496               # coverage fraction 64/129
+# iRMSD  8.13053      # iRMSD true1--true2/templ1--templ2
+# OK 31 40   0.78     # 31 out of 40 (78%) are "OK" (in what sense?)
+# I2                  # The following refer to interprets2
+# Z   4.188           # i2 z-score
+# p 0.005             # i2 p-val
+# 
+sub grep_db {
+    my ($self, $comp1, $comp2) = @_;
+    my ($pdb) = $comp1 =~ /^(.{4})/;
+    # Grep the lines from $db
+    my @lines = `grep 'Can model $pdb $comp1 $comp2 on`;
+    my @interactions;
+    foreach (@lines) {
+        unless (/( -- )?Can model $pdb $comp1 $comp2 on (\S+) (\S+)\s+(.*)$/) {
+            $logger->warn("Should've been able to parse:\n$_");
+            next;
+        }
+        my ($templ1, $templ2) = ($2, $3);
+        my $scores = $4;
+
+        my ($pdbid1, $chainid1, $scopid1) = parse_scopid($templ1);
+        my ($pdbid2, $chainid2, $scopid2) = parse_scopid($templ2);
+        my ($file1, undef, $descr1) = get_descriptor($scopid1);
+        my ($file2, undef, $descr2) = get_descriptor($scopid2);
+        
+        my $iaction = $self->_make_iaction(
+            $comp1, $comp2, $pdbid1, $descr1, $pdbid2, $descr2);
+
+        my ($eval1, $sid1, $eval2, $sid2, 
+            $coverage, $coverage_f, 
+            undef, $irmsd,
+            undef, $ok_n, $ok_tot, $ok_f,
+            undef, undef, $i2z, undef, $i2p,
+            ) = parse_line('\s+', 0, $scores);
+        
+        # Save scores in the interaction template
+        $iaction->score('eval1') = $eval1;
+        $iaction->score('eval2') = $eval2;
+        $iaction->score('seqid1') = $sid1;
+        $iaction->score('seqid2') = $sid2;
+        $iaction->score('irmsd') = $irmsd;
+        $iaction->score('ipts2z-score') = $i2z;
+        $iaction->score('ipts2p-val') = $i2p;
+
+        push @interactions, $iaction;
+    } # foreach
+    return @interactions;
+} # grep_db
 
 
 ################################################################################

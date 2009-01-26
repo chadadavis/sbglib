@@ -46,7 +46,6 @@ sub new () {
 
 sub _asstring {
     my ($self) = @_;
-    my $class = ref($self) || $self;
     return $self->primary_id;
 }
 
@@ -100,6 +99,26 @@ sub template : lvalue {
     $self->{template} ||= {};
     # Do not use 'return' with 'lvalue'
     $self->{template}{$key};
+} # template
+
+
+################################################################################
+=head2 score
+
+ Title   : score
+ Usage   :
+ Function:
+ Example :
+ Returns : an lvalue
+ Args    :
+
+
+=cut
+sub score : lvalue {
+    my ($self,$key) = @_;
+    $self->{score} ||= {};
+    # Do not use 'return' with 'lvalue'
+    $self->{score}{$key};
 } # template
 
 

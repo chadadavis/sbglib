@@ -18,15 +18,20 @@ L<Bio::Network::Interaction> , L<SBG::Interaction>
 
 =cut
 
+# TODO import bin/mkconnected
+
 ################################################################################
 
 package SBG::Network;
 use SBG::Root -base;
 use base qw(Bio::Network::ProteinNet);
 
+field 'subgraphid' => 0;
+
 use overload (
     '""' => '_asstring',
     );
+
 
 
 ################################################################################
@@ -41,9 +46,51 @@ sub new () {
     return $self;
 }
 
+
+################################################################################
+
+# Subset the network and return array of SBG::Network
+sub partition {
+    my ($self) = @_;
+    my @partitions = $self->connected_components;
+    my $partition_i = 0;
+    my @graphs;
+    foreach my $nodeset (@partitions) {
+        next unless @$nodeset > 2;
+        $partition_i++;
+        my $subgraph = $self->subgraph(@$nodeset);
+        print "I'm a ", ref($self), "\n";
+        bless $subgraph, ref($self);
+        print "he's a ", ref($subgraph), "\n";
+
+#         $subgraph->subgraphid($partition_i);
+        print 
+            "Subgraph $partition_i : ", 
+            scalar(@$nodeset), " components, ", 
+            scalar($subgraph->interactions), " interaction templates on ",
+            scalar($subgraph->edges), " edges",
+            "\n";
+        push @graphs, $subgraph;
+    }
+    return @graphs;
+} # partitions
+
+
+################################################################################
+
+# Get all interactions (L<SBG::Interaction>) between $u and $v
+sub templates {
+    my ($self, $u, $v) = @_;
+    my @iaction_names = $self->get_edge_attribute_names($u, $v);
+    next unless @iaction_names;
+    my @iactions = map { $self->get_interaction_by_id($_) } @iaction_names;
+    return @iactions;
+}
+
+
 sub _asstring {
     my ($self) = @_;
-#     return $self->primary_id;
+    return join(",", sort($self->nodes()));
 }
 
 
