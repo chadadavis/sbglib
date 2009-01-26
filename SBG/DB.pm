@@ -32,6 +32,9 @@ our @EXPORT = qw(dbconnect);
 use warnings;
 use DBI;
 
+# Singleton
+our %dbh;
+
 
 ################################################################################
 =head2 dbconnect
