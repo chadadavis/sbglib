@@ -1,0 +1,66 @@
+#!/usr/bin/env perl
+
+=head1 NAME
+
+B<sbgcount> - Interface to cached objects 
+
+=head1 SYNOPSIS
+
+sbgeach object(s).stor more-object(s).stor <method-to-call-on-each-obj>
+
+=head1 DESCRIPTION
+
+Read the object saved in the given file and calls the given method on that
+object. Prints the return value.
+
+=head1 OPTIONS
+
+=head2 -h Print this help page
+
+=head1 SEE ALSO
+
+
+
+=cut
+
+################################################################################
+
+# CPAN
+use Getopt::Long;
+use Pod::Usage;
+use Storable;
+
+# Things (i.e. data structures) that make sense to serialize
+use SBG::Domain;
+use SBG::Transform;
+use SBG::Interaction;
+use SBG::Complex;
+use SBG::List qw(flatten retrieve_files);
+
+my %ops;
+my $result = GetOptions(\%ops, 
+                        'h|help',
+    );
+if ($ops{'h'}) { pod2usage(-exitval=>1, -verbose=>2); }
+
+my $method = pop @ARGV;
+if (-r $method) {
+    push @ARGV, $method;
+    undef $method;
+}
+@ARGV or pod2usage(-exitval=>2);
+my @objs = retrieve_files(@ARGV);
+my $count = 0;
+if ($method) {
+    foreach my $obj (@objs) {
+        $count += flatten($obj->$method);
+    }
+} else {
+    $count=scalar(@objs);
+}
+print $count, "\n";
+
+
+
+
+

@@ -2,14 +2,16 @@
 
 =head1 NAME
 
-B<sbg> - Interface to cached objects 
+B<sbgeach> - Interface to cached objects 
 
 =head1 SYNOPSIS
 
-sbg file.stor
+sbgeach object(s).stor more-object(s).stor <method-to-call-on-each-obj>
 
 =head1 DESCRIPTION
 
+Read the object saved in the given file and calls the given method on that
+object. Prints the return value.
 
 =head1 OPTIONS
 
@@ -33,7 +35,7 @@ use SBG::Domain;
 use SBG::Transform;
 use SBG::Interaction;
 use SBG::Complex;
-
+use SBG::List qw(retrieve_files);
 
 my %ops;
 my $result = GetOptions(\%ops, 
@@ -41,13 +43,17 @@ my $result = GetOptions(\%ops,
     );
 if ($ops{'h'}) { pod2usage(-exitval=>1, -verbose=>2); }
 
-my ($file,$method,@args) = @ARGV;
-$file or pod2usage(-exitval=>2);
-my $obj = retrieve $file;
+my $method = pop @ARGV;
+@ARGV or pod2usage(-exitval=>2);
+my @objs = retrieve_files(@ARGV);
 
-my $res = $method ? $obj->$method(@args) : "$obj";
-print $res;
-print "\n" unless $res =~ /\n$/;
+foreach my $obj (@objs) {
+    my $res = $obj->$method;
+    print $res;
+    print "\n" unless $res =~ /\n$/;
+}
+
+
 
 
 
