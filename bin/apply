@@ -8,6 +8,8 @@ use SBG::DomainIO;
 use SBG::STAMP;
 use SBG::CofM;
 
+use PDL::Matrix;
+
 my ($tfile, @files) = @ARGV;
 die unless $tfile;
 my $io = new SBG::DomainIO(-file=>$tfile);
@@ -23,15 +25,31 @@ foreach my $file (@files) {
 
     while (my $d = $io->read) {
         # Make sure points are defined in space first
-        $d = SBG::CofM::cofm($d);
-        # Apply any saved transformation to native CofM point
-        $d->transform($d->transformation);
 
-        my $label = label_incr($d->label);
-        $d->label($label);
-        print STDERR "\t$d\n";
-        $d->transform($t);
-        push @doms, $d;
+        # Check if we are transforming a Domain or a Transform
+        # It's always a Domain, but sometimes it doesn't have a PDB ID
+        # In that case, need to set cofm, without resetting its transform
+        # TODO this should be the same API either way. use Storable; !
+
+#         $d = SBG::CofM::cofm($d);
+        my $thing = SBG::CofM::cofm($d);
+
+        if ($thing) {
+            # Apply any saved transformation to native CofM point
+            $thing->transform($thing->transformation);
+        } else {
+            # Must be just a transform
+            $thing = $d;
+            $thing->cofm(mpdl (0,0,0,1));
+        }
+
+        $thing->transform($t);
+
+        my $label = label_incr($thing->label);
+        $thing->label($label);
+        print STDERR "\t$thing\n";
+
+        push @doms, $thing;
     }
     $io->close;
     $io = new SBG::DomainIO(-file=>">$file");
