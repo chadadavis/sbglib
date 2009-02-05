@@ -25,14 +25,14 @@ L<DBI>
 ################################################################################
 
 package SBG::DB;
-use SBG::Root -base, -XXX;
+use base qw/Exporter/;
+our @EXPORT_OK = qw(dbconnect);
 
-our @EXPORT = qw(dbconnect);
-
-use warnings;
 use DBI;
+use Carp;
 
 # Singleton
+# Dictionary of connections, indexed by host/db name
 our %dbh;
 
 
@@ -40,7 +40,7 @@ our %dbh;
 =head2 dbconnect
 
  Title   : dbconnect
- Usage   : dbconnect(-host=>"dbhost.organisation.org", -db=>"your_database_name");
+ Usage   : dbconnect(host=>"dbhost.organisation.org", db=>"your_database_name");
  Function: 
  Returns : Reference to a L<DBI> handle or B<undef>
  Args    : host String name of the database host, otherwise B<localhost>
@@ -59,23 +59,27 @@ This does not invalidate any open handles to any other databases.
 =cut
 sub dbconnect {
     my %o = @_;
-    SBG::Root::_undash(%o);
-    $o{host} ||= $config->val("database", "host") || "localhost";
-    $o{db} ||= $config->val("database", "db");
-    $o{driver} ||= $config->val("database", "driver") || "mysql";
+    unless ($o{db}) {
+        carp "No db=>'database' given";
+        return;
+    }
+    $o{driver} ||= "mysql";
+    $o{host} ||= "localhost";
 
     # Use cached connection to this database on this host
     our %dbh;
     $dbh{ $o{host} } ||= {};
     my $dbh = $dbh{ $o{host} }{ $o{db} };
-    if ($dbh && ! $o{reconnect}) { return $dbh; }
+    return $dbh if defined($dbh) && ! defined($o{reconnect});
 
-    $dbh = DBI->connect("dbi:$o{driver}:dbname=$o{db};host=$o{host}");
-    if ($dbh) {
-        $dbh{ $o{host} }{ $o{db} } = $dbh;
-    } else {
-        $logger->error("Cannot connect to DB $o{db} on host $o{host}");
+    my $dbistr = "dbi:$o{driver}:dbname=$o{db}";
+    $dbistr .= ";host=$o{host}" if $o{host};
+    $dbh = DBI->connect($dbistr);
+    unless ($dbh) {
+        carp "Cannot connect via: $dbistr";
+        return;
     }
+    $dbh{ $o{host} }{ $o{db} } = $dbh;
     return $dbh;
 
 } # dbconnect
