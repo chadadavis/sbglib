@@ -23,36 +23,20 @@ L<Bio::Seq>
 ################################################################################
 
 package SBG::Seq;
-use SBG::Root -base, -XXX;
-use base qw(Bio::Seq);
+use Moose;
+extends 'Bio::Seq';
 
 use overload (
     '""' => '_asstring',
     'cmp' => '_compare',
-    'eq' => '_equal',
-
+    fallback => 1,
     );
 
 ################################################################################
 
-sub new () {
-    my $class = shift;
-    # Delegate to parent class
-    my $self = new Bio::Seq(@_);
-    # And add our ISA spec
-    bless $self, $class;
-    # Is now both a Bio::Seq and an SBG::Seq
-    return $self;
-}
-
 sub _asstring {
     my ($self) = @_;
     return $self->accession_number;
-}
-
-sub _equal {
-    my ($a, $b) = @_;
-    return 0 == _compare($a, $b);
 }
 
 sub _compare {
@@ -60,9 +44,8 @@ sub _compare {
     return $a->accession_number cmp $b->accession_number;
 }
 
-
 ###############################################################################
-
+__PACKAGE__->meta->make_immutable;
 1;
 
 

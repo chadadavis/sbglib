@@ -25,28 +25,17 @@ L<Bio::Network::Node> , L<Bio::Network::ProteinNet> , L<Bio::Network::Interactio
 ################################################################################
 
 package SBG::Node;
-use SBG::Root -base, -XXX;
-use base qw(Bio::Network::Node);
-
+use Moose;
+extends 'Bio::Network::Node';
 
 use overload (
     '""' => '_asstring',
     'cmp' => '_compare',
-    'eq' => '_equal',
+    fallback => 1,
     );
 
 
 ################################################################################
-
-sub new () {
-    my $class = shift;
-    # Delegate to parent class
-    my $self = new Bio::Network::Node(@_);
-    # And add our ISA spec
-    bless $self, $class;
-    # Is now both a Bio::Network::Node and an SBG::Node
-    return $self;
-}
 
 sub _asstring {
     my ($self) = @_;
@@ -54,16 +43,11 @@ sub _asstring {
 } # _asstring
 
 
-sub _equal {
-    my ($a, $b) = @_;
-    return 0 == _compare($a, $b);
-}
-
 # Setwise comparison
 sub _compare {
     my ($a, $b) = @_;
 
-    return undef unless ref($b) && $b->isa("Bio::Network::Node");
+    return unless ref($b) && $b->isa("Bio::Network::Node");
 
     # If all A's are less than all B's, then A < B, and vice versa
     # If results are mixed, return 0 (equivalent)
@@ -87,6 +71,7 @@ sub tally {
     # Store all comparisons
     my %cmp = (-1 => 0, 0 => 0, +1 => 0);
 
+    # TODO should probably sort these?
     my @a = $a && $a->proteins;
     my @b = $b && $b->proteins;
     foreach my $pa (@a) {
