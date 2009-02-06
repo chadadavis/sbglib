@@ -22,6 +22,7 @@ L<Test::More>
 package SBG::Test;
 use base qw(Exporter);
 
+use feature 'say';
 use Carp;
 use Data::Dumper;
 use Test::More;
@@ -33,15 +34,11 @@ our @EXPORT_OK = qw(float_is);
 
 
 ################################################################################
-
-################################################################################
 =head2 float_is
 
- Title   : float_is
- Usage   :
- Function:
- Example :
- Returns : 
+ Function: Like L<Test::More::is> but works for imprecise floating-point numbers
+ Example : float_is(3.23434, 3.2341, 3, "These are equal for 3 decimals, not 4");
+ Returns : Bool
  Args    : precision: number of significant digits after decimal
 
 
