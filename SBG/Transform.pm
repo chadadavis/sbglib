@@ -10,6 +10,9 @@ SBG::Transform - Represents an affine transformation matrix (4x4)
 
 =head1 DESCRIPTION
 
+This simply translates between STAMP (I/O) and PDL (internal) matrix
+crepresentations.
+
 An L<SBG::Transform> can transform L<SBG::Domain>s or L<SBG::Assembly>s. It
 is compatible with STAMP transformation matrices (3x4) and reads and writes
 them.
@@ -74,7 +77,7 @@ Create a matrix from a CSV file
 =cut
 has 'file' => (
     is => 'ro',
-    isa => 'File',
+    isa => 'SBG.File',
     );
 # Update/parse matrix after a file/string set
 after qw/string file/ => sub {

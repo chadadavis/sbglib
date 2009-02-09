@@ -2,6 +2,7 @@
 
 use Test::More 'no_plan';
 use feature 'say';
+$, = ' ';
 
 use SBG::Sphere;
 use PDL::Lite;
@@ -13,8 +14,18 @@ use SBG::Test qw(float_is);
 # Sanity check
 
 $p = mpdl (1,2,3,1);
-$s = new SBG::Sphere(centre=>$p);
+$s = new SBG::Sphere(centre=>$p,radius=>2);
+
+use Moose::Util qw/does_role/;
+ok(does_role($s,'SBG::RepresentationI'), "does_role SBG::RepresentationI");
+
+
+__END__
+
 isa_ok($s, "SBG::Sphere");
+ok($s->isa('SBG::RepresentationI'));
+
+isa_ok($s, "SBG::RepresentationI");
 isa_ok($s->centre, "PDL::Matrix");
 $s->centre([4,5,6]);
 isa_ok($s->centre, "PDL::Matrix");

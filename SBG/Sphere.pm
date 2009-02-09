@@ -25,6 +25,7 @@ L<SBG::RepresentationI> , L<SBG::Domain> , L<SBG::CofM>
 
 package SBG::Sphere;
 use Moose;
+use MooseX::StrictConstructor;
 use Moose::Util::TypeConstraints;
 
 with qw(SBG::Storable);
@@ -47,6 +48,7 @@ use Scalar::Util qw(refaddr);
 use List::Util; # qw(min); 
 
 use SBG::Transform;
+use SBG::Log; # imports $logger
 
 
 ################################################################################
@@ -92,6 +94,8 @@ Radius of sphere (e.g. radius of gyration (an avg) or maximum radius)
 has 'radius' => (
     is => 'rw',
     isa => 'Num',
+    required => 1,
+    default => 0,
     );
 
 
@@ -431,14 +435,36 @@ sub voverlaps {
 
 
 ################################################################################
+=head2 evaluate
+
+ Function:
+ Example :
+ Returns : 
+ Args    :
+
+To what extent is $self a good approximation/representation of $obj.
+0 is worst, 1 is best
+
+# TODO test voverlap()
+
+=cut
+sub evaluate {
+    my ($self,$obj) = @_;
+
+    my $overlapfrac = 
+        $self->voverlap($obj) / List::Util::min($self->volume(),$obj->volume());
+    return $overlapfrac;
+
+} # evaluate
+
+
+################################################################################
 # Private
 
 
 ################################################################################
 =head2 _asstring
 
- Title   : _asstring
- Usage   :
  Function:
  Example :
  Returns : 
@@ -453,15 +479,23 @@ sub _asstring {
 } # _asstring
 
 
-# Are two spheres equal
-# This includes centre and radius
+################################################################################
+=head2 _equal
+
+ Function:
+ Example :
+ Returns : 
+ Args    :
+
+This includes centre and radius.
+
+=cut
 sub _equal {
     my ($self, $other) = @_;
     return 0 unless defined $other;
     return 1 if refaddr($self) == refaddr($other);
     return 0 unless $self->radius == $other->radius;
     return 0 unless all($self->centre == $other->centre);
-
     return 1;
 }
 
