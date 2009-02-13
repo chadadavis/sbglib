@@ -74,6 +74,8 @@ sub _init {
     # Register the appender with the logger
     $logger->add_appender($appender);
 
+    warn "Logging to: $logfile\n";
+
     # First log message is the banner
     $logger->debug("\n\n", "=" x 80);
 
