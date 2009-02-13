@@ -25,12 +25,23 @@ use Moose;
 use Moose::Util::TypeConstraints;
 
 extends 'Exporter';
-our @EXPORT_OK = 
-    qw/$pdb41 $re_pdb $re_chain_id $re_chain $re_seg $re_chain_seg/;
+our @EXPORT_OK = qw/
+$pdb41 $re_pdb $re_chain_id $re_chain $re_seg $re_chain_seg $re_descriptor
+/;
 
+# A file path is readable and non-empty
 subtype 'SBG.File' 
     => as 'Str'
-    => where { -r $_ && -s $_ };
+    => where { -f $_ };
+
+# File open mode specifiers. See perldoc -f open
+our $re_mode = '\+?(<|>|>>)?';
+# File with open-mode spec
+subtype 'SBG.FileMode'
+    => as 'Str'
+    # First part is (optional) mode spec, second part must be file path
+    => where { /^\s*$re_mode\s*(.*?)\s*$/ && -f $2 };
+
 
 our $re_chain_id = "[A-Za-z0-9_]";
 subtype 'SBG.ChainID'
@@ -53,11 +64,12 @@ our $re_seg = '(' . $re_chain_id . ')\s+\d+\s+_\s+to\s+\g-1\s+\d+\s+_';
 our $re_chain_seg = "($re_chain)|($re_seg)";
 # (whole-chain or segment), repeated, white-space separated
 our $re_chain_segs =  "($re_chain_seg)(\\s+$re_chain_seg)*";
+our $re_descriptor = "ALL|($re_chain_segs)";
 
 subtype 'SBG.Descriptor'
     => as 'Str',
     => where { 
-        /^\s*(ALL|($re_chain_segs))\s*$/
+        /^\s*($re_descriptor)\s*$/
 };
 coerce 'SBG.Descriptor'
     => from 'Str'

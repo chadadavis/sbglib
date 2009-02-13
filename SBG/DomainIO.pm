@@ -2,14 +2,14 @@
 
 =head1 NAME
 
-SBG::DomainIO - Represents a STAMP domain reader/writer
+SBG::DomainIO - Reads/writes L<SBG::Domain> objects, primarily in STAMP format
 
 =head1 SYNOPSIS
 
  use SBG::DomainIO;
 
  my $file = "domains.dom";
- my $io = new SBG::DomainIO(-file=>"<$file");
+ my $io = new SBG::DomainIO(file=>"<$file");
  
  # Read all domains from a dom file
  my @doms;
@@ -20,68 +20,75 @@ SBG::DomainIO - Represents a STAMP domain reader/writer
 
  # Write domains
  my $outfile = ">results.dom";
- my $ioout = new SBG::DomainIO(-file=>">$outfile");
+ my $ioout = new SBG::DomainIO(file=>">$outfile");
  foreach my $d (@doms) {
      $ioout->write($d);
  }
 
+Using a specific representation for the L<SBG::Domain> :
+
+ my $io = new SBG::DomainIO(file=>"<$file", representation=>'SBG::CofM');
+ my $dom = $io->read;
+ # Automatically populated. This is true;
+ ok($dom->representation->isa('SBG::CofM'));
+
 
 =head1 DESCRIPTION
 
-Represents a single STAMP Domain, being a chain or sub-segment of a protein
-chain from a PDB entry.
+Reads/writes SBG::Domain objects in STAMP format to/from files.
+
+Any existing labels (i.e. STAMP IDs) are not retained. They are overwritten, as to make them unique. STAMP requires them to be unique.
+
+http://www.compbio.dundee.ac.uk/manuals/stamp.4.2/node29.html
 
 =head1 SEE ALSO
 
-L<SBG::Domain> , L<SBG::CofM> , L<SBG::IO>
+L<SBG::Domain> , L<SBG::IO>
 
 =cut
 
 ################################################################################
 
 package SBG::DomainIO;
-use SBG::Root -base, -XXX;
-use base qw(SBG::IO);
+use Moose;
+use Moose::Util::TypeConstraints;
 
+extends 'SBG::IO';
 
-use warnings;
-use File::Temp qw(tempfile);
-
+use SBG::Types qw/$re_pdb $re_descriptor/;
 use SBG::Domain;
 use SBG::Transform;
-use SBG::DB;
 
 
 ################################################################################
+# Accessors
 
-sub new () {
-    my $class = shift;
-    # Delegate to parent class
-    my $self = new SBG::IO(@_);
-    return unless $self;
-    # And add our ISA spec
-    bless $self, $class;
-    return $self;
-} # new
+=head2 representation
+
+The type to use for any dynamically created objects. Should be SBG::Domain or a
+sub-class of that. Default "L<SBG::Domain>" .
+
+=cut
+has 'type' => (
+    is => 'rw',
+    isa => 'ClassName',
+    required => 1,
+    default => 'SBG::Domain',
+    );
 
 
 ################################################################################
 =head2 write
 
- Title   : write
- Usage   : $output->write($dom);
  Function: Writes given domain object to the output stream
- Example : (see below)
- Returns : The string that was printed to the stream
+ Example : $output->write($dom);
+ Returns : $self
  Args    : L<SBG::Domain> - A domain, may contain an L<SBG::Transform>
-           -id Print 'pdbid' or 'label' (default) or 'stampid' as label
-           -newline If true, also prints a newline after the domain (default)
-           -fh another file handle
 
 Prints in STAMP format, along with any transform(s) that have been applied.
 
  my $outfile = "results.dom";
- my $ioout = new SBG::DomainIO(-file=>">$outfile");
+ my $ioout = new SBG::DomainIO(file=>">$outfile");
  foreach my $d (@doms) {
      $ioout->write($d);
  }
@@ -92,16 +99,12 @@ Or, to just convert to a string, without any file I/O:
 
 =cut
 sub write {
-    my $self = shift;
-    my ($dom, %o) = @_;
-    $dom = want($dom, 'SBG::Domain');
-    return unless $dom;
-
-    my $fh = $o{-fh} || $self->fh;
-    my $str = $dom->asstamp(%o);
-    defined($fh) and print $fh $str;
-    return $str;
-
+    my ($self, $dom) = @_;
+    defined($dom) or return;
+    my $fh = $self->fh or return;
+    my $str = $dom->asstamp;
+    print $fh $str;
+    return $self;
 } # write
 
 
@@ -124,8 +127,8 @@ sub write {
 
 =cut
 sub read {
-    my $self = shift;
-    my $fh = $self->fh;
+    my ($self) = @_;
+    my $fh = $self->fh or return;
     while (<$fh>) {
         chomp;
         # Comments and blank lines
@@ -133,28 +136,33 @@ sub read {
         next if /^\s*\#/;
         next if /^\s*$/;
 
-        # Create/parse new domain header
-        # May not always have a file name
-        unless (/^(\S*)\s+(\S+)\s+\{\s*([^}]*)(\s+\})?\s*$/) {
-            $logger->error("Cannot parse:$_:");
-            return undef;
+        # Create/parse new domain header, May not always have a file name
+        unless (/^(\S*)\s+($re_pdb)(\S+)\s+\{\s*($re_descriptor)(\s+\})?\s*$/) {
+            carp("Cannot parse:$_:");
+            return;
         }
+        # $1 is (possible) file
+        # $2 is pdbid
+        # $3 is rest of STAMP label
+        # $4 is STAMP descriptor, without { }
 
-        my $dom = new SBG::Domain(-file=>$1,-label=>$2,-descriptor=>$3);
+        my $class = $self->type;
+        eval { require $class; };
+        my $dom = $class->new(pdbid=>$2,descriptor=>$4);
+        $dom->file($1) if $1;
 
         # Header ends, i.e. contains no transformation
         if (/\}\s*$/) { 
             return $dom;
         }
-
         # Parse transformtion
         my $transstr = $self->_read_trans;
-        my $trans = new SBG::Transform(-string=>$transstr);
+        my $trans = new SBG::Transform(string=>$transstr);
         $dom->transformation($trans);
         return $dom;
     }
     # End of file
-    return undef;
+    return;
 } # read
 
 
@@ -162,20 +170,18 @@ sub read {
 ################################################################################
 =head2 _read_trans
 
- Title   : _read_trans
- Usage   : my $trans_string = $self->_read_trans();
  Function: Reads a transformation matrix from the internal stream
  Example : my $trans_string = $self->_read_trans();
  Returns : Transformation matrix (3x4) as a 3-lined CSV string
- Args    : fh - An openeded file handle to read from, if not the internal one
+ Args    : 
 
 Returned string is in CSV format, whitespace-separated, including newlines.
 Matrix is 3x4 (3 rows, 4 cols).
 
 =cut
 sub _read_trans {
-    my $self = shift;
-    my $fh = shift || $self->fh;
+    my ($self) = @_;
+    my $fh = $self->fh or return;
     my $transstr;
     while (<$fh>) {
         # No chomp, keep this as CSV formatted text
@@ -194,4 +200,5 @@ sub _read_trans {
 
 
 ################################################################################
+__PACKAGE__->meta->make_immutable;
 1;

@@ -7,6 +7,7 @@ use SBG::Domain;
 use SBG::Types;
 $d = new_ok(SBG::Domain);
 
+
 # NB You need to split off ChainID, cannot be in PDB ID
 ok(! eval { $d->pdbid('3didA') }, "Catching invalid PDB ID");
 ok(! eval { $d->pdbid('didi') }, "Catching invalid PDB ID");
@@ -35,16 +36,6 @@ ok(! $dom->wholechain);
 
 $equiv = new SBG::Domain(pdbid=>'2nn6', descriptor=>'A 10 _ to A 233 _');
 ok($equiv == $dom);
-
-use SBG::Sphere;
-$dom->representation(new SBG::Sphere);
-ok(! ($equiv == $dom));
-
-$equiv->representation(new SBG::Sphere);
-# Will be equal if underlying representations consider themselves equal
-ok($equiv == $dom);
-isnt($dom->uniqueid, $equiv->uniqueid);
-
 
 
 __END__

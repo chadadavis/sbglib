@@ -2,31 +2,29 @@
 
 =head1 NAME
 
-SBG::Sphere - Represents a structure as sphere, around a centre point
+SBG::Domain::CofM - Represents a structure as a sphere around a centre-of-mass
 
 =head1 SYNOPSIS
 
- use SBG::Sphere;
+ use SBG::Domain::CofM;
 
 =head1 DESCRIPTION
 
-Uses affine coordinates, to simplifiy application of transformations down to a
-single matrix multiplication.
-
-All coordinates and lengths are unitless.
 
 =head1 SEE ALSO
 
-L<SBG::RepresentationI> , L<SBG::Domain> , L<SBG::CofM>
+L<SBG::RepresentationI> , L<SBG::Domain>
 
 =cut
 
 ################################################################################
 
-package SBG::Sphere;
+package SBG::Domain::CofM;
 use Moose;
 use MooseX::StrictConstructor;
 use Moose::Util::TypeConstraints;
+
+extends 'SBG::Domain';
 
 with qw(SBG::Storable);
 with qw(SBG::Dumpable);
@@ -43,12 +41,13 @@ use PDL::Ufunc;
 use PDL::Math;
 use PDL::Matrix;
 use Math::Trig qw(:pi);
-use Scalar::Util qw(refaddr);
 # List::Util::min conflicts with PDL::min Must be fully qualified to use
 use List::Util; # qw(min); 
 
 use SBG::Transform;
 use SBG::Log; # imports $logger
+use Carp qw/cluck/;
+use SBG::Run::cofm qw/cofm/;
 
 
 ################################################################################
@@ -58,17 +57,16 @@ use SBG::Log; # imports $logger
 # Define own subtype to enable type coersion. 
 subtype 'PDL3' => as "PDL::Matrix";
 
+# In coercion, always append a 1 for affine matrix multiplication
 coerce 'PDL3'
-    => from 'ArrayRef' => via { mpdl [@$_,1] }
+    => from 'ArrayRef' => via { mpdl [@$_, 1] }
     => from 'Str' => via { mpdl ((split)[0..2], 1) };
 
 
 =head2 centre
 
- Title   : centre
- Usage   : $sphere->centre([12.2343, 66.122, 233.122]); # set XYZ
  Function: Accessor for 'centre' field, which is an L<PDL::Matrix>
- Example : 
+ Example : $sphere->centre([12.2343, 66.122, 233.122]); # set XYZ
  Returns : New value of 'centre' field.
  Args    : L<PDL::Matrix> - optional, new centre point to be assigned
 
@@ -90,27 +88,30 @@ has 'centre' => (
 =head2 radius
 
 Radius of sphere (e.g. radius of gyration (an avg) or maximum radius)
+Use L<radius_type> to determine whether maximum or radius of gyration is used
+
 =cut
 has 'radius' => (
     is => 'rw',
     isa => 'Num',
     required => 1,
     default => 0,
-    );
+);
 
 
-=head2 transformation
+=head2 radius_type
 
-The cumulative transformation, resulting from all applied L<SBG::Transform>s. To
-apply an L<SBG::Transform>, call L<transform>.
+Choose wither 'Rg' (radius of gyration) or 'Rmax' (maximum radius) is used by
+the L<radius> method.
+
+Default: 'Rg'
 
 =cut
-has 'transformation' => (
+has 'radius_type' => (
     is => 'rw',
-    isa => 'SBG::Transform',
-    coerce => 1,
+    isa => enum([qw/Rg Rmax/]),
     required => 1,
-    default => sub { new SBG::Transform },
+    default => 'Rg',
     );
 
 
@@ -118,27 +119,33 @@ has 'transformation' => (
 # Public methods
 
 
-################################################################################
-=head2 asarray
+sub BUILD {
+    my ($self) = @_;
+    $self->load;
+}
 
- Title   : asarray
- Usage   : my @xyz = $s->asarray();
- Function: Converts internal centre ('centre' field) to a 3-tuple
- Example : print "X,Y,Z: " . $s->asarray() . "\n";
- Returns : 3-Tuple (X,Y,Z)
- Args    : NA
+
+################################################################################
+=head2 load
+
+ Function: load centre-of-mass data into object, 
+ Example :
+ Returns : 
+ Args    :
+
 
 =cut
-sub asarray {
-    my ($self) = @_;
-    return unless defined $self->centre;
-    my @a = 
-        ($self->centre->at(0,0), 
-         $self->centre->at(0,1), 
-         $self->centre->at(0,2),
-        ); 
-    return @a;
-}
+sub load {
+    my ($self,@args) = @_;
+    return unless $self->pdbid && $self->descriptor;
+
+    my $res = cofm($self->pdbid, $self->descriptor);
+
+    # Fetch the radius according to the type chosen, then update radius attr
+    $self->radius($res->{ $self->radius_type });
+    $self->centre( [ $res->{Cx}, $res->{Cy}, $res->{Cz} ] );
+
+} # load
 
 
 ################################################################################
@@ -208,7 +215,7 @@ If you simply want to access the current cumulative transformation saved in this
 object, use L<transformation>.
 
 =cut
-sub transform {
+override 'transform' => sub {
     my ($self, $newtrans) = @_;
     return $self unless defined($newtrans) && defined($self->centre);
     # Need to transpose row vector to a column vector first. 
@@ -217,59 +224,11 @@ sub transform {
     # Transpose back
     $self->centre($newcentre->transpose);
 
-    # Update the cumulative transformation
-    my $prod = $newtrans * $self->transformation;
-    $self->transformation($prod);
+    # Update cumulative transformation. Managed by parent
+    super();
 
     return $self;
-}
-
-
-################################################################################
-=head2 volume
-
- Title   : volume
- Usage   :
- Function:
- Example :
- Returns : 
- Args    :
-
-
-=cut
-sub volume {
-    my ($self) = @_;
-    return (4.0/3.0) * pi * $self->radius ** 3;
-}
-
-
-
-################################################################################
-=head2 capvolume
-
- Title   : capvolume
- Usage   :
- Function:
- Example :
- Returns : 
- Args    : depth: how deep the slicing plane sits within the sphere
-
-Volume of a cap of the Sphere. Calculates integral to get volume of sphere's
-cap. Thee cap is the shape created by slicing off the top of a sphere using a
-plane.
-
-The depth is the length of a line, perpendicular to the slicing plane, to the
-surface of the sphere.
-
-http://www.russell.embl.de/wiki/index.php/Collision_Detection
-
-http://www.ugrad.math.ubc.ca/coursedoc/math101/notes/applications/volume.html
-
-=cut
-sub capvolume {
-    my ($self, $depth) = @_;
-    return pi * ($depth**2 * $self->radius - $depth**3 / 3.0);
-}
+};
 
 
 ################################################################################
@@ -321,8 +280,8 @@ the smaller sphere.
 =cut
 sub overlaps {
     my ($self, $obj, $thresh) = @_;
-    if ($self->_equal($obj)) {
-        $logger->info("Identical spheres overlap");
+    if ($self == $obj) {
+        $logger->info("Identical domains overlap");
         return 1;
     }
     $thresh ||= 0;
@@ -332,105 +291,6 @@ sub overlaps {
         $self->overlap($obj) / (2 * $minradius);
 
     return $overlapfrac > $thresh;
-}
-
-
-################################################################################
-=head2 voverlap
-
- Title   : voverlap
- Usage   :
- Function:
- Example :
- Returns : Positive: volume of overlap between spheres
-           Negative: distance between surfaces of non-overlapping spheres
- Args    :
-
-If two spheres overlap, this is the volume of the overlapping portions.
-
-If two spheres do not overlap, the absolute value of the negative number
-returned is how far apart the surfaces of the two spheres are.
-
-=cut
-sub voverlap {
-    my ($self, $obj) = @_;
-    # Linear overlap (sum of radii vs dist. between centres)
-    my $c = $self->overlap($obj);
-
-    # Special cases: no overlap, or completely enclosed:
-    if ($c < 0 ) {
-        # If distance is negative, there is no overlapping volume
-        return $c;
-    } elsif ($c + $self->radius < $obj->radius) {
-        # $self is completely within $obj
-        return $self->volume();
-    } elsif ($c + $obj->radius < $self->radius) {
-        # $obj is completely within $self
-        return $obj->volume();
-    }
-
-    my ($a, $b) = ($self->radius, $obj->radius);
-    # Need to find the plane (a circle) of intersection between spheres
-    # Law of cosines to get one angle of triangle created by intersection
-    my $alpha = acos( ($b**2 + $c**2 - $a**2) / (2 * $b * $c) );
-    my $beta  = acos( ($a**2 + $c**2 - $b**2) / (2 * $a * $c) );
-
-    # The *length* of $obj that is inside $self
-    my $overb;
-    # The *length* of $self that is inside $obj
-    my $overa;
-    # Check whether angles are acute to determine length of overlap
-    if ($alpha < pi / 2) {
-        $overb = $b - $b * cos($alpha);
-    } else {
-        $overb = $b + $b * cos(pi - $alpha);
-    }
-    if ($beta < pi / 2) {
-        $overa = $a - $a * cos($beta);
-    } else {
-        $overa = $a + $a * cos(pi - $beta);
-    }
-
-    # These volumes only count what is beyond the intersection plane
-    # (i.e. this is *not* double counting) 
-    # Volume of sb inside of sa:
-    my $overbvol = $obj->cap($overb);
-    # Volume of sa inside of sb;
-    my $overavol = $self->cap($overa);
-    # Total overlap volume
-    my $sum = $overbvol + $overavol;
-    $logger->debug("$sum overlap on ($self) and ($obj)");
-    return $sum;
-
-} # voverlap
-
-
-################################################################################
-=head2 voverlaps
-
- Title   : voverlaps
- Usage   :
- Function:
- Example :
- Returns : 
- Args    : fraction: fraction of max possible overlap tolerated, default 0
-
-Does the volume of the overlap exceed given fraction of the max possible volume
-overlap. The max possible volume overlap is simply the volume of the smaller
-sphere (this occurs when the smaller sphere is completely contained within the
-larger sphere).
-
-=cut
-sub voverlaps {
-    my ($self, $obj, $fracthresh) = @_;
-    $fracthresh ||= 0;
-    if ($self->_equal($obj)) {
-        $logger->info("Identical domain, overlaps");
-        return 1;
-    }
-    my $overlapfrac = 
-        $self->voverlap($obj) / List::Util::min($self->volume(),$obj->volume());
-    return $overlapfrac > $fracthresh;
 }
 
 
@@ -445,17 +305,40 @@ sub voverlaps {
 To what extent is $self a good approximation/representation of $obj.
 0 is worst, 1 is best
 
-# TODO test voverlap()
-
 =cut
 sub evaluate {
     my ($self,$obj) = @_;
 
+    my $minradius = List::Util::min($self->radius(), $obj->radius());
     my $overlapfrac = 
-        $self->voverlap($obj) / List::Util::min($self->volume(),$obj->volume());
+        $self->overlap($obj) / (2 * $minradius);
+
     return $overlapfrac;
 
 } # evaluate
+
+
+################################################################################
+=head2 asarray
+
+ Title   : asarray
+ Usage   : my @xyz = $s->asarray();
+ Function: Converts internal centre ('centre' field) to a 3-tuple
+ Example : print "X,Y,Z: " . $s->asarray() . "\n";
+ Returns : 3-Tuple (X,Y,Z)
+ Args    : NA
+
+=cut
+sub asarray {
+    my ($self) = @_;
+    return unless defined $self->centre;
+    my @a = 
+        ($self->centre->at(0,0), 
+         $self->centre->at(0,1), 
+         $self->centre->at(0,2),
+        ); 
+    return @a;
+}
 
 
 ################################################################################
@@ -472,11 +355,12 @@ sub evaluate {
 
 
 =cut
-sub _asstring {
+override '_asstring' => sub {
     my ($self) = @_;
     my @a = ($self->asarray, $self->radius);
-    return sprintf("(%10.5f,%10.5f,%10.5f,%10.5f)", @a);
-} # _asstring
+    # Prepend stringification of parent first
+    return sprintf("%s(%10.5f,%10.5f,%10.5f,%10.5f)", super(), @a);
+};
 
 
 ################################################################################
@@ -490,14 +374,15 @@ sub _asstring {
 This includes centre and radius.
 
 =cut
-sub _equal {
+override '_equal' => sub {
     my ($self, $other) = @_;
-    return 0 unless defined $other;
-    return 1 if refaddr($self) == refaddr($other);
+    # Delegate to parent first
+    return 0 unless super();
     return 0 unless $self->radius == $other->radius;
     return 0 unless all($self->centre == $other->centre);
     return 1;
-}
+};
+
 
 
 ################################################################################

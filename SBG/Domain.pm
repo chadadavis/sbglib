@@ -32,12 +32,18 @@ http://www.compbio.dundee.ac.uk/manuals/stamp.4.2/node29.html
 package SBG::Domain;
 use Moose;
 use MooseX::StrictConstructor;
+
+# Defines what must be implemented to represent a 3D structure
+with 'SBG::RepresentationI';
 with 'SBG::Storable';
 with 'SBG::Dumpable';
 
+# Some regexs for parsing PDB IDs and descriptors
 use SBG::Types qw/$re_chain $re_chain_seg/;
 
+use SBG::Transform;
 use Scalar::Util qw(refaddr);
+use Carp qw/cluck/;
 
 use overload (
     '""' => '_asstring',
@@ -81,6 +87,22 @@ has 'descriptor' => (
     );
 
 
+################################################################################
+=head2 scopid
+
+ Function:
+ Example :
+ Returns : 
+ Args    :
+
+
+=cut
+has 'scopid' => (
+    is => 'rw',
+    isa => 'Str',
+    trigger => \&_from_scop,
+    );
+
 =head2 file
 
 Path to PDB/MMol file.
@@ -94,23 +116,67 @@ has 'file' => (
     );
 
 
-=head2 rep
+################################################################################
+=head2 transformation
 
-3D representation of this domain in space.
+ Function: The L<SBG::Transform> describing any applied transformations
+ Example :
+ Returns : 
+ Args    :
 
-This object is an instance of an implementor of L<SBG::RepresentationI>.
+This attribute is imported automatically in consuming classes. But you may
+override it.
+
 =cut
-has 'representation' => (
+has 'transformation' => (
     is => 'rw',
-    does => 'SBG::RepresentationI',
-    # Calling $domain->transform(...) delegates to 
-    #   $domain->representation->transform(...);
-    handles => [qw/transform/],
+    isa => 'SBG::Transform',
+    required => 1,
+    default => sub { new SBG::Transform },
     );
 
 
 ################################################################################
-# Public methods
+# Methods required by SBG::RepresentationI
+
+sub dist { return };
+sub rmsd { return };
+sub evaluate { return };
+
+sub volume { return };
+sub overlap { return };
+sub overlaps { return };
+
+
+################################################################################
+=head2 transform
+
+ Function: 
+ Example : $self->transform(new SBG::Transform); # no-op
+ Returns : $self
+ Args    : L<SBG::Transform>
+
+In this parent class, this simply updates the cumulative L<SBG::Transform> but
+does not transform any structures. Subclasses are expected to L<Moose::override>
+this method and to continue to call L<Moose::super>, so that the cumulative
+transform stays up-to-date.
+
+=cut
+sub transform {
+    my ($self,$newtrans) = @_;
+    return $self unless defined($newtrans);
+
+    # Update the cumulative transformation
+    my $prod = $newtrans * $self->transformation;
+    $self->transformation($prod);
+    return $self;
+
+} # transform
+
+
+
+################################################################################
+# Additional public methods
 
 
 =head2 uniqueid
@@ -125,11 +191,11 @@ sub uniqueid {
     my ($self) = @_;
     my $str = $self->pdbid;
     $str .= ($self->_descriptor_short || '');
-    # Get the memory address of the representation object, 
-    my $rep = $self->representation;
+    # Get the memory address of some relevant attribute object, 
+    my $rep = $self->transformation;
     $str .= $rep ? sprintf("-0x%x", refaddr($rep)) : '';
     return $str;
-} # 
+} 
 
 
 ################################################################################
@@ -176,6 +242,7 @@ sub continuous {
 } # continuous
 
 
+################################################################################
 =head2 fromchain
 
 Returns the chain of this domain, if it comes from a single chain.
@@ -195,8 +262,6 @@ sub fromchain {
 ################################################################################
 =head2 asstamp
 
- Title   : asstamp
- Usage   :
  Function:
  Example :
  Returns : 
@@ -208,7 +273,6 @@ String representing domain in STAMP format
 sub asstamp {
     my ($self, %o) = @_;
     # Default to on, unless already set
-    $o{newline} = 1 unless defined($o{newline});
     my $str = 
         join(" ",
              $self->file  || '',
@@ -217,9 +281,9 @@ sub asstamp {
              $self->descriptor || '',
         );
     # Append any transformation
-    my $transstr = $self->representation->transformation->ascsv;
+    my $transstr = $self->transformation->ascsv if $self->transformation;
     $str .= $transstr ? (" \n${transstr}\}") : " \}";
-    $str .= "\n" if defined($o{newline}) && $o{newline};
+    $str .= "\n";
     return $str;
 
 } # asstamp
@@ -238,9 +302,10 @@ sub asstamp {
  Args    : NA
 
 =cut
+use Carp qw/cluck/;
 sub _asstring {
     my ($self) = @_;
-    my $s = $self->pdbid . $self->_descriptor_short;
+    my $s = $self->pdbid || '' . $self->_descriptor_short || '';
     return $s;
 }
 
@@ -258,7 +323,7 @@ This includes the external 3D representation of the domain.
 =cut
 sub _equal {
     my ($self, $other) = @_;
-    return 0 unless defined $other;
+    return 0 unless defined $other && blessed($self) eq blessed($other);
     return 1 if refaddr($self) == refaddr($other);
     # Fields, from most general to more specific
     my @fields = qw(pdbid descriptor file);
@@ -266,15 +331,34 @@ sub _equal {
         return 0 if 
             $self->$_ && $other->$_ && $self->$_ ne $other->$_;
     }
-    # Now compare the external 3D representations
-    return 0 if 
-        defined($self->representation) xor defined($other->representation);
-    return 0 if
-        defined $self->representation && defined $other->representation && 
-        ! ($self->representation == $other->representation);
+    my $res = _attr_eq($self->transformation, $other->transformation);
+    # If not defined, then assume the objects are equivalent 
+    return defined($res) ? $res : 1;
 
-    # OK, everything's the same
-    return 1;
+} # _equal
+
+
+################################################################################
+=head2 _attr_eq
+
+ Function:
+ Example :
+ Returns : 
+ Args    :
+
+Equality of potentially undef attributes
+Returns:
+undef when both undef
+0 if exactly one undef, or if different classes
+otherwise: returns $a == $b
+
+=cut
+sub _attr_eq {
+    my ($a, $b) = @_;
+    return unless defined($a) || defined($b);
+    return 0 if defined($a) xor defined($b);
+    return 0 unless blessed($a) eq blessed($b);
+    return $a == $b;
 }
 
 
@@ -301,6 +385,24 @@ sub _descriptor_short {
     $descriptor =~ s/\s+//g;
     return $descriptor;
 }
+
+
+################################################################################
+=head2 _from_scop
+
+ Function:
+ Example :
+ Returns : 
+ Args    :
+
+# Parse SCOP ID into PDB ID and descriptor
+=cut
+sub _from_scop {
+    my ($self,$scopid) = @_;
+
+    cluck("Not implemented");
+
+} # _from_scop
 
 
 

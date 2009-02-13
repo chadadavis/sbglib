@@ -1,31 +1,23 @@
 #!/usr/bin/env perl
 
 use Test::More 'no_plan';
+use SBG::Test qw(float_is);
 use feature 'say';
 $, = ' ';
 
-use SBG::Sphere;
 use PDL::Lite;
 use PDL::Matrix;
-use List::Util;
-use SBG::Test qw(float_is);
+
+use SBG::Domain::CofM;
 
 ################################################################################
 # Sanity check
 
-$p = mpdl (1,2,3,1);
-$s = new SBG::Sphere(centre=>$p,radius=>2);
-
-use Moose::Util qw/does_role/;
-ok(does_role($s,'SBG::RepresentationI'), "does_role SBG::RepresentationI");
-
-
-__END__
-
-isa_ok($s, "SBG::Sphere");
-ok($s->isa('SBG::RepresentationI'));
-
-isa_ok($s, "SBG::RepresentationI");
+$s = new SBG::Domain::CofM(centre=>"1 2 3",radius=>2);
+is($s->radius,2);
+$s->radius(3.1);
+is($s->radius,3.1);
+ok($s->does('SBG::RepresentationI'));
 isa_ok($s->centre, "PDL::Matrix");
 $s->centre([4,5,6]);
 isa_ok($s->centre, "PDL::Matrix");
@@ -33,19 +25,12 @@ $s->centre('4 5 6');
 isa_ok($s->centre, "PDL::Matrix");
 
 
-################################################################################
-# Requires
-
-
-################################################################################
-# Provides
-
 # new()
-$s = new SBG::Sphere(centre=>[-6.61,-32.62,-53.18]);
+$s = new SBG::Domain::CofM(centre=>[-6.61,-32.62,-53.18]);
 is($s->centre, mpdl (-6.61,-32.62,-53.18,1));
 
 # asarray()
-$s = new SBG::Sphere();
+$s = new SBG::Domain::CofM();
 my @abc = qw(80.86   12.45  122.08);
 my $p = mpdl (@abc,1);
 $s->centre($p);
@@ -54,8 +39,8 @@ my @a = ($s->asarray)[0..2];
 is_deeply(\@a, [@abc]);
 
 # dist()
-$s1 = new SBG::Sphere(qw(-6.61  -32.62  -53.18));
-$s2 = new SBG::Sphere(qw(80.86   12.45  122.08));
+$s1 = new SBG::Domain::CofM(centre=>[qw(-6.61  -32.62  -53.18)]);
+$s2 = new SBG::Domain::CofM(centre=>"80.86   12.45  122.08");
 my $diff = $s1->dist($s2);
 $expectdist = 200.99;
 $sigdigits = 5;
@@ -77,7 +62,28 @@ ok($s1->overlaps($s2, $expectfrac-$delta),
 ok(! $s1->overlaps($s2, $expectfrac+$delta), 
    'overlaps not at upper thresh');
 
-# Test voverlap and voverlaps
+$prec = 4;
+
+# DB fetching
+$s = new SBG::Domain::CofM(pdbid=>'2nn6', descriptor=>'CHAIN A');
+($tx, $ty, $tz, $trg) = (80.860, 12.450, 122.080, 26.738);
+@a = $s->asarray;
+float_is($a[0], $tx, $prec);
+float_is($a[1], $ty, $prec);
+float_is($a[2], $tz, $prec);
+float_is($s->radius, $trg, $prec);
+
+
+# Running
+$s = new SBG::Domain::CofM(pdbid=>'2nn6', descriptor=>'A 50 _ to A 120 _');
+($tx, $ty, $tz, $trg) = (83.495, 17.452, 114.562, 15.246);
+@a = $s->asarray;
+float_is($a[0], $tx, $prec);
+float_is($a[1], $ty, $prec);
+float_is($a[2], $tz, $prec);
+float_is($s->radius, $trg, $prec);
+
+
 
 # TODO test applying non-trivial transformation 
 
@@ -86,5 +92,7 @@ ok(! $s1->overlaps($s2, $expectfrac+$delta),
 # transform is the cum. cofm But still, should maintain current cofm, for sake
 # of overlap detection
 
-
+# TODO
+use SBG::Domain::CofMVol;
+# Test voverlap and voverlaps
 

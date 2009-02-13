@@ -2,7 +2,7 @@
 
 =head1 NAME
 
-SBG::IO - Generic I/O (input/output) interface, similar to L<Bio::Root::IO>
+SBG::IO - Generic I/O (input/output) interface, based off L<Bio::Root::IO>
 
 =head1 SYNOPSIS
 
@@ -21,62 +21,101 @@ L<SBG::DomainIO> , L<SBG::AssemblyIO>
 ################################################################################
 
 package SBG::IO;
-use SBG::Root -base, -XXX;
+use Moose;
+use Moose::Util::TypeConstraints;
 
-field 'fh';
-field 'file';
-field 'string';
+use SBG::Types;
 
-use warnings;
-use File::Temp qw(tempfile);
+use File::Temp;
 use IO::String;
+use IO::File;
+
+################################################################################
+# Accessors
+
+=head2 fh
+
+=cut
+has 'fh' => (
+    is => 'rw',
+    isa => 'Maybe[FileHandle]',
+    handles => [qw/flush close/],
+    );
+
+
+=head2 file
+
+Do I/O on the given file. 
+For input: prepend with <
+For output prepend with >
+For append prepend with >>
+See L<IO::File>
+=cut
+has 'file' => (
+    is => 'rw',
+    isa => 'Str',
+    );
+
+
+=head2 tempfile
+
+Set this true to just start writing to a tempfile.
+Use L<file> to later fetch the name of the created file
+
+=cut
+has 'tempfile' => (
+    is => 'rw',
+    isa => 'Bool',
+    trigger => sub { 
+        my(undef, $f) = File::Temp::tempfile(); 
+        (shift)->file(">$f")
+    },
+    );
+
+
+=head2 string
+
+Use IO::String to read/write to/from a string as an input/output stream
+=cut
+has 'string' => (
+    is => 'rw',
+    isa => 'Str',
+    # When set, open the string as a file handle
+    trigger => sub { my $self=shift; $self->fh(new IO::String($self->string)) },
+    );
 
 
 ################################################################################
-=head2 new
+=head2 BUILD
 
- Title   : new
- Usage   : my $input = new SBG::IO(-file=>"<file.dom");
-           my $input = new SBG::IO(-fh=>\*STDIN);
- Function: Open a new input stream to a STAMP domain file
- Example : my $input = new SBG::IO(-file=>"<file.dom");
-           my $output = new SBG::IO(-file=>">file.dom");
-           my $append = new SBG::IO(-file=>">>file.dom");
- Returns : Instance of L<SBG::IO>
- Args    : -file - Path to file to open, including preceeding "<" or ">"
-           -fh - An already opened file handle to read from
+ Function: L<Moose> constructor
+ Example :
+ Returns : 
+ Args    :
 
- 
+
 =cut
-sub new () {
-    my ($class, %o) = @_;
-    my $self = { %o };
-    bless $self, $class;
-    $self->_undash;
-
-    if (-r $self->file) {
-        $self->_open() or return undef;
-    } elsif (defined $self->{string}) {
-        $self->fh(new IO::String($self->{'string'}));
-    }
-
-    return $self;
-} # new
+sub BUILD {
+    my ($self) = @_;
+    my $file = $self->file or return;
+    $self->fh(new IO::File($file));
+    # Clean file name
+    $file =~ s/^[+<>]*//g;
+    $self->file($file);
+}
 
 
 ################################################################################
 =head2 read
 
- Title   : read
- Usage   : my $dom = $io->read();
  Function: Reads the next object from the stream.
- Example : (see below)
+ Example : my $dom = $io->read();
  Returns : 
  Args    : NA
 
 Should generally be overriden by sub-classes.
 
-This simple implementation reads line by line
+This simple implementation reads line by line, chomp'ing them as well.
 
  # Read all lines from a file
  my @lines;
@@ -87,8 +126,8 @@ This simple implementation reads line by line
 
 =cut
 sub read {
-    my $self = shift;
-    my $fh = $self->fh;
+    my ($self) = @_;
+    my $fh = $self->fh or return;
     my $l = <$fh>;
     return unless defined $l;
     chomp $l;
@@ -99,106 +138,31 @@ sub read {
 ################################################################################
 =head2 write
 
- Title   : write
- Usage   : $output->write($object);
- Function: Writes given domain object to the output stream
- Example : (see below)
- Returns : The string that was printed to the stream
+ Function: Writes given object/string to the output stream
+ Example : $output->write($object);
+ Returns : $self
  Args    : 
-           -newline If true, also prints a newline (default)
-           -fh another file handle, apart from the internal file handle
 
 Generally this method should be overriden by sub-classes.
 
-A generic implementation is provided here.
+A generic implementation is provided here, prints lines, with newline
 
  my $outfile = "results.txt";
- my $ioout = new SBG::IO(-file=>">$outfile");
+ my $ioout = new SBG::IO(file=>">$outfile");
  foreach my $o (@objects) {
      $ioout->write($o);
  }
 
 =cut
 sub write {
-    my $self = shift;
-    my ($obj, %o) = @_;
-    return unless $obj;
-    # Default to on, unless already set
-    $o{-newline} = 1 unless defined($o{-newline});
-    my $fh = $self->fh;
-    $fh = $o{-fh} if defined $o{-fh};
-
-    defined($fh) and print $fh $obj;
-    return $obj;
+    my ($self, @a) = @_;
+    @a or return;
+    my $fh = $self->fh or return;
+    print $fh @a;
+    return $self;
 } # write
 
 
 ################################################################################
-=head2 close
-
- Title   : close
- Usage   : $io->close;
- Function: Closes the internal file handle
- Example : $io->close;
- Returns : result of close()
- Args    : NA
-
-Should not generally need to be explicitly called.
-
-=cut
-sub close {
-    my $self = shift;
-    return $self->fh()->close;
-}
-
-
-################################################################################
-=head2 flush
-
- Title   : flush
- Usage   : $io->flush;
- Function: Flushes the internal file handle
- Example : $io->flush;
- Returns : result of flush()
- Args    : NA
-
-Should not generally need to be explicitly called.
-
-=cut
-sub flush {
-    my $self = shift;
-    return $self->fh()->flush;
-}
-
-
-
-################################################################################
-=head2 _open
-
- Title   : _open
- Usage   : $self->_open("<file.dom");
- Function: Opens the internal file handle on the file path given
- Example : $self->_open("<file.dom");
- Returns : $self
- Args    : file - Path to file to open for reading, including the  "<" or ">"
-
-=cut
-sub _open {
-    my $self = shift;
-    my $file = shift || $self->file;
-    if ($self->fh) {
-        $self->close;
-        delete $self->{'fh'};
-    }
-    my $fh;
-    unless (open($fh, $file)) {
-        $logger->error("Cannot read $file: $!");
-        return undef;
-    }
-    $self->fh($fh);
-    return $self;
-} # _open
-
-
-################################################################################
+__PACKAGE__->meta->make_immutable;
 1;

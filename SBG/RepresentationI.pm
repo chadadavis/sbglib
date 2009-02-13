@@ -2,7 +2,7 @@
 
 =head1 NAME
 
-SBG::Representation - Simplified structural representation (abstract base class)
+SBG::RepresentationI - Simplified structure representation (a L<Moose::Role>)
 
 =head1 SYNOPSIS
 
@@ -27,6 +27,7 @@ package SBG::RepresentationI;
 use Moose::Role;
 
 
+
 ################################################################################
 =head2 dist
 
@@ -42,6 +43,19 @@ requires 'dist';
 
 
 ################################################################################
+=head2 rmsd
+
+ Function:
+ Example :
+ Returns : 
+ Args    :
+
+RMSD between the points of B<$self>'s representation and B<$other>
+=cut
+requires 'rmsd';
+
+
+################################################################################
 =head2 evaluate
 
  Function: To what extent is $self a good approximation for $obj
@@ -52,6 +66,7 @@ requires 'dist';
 
 =cut
 requires 'evaluate';
+
 
 
 ################################################################################
