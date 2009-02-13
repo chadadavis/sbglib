@@ -32,6 +32,7 @@ with 'SBG::Dumpable';
 
 use Carp;
 use PDL::Lite;
+use PDL::Core;
 use PDL::Matrix;
 use PDL::IO::Storable;
 use PDL::Ufunc;
@@ -69,6 +70,7 @@ Create a matrix from a CSV string
 has 'string' => (
     is => 'ro',
     isa => 'Str',
+    trigger => sub { (shift)->_load },
     );
 
 =head2 file
@@ -78,11 +80,8 @@ Create a matrix from a CSV file
 has 'file' => (
     is => 'ro',
     isa => 'SBG.File',
+    trigger => sub { (shift)->_load },
     );
-# Update/parse matrix after a file/string set
-after qw/string file/ => sub {
-    (shift)->load();
-};
 
 has '_opcount' => (
     is => 'rw',
@@ -240,15 +239,15 @@ sub transform {
  Function:
  Example : print $transf->ascsv(force=>1)
  Returns : 
- Args    : force - even print if only the identity matrix
+ Args    : 
 
 For saving, CSV format
 Appends newline B<\n>
 
 =cut
 sub ascsv {
-    my ($self, %o) = @_;
-    return "" unless $self->_tainted || defined $o{force};
+    my ($self) = @_;
+    return "" unless $self->_tainted;
 
     my $mat = $self->matrix;
     my ($n,$m) = $mat->dims;
@@ -296,7 +295,7 @@ sub _load {
 ################################################################################
 =head2 _load_file
 
- Function: Overwrite with 3x4 from file (using rasc() from PDL )
+ Function: Overwrite with 3x4 from CSV file (using rasc() from PDL )
  Example :
  Returns : 
  Args    :
@@ -363,7 +362,7 @@ sub _mult {
     my $m = $self->matrix x $other->matrix;
     # Carry over the opcount (debuggin)
     return new SBG::Transform(matrix=>$m, 
-                              opcount=>1 + $self->opcount + $other->opcount);
+                              _opcount=>1 + $self->_opcount + $other->_opcount);
 } # _mult
 
 
@@ -380,6 +379,9 @@ sub _mult {
 =cut
 sub _equal ($$) {
     my ($self, $other) = @_;
+    return 0 unless defined($other) && blessed($self) eq blessed($other);
+    # Equal if neither has yet been set
+    return 1 unless $self->_tainted || $other->_tainted;
     return all($self->matrix == $other->matrix);
 }
 
