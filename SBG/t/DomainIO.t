@@ -42,8 +42,8 @@ my $desc = $domnofile->descriptor;
 like($str, qr/^ ${label}(.*?) \{ ${desc} \}$/, "Output format correct");
 
 
-# TODO test _read_trans
-my $iomixed = new SBG::DomainIO(file=>"$dir/model.dom");
+use SBG::Domain::CofM;
+my $iomixed = new SBG::DomainIO(file=>"$dir/model.dom", type=>'SBG::Domain::CofM');
 my @transes;
 while (my $dom = $iomixed->read) {
     push @transes, $dom->transformation if $dom->transformation;

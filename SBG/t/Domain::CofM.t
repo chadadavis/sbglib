@@ -96,3 +96,5 @@ float_is($s->radius, $trg, $prec);
 use SBG::Domain::CofMVol;
 # Test voverlap and voverlaps
 
+$s = new SBG::Domain::CofM(pdbid=>'2nn6', descriptor=>'A 50 _ to A 120 _');
+
