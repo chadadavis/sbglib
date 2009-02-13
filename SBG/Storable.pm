@@ -80,14 +80,14 @@ sub retrieve {
  Function: Loads the module for an object of a given class
  Example : my $obj = retrieve("file.stor"); module_for($obj); $obj->a_method();
  Returns : Whether module was loaded successfully
- Args    : $obj : an object
+ Args    : $obj : an object or a class name (Str)
 
 Why does Perl not do this automatically?
 
 =cut
 sub module_for {
     my ($obj) = @_;
-    my $class = blessed $obj;
+    my $class = blessed($obj) || $obj;
     $class =~ s|::|/|g;
     $class .= '.pm';
     eval { require $class; };
