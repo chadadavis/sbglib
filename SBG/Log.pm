@@ -40,7 +40,7 @@ use Log::Log4perl qw(:levels :resurrect);
 our $logger;
 
 use base qw/Exporter/;
-our @EXPORT = qw(carp Dumper $logger);
+our @EXPORT = qw($logger);
 
 
 ################################################################################
