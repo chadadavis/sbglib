@@ -48,8 +48,7 @@ sub config {
 }
 
 sub val {
-    our $config;
-    return $config->val(@_);
+    return config()->val(@_);
 }
 
 
