@@ -167,7 +167,7 @@ sub transform {
     return $self unless defined($newtrans);
 
     # Update the cumulative transformation
-    my $prod = $newtrans * $self->transformation;
+    my $prod = $newtrans x $self->transformation;
     $self->transformation($prod);
     return $self;
 
@@ -305,7 +305,7 @@ sub asstamp {
 use Carp qw/cluck/;
 sub _asstring {
     my ($self) = @_;
-    my $s = $self->pdbid || '' . $self->_descriptor_short || '';
+    my $s = ($self->pdbid || '') . ($self->_descriptor_short || '');
     return $s;
 }
 

@@ -139,7 +139,7 @@ sub load {
     my ($self,@args) = @_;
     return unless $self->pdbid && $self->descriptor;
 
-    my $res = cofm($self->pdbid, $self->descriptor);
+    my $res = cofm($self->pdbid, $self->descriptor) or return;
 
     # Fetch the radius according to the type chosen, then update radius attr
     $self->radius($res->{ $self->radius_type });
@@ -220,8 +220,9 @@ override 'transform' => sub {
     return $self unless defined($newtrans) && defined($self->centre);
     # Need to transpose row vector to a column vector first. 
     # Then let Transform do the work.
+
     my $newcentre = $newtrans->transform($self->centre->transpose);
-    # Transpose back
+    # Transpose back before saving
     $self->centre($newcentre->transpose);
 
     # Update cumulative transformation. Managed by parent

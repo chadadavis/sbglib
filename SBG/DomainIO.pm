@@ -55,10 +55,11 @@ use Moose::Util::TypeConstraints;
 
 extends 'SBG::IO';
 
+use Carp;
 use SBG::Types qw/$re_pdb $re_descriptor/;
 use SBG::Domain;
 use SBG::Transform;
-
+use SBG::Storable qw/module_for/;
 
 ################################################################################
 # Accessors
@@ -75,6 +76,13 @@ has 'type' => (
     required => 1,
     default => 'SBG::Domain',
     );
+
+# ClassName does not validate if the class isn't already loaded. Preload it here.
+before 'type' => sub {
+    my ($self, $classname) = @_;
+    return unless $classname;
+    module_for($classname);
+};
 
 
 ################################################################################
@@ -98,14 +106,14 @@ Or, to just convert to a string, without any file I/O:
  my $str = new SBG::DomainIO->write($dom);
 
 =cut
-sub write {
+override 'write' => sub {
     my ($self, $dom) = @_;
     defined($dom) or return;
     my $fh = $self->fh or return;
     my $str = $dom->asstamp;
     print $fh $str;
     return $self;
-} # write
+}; # write
 
 
 ################################################################################
@@ -125,8 +133,10 @@ sub write {
  }
  print "Read in " . scalar(@doms) . " domains\n";
 
+NB You can change L<type> in between invocations of L<read>
+
 =cut
-sub read {
+override 'read' => sub {
     my ($self) = @_;
     my $fh = $self->fh or return;
     while (<$fh>) {
@@ -147,7 +157,6 @@ sub read {
         # $4 is STAMP descriptor, without { }
 
         my $class = $self->type;
-        eval { require $class; };
         my $dom = $class->new(pdbid=>$2,descriptor=>$4);
         $dom->file($1) if $1;
 
@@ -158,12 +167,13 @@ sub read {
         # Parse transformtion
         my $transstr = $self->_read_trans;
         my $trans = new SBG::Transform(string=>$transstr);
-        $dom->transformation($trans);
+        # Since a transformation was found, apply it
+        $dom->transform($trans);
         return $dom;
     }
     # End of file
     return;
-} # read
+}; # read
 
 
 

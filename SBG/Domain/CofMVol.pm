@@ -29,14 +29,7 @@ with qw(SBG::Storable);
 with qw(SBG::Dumpable);
 with qw(SBG::RepresentationI);
 
-# TODO not all necessary in child class
-
-# TODO test if overload inherited
-# use overload (
-#     '""' => '_asstring',
-#     '==' => '_equal',
-#     fallback => 1,
-#     );
+# NB "" and == inherited from SBG::Domain::CofM
 
 use Math::Trig qw(:pi);
 # List::Util::min conflicts with PDL::min Must be fully qualified to use
