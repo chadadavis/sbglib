@@ -27,13 +27,20 @@ package SBG::Storable;
 use Moose::Role;
 
 use Storable qw();
-use Scalar::Util qw(blessed);
 use Carp;
+use Scalar::Util qw/blessed/;
+use Module::Load qw/load/;
+use Class::MOP::Class;
+
+use SBG::List qw/flatten/;
+
+# Any contained PDL objects need this to de-serialize
+use PDL::IO::Storable;
 
 # Also a functional interface
 use base qw(Exporter);
 our @EXPORT = qw(store retrieve);
-our @EXPORT_OK = qw(module_for);
+our @EXPORT_OK = qw(module_for can_do retrieve_files);
 
 
 ################################################################################
@@ -61,17 +68,39 @@ sub store {
  Returns : 
  Args    :
 
+NB Due to the overload module not automatically updating the symbol table, this
+function will re-bless the object back into its own class. This *may* have other
+unintended side effects.
+
+See also L<bless> , L<overload>
 
 =cut
 sub retrieve {
-   my ($self, $file,@args) = @_;
-   # Not called as an object/package method?
-   $file = $self if -r $self;
+   my ($file) = @_;
+   return $file unless -r $file;
    my $obj = Storable::retrieve($file);
-   # Load required module
    module_for($obj);
+   my $class = blessed($obj);
+   # Bless back into own class (restores 'overload' functionality)
+   bless $obj, $class if $class;
    return $obj;
 } # retrieve
+
+
+################################################################################
+=head2 retrieve_files
+
+ Function: Get all the objects from all the Stor'ed arrays in all given files
+ Example : my ($objA, $objB) = retrieve_files("filea.stor", "../tmp/fileb.stor");
+ Returns : Array or ArrayRef, depending on wantarray
+ Args    : Paths to files containing L<Storable> objects
+
+=cut
+sub retrieve_files {
+    @_ = flatten @_;
+    my @a = map { flatten retrieve($_) } @_;
+    return wantarray ? @a : \@a;    
+}
 
 
 ################################################################################
@@ -79,24 +108,66 @@ sub retrieve {
 
  Function: Loads the module for an object of a given class
  Example : my $obj = retrieve("file.stor"); module_for($obj); $obj->a_method();
- Returns : Whether module was loaded successfully
+ Returns : NA
  Args    : $obj : an object or a class name (Str)
 
-Why does Perl not do this automatically?
+Recursively traverses the data structure, loading any needed modules along the
+way.
+
+BUGS: Why does Perl not do this automatically when deserializing an object?
 
 =cut
 sub module_for {
     my ($obj) = @_;
-    my $class = blessed($obj) || $obj;
-    $class =~ s|::|/|g;
-    $class .= '.pm';
-    eval { require $class; };
-    if ($@) {
-        carp("Could not load module: $class");
-        return 0;
+    my $class = blessed($obj) or return;
+    load($class);
+    UNIVERSAL::isa($obj, 'HASH') or return;
+    foreach my $k (%$obj) {
+        module_for($obj->{$k});
     }
-    return 1;
 }
+
+
+################################################################################
+=head2 can_do
+
+ Function: Figures out what methods an object supports
+ Example : my $methods = Storable::can_do($obj);
+ Returns : HashRef of method names, keyed by module name
+ Args    : An Object
+
+E.g.
+$VAR1 = {
+          'SBG::Domain::CofM' => [
+                                   'transform',
+                                   'radius',
+                                   'asarray',
+                                 ],
+          'SBG::Domain' => [
+                             'pdbid',
+                             'descriptor',
+                             'uniqueid',
+                             'transformation',
+                           ]
+        };
+
+
+=cut
+sub can_do {
+    my ($obj) = @_;
+    my $class = blessed $obj;
+    my $meta = Class::MOP::Class->initialize($class);
+    my @names = $meta->compute_all_applicable_methods;
+    my @sbgnames = grep { $_->{'class'} =~ /^SBG/ } @names;
+    my %methods;
+    foreach (@sbgnames) {
+        my ($class, $name) = ($_->{class}, $_->{name});
+        next if $name =~ /^_/;
+        $methods{$class} ||= [];
+        push(@{$methods{$class}}, $name);
+    }
+    return \%methods;
+} # can_do
 
 
 ################################################################################

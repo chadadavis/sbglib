@@ -56,10 +56,11 @@ use Moose::Util::TypeConstraints;
 extends 'SBG::IO';
 
 use Carp;
+use Module::Load;
+
 use SBG::Types qw/$re_pdb $re_descriptor/;
 use SBG::Domain;
 use SBG::Transform;
-use SBG::Storable qw/module_for/;
 
 ################################################################################
 # Accessors
@@ -81,7 +82,7 @@ has 'type' => (
 before 'type' => sub {
     my ($self, $classname) = @_;
     return unless $classname;
-    module_for($classname);
+    load($classname);
 };
 
 
