@@ -2,11 +2,11 @@
 
 =head1 NAME
 
-SBG::Node - Additions to Bioperl's Bio::Network::Node
+SBG::Node - Additions to Bioperl's L<Bio::Network::Node>
 
 =head1 SYNOPSIS
 
-use SBG::Node;
+ use SBG::Node;
 
 
 =head1 DESCRIPTION
@@ -18,7 +18,7 @@ stringification and comparison operators.
 
 =head1 SEE ALSO
 
-L<Bio::Network::Node> , L<Bio::Network::ProteinNet> , L<Bio::Network::Interaction>
+L<Bio::Network::Node> , L<SBG::Network>
 
 =cut
 
@@ -43,8 +43,16 @@ sub _asstring {
 } # _asstring
 
 
-# Setwise comparison
 sub _compare {
+    my ($a, $b) = @_;
+    return unless ref($b) && $b->isa("Bio::Network::Node");
+    # Assume each Node holds just one protein
+    return $a cmp $b;
+}
+
+
+# Setwise comparison
+sub _compare_sets {
     my ($a, $b) = @_;
 
     return unless ref($b) && $b->isa("Bio::Network::Node");
@@ -63,7 +71,17 @@ sub _compare {
 }
 
 
-# Setwise counts of $a < $b (-1), $a == $b (0), $a > $b (+1)
+################################################################################
+=head2 tally
+
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
+
+Setwise counts of $a < $b (-1), $a == $b (0), $a > $b (+1)
+
+=cut
 sub tally {
     my ($a, $b) = @_;
 
@@ -86,7 +104,6 @@ sub tally {
 }
 
 ###############################################################################
-
+__PACKAGE__->meta->make_immutable;
 1;
 
-__END__
