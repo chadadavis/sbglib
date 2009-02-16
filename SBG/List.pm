@@ -25,9 +25,10 @@ L<List::Utils> , L<List::MoreUtils>
 
 package SBG::List;
 use Carp;
-use List::Util;
+
+use List::Util qw/reduce/;
 use List::MoreUtils;
-use Storable;
+
 use base qw(Exporter);
 
 our @EXPORT = qw(
@@ -36,6 +37,7 @@ our @EXPORT_OK = qw(
 sum
 min
 max
+reduce
 uniq
 flatten
 swap
@@ -51,7 +53,6 @@ lcp
 intersection
 union
 pairs
-retrieve_files
 reorder
 thresh
 );
@@ -84,6 +85,7 @@ sub uniq {
     my @a = List::MoreUtils::uniq flatten @_;
     return wantarray ? @a : \@a;
 }    
+
 
 # Numeric sort
 sub nsort {
@@ -220,14 +222,6 @@ sub lcp {
     return $prefix;
 }
 
-
-# Get all the objects from all the Stor'ed arrays in all the given files
-# use Storable
-sub retrieve_files {
-    @_ = flatten @_;
-    my @a = map { flatten Storable::retrieve($_) } @_;
-    return wantarray ? @a : \@a;    
-}
 
 
 ################################################################################
