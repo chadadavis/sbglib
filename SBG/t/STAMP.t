@@ -1,14 +1,18 @@
 #!/usr/bin/env perl
 
 use Test::More 'no_plan';
-use strict;
-use warnings;
+use SBG::Test 'float_is';
+use feature 'say';
+use Carp;
+use Data::Dumper;
+$, = ' ';
 
-use SBG::STAMP;
+use SBG::STAMP qw/pdbc superpose gtransform/;
 use SBG::Domain;
 use SBG::DomainIO;
-use SBG::CofM;
-use SBG::Complex;
+use SBG::Domain::CofM;
+use List::MoreUtils qw(first_index);
+
 
 # Tolerate rounding differences between clib (STAMP) and PDL (SBG)
 use PDL::Ufunc;
@@ -17,12 +21,17 @@ my $toler = 0.25;
 # TODO test do_stamp alone (i.e. on a family of domains)
 
 # Test pdbc
-my $dom = pdbc('2nn6', 'A')->read();
-is($dom->label, '2nn6a', 'pdbc');
+$io = pdbc('2nn6', 'A');
+# Define the type of Domain object we want back
+$io->type('SBG::Domain::CofM');
+$dom = $io->read;
+is($dom->pdbid, '2nn6');
+is($dom->descriptor, 'CHAIN A');
 
-# Get domains for two chains of interest
-my $doma = SBG::CofM::cofm('2br2', 'CHAIN A');
-my $domd = SBG::CofM::cofm('2br2', 'CHAIN D');
+
+# get domains for two chains of interest
+my $doma = SBG::Domain::CofM->new(pdbid=>'2br2', descriptor=>'CHAIN A');
+my $domd = SBG::Domain::CofM->new(pdbid=>'2br2', descriptor=>'CHAIN D');
 
 # Get superposition, in both directions
 my $tt;
@@ -46,8 +55,8 @@ my $dtoa_transstr = <<STOP;
 STOP
 
 # Convert this into PDL matrixes
-my $dtoa_ans = new SBG::Transform(-string=>$dtoa_transstr)->matrix;
-my $atod_ans = new SBG::Transform(-string=>$atod_transstr)->matrix;
+my $dtoa_ans = new SBG::Transform(string=>$dtoa_transstr)->matrix;
+my $atod_ans = new SBG::Transform(string=>$atod_transstr)->matrix;
 
 
 unless(
@@ -75,66 +84,66 @@ unless(
 # 2xApply:     DA
 # Finally: DADADA = Homohexamer homologous to DABEFC
 
-my $d2br2d = new SBG::Domain(-label=>'2br2d');
-my $d2br2b = new SBG::Domain(-label=>'2br2b');
+my $d2br2d = new SBG::Domain::CofM(pdbid=>'2br2', descriptor=>'CHAIN D');
+my $d2br2b = new SBG::Domain::CofM(pdbid=>'2br2', descriptor=>'CHAIN B');
+# The basic transformation
 my $transf = superpose($d2br2d, $d2br2b);
 
 # Now get the dimer:
-my $d2br2d0 = new SBG::Domain(-label=>'2br2d-d0');
-my $d2br2a0 = new SBG::Domain(-label=>'2br2a-a0');
+my $d2br2d0 = new SBG::Domain::CofM(pdbid=>'2br2', descriptor=>'CHAIN D');
+my $d2br2a0 = new SBG::Domain::CofM(pdbid=>'2br2', descriptor=>'CHAIN A');
 # Dont' do transforms there, those are already in the frame of reference
 
-my $d2br2d1 = new SBG::Domain(-label=>'2br2d-d1');
-my $d2br2a1 = new SBG::Domain(-label=>'2br2a-a1');
+my $d2br2d1 = new SBG::Domain::CofM(pdbid=>'2br2', descriptor=>'CHAIN D');
+my $d2br2a1 = new SBG::Domain::CofM(pdbid=>'2br2', descriptor=>'CHAIN A');
+
 # Apply
 $d2br2d1->transform($transf);
 $d2br2a1->transform($transf);
 
 # Apply product
-my $double = $transf * $transf;
-my $d2br2d2 = new SBG::Domain(-label=>'2br2d-d2');
-my $d2br2a2 = new SBG::Domain(-label=>'2br2a-a2');
+my $double = $transf x $transf;
+my $d2br2d2 = new SBG::Domain::CofM(pdbid=>'2br2', descriptor=>'CHAIN D');
+my $d2br2a2 = new SBG::Domain::CofM(pdbid=>'2br2', descriptor=>'CHAIN A');
+
 $d2br2d2->transform($double);
 $d2br2a2->transform($double);
 
-my $complex = new SBG::Complex();
-$complex->add($d2br2d0,$d2br2a0,$d2br2d1,$d2br2a1,$d2br2d2,$d2br2a2);
-my @doms = $complex->asarray;
-is(@doms, 6, "Complex contains all 6: @doms");
 
+my @doms = ($d2br2d0,$d2br2a0,$d2br2d1,$d2br2a1,$d2br2d2,$d2br2a2);
 
-use SBG::List qw(whichfield);
+use SBG::Run::rasmol qw/pdb2img/;
 
 # Finally, transform() the whole thing into a coordinate file, a la STAMP
-my $file = transform(-doms=>\@doms);
+my $file = gtransform(doms=>\@doms);
 if (ok(-r $file, "transform() created PDB file: $file")) {
-#     `rasmol $file 2>/dev/null`;
+    `rasmol $file 2>/dev/null`;
 #     ok(ask("You saw a hexameric ring"), "Confirmed hexamer");
     
     # Convert to IMG
     # And highlight clashes from domain $d2br2d1
     # Which index in the array is occupied by 2br2d1 ?
-    # NB the actual label is just 'd1' not '2br2d-d1'
-    my $chi = whichfield('label', 'd1', @doms);
+    my $chi = first_index { $_ == $d2br2d1 } @doms; 
     # This is the chain that will display the domain 2br2d1 in the complex
     my $chain = chr(ord('A') + $chi);
 
     my $optstr = "select (!*$chain and within(10.0, *$chain))\ncolor white";
-    my $img = pdb2img(-pdb=>$file, -script=>$optstr);
+    my $img = pdb2img(pdb=>$file, script=>$optstr);
     if (ok($img && -r $img, "pdb2img() created image from PDB file")) {
         print 
             "Now showing an image of the same\n",
             "(with clashes from the red chain highlighted in white)\n";
-#         `display $img`;
+        `display $img`;
 #         ok(ask("You saw the same hexamer"), "Confirmed image conversion");
     }
 }
 
 
+
 # Test querying transformations from database
 # Get domains for two chains of interest
-my $domb5 = SBG::CofM::cofm('2br2', 'CHAIN B');
-my $domd5 = SBG::CofM::cofm('2br2', 'CHAIN D');
+my $domb5 = new SBG::Domain::CofM(pdbid=>'2br2', descriptor=>'CHAIN B');
+my $domd5 = new SBG::Domain::CofM(pdbid=>'2br2', descriptor=>'CHAIN D');
 my $trans5 = SBG::STAMP::superpose_query($domb5, $domd5);
 ok($trans5, "Got transform from database cache");
 my $btod_transstr = <<STOP;
@@ -143,7 +152,7 @@ my $btod_transstr = <<STOP;
    0.05357    0.99738   -0.04873        -0.08447
 STOP
 # Convert this into PDL matrixes
-my $btod_ans = new SBG::Transform(-string=>$btod_transstr)->matrix;
+my $btod_ans = new SBG::Transform(string=>$btod_transstr)->matrix;
 # Get the underlying PDL
 $trans5 = $trans5->matrix;
 unless(
@@ -154,13 +163,13 @@ unless(
 }
 
 
-# TODO  Test sub-segments of chains
+# Test sub-segments of chains
 # Get domains for two chains of interest
-my $dombseg = SBG::CofM::cofm('2br2', 'B 8 _ to B 248 _');
-my $domdseg = SBG::CofM::cofm('2br2', 'D 8 _ to D 248 _');
-# TODO why can't STAMP do this?
-# my $trans = superpose($dombseg, $domdseg);
-# ok($trans, "superpose($dombseg onto $domdseg)");
+my $dombseg = new SBG::Domain::CofM(pdbid=>'2br2', descriptor=>'B 8 _ to B 248 _');
+my $domdseg = new SBG::Domain::CofM(pdbid=>'2br2', descriptor=>'D 8 _ to D 248 _');
+# TODO verify the transformation values
+my $trans = superpose($dombseg, $domdseg);
+ok($trans, "superpose($dombseg onto $domdseg)");
 
 
 

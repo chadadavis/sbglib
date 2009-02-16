@@ -35,6 +35,7 @@ use PDL::Lite;
 use PDL::Core;
 use PDL::Matrix;
 use PDL::IO::Storable;
+use PDL::IO::Misc;
 use PDL::Ufunc;
 
 use SBG::Types;
@@ -56,12 +57,11 @@ The 4x4 affine transformation matrix
 has 'matrix' => (
     is => 'rw',
     isa => 'PDL::Matrix',
-    lazy_build => 1,
+    required => 1,
+    default => sub { mpdl [ [1,0,0,0], [0,1,0,0], [0,0,1,0], [0,0,0,1] ] },
+    trigger => sub { my $self = shift; $self->_tainted(1) if @_ },
     );
-# Differntiate between identity matrix and non-identity
-after 'matrix' => sub {
-    (shift)->_tainted(1);
-};
+
 
 =head2 string
 
@@ -72,6 +72,7 @@ has 'string' => (
     isa => 'Str',
     trigger => sub { (shift)->_load },
     );
+
 
 =head2 file
 
@@ -89,6 +90,7 @@ has '_opcount' => (
     default => 0,
     );
 
+# Note if not-yet-modified
 has '_tainted' => (
     is => 'rw',
     isa => 'Bool',

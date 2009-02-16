@@ -2,7 +2,7 @@
 
 =head1 NAME
 
-SBG::CofM - Computes STAMP centre-of-mass of an SBG::Domain
+SBG::STAMP - Computes STAMP centre-of-mass of an SBG::Domain
 
 =head1 SYNOPSIS
 
@@ -24,12 +24,13 @@ L<SBG::Domain> , L<SBG::DomainIO>
 ################################################################################
 
 package SBG::STAMP;
-use SBG::Root -base, -XXX;
+use base qw/Exporter/;
 
-# TODO DES don't need all of these
-our @EXPORT = qw(do_stamp sorttrans stamp pickframe transform superpose pdb2img pdbc);
+our @EXPORT_OK = qw(do_stamp sorttrans stamp pickframe gtransform superpose pdbc);
 
+use strict;
 use warnings;
+
 use File::Temp qw(tempfile tempdir);
 use IO::String;
 use Data::Dumper;
@@ -37,81 +38,46 @@ use Data::Dumper;
 use SBG::Transform;
 use SBG::Domain;
 use SBG::DomainIO;
-use SBG::DB;
 use SBG::List qw(reorder);
+use SBG::Config qw/val/;
+use SBG::Log;
 
 ################################################################################
 
+# TODO use Cache::FileCache
 our $cachedir;
 
 BEGIN {
 
-    $cachedir = $config->val('stamp', 'cache') || "/tmp/stampcache";
+    $cachedir = val(qw/stamp cache/) || "/tmp/stampcache";
     mkdir $cachedir;
     $logger->debug("STAMP cache: $cachedir");
 
 }
 
-# -script - any additional options (string with newlines)
-# -pdb
-# -img
-sub pdb2img {
+
+################################################################################
+=head2 transform
+
+ Function: Converts an array of L<SBG::Domain>s to a PDB file
+ Example :
+ Returns : Path to PDB file, if successful
+ Args    :
+           doms arrayref of Domain's
+           in path to Domain file
+           out path to PDB file to create (otherwise temp file)
+
+=cut
+sub gtransform {
     my (%o) = @_;
-    SBG::Root::_undash %o;
-    $o{pdb} or return;
-    (undef, $o{img}) = tempfile(SUFFIX=>'.ppm') unless $o{img};
-    $logger->trace("$o{pdb} => $o{img}");
-    my $rasmol = $config->val('rasmol','executable') || 'rasmol';
-    my $fh;
-    my $cmd = "$rasmol -nodisplay >/dev/null";
-#     my $cmd = "$rasmol -nodisplay ";
-    $logger->trace($cmd);
-    unless(open $fh, "| $cmd") {
-        $logger->error("Failed: $cmd");
-        return;
-    }
-    print $fh <<HERE;
-load "$o{pdb}"
-wireframe off
-spacefill
-color chain
-HERE
-
-    # Any additional options
-    print $fh "$o{script}\n" if $o{script};
-
-    print $fh <<HERE;
-write "$o{img}"
-exit
-HERE
-
-    # Need to explicitly close before checking for output file
-    close $fh;
-    unless (-s "$o{img}") {
-        $logger->error("Rasmol failed to write: $o{img}");
-        return;
-    }
-    return $o{img};
-} # pdb2img
-    
-
-# Converts an array of L<SBG::Domain>s to a PDB file
-# returns Path to PDB file, if successful
-# -doms arrayref of Domain's
-# -in path to Domain file
-# -out path to PDB file to create (otherwise temp file)
-sub transform {
-    my (%o) = @_;
-    SBG::Root::_undash(%o);
     my $doms = $o{doms};
     # Input file (domains/transformations)
     unless ($o{in}) {
         $logger->debug("transform'ing domains: @$doms");
         return unless @$doms;
         (undef, $o{in}) = tempfile;
-        my $io = new SBG::DomainIO(-file=>">$o{in}");
-        $io->write($_,-id=>'stampid') for @$doms;
-
+        my $io = new SBG::DomainIO(file=>">$o{in}");
+        $io->write($_) for @$doms;
     }
     # Output PDB file
     (undef, $o{out}) = tempfile(UNLINK=>0) unless $o{out};
@@ -127,14 +93,23 @@ sub transform {
 } # transform
 
 
-# TODO DOC
-# Returns Transformation required to put $fromdom onto $ontodom
+
+################################################################################
+=head2 superpose
+
+ Function: Provides L<SBG::Transform> required to put $fromdom onto $ontodom
+ Example :
+ Returns : 
+ Args    : 
+           fromdom
+           ontodom
+
+=cut
 sub superpose {
     my ($fromdom, $ontodom) = @_;
     $logger->trace("$fromdom onto $ontodom");
 
-    if ($fromdom->pdbid eq $ontodom->pdbid &&
-        $fromdom->descriptor eq $ontodom->descriptor) {
+    if ($fromdom eq $ontodom) {
         $logger->trace("Identity");
         return new SBG::Transform();
     }
@@ -151,7 +126,7 @@ sub superpose {
             return $cached;
         } else {
             # Negative cache hit
-            return undef;
+            return;
         }
     }
 
@@ -160,8 +135,20 @@ sub superpose {
 
 } # superpose
 
-# NB STAMP doesn't work on Domains that already have a Transform
-# This is for computing transforms on the native, not-yet-transformed PDB data
+
+################################################################################
+=head2 superpose_local
+
+ Function: run stamp locally, to do superposition of one domain onto another
+ Example :
+ Returns : 
+ Args    :
+
+NB STAMP doesn't work on Domains that already have a Transform.  I.e. it does
+not consider the structure in its new location.  This is for computing
+transforms on the native, not-yet-transformed PDB data.
+
+=cut
 sub superpose_local {
     my ($fromdom, $ontodom) = @_;
     $logger->trace("$fromdom onto $ontodom");
@@ -175,15 +162,15 @@ sub superpose_local {
 
     # Reorder @doms based on the order of $fromdom, $ontodom
     my $ordered = reorder(\@doms, 
-                          [ $fromdom->stampid, $ontodom->stampid],
-                          'stampid');
+                          [ $fromdom->id, $ontodom->id],
+                          sub { $_->id });
     
     # Want transformation relative to $ontodom
     # I.e. applying the resulting transformation to $fromdom results in $ontodom
     # The *absolute* transformation, that puts [0] into frame-of-ref of [1]
     my ($from, $to) = @$ordered;
     my $trans = $from->transformation->relativeto($to->transformation);
-    $logger->debug("Transformation:\n$trans");    
+    $logger->debug("Transformation: ", $fromdom->id, ' ', $ontodom->id, "\n$trans");    
 
     # Positive cache
     cachepos($fromdom,$ontodom,$trans);
@@ -192,16 +179,29 @@ sub superpose_local {
 } # superpose_local
 
 
+
+sub _dbconnect {
+    my ($db) = @_;
+    our $dbh;
+    return $dbh if $dbh;
+    $db ||= val('trans', 'db') || "trans_1_4";
+    my $host = val(qw/trans host/);
+    my $dbistr = "dbi:mysql:dbname=$db";
+    $dbistr .= ";host=$host" if $host;
+    $dbh = DBI->connect($dbistr);
+    return $dbh;
+}
+
 # Takes two domain objects
 sub superpose_query {
     my ($fromdom, $ontodom) = @_;
     $logger->trace("$fromdom onto $ontodom");
     return unless 
-        $fromdom && $fromdom->onechain &&
-        $ontodom && $ontodom->onechain;
+        $fromdom && $fromdom->wholechain &&
+        $ontodom && $ontodom->wholechain;
 
-    my $db = $config->val('trans', 'db') || "trans_1_4";
-    my $dbh = dbconnect(-db=>$db) or return undef;
+    my $dbh = _dbconnect();
+
     # Static handle, prepare it only once
     our $trans_sth;
     $trans_sth ||= $dbh->prepare(
@@ -212,20 +212,20 @@ sub superpose_query {
         );
     unless ($trans_sth) {
         $logger->error($dbh->errstr);
-        return undef;
+        return;
     }
 
-    my $pdbstr1 = 'pdb|' . uc($fromdom->pdbid) . '|' . $fromdom->chainid;
-    my $pdbstr2 = 'pdb|' . uc($ontodom->pdbid) . '|' . $ontodom->chainid;
+    my $pdbstr1 = 'pdb|' . uc($fromdom->pdbid) . '|' . $fromdom->fromchain;
+    my $pdbstr2 = 'pdb|' . uc($ontodom->pdbid) . '|' . $ontodom->fromchain;
 
     if (! $trans_sth->execute($pdbstr1)) {
         $logger->error($trans_sth->errstr);
-        return undef;
+        return;
     }
     my ($domset1, $transstr1) = $trans_sth->fetchrow_array();
     if (! $trans_sth->execute($pdbstr2)) {
         $logger->error($trans_sth->errstr);
-        return undef;
+        return;
     }
     my ($domset2, $transstr2) = $trans_sth->fetchrow_array();
     $logger->debug("domset $domset1 == domset $domset2 ?");
@@ -235,8 +235,8 @@ sub superpose_query {
         return;
     }
 
-    my $trans1 = new SBG::Transform(-string=>$transstr1);
-    my $trans2 = new SBG::Transform(-string=>$transstr2);
+    my $trans1 = new SBG::Transform(string=>$transstr1);
+    my $trans2 = new SBG::Transform(string=>$transstr2);
     # Returns a new Transform
     return $trans1->relativeto($trans2);
 
@@ -245,10 +245,7 @@ sub superpose_query {
 
 sub _cache_file {
     my ($fromdom, $ontodom) = @_;
-    my $file = "$cachedir/" . 
-        join('-', $fromdom->pdbid, $fromdom->_descriptor_short,
-             $ontodom->pdbid, $ontodom->_descriptor_short) .
-             ".trans";
+    my $file = $cachedir . '/' . $fromdom->id . '-' . $ontodom->id . '.trans';
     $logger->trace("Cache: $file");
     return $file;
 }
@@ -257,7 +254,7 @@ sub cacheneg {
     my ($fromdom, $ontodom) = @_;
     $logger->trace();
     my $file = _cache_file($fromdom, $ontodom);
-    my $io = new SBG::DomainIO(-file=>">$file");
+    my $io = new SBG::DomainIO(file=>">$file");
     # But write nothing ...
 }
 
@@ -267,8 +264,8 @@ sub cachepos {
     my ($fromdom, $ontodom, $trans) = @_;
     $logger->trace();
     my $file = _cache_file($fromdom, $ontodom);
-    my $io = new SBG::IO(-file=>">$file");
-    $io->write($trans,-id=>'stampid');
+    my $io = new SBG::IO(file=>">$file");
+    $io->write($trans->ascsv);
 }
 
 # Returns:
@@ -284,14 +281,14 @@ sub cacheget {
         # Cache hit
         if (-s $file) {
             $logger->debug("Positive cache hit");
-            return new SBG::Transform(-file=>$file);
+            return new SBG::Transform(file=>$file);
         } else {
             $logger->debug("Negative cache hit");
             return 0;
         }
     } else {
         $logger->debug("Cache miss");
-        return undef;
+        return;
     }
 } # cacheget
 
@@ -311,8 +308,8 @@ sub do_stamp {
         return;
     }
     # Index label's
-    my @dom_ids = map { $_->stampid } @doms;
-    my %domains = map { $_->stampid => $_ } @doms;
+    my @dom_ids = map { $_->id } @doms;
+    my %domains = map { $_->id => $_ } @doms;
     $logger->debug("Domain IDs:@dom_ids");
     # No. domains tried as a probe
     my %tried;
@@ -333,20 +330,21 @@ sub do_stamp {
 
         # Write probe domain to file
         my (undef, $tmp_probe) = tempfile();
-        my $ioprobe = new SBG::DomainIO(-file=>">$tmp_probe");
-        $ioprobe->write($domains{$probe},-id=>'stampid');
+        my $ioprobe = new SBG::DomainIO(file=>">$tmp_probe");
+        $ioprobe->write($domains{$probe});
+        $ioprobe->close;
         $logger->debug("probe:$probe");
         # Write other domains to single file
         my (undef, $tmp_doms) = tempfile();
-        my $iodoms = new SBG::DomainIO(-file=>">$tmp_doms");
+        my $iodoms = new SBG::DomainIO(file=>">$tmp_doms");
         foreach my $dom (@dom_ids) {
             if((!defined($current{$dom})) && ($dom ne $probe)) {
-                $iodoms->write($domains{$dom},-id=>'stampid');
+                $iodoms->write($domains{$dom});
                 $logger->debug("a domain:$dom (",
-                               $domains{$dom}->stampid . ')');
+                               $domains{$dom}->uniqueid . ')');
             }
         }
-
+        $iodoms->close;
         # Run stamp and add %keep to %current
         my %keep = stamp($tmp_probe, $tmp_doms);
         $current{$_} = 1 for keys %keep;
@@ -354,7 +352,7 @@ sub do_stamp {
         # Sort transformations
         my @keep_doms = sorttrans(\%keep);
         # Unless this only contains the probe, results are useful
-        unless ( @keep_doms == 1 && $keep_doms[0]->label eq $probe ) {
+        unless ( @keep_doms == 1 && $keep_doms[0]->id eq $probe ) {
             push @all_doms, @keep_doms;
             # Count number of disjoint sets
 #             $n_disjoins++ if $in_disjoint;
@@ -366,19 +364,28 @@ sub do_stamp {
 } # do_stamp
 
 
-#     pickframe('2nn6b', @keep_doms);
-# NB STAMP uses lowercase chain IDs. Need to change IDs for pickframe?
-# $key is a regular expression, case insensitive
+################################################################################
+=head2 pickframe
 
-# NB This actually changes the transformations of all the domains given
-# This should be called 'setframe', but we'll stick to STAMP conventions
-# NB This hasn't been tested and is suspected of being broken!
+ Function:
+ Example : pickframe('2nn6b', @keep_doms);
+ Returns : 
+ Args    :
+
+NB STAMP uses lowercase chain IDs. Need to change IDs for pickframe?
+$key is a regular expression, case insensitive
+
+NB This actually changes the transformations of all the domains given
+This should be called 'setframe', but we'll stick to STAMP conventions
+NB This hasn't been tested and is suspected of being broken!
+
+=cut
 sub pickframe {
     my ($key, @doms) = @_;
     $logger->trace("key:$key in ", join(',',@doms));
 
     # Find the domain with the given label
-    my ($ref) = grep { $_->stampid =~ /$key/i } @doms;
+    my ($ref) = grep { $_->id =~ /$key/i } @doms;
     $logger->debug("Reference: $ref\n", $ref->transformation);
     unless ($ref) {
         $logger->error("Cannot find domain: $key");;
@@ -396,18 +403,27 @@ sub pickframe {
 
 
 
-# Returns IDs of the domains to keep, based on Sc cutoff
+################################################################################
+=head2 stamp
+
+ Function: Returns IDs of the domains to keep, based on Sc cutoff
+ Example : 
+ Returns : 
+ Args    : 
+
+
+=cut
 sub stamp {
     my ($tmp_probe, $tmp_doms) = @_;
     $logger->trace("probe: $tmp_probe domains: $tmp_doms");
     # Get config setttings
-    my $stamp = $config->val('stamp', 'executable') || 'stamp';
-    my $min_fit = $config->val('stamp', 'min_fit') || 30;
-    my $min_sc = $config->val('stamp', 'sc_cut') || 2.0;
-    my $stamp_pars = $config->val('stamp', 'params') || 
+    my $stamp = val('stamp', 'executable') || 'stamp';
+    my $min_fit = val('stamp', 'min_fit') || 30;
+    my $min_sc = val('stamp', 'sc_cut') || 2.0;
+    my $stamp_pars = val('stamp', 'params') || 
         '-n 2 -slide 5 -s -secscreen F -opd';
     $stamp_pars .= " -scancut $min_sc";
-    my $tmp_prefix = $config->val('stamp', 'prefix') || 'stamp_trans';
+    my $tmp_prefix = val('stamp', 'prefix') || 'stamp_trans';
 
     my $com = join(' ', $stamp, $stamp_pars,
                 "-l $tmp_probe",
@@ -441,25 +457,34 @@ sub stamp {
 } # stamp
 
 
-# Run sorttrans (parse the $tmp_scan file)
-# -sort Sc
-# -cutoff 0.5
-# Returns array of L<SBG::Domain> 
-# NB: might be just the probe. You need to check
+
+################################################################################
+=head2 sorttrans
+
+ Function: Run sorttrans (parse the $tmp_scan file)
+ Example : 
+ Returns : array of L<SBG::Domain> 
+ Args    : 
+          sort Sc
+          cutoff 0.5
+
+NB: might return just the probe. You need to check
+
+=cut
 sub sorttrans {
     my ($KEEP, %o) = @_;
-    $o{-sort} ||= 'Sc';
-    $o{-cutoff} ||= 0.5;
-    $logger->trace("keep:" . join(' ',keys(%$KEEP)) . " $o{-sort}:$o{-cutoff}");
-    my $tmp_prefix = $config->val('stamp', 'prefix') || 'stamp_trans';
+    $o{sort} ||= 'Sc';
+    $o{cutoff} ||= 0.5;
+    $logger->trace("keep:" . join(' ',keys(%$KEEP)) . " $o{sort}:$o{cutoff}");
+    my $tmp_prefix = val('stamp', 'prefix') || 'stamp_trans';
     # File containing STAMP scan results
     my $tmp_scan = "${tmp_prefix}.scan";
 
-    my $sorttrans = $config->val("stamp", "sorttrans") || 'sorttrans';
+    my $sorttrans = val("stamp", "sorttrans") || 'sorttrans';
     my $params = "-i";
     my $com = join(' ', $sorttrans, $params,
                    "-f", $tmp_scan,
-                   "-s", $o{-sort}, $o{-cutoff},
+                   "-s", $o{sort}, $o{cutoff},
         );
     $logger->trace("\n$com");
     my $fh;
@@ -469,23 +494,38 @@ sub sorttrans {
     }
 
     # Read all doms
-    my $io = new SBG::DomainIO(-fh=>$fh);
+    my $io = new SBG::DomainIO(fh=>$fh);
     my @doms;
     while (my $d = $io->read) {
         push(@doms, $d);
     }
+    $io->close;
+    unlink $tmp_scan;
     $logger->trace("Re-read domains:@doms");
 
+    my @theids  = map { $_->id } @doms;
+    $logger->trace("Re-read IDs:@theids");
+    $logger->trace("Looking for domains w/ IDs: " .  keys(%$KEEP));
+
     # Which domains are to be kept
-    my @keep_doms = grep { defined($KEEP->{$_->stampid}) } @doms;
+    my @keep_doms = grep { defined($KEEP->{$_->id}) } @doms;
     $logger->debug("Kept:@keep_doms");
     return @keep_doms;
 
 } # sorttrans
 
 
-# Returns (probe, disjoint)
-# Disjoint==1 if not-yet-tried probe could not be found in %$current
+################################################################################
+=head2 _next_probe
+
+ Function: Returns (probe, disjoint)
+ Example : 
+ Returns : 
+ Args    : 
+
+Disjoint==1 if not-yet-tried probe could not be found in %$current
+
+=cut
 sub _next_probe {
     my ($all, $current, $tried) = @_;
     my $probe;
@@ -506,15 +546,11 @@ sub _next_probe {
 ################################################################################
 =head2 pdbc
 
- Title   : pdbc
- Usage   : pdbc('2nn6');
-           pdbc('2nn6', 'A', 'B');
-           pdbc('2nn6A', 'F');
  Function: Runs STAMP's pdbc and opens its output as the internal input stream.
  Example : my $domio = pdbc('2nn6');
            my $dom = $domio->read();
            # or all in one:
-           my $first_dom = pdbc(-pdbid=>'2nn6')->read();
+           my $first_dom = pdbc(pdbid=>'2nn6')->read();
  Returns : $self (success) or undef (failure)
  Args    : @ids - begins with one PDB ID, followed by any number of chain IDs
 
@@ -540,7 +576,7 @@ sub pdbc {
         $logger->error("Failed:\n\t$cmd\n\t$!");
         return 0;
     }
-    return new SBG::DomainIO(-file=>"<$path");
+    return new SBG::DomainIO(file=>"<$path");
 
 } # pdbc
 

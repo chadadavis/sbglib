@@ -179,18 +179,42 @@ sub transform {
 # Additional public methods
 
 
-=head2 uniqueid
+################################################################################
+=head2 id
 
-A unique ID, for use with STAMP
+Combines the PDBID and the descriptor into a short ID.
 
-First four characters must be the PDB ID (case insensitive).
-The fifth character may optionally be a chain ID (case sensitive).
-The address
+E.g. 2nn6A13A122 => 2nn6 { A 13 _ to A 122 _ }
+
+First four characters are the PDB ID.
+A unique domain descriptor is then appended.
+
+See also L<uniqueid>
+
 =cut
-sub uniqueid {
+sub id {
     my ($self) = @_;
     my $str = $self->pdbid;
     $str .= ($self->_descriptor_short || '');
+    return $str;
+} 
+
+
+################################################################################
+=head2 uniqueid
+
+A unique ID, for use with STAMP.
+
+In addition to L<id>, a unique ID for the transformation, if defined, is
+appended.
+
+NB If the L<SBG::Domain> contains a L<SBG::Transform>, the unique ID will be
+different after read/write or after serializing and deserializing.
+
+=cut
+sub uniqueid {
+    my ($self) = @_;
+    my $str = $self->id();
     # Get the memory address of some relevant attribute object, 
     my $rep = $self->transformation;
     $str .= $rep ? sprintf("-0x%x", refaddr($rep)) : '';

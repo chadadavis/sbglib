@@ -1,12 +1,17 @@
 #!/usr/bin/env perl
 
 use Test::More 'no_plan';
+use SBG::Test 'float_is';
+use feature 'say';
+use Carp;
+use Data::Dumper;
+$, = ' ';
+
 
 use File::Temp qw(tempfile);
-
 use SBG::DomainIO;
-
 use FindBin;
+
 my $dir = $FindBin::RealBin;
 my $file = "$dir/2nn6.dom";
 
@@ -47,6 +52,7 @@ my $iomixed = new SBG::DomainIO(file=>"$dir/model.dom", type=>'SBG::Domain::CofM
 my @transes;
 while (my $dom = $iomixed->read) {
     push @transes, $dom->transformation if $dom->transformation;
+    say "dom: ", $dom->uniqueid;
 }
 is(4, @transes, "4/6 Domains have explicit transformation");
 
