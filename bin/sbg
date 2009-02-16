@@ -2,22 +2,24 @@
 
 =head1 NAME
 
-B<sbg> - Interface to cached objects 
+B<sbg> - Interface to serialized objects 
 
 =head1 SYNOPSIS
 
-sbg file.stor
+sbg myfile.stor <object-method> <parameters> ...
 
 =head1 DESCRIPTION
 
 
 =head1 OPTIONS
 
-=head2 -h Print this help page
+=head2 -h 
+
+Print this help page
 
 =head1 SEE ALSO
 
-
+L<SBG::Storable>
 
 =cut
 
@@ -26,28 +28,54 @@ sbg file.stor
 # CPAN
 use Getopt::Long;
 use Pod::Usage;
-use Storable;
 
-# Things (i.e. data structures) that make sense to serialize
-use SBG::Domain;
-use SBG::Transform;
-use SBG::Interaction;
-use SBG::Complex;
+use Scalar::Util qw/blessed/;
 
+use SBG::Storable qw/module_for retrieve can_do/;
+
+use Moose::Autobox;
+use autobox;
+
+################################################################################
 
 my %ops;
 my $result = GetOptions(\%ops, 
                         'h|help',
     );
-if ($ops{'h'}) { pod2usage(-exitval=>1, -verbose=>2); }
-
 my ($file,$method,@args) = @ARGV;
 $file or pod2usage(-exitval=>2);
-my $obj = retrieve $file;
+my $obj = retrieve($file);
 
-my $res = $method ? $obj->$method(@args) : "$obj";
-print $res;
-print "\n" unless $res =~ /\n$/;
+if ($ops{'h'}) { 
+    my $mstr = method_str($obj);
+    pod2usage(-msg=>$mstr,-exitval=>0);
+}
+
+@args = load_args(@args);
+my @res = $method ? $obj->$method(@args) : "$obj";
+print "@res\n";
+
+
+################################################################################
+
+# If any param is readable file, convert to object
+sub load_args {
+    map { -r $_ ? retrieve($_) : $_ } @_;
+}
+
+sub method_str {
+    my ($obj) = @_;
+    $obj or return;
+    my $str;
+    $str .= "$file can do these functions:\n";
+    my $methods = $obj->can_do;
+    my $keys = $methods->keys->sort;
+    foreach my $class (@$keys) {
+        my $names = $methods->{$class}->sort;
+        $str .= $class . "::\n\t@$names\n";
+    }
+    return $str;
+}
 
 
 

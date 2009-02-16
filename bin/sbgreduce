@@ -6,7 +6,7 @@ B<sbgreduce> - Interface to cached objects
 
 =head1 SYNOPSIS
 
-sbgreduce BLOCK object(s).stor more-object(s).stor
+sbgreduce CODE object(s).stor more-object(s).stor
 
 
 =head1 DESCRIPTION
@@ -39,16 +39,10 @@ Put the BLOCK in quotes to prevent your shell from interpreting it.
 # CPAN
 use Getopt::Long;
 use Pod::Usage;
-use Storable;
-use List::Util qw(reduce);
+use SBG::Storable;
 
-use SBG::List qw(retrieve_files);
-
-# Things (i.e. data structures) that make sense to serialize
-use SBG::Domain;
-use SBG::Transform;
-use SBG::Interaction;
-use SBG::Complex;
+use List::Util qw/reduce/;
+use SBG::Storable qw(retrieve_files);
 
 my %ops;
 my $result = GetOptions(\%ops, 
