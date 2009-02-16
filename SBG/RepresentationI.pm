@@ -6,9 +6,9 @@ SBG::RepresentationI - Simplified structure representation (a L<Moose::Role>)
 
 =head1 SYNOPSIS
 
-package MyClass;
-use Moose;
-with 'SBG::RepresentationI'; 
+ package MyClass;
+ use Moose;
+ with 'SBG::RepresentationI'; 
 
 
 =head1 DESCRIPTION
@@ -40,6 +40,19 @@ positive (Euclidean) distance between this object and some other
 
 =cut
 requires 'dist';
+
+
+################################################################################
+=head2 sqdist
+
+ Function: Squared linar distance between objects
+ Example : 
+ Returns : 
+ Args    : 
+
+
+=cut
+requires 'sqdist';
 
 
 ################################################################################
