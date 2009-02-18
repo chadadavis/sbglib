@@ -171,6 +171,10 @@ my $domdseg = new SBG::Domain::CofM(pdbid=>'2br2', descriptor=>'D 8 _ to D 248 _
 my $trans = superpose($dombseg, $domdseg);
 ok($trans, "superpose($dombseg onto $domdseg)");
 
+TODO: {
+    local $TODO = "Test pickframe";
+    ok(0);
+}
 
 
 ################################################################################
