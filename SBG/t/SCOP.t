@@ -13,6 +13,4 @@ ok(equiv(@strings,4), 'equiv()');
 ok(! equiv(@strings,5), 'not equiv()');
 
 
-# TODO
-
 __END__
