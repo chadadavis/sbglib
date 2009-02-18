@@ -84,6 +84,9 @@ float_is($a[2], $tz, $prec);
 float_is($s->radius, $trg, $prec);
 
 
+# Storable
+ok($s->store("cofm.stor"), "Serializing to cofm.stor");
+
 
 # TODO test applying non-trivial transformation 
 
