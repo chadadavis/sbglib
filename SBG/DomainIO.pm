@@ -65,10 +65,10 @@ use SBG::Transform;
 ################################################################################
 # Accessors
 
-=head2 representation
+=head2 type
 
-The type to use for any dynamically created objects. Should be SBG::Domain or a
-sub-class of that. Default "L<SBG::Domain>" .
+The sub-type to use for any dynamically created objects. Should be
+L<SBG::Domain> or a sub-class of that. Default "L<SBG::Domain>" .
 
 =cut
 has 'type' => (

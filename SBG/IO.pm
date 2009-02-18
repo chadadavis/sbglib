@@ -25,7 +25,7 @@ use Moose;
 use Moose::Util::TypeConstraints;
 
 use SBG::Types;
-
+use Carp;
 use File::Temp;
 use IO::String;
 use IO::File;
@@ -50,6 +50,10 @@ For input: prepend with <
 For output prepend with >
 For append prepend with >>
 See L<IO::File>
+
+Not going to enforce that the file is readable here, as we may be opening for
+creation/writing.
+
 =cut
 has 'file' => (
     is => 'rw',
@@ -99,9 +103,14 @@ sub BUILD {
     my ($self) = @_;
     my $file = $self->file or return;
     $self->fh(new IO::File($file));
+    unless ($self->fh) {
+        carp "Cannot open: $file";
+        return;
+    }
     # Clean file name
     $file =~ s/^[+<>]*//g;
     $self->file($file);
+    return $self;
 }
 
 

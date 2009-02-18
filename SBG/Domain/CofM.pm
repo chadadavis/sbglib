@@ -149,6 +149,21 @@ sub load {
 
 
 ################################################################################
+=head2 rmsd
+
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
+
+
+=cut
+sub rmsd {
+    return dist(@_);
+}
+
+
+################################################################################
 =head2 dist
 
  Title   : dist
@@ -356,12 +371,12 @@ sub asarray {
 
 
 =cut
-override '_asstring' => sub {
-    my ($self) = @_;
-    my @a = ($self->asarray, $self->radius);
-    # Prepend stringification of parent first
-    return sprintf("%s(%10.5f,%10.5f,%10.5f,%10.5f)", super(), @a);
-};
+# override '_asstring' => sub {
+#     my ($self) = @_;
+#     my @a = ($self->asarray, $self->radius);
+#     # Prepend stringification of parent first
+#     return sprintf("%s(%10.5f,%10.5f,%10.5f,%10.5f)", super(), @a);
+# };
 
 
 ################################################################################

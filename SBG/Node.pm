@@ -27,6 +27,7 @@ L<Bio::Network::Node> , L<SBG::Network>
 package SBG::Node;
 use Moose;
 extends 'Bio::Network::Node';
+with 'SBG::Storable';
 
 use overload (
     '""' => '_asstring',
@@ -36,6 +37,14 @@ use overload (
 
 
 ################################################################################
+
+sub new () {
+    my $class = shift;
+    my $self = $class->SUPER::new(@_);
+    bless $self, $class;
+    return $self;
+}
+
 
 sub _asstring {
     my ($self) = @_;
@@ -47,7 +56,8 @@ sub _compare {
     my ($a, $b) = @_;
     return unless ref($b) && $b->isa("Bio::Network::Node");
     # Assume each Node holds just one protein
-    return $a cmp $b;
+    # Need to stringify here, otherwise it's recursive
+    return "$a" cmp "$b";
 }
 
 

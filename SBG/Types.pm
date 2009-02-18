@@ -29,7 +29,7 @@ our @EXPORT_OK = qw/
 $pdb41 $re_pdb $re_chain_id $re_chain $re_seg $re_chain_seg $re_descriptor
 /;
 
-# A file path is readable and non-empty
+# A file path 
 subtype 'SBG.File' 
     => as 'Str'
     => where { -f $_ };

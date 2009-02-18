@@ -140,6 +140,7 @@ has 'transformation' => (
 # Methods required by SBG::RepresentationI
 
 sub dist { return };
+sub sqdist { return };
 sub rmsd { return };
 sub evaluate { return };
 
