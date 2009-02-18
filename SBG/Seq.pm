@@ -25,6 +25,7 @@ L<Bio::Seq>
 package SBG::Seq;
 use Moose;
 extends 'Bio::Seq';
+with 'SBG::Storable';
 
 use overload (
     '""' => '_asstring',
@@ -33,6 +34,13 @@ use overload (
     );
 
 ################################################################################
+
+sub new () {
+    my $class = shift;
+    my $self = $class->SUPER::new(@_);
+    bless $self, $class;
+    return $self;
+}
 
 sub _asstring {
     my ($self) = @_;
