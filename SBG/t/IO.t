@@ -7,7 +7,6 @@ use File::Temp qw(tempfile);
 use SBG::IO;
 use FindBin qw/$Bin/;
 
-
 my $io = new_ok "SBG::IO";
 
 # Open a not-yet-opened file
