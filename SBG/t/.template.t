@@ -5,16 +5,10 @@ use SBG::Test 'float_is';
 use feature 'say';
 use Carp;
 use Data::Dumper;
+use FindBin;
+use File::Temp qw/tempfile/;
+my $dir = $FindBin::RealBin;
 $, = ' ';
 
-
 ################################################################################
-# Requires (outside functionality that I assume)
-
-
-
-################################################################################
-# Provides (promises made to users of my module)
-
-
 
