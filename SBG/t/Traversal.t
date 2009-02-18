@@ -1,25 +1,36 @@
 #!/usr/bin/env perl
 
 use Test::More 'no_plan';
+use SBG::Test 'float_is';
+use feature 'say';
+use Carp;
+use Data::Dumper;
+use FindBin;
+use File::Temp qw/tempfile/;
+my $dir = $FindBin::RealBin;
+$, = ' ';
 
 use SBG::Traversal;
 use SBG::NetworkIO;
-use Data::Dumper;
 
 # Load up a network
-my $file = "$installdir/t/simple_network.csv";
-my $io = new SBG::NetworkIO(-file=>$file);
+my $file = "$dir/simple_network.csv";
+my $io = new SBG::NetworkIO(file=>$file);
 my $net = $io->read;
 
 # GraphViz
+SKIP: {
+    skip "GraphViz needs update";
 my $graphout = "$installdir/t/graph.dot";
 SBG::NetworkIO::graphviz($net, $graphout,-edge_color=>'grey');
 ok(-r $graphout, "GraphViz creation: $graphout");
+}
 
 # For the sake of testing, define some incompatible sets of templates.  Anything
 # in the same set is all not compatible.  NB alternative templates for a single
 # edge are implicitly mutually incompatible.
 
+use Graph::UnionFind;
 # Set of sets of templates
 my $uf = new Graph::UnionFind; 
 # In this simple example, each template has a numeric index
@@ -68,15 +79,14 @@ my %expected = (
     );
 
 # Create a traversal
-my $trav = new SBG::Traversal(-graph=>$net, 
-                              -test=>\&try_template,
-                              -partial=>\&got_an_answer,
+my $trav = new SBG::Traversal(graph=>$net, 
+                              sub_test=>\&try_template,
+                              sub_solution=>\&got_an_answer,
     );
 
 $trav->traverse;
 
 is(11, scalar(keys %answers), "11 Covering solutions from traversal");
-# is($expect, join(";", sort keys %answers), "Exactly the right 11 coverings");
 
 foreach (sort keys %answers) {
     ok($expected{$_}, "Solution was expected: $_");
@@ -85,10 +95,13 @@ foreach (sort keys %answers) {
 is(0, scalar(keys %expected), 
    "(No) missing solutions: " . join(' ', keys %expected));
 
+
 exit;
+
 
 ################################################################################
 
+# In these callbacks, the default $state will just be a HashRef
 sub got_an_answer {
     my ($state, $g, $nodecover, $templates) = @_;
     my @ids;
@@ -101,6 +114,7 @@ sub got_an_answer {
     print STDERR 
         "Solution: ",
         "Nodes @$nodecover, Templates: @ids : \n@$templates\n";
+
     $state->{solutions} = [];
     $answers{"@$nodecover @ids"} = 1;
 }
