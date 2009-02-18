@@ -367,38 +367,27 @@ sub do_stamp {
 ################################################################################
 =head2 pickframe
 
- Function:
- Example : pickframe('2nn6b', @keep_doms);
- Returns : 
- Args    :
+ Function: Sets all domains to be relative to given L<SBG::Domain>
+ Example : pickframe($mydomain, @other_domains);
+ Returns : NA
+ Args    : Array of L<SBG::Domain>
 
-NB STAMP uses lowercase chain IDs. Need to change IDs for pickframe?
-$key is a regular expression, case insensitive
+NB This actually changes the transformations of all the domains given.
 
-NB This actually changes the transformations of all the domains given
-This should be called 'setframe', but we'll stick to STAMP conventions
-NB This hasn't been tested and is suspected of being broken!
+TODO test this
 
 =cut
 sub pickframe {
-    my ($key, @doms) = @_;
-    $logger->trace("key:$key in ", join(',',@doms));
+    my ($dom, @others) = @_;
 
-    # Find the domain with the given label
-    my ($ref) = grep { $_->id =~ /$key/i } @doms;
-    $logger->debug("Reference: $ref\n", $ref->transformation);
-    unless ($ref) {
-        $logger->error("Cannot find domain: $key");;
-        return;
+    foreach my $o (@others) {
+        my $trans = $o->transformation->relativeto($dom->transformation);
+        $o->transform($trans);
     }
 
-    # Get it's transformation matrix, the inverse that is
-    my $inv = $ref->transformation->matrix->inv;
-    # Multiply every matrix of every domain by this inverse
-    foreach (@doms) {
-        my $m = $_->transformation->matrix;
-        $m .= $inv x $m;
-    }
+    # Finally, the frame of reference gets the identity transformation
+    $dom->transformation(new SBG::Transform);
+
 } # pickframe
 
 
