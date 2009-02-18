@@ -1,8 +1,14 @@
 #!/usr/bin/env perl
 
 use Test::More 'no_plan';
+use SBG::Test 'float_is';
+use feature 'say';
+use Carp;
+use Data::Dumper;
+$, = ' ';
 
 use SBG::Interaction;
+
 
 # new()
 my $label1 = "component1-component2(template1-template2)";
@@ -19,6 +25,7 @@ ok($i2 ge $i1, "String comparison: ge");
 
 my $i3 = new SBG::Interaction(-id=>$label2, -weight => 99.9);
 is($i2, $i3, "String equality, between unique objects");
+
 
 # TODO
 # Test Interaction->template("key") = $domain

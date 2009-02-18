@@ -7,7 +7,7 @@ SBG::NetworkIO - Reads interactions and their templates from file
 =head1 SYNOPSIS
 
  use SBG::NetworkIO;
- my $net = new SBG::NetworkIO(-file=>"interactions.csv")->read;
+ my $net = new SBG::NetworkIO(file=>"interactions.csv")->read;
  $net->graphviz("printed_graph.png");
 
 =head1 DESCRIPTION
@@ -18,7 +18,7 @@ L<Graph>.
 
 The input format contains one interaction per line, with this format:
 
- component1 component2 template1 { descriptor } template2 { desc } score
+ component1 component2 pdbid1 { descriptor } pdbid1 { descriptor }
 
 Where:
 
@@ -42,58 +42,68 @@ Example:
 
 =head1 SEE ALSO
 
-L<SBG::IO> , L<SBG::Interaction> , L<Bio::Network::ProteinNet>
+L<SBG::Interaction> , L<SBG::Network>
 
 =cut
 
 ################################################################################
 
 package SBG::NetworkIO;
-use SBG::Root -base, -XXX;
-use base qw(SBG::IO);
-
+use Moose;
+extends qw/SBG::IO Exporter/;
 our @EXPORT_OK = qw(graphviz graphvizmulti);
 
-use warnings;
-use Carp;
 use Text::ParseWords;
 use Bio::Network::ProteinNet;
 use Graph::Writer::GraphViz;
 
+use Bio::Network::ProteinNet;
+
+use SBG::Network;
 use SBG::Interaction;
 use SBG::Node;
 use SBG::Seq;
 use SBG::Domain;
+use SBG::Template;
 use SBG::List qw(pairs);
+use SBG::HashFields;
 
 ################################################################################
+# Fields
 
-sub new () {
-    my $class = shift;
-    # Delegate to parent class
-    my $self = new SBG::IO(@_);
-    return unless $self;
-    # And add our ISA spec
-    bless $self, $class;
-    return $self;
-} # new
+
+################################################################################
+=head2 node
+
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
+
+Components can participate in multiple interactions.  But the nodes themselves
+are unique.
+
+NB you cannot do this with Domain's, even if they are effectively equal.
+Because a Domain can be later transformed, but those are all independent.
+
+=cut
+hashfield 'node';
+
 
 
 ################################################################################
 =head2 read
 
- Title   : read
- Usage   : my $net = $io->read();
  Function: Reads the interaction lines from the stream and produces a network
- Example : (see above)
- Returns : L<Bio::Network::ProteinNet>
+ Example : my $net = $io->read();
+ Returns : L<SBG::Network>
  Args    : NA
 
 E.g.:
 
-RRP41 RRP42  2br2 { CHAIN A } 2br2 { CHAIN B } 69.70 
+RRP41 RRP42  2br2 { CHAIN A } 2br2 { CHAIN B }
 # or
-RRP41 RRP42  2br2 { A 5 _ to A 220 _ } 2br2 { B 1 _ to B 55 _ } 69.70 
+RRP41 RRP42  2br2 { A 5 _ to A 220 _ } 2br2 { B 1 _ to B 55 _ }
 
 Set 'extract' to true to try to get interactions out of comment lines too
 =cut
@@ -101,23 +111,21 @@ sub read {
     my ($self, $extract) = @_;
     my $fh = $self->fh;
 
-    # refvertexed because the nodes are object refs, rather than strings or so
-    my $net = Bio::Network::ProteinNet->new(refvertexed=>1);
+    my $net = new SBG::Network;
 
     while (<$fh>) {
         next if !$extract && (/^\s*\#/ || /^\s*\%/ || /^\s*$/);
         chomp;
 
-        my ($comp1, $comp2, $pdbid1, $descr1, $pdbid2, $descr2, $score) = 
+        my ($comp1, $comp2, $pdbid1, $descr1, $pdbid2, $descr2) = 
             _parse_line($_) or next;
 
-        my $interaction = $self->_make_iaction(
-            $comp1, $comp2, $pdbid1, $descr1, $pdbid2, $descr2, $score);
+        my $interaction = $self->_make_interaction(
+            $comp1, $comp2, $pdbid1, $descr1, $pdbid2, $descr2);
 
         # Now put it all into the ProteinNet. 
         # Now there is a formal association beteen Interaction and it's Node's
         $net->add_interaction(
-#             -nodes => [$nodes{$comp1}, $nodes{$comp2}], 
             -nodes => [$self->node($comp1), $self->node($comp2)], 
             -interaction => $interaction,
             );
@@ -127,121 +135,28 @@ sub read {
 } # read
 
 
-################################################################################
-=head2 search
+sub _make_node {
+    my ($self, $comp, $pdbid, $descr) = @_;
+    my $seq = new SBG::Seq(-accession_number=>$comp);
+    my $node = $self->node($comp) || new SBG::Node($seq);
+    $self->node($comp, $node);
+    my $dom = new SBG::Domain(pdbid=>$pdbid,descriptor=>$descr);
+    my $templ = new SBG::Template(seq=>$seq,domain=>$dom);
+    return ($node, $templ);
+}
 
- Title   : search
- Usage   :
- Function:
- Example :
- Returns : 
- Args    :
-
-# TODO doesn't belong here
-=cut
-sub search {
-   my ($self, @components) = @_;
-
-   # refvertexed because the nodes are object refs, rather than strings or so
-   my $net = Bio::Network::ProteinNet->new(refvertexed=>1);
-
-   # For all pairs
-   foreach my $pair (pairs(@components)) {
-       my ($comp1, $comp2) = @$pair;
-
-       my @interactions = $self->grep_db($comp1, $comp2);
-
-       foreach my $iaction (@interactions) {
-           $net->add_interaction(
-               -nodes => [$self->node($comp1), $self->node($comp2)], 
-               -interaction => $iaction);
-       }
-   }
-
-   return $net;
-
-} # search
+sub _make_interaction {
+    my ($self, $comp1, $comp2, $pdbid1, $descr1, $pdbid2, $descr2) = @_;
+    my ($node1, $templ1) = $self->_make_node($comp1, $pdbid1, $descr1);
+    my ($node2, $templ2) = $self->_make_node($comp2, $pdbid2, $descr2);
+    my $iactionid = "$templ1--$templ2";
+    my $iaction = new SBG::Interaction(-id=>$iactionid);
+    $iaction->template($node1,$templ1);
+    $iaction->template($node2,$templ2);
+    return $iaction;
+}
 
 
-# Greps the benchmark text file from Rob for templates
-# Parse:
-
-#  -- 
-# Can model 
-# 1ir2                #pdb
-# 1ir2A.c.1.14.1-1    #true1
-# 1ir2A.d.58.9.1-1    #true2
-# on 
-# 1svdA.c.1.14.1-1    #templ1
-# 1svdA.d.58.9.1-1    #templ2
-# 1.000e-150          #eval1
-# 77.00               #id1
-# 1.000e-44           #eval2
-# 70.00               #id2
-# 64/129              # 1ir2 has 129 components, 1svd has 64 of them
-# 0.496               # coverage fraction 64/129
-# iRMSD  8.13053      # iRMSD true1--true2/templ1--templ2
-# OK 31 40   0.78     # 31 out of 40 (78%) are "OK" (in what sense?)
-# I2                  # The following refer to interprets2
-# Z   4.188           # i2 z-score
-# p 0.005             # i2 p-val
-# 
-sub grep_db {
-    my ($self, $comp1, $comp2) = @_;
-    my ($pdb) = $comp1 =~ /^(.{4})/;
-    # Grep the lines from $db
-    my @lines = `grep 'Can model $pdb $comp1 $comp2 on`;
-    my @interactions;
-    foreach (@lines) {
-        unless (/( -- )?Can model $pdb $comp1 $comp2 on (\S+) (\S+)\s+(.*)$/) {
-            $logger->warn("Should've been able to parse:\n$_");
-            next;
-        }
-        my ($templ1, $templ2) = ($2, $3);
-        my $scores = $4;
-
-        my ($pdbid1, $chainid1, $scopid1) = parse_scopid($templ1);
-        my ($pdbid2, $chainid2, $scopid2) = parse_scopid($templ2);
-        my ($file1, undef, $descr1) = get_descriptor($scopid1);
-        my ($file2, undef, $descr2) = get_descriptor($scopid2);
-        
-        my $iaction = $self->_make_iaction(
-            $comp1, $comp2, $pdbid1, $descr1, $pdbid2, $descr2);
-
-        my ($eval1, $sid1, $eval2, $sid2, 
-            $coverage, $coverage_f, 
-            undef, $irmsd,
-            undef, $ok_n, $ok_tot, $ok_f,
-            undef, undef, $i2z, undef, $i2p,
-            ) = parse_line('\s+', 0, $scores);
-        
-        # Save scores in the interaction template
-        $iaction->score('eval1') = $eval1;
-        $iaction->score('eval2') = $eval2;
-        $iaction->score('seqid1') = $sid1;
-        $iaction->score('seqid2') = $sid2;
-        $iaction->score('irmsd') = $irmsd;
-        $iaction->score('ipts2z-score') = $i2z;
-        $iaction->score('ipts2p-val') = $i2p;
-
-        push @interactions, $iaction;
-    } # foreach
-    return @interactions;
-} # grep_db
-
-
-################################################################################
-=head2 _parse_line
-
- Title   : _parse_line
- Usage   :
- Function:
- Example :
- Returns : 
- Args    :
-
-
-=cut
 sub _parse_line {
    my ($line) = @_;
 
@@ -255,66 +170,13 @@ sub _parse_line {
 
    $score ||= 0;
    unless ($comp1 && $comp2 && $pdbid1 && $pdbid2) {
-       $logger->warn("Cannot parse interaction line:\n", $line);
+       warn("Cannot parse interaction line:\n", $line);
        return;
    }
    return ($comp1, $comp2, $pdbid1, $descr1, $pdbid2, $descr2, $score);
 
 } # _parse_line
 
-
-# Components can participate in multiple interactions
-# But the nodes themselves are unique
-# NB you cannot do this with Domain's, even if they are effectively equal.
-# Because a Domain can be later transformed, but those are all independent
-sub node : lvalue {
-    my ($self,$key) = @_;
-    $self->{node} ||= {};
-    # Do not use 'return' with 'lvalue'
-    $self->{node}{$key};
-}
-
-################################################################################
-=head2 _make_iaction
-
- Title   : _make_iaction
- Usage   :
- Function:
- Example :
- Returns : 
- Args    :
-
-
-=cut
-sub _make_iaction {
-    my ($self, $comp1, $comp2, $pdbid1, $descr1, $pdbid2, $descr2, $score) = @_;
-
-    # Create Seq objects, using accession; and Node objects contain a Seq
-    # Only if we have not already seen these component Nodes, else reuse
-    $self->node($comp1) ||= 
-            new SBG::Node(new SBG::Seq(-accession_number=>$comp1));
-    $self->node($comp2) ||= 
-            new SBG::Node(new SBG::Seq(-accession_number=>$comp2));
-
-    # Template domains.
-    # Will be created, even if they are equivalent to previously created dom
-    # Because the template domains are specific to an interaction template
-    my $dom1 = new SBG::Domain(
-        -label=>$comp1,-pdbid=>$pdbid1,-descriptor=>$descr1);
-    my $dom2 = new SBG::Domain(
-        -label=>$comp2,-pdbid=>$pdbid2,-descriptor=>$descr2);
-    
-    # Unique (in the whole network) interaction label/id
-    my $iactionid = "$comp1($pdbid1 $descr1)--$comp2($pdbid2 $descr2)";
-    $logger->trace("Interaction:$iactionid $score");
-
-    # Interaction object.
-    my $interaction = new SBG::Interaction(-id=>$iactionid,-weight=>$score);
-    # The Interaction notes which Domain models which Node
-    $interaction->template($self->node($comp1)) = $dom1;
-    $interaction->template($self->node($comp2)) = $dom2;
-    return $interaction;
-} # _make_iaction
 
 ################################################################################
 =head2 graphviz
@@ -380,7 +242,7 @@ sub graphvizmulti {
             # Look up what domains model which halves of this interaction
             my $udom = $ix->template($u);
             my $vdom = $ix->template($v);
-             $str .= "\t\"" . $udom->label . "\" -- \"" . $vdom->label . "\" [" . 
+             $str .= "\t\"" . $udom->id . "\" -- \"" . $vdom->id . "\" [" . 
                 join(', ', 
 #                      "label=\"" . $ix->weight . "\"",
                      "headlabel=\"" . $udom->pdbid . "\"",
@@ -399,4 +261,5 @@ sub graphvizmulti {
 }
 
 ################################################################################
+__PACKAGE__->meta->make_immutable;
 1;

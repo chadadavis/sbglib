@@ -1,27 +1,67 @@
 #!/usr/bin/env perl
 
 use Test::More 'no_plan';
+use SBG::Test 'float_is';
+use feature 'say';
+use Carp;
+use Data::Dumper;
+$, = ' ';
 
-use strict;
+
+use SBG::Storable qw(retrieve_files);
 use SBG::Network;
-use SBG::NetworkIO;
+use SBG::Node;
+use File::Temp qw(tempfile);
+use SBG::Seq;
+use SBG::Interaction;
+use Bio::Network::Node;
+use SBG::SCOPSearch;
 
-my $file = shift || "$installdir/t/ex_disconnected.csv";
-# my $file = shift || "$installdir/t/ex_small.csv";
+my $net = new SBG::Network;
+my $seq1 = new SBG::Seq(-accession_number=>'RRP43');
+my $seq2 = new SBG::Seq(-accession_number=>'RRP41');
+my $seqn = new Bio::Seq(-accession_number=>'RRP43');
+my $node1 = new SBG::Node($seq1);
+my $node2 = new SBG::Node($seq2);
+my $noden = new Bio::Network::Node($seqn);
 
-my $io = new SBG::NetworkIO(-file=>$file);
-my $net = $io->read;
+$net->add($node1);
 
-print join("|", $net->nodes), "\n";
+@nodes = $net->nodes_by_id($seq1->accession_number);
+# @nodes = $net->nodes_by_id('RRP43');
 
-# TODO update NetworkIO to return SBG::Network
-bless $net, 'SBG::Network';
+my $interaction = new SBG::Interaction(-id=>'iaction');
+$net->add_interaction(
+    -nodes=>[ $node1, $node2 ],
+    -interaction => $interaction,
+    );
 
-# my @graphs = $net->partition();
-my @graphs = SBG::Network::partition($net);
-
-
-foreach my $g (@graphs) {
-#     print  Dumper $g;
-    print "$g\n";
+@nodes = $net->nodes;
+print "nodes:@nodes:\n";
+%iactions = $net->get_interactions($net->nodes);
+for (keys %iactions) {
+    say "$_ : ", $iactions{$_};
 }
+
+
+$net = new SBG::Network;
+
+my @accnos = SBG::SCOPSearch::domains('2os7');
+my @seqs = map { new SBG::Seq(-accession_number=>$_) } @accnos;
+my @nodes = map { new SBG::Node($_) } @seqs;
+$net->add($_) for @nodes;
+
+$net->build(new SBG::SCOPSearch);
+say "iactions: " . join("\n", sort $net->interactions);
+
+my $subnets = $net->partition;
+foreach my $subnet (@$subnets) {
+    say "Subnet:$subnet";
+}
+
+
+__END__
+
+# TODO
+
+
