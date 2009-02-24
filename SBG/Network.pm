@@ -25,8 +25,9 @@ L<Bio::Network::ProteinNet> , L<Bio::Network::Interaction> , L<SBG::Interaction>
 
 package SBG::Network;
 use Moose;
-extends 'Bio::Network::ProteinNet';
+extends qw/Bio::Network::ProteinNet/;
 with 'SBG::Storable';
+with 'SBG::Dumpable';
 
 use Carp;
 use SBG::List qw/pairs/;
@@ -47,12 +48,20 @@ use overload (
  Returns : 
  Args    : 
 
+NB. Due to a bug in Graph::AdjacencyMap::Vertex, we prefer to use
+Graph::AdjacencyMap::Light. This can be achieved by setting revertexed=>0,
+though, intuitively, we would prefer refvertexed=>1, as a Node in the Graph is
+an object, and not just a string.
+
+The bug is that stringification of SGB::Node is ignored, which causes Storable
+to not be able to store/retrieve a SBG::Network correctly.
 
 =cut
 sub new () {
     my $class = shift;
     # refvertexed because the nodes are object refs, rather than strings or so
-    my $self = $class->SUPER::new(refvertexed=>1, @_);
+
+    my $self = $class->SUPER::new(refvertexed=>0, @_);
     bless $self, $class;
     return $self;
 }
