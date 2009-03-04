@@ -24,7 +24,7 @@ package SBG::Types;
 use Moose;
 use Moose::Util::TypeConstraints;
 
-extends 'Exporter';
+extends qw/Moose::Object Exporter/;
 our @EXPORT_OK = qw/
 $pdb41 $re_pdb $re_chain_id $re_chain $re_seg $re_chain_seg $re_descriptor
 /;
@@ -59,11 +59,16 @@ our $pdb41 = "($re_pdb)($re_chain_id)";
 our $re_chain = 'CHAIN\s+' . $re_chain_id;
 # This is strict
 
+# NB: Residue IDs can be negative
+our $re_pos = '-?\d+';
 # NB: Back referencing same chain with \g-1 (this goes back to prev. match)
-our $re_seg = '(' . $re_chain_id . ')\s+\d+\s+_\s+to\s+\g-1\s+\d+\s+_';
+our $re_seg = 
+    '('.$re_chain_id.')\s+'.$re_pos.'\s+_\s+to\s+\g-1\s+'.$re_pos.'\s+_';
+# A whole chain or a subsegment
 our $re_chain_seg = "($re_chain)|($re_seg)";
 # (whole-chain or segment), repeated, white-space separated
-our $re_chain_segs =  "($re_chain_seg)(\\s+$re_chain_seg)*";
+our $re_chain_segs =  "($re_chain_seg)(\\s+($re_chain_seg))*";
+# A STAMP descriptor can also be "ALL" for all residues of all chains
 our $re_descriptor = "ALL|($re_chain_segs)";
 
 subtype 'SBG.Descriptor'
