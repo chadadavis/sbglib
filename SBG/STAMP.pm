@@ -34,6 +34,7 @@ use warnings;
 use File::Temp qw(tempfile tempdir);
 use IO::String;
 use Data::Dumper;
+use List::MoreUtils qw/mesh/;
 
 use SBG::Transform;
 use SBG::Domain;
@@ -99,10 +100,18 @@ sub gtransform {
 
  Function: Provides L<SBG::Transform> required to put $fromdom onto $ontodom
  Example :
- Returns : 
+ Returns : L<SBG::Transform>
  Args    : 
            fromdom
            ontodom
+
+Does not modify/transform $fromdom.
+
+If a L<SBG::Domain> already has a non-identity L<SBG::Transform>, it is not
+considered here. I.e. the transformation will be the one that places the native
+orientation of $fromdom onto the native orientation of $ontodom.
+
+You will still need to then transform $fromdom.
 
 =cut
 sub superpose {
@@ -141,12 +150,9 @@ sub superpose {
 
  Function: run stamp locally, to do superposition of one domain onto another
  Example :
- Returns : 
+ Returns : L<SBG::Transform>
  Args    :
 
-NB STAMP doesn't work on Domains that already have a Transform.  I.e. it does
-not consider the structure in its new location.  This is for computing
-transforms on the native, not-yet-transformed PDB data.
 
 =cut
 sub superpose_local {
@@ -331,7 +337,7 @@ sub do_stamp {
         # Write probe domain to file
         my (undef, $tmp_probe) = tempfile();
         my $ioprobe = new SBG::DomainIO(file=>">$tmp_probe");
-        $ioprobe->write($domains{$probe});
+        $ioprobe->write($domains{$probe}, trans=>0);
         $ioprobe->close;
         $logger->debug("probe:$probe");
         # Write other domains to single file
@@ -339,7 +345,7 @@ sub do_stamp {
         my $iodoms = new SBG::DomainIO(file=>">$tmp_doms");
         foreach my $dom (@dom_ids) {
             if((!defined($current{$dom})) && ($dom ne $probe)) {
-                $iodoms->write($domains{$dom});
+                $iodoms->write($domains{$dom}, trans=>0);
                 $logger->debug("a domain:$dom (",
                                $domains{$dom}->uniqueid . ')');
             }
@@ -349,8 +355,9 @@ sub do_stamp {
         my %keep = stamp($tmp_probe, $tmp_doms);
         $current{$_} = 1 for keys %keep;
 
-        # Sort transformations
-        my @keep_doms = sorttrans(\%keep);
+        # Sort transformations, if there were any
+        my @keep_doms;
+        @keep_doms = sorttrans(\%keep) if keys(%keep);
         # Unless this only contains the probe, results are useful
         unless ( @keep_doms == 1 && $keep_doms[0]->id eq $probe ) {
             push @all_doms, @keep_doms;
@@ -400,51 +407,88 @@ sub pickframe {
  Returns : 
  Args    : 
 
+For stamp parameters, see: 
+
+ http://www.compbio.dundee.ac.uk/manuals/stamp.4.2/node36.html
 
 =cut
 sub stamp {
-    my ($tmp_probe, $tmp_doms) = @_;
-    $logger->trace("probe: $tmp_probe domains: $tmp_doms");
-    # Get config setttings
-    my $stamp = val('stamp', 'executable') || 'stamp';
-    my $min_fit = val('stamp', 'min_fit') || 30;
-    my $min_sc = val('stamp', 'sc_cut') || 2.0;
-    my $stamp_pars = val('stamp', 'params') || 
-        '-n 2 -slide 5 -s -secscreen F -opd';
-    $stamp_pars .= " -scancut $min_sc";
-    my $tmp_prefix = val('stamp', 'prefix') || 'stamp_trans';
+    my ($tmp_probe, $tmp_doms, $just1) = @_;
+    our $com;
+    $com ||= _stamp_config();
+    $com .= join(' ', ' ',
+        "-l $tmp_probe",  # probe (i.e. query) sequence
+        "-d $tmp_doms",   # database domains
+        );
 
-    my $com = join(' ', $stamp, $stamp_pars,
-                "-l $tmp_probe",
-                "-prefix $tmp_prefix",
-                "-d $tmp_doms");
     $logger->trace("\n$com");
-    my $fh;
-    unless (open $fh,"$com |") {
+    open my $fh,"$com |";
+    unless ($fh) {
         $logger->error("Error running stamp:\n$com");
         return;
     }
 
     # Parse out the 'Scan' lines from stamp output
+    our @keys = qw/Domain1 Domain2 Fits Sc RMS Len1 Len2 Align Fit Eq Secs I S P/;
     my %KEEP = ();
     while(<$fh>) {
         next if /skipped/ || /error/ || /missing/;
         next unless /^Scan/;
         chomp;
         $logger->trace($_);
+
         my @t = split(/\s+/);
-        my $id1 = $t[1];
-        my $id2 = $t[2];
-        my $sc = $t[4];
-        my $nfit = $t[9];
-        if(($sc > 0.5) && (($sc>=$min_sc) || ($nfit >= $min_fit))) {
-            $KEEP{$id1}=1;
-            $KEEP{$id2}=1;
+        shift @t; # Loose the 'Scan' header
+        # Hash @keys to @t
+        my %fields = List::MoreUtils::mesh @keys, @t;
+        # If the incoming domain had a trans, but it doesn't afterward, the name
+        # can be different, remove qualifier:
+        $fields{'Domain1'} =~ s/-0x.*//;
+        $fields{'Domain2'} =~ s/-0x.*//;
+        
+        unless ($fields{'Fits'} > 0) {
+            $logger->info("No fits");
+            next;
         }
+        # Yes, keep these domains
+        $KEEP{ $fields{'Domain1'} } = 1;
+        $KEEP{ $fields{'Domain2'} } = 1;
+
+        return \%fields if $just1;
     }
     return %KEEP;
 } # stamp
 
+
+sub _stamp_config {
+
+    # Get config setttings
+    my $stamp = val('stamp', 'executable') || 'stamp';
+    # Number of fits (residues?) that were performed
+    my $minfit = val('stamp', 'minfit') || 30;
+    # Min Sc value to accept
+    my $scancut = val('stamp', 'scancut') || 2.0;
+    # Temporary output file prefix
+    my $tmp_prefix = val('stamp', 'prefix') || 'stamp_trans';
+
+    my $stamp_pars = val('stamp', 'params') || join(' ',
+        '-n 2',         # number of fits 
+        '-slide 5',     # query slides every 5 AAs along DB sequence
+        '-s',           # scan mode: only query compared to each DB sequence
+        '-secscreen F', # Do not perform initial secondary structure screen
+        '-opd',         # one-per-domain: just one hit per query domain
+        );
+
+    $stamp_pars .= join(' ', ' ',
+        "-minfit $minfit",
+        "-scancut $scancut", 
+        "-prefix $tmp_prefix", # output scan file prefix
+        );
+
+    my $com = "$stamp $stamp_pars";
+    $logger->trace("\n$com");
+    return $com;
+}
 
 
 ################################################################################
@@ -471,7 +515,8 @@ sub sorttrans {
 
     my $sorttrans = val("stamp", "sorttrans") || 'sorttrans';
     my $params = "-i";
-    my $com = join(' ', $sorttrans, $params,
+    my $com = join(' ', 
+                   $sorttrans, $params,
                    "-f", $tmp_scan,
                    "-s", $o{sort}, $o{cutoff},
         );
@@ -494,7 +539,7 @@ sub sorttrans {
 
     my @theids  = map { $_->id } @doms;
     $logger->trace("Re-read IDs:@theids");
-    $logger->trace("Looking for domains w/ IDs: " .  keys(%$KEEP));
+    $logger->trace("Looking for domains w/ IDs: " .  join(' ',keys(%$KEEP)));
 
     # Which domains are to be kept
     my @keep_doms = grep { defined($KEEP->{$_->id}) } @doms;
