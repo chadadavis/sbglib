@@ -11,33 +11,43 @@ SBG::Complex - Represents one solution to the problem of assembling a complex
 
 =head1 DESCRIPTION
 
-A state-holder for L<SBG::Traversal>. Also provides the call-back functions
-needed by L<SBG::Traversal>. In short, an L<SBG::Complex> is one of many
+A state-holder for L<SBG::Traversal>.  L<SBG::Assembler> uses L<SBG::Complex> to
+hold state-information while L<SBG::Traversal> traverses an L<SBG::Network>.
+
+In short, an L<SBG::Complex> is one of many
 solutions to the protein complex assembly problem for a give set of proteins.
 
 =SEE ALSO
 
-L<SBG::ComplexIO> , L<SBG::Domain>
+L<SBG::ComplexIO> , L<SBG::Assembler> , L<SBG::Traversal>
 
 =cut
 
 ################################################################################
 
 package SBG::Complex;
-use SBG::Root -base;
+use Moose;
 
-# This object is clonable
-use base qw(Clone);
+extends qw/Moose::Object Clone/;
+with 'SBG::Storable';
 
-use SBG::List qw(intersection);
-use SBG::Domain qw(sqdist);
-use SBG::STAMP;
-use List::Util qw(min);
+use Moose::Autobox;
+use autobox ARRAY => 'SBG::List';
+
+use File::Temp qw/tempfile/;
+
+use SBG::HashFields;
+use SBG::List qw/min union sum intersection/;
+use SBG::Config qw/config/;
+use SBG::Log;
+use SBG::STAMP qw/superpose stamp/;
+
+# Default Domain subtype
+use SBG::Domain::CofM;
 
 use overload (
     '""' => '_asstring',
-    'eq' => '_eq',
-    '-'  => 'rmsd',
+    fallback => 1,
     );
 
 
@@ -45,184 +55,226 @@ use overload (
 # Fields and accessors
 
 
-# Allowed (linear) overlap between the spheres, that represent the proteins
-# Centre-of-mass + Radius-of-gyration
-field 'lin_thresh';
+=head2 name
+
+Just for keeping track of which complex models correspond to which networks
+
+=cut
+has 'name' => (
+    is => 'ro',
+    isa => 'Str',
+    default => '',
+    );
+
+
+=head2 type
+
+The sub-type to use for any dynamically created objects. Should be
+L<SBG::Domain> or a sub-class of that. Default "L<SBG::Domain>" .
+
+=cut
+has 'type' => (
+    is => 'rw',
+    isa => 'ClassName',
+    required => 1,
+    default => 'SBG::Domain::CofM',
+    );
+
+# ClassName does not validate if the class isn't already loaded. Preload it here.
+before 'type' => sub {
+    my ($self, $classname) = @_;
+    return unless $classname;
+    load($classname);
+};
 
 
 ################################################################################
-=head2 comp
+=head2 interaction
 
- Title   : comp
- Usage   : $assem->comp('mylabel') = $domainobject;
- Function: 
- Example : $assem->comp('mylabel') = $domainobject;
- Returns : An (lvalue) ref to the L<SBG::Domain> for the component name given
- Args    :
-
-A L<SBG::Domain> also contains a centre-of-mass point and possibly an associated
-L<SBG::Transform>
-
-These saved domains are used to lookup previously determined frames of
-reference. This is necessary because domains are transformed in space throughout
-the traversal. 
+L<SBG::Interaction> objects used to create this complex. Indexed by the
+B<primary_id> of the interaction.
 
 =cut
-# NB Spiffy doesn't magically create $self here, probably due to the attribute
-sub comp : lvalue {
-    my ($self,$key) = @_;
-    $self->{comp} ||= {};
-    # Do not use 'return' with 'lvalue'
-    $self->{comp}{$key};
-} # comp
+hashfield 'interaction', 'interactions';
 
-# TODO DOC
-# TODO save just the IDs or the actual objects, or both?
-# Well, it's a hash, index the objects by the ID !
-sub iaction : lvalue {
-    my ($self,$key) = @_;
-    $self->{iaction} ||= {};
-    # Do not use 'return' with 'lvalue'
-    $self->{iaction}{$key};
+
+################################################################################
+=head2 template
+
+ Function: 
+ Example : $cmplx->template('RRP43',new SBG::Template(seq=>$seq,domain=>$dom);
+ Returns : A ref to the L<SBG::Domain> for the component name given
+ Args    :
+
+Indexed by accession_number of protein modelled by this template.
+
+=cut
+# hashfield 'template', 'templates';
+
+
+################################################################################
+=head2 model
+
+ Function: Maps accession number of protein components to L<SBG::Domain> model.
+ Example : $cmplx->domain('RRP43',
+               new SBG::Domain::CofM(pdbid=>'2xyz',descriptor='CHAIN A'));
+ Returns : The one L<SBG::Domain> modelling the protein, if any
+ Args    : accession_number
+
+Indexed by accession_number of protein modelled by this L<SBG::Domain>
+
+=cut
+hashfield 'model', 'models';
+
+
+################################################################################
+=head2 attach
+
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
+
+
+=cut
+sub attach {
+    my ($self, $src, $dest, $ix) = @_;
+    my $success;
+    # These two domains may be abstract (i.e. no spacial representation)
+    my $srcdom = $ix->template($src)->domain;
+    my $destdom = $ix->template($dest)->domain;
+    # Get reference domain of $src component (a concrete domain, w/ coordinates)
+    my $refdom = $self->model($src);
+
+    unless (defined $refdom) {
+        # Base case: no previous structural constraint.
+        # I.e. We're in a new frame of reference: implicitly sterically OK
+        # Initialize new object, based on previous (copy construction)
+
+        $self->model($src, $self->type()->new(%$srcdom));
+        $self->model($dest, $self->type()->new(%$destdom));
+        $self->interaction($ix, $ix);
+        return $success = 1;
+    }
+
+    $destdom = $self->linker($refdom, $srcdom, $destdom);
+    return $success = 0 unless $destdom;
+
+    # Check new coords of destdom for clashes across currently assembly
+    $success = ! $self->clashes($destdom);
+    return $success = 0 unless $success;
+    
+    # Domain does not clash after being oriented, can be saved in complex now
+    # Update frame-of-reference of interaction partner ($dest)
+    # NB Any previous $self->domain($dest) gets overwritten
+    # This is compatible with the backtracking of SBG::Traversal
+    $self->model($dest, $destdom);
+    $self->interaction($ix, $ix);
+    return $success;
+
+} # attach
+
+
+# Transform $destdom via the linking transformation that puts src onto srcref
+# TODO move this to STAMP.pm
+sub linker { 
+    my ($self, $srcrefdom, $srcdom, $destdom) = @_;
+    $logger->trace("linking $srcdom onto $srcrefdom, ",
+                   "in order to orient $destdom");
+    # Superpose $srcdom into prev frame of reference from $src component
+    # This defines the (additional) transform we need to apply to $destdom
+    my $xform = superpose($srcdom, $srcrefdom);
+    unless (defined($xform)) {
+        $logger->error("Cannot link via: superpose($srcdom,$srcrefdom)");
+        return;
+    }
+    # A concrete (w/ coordinates) instance of this domain
+    $destdom = $self->type->new(%$destdom);
+
+    # Then apply that transformation to the interaction partner $dest
+    # Product of relative with absolute transformation
+    # Any previous transformation (reference domain) has to also be included
+
+# TODO explain order of ops here (do this in STAMP.pm, not here)
+    $destdom->transform($xform);
+    $destdom->transform($srcrefdom->transformation);
+
+    return $destdom;
 }
 
 
-################################################################################
-# Public
+# TODO
+# Derive a new L<SBG::Network> using $self->interactions and $self->templates
+sub subnet {
+    my ($self) = @_;
+    
+}
 
-################################################################################
-=head2 new
-
- Title   : new
- Usage   : 
- Function: 
- Returns : 
- Args    : -lin_thresh Tolerance (angstrom) for overlaping radii of gyration
-
-=cut
-sub new () {
-    my ($class, %o) = @_;
-    my $self = { %o };
-    bless $self, $class;
-    $self->_undash;
-
-    $self->{lin_thresh} = $config->val('assembly', 'lin_thresh') || '15';
-
-    return $self;
-} # new
 
 
 ################################################################################
 =head2 clone
 
- Title   : clone
- Usage   :
- Function:
- Example :
- Returns : 
- Args    :
+ Function: A shallow copy, copies hashes and their pointers.  
+ Example : $clone = $complex->clone();
+ Returns : Another independent instance of L<SBG::Complex>
+ Args    : NA
 
-A shallow copy, copies hashes and their pointers.  Doesn't copy referenced
-Domain/Transform objects.  This is necessary, as backtracking graph traversal
-creates many Assemblys.
-
-Depth 2 means: copy assembly (1) and the hashes/objects in Assembly (2).  Does
-not copy what is referenced in/from the hashes/objects (3).
+Doesn't copy referenced Domain/Transform objects.  This is necessary, as
+backtracking graph traversal creates many Assemblys.
 
 I.e. Assembly can efficiently contain references to other objects without
 incurring a cloning copy penalty.
 
 =cut
 sub clone {
-    my $self = shift;
-    return $self->Clone::clone(shift || 2);
+    my ($self, $depth) = @_;
+    $depth = 2 unless defined $depth;
+    # Depth 2 means: copy object HashRef (1) and the hashes/objects in it (2).
+    # Does not copy what is referenced in/from those hashes/objects (3).
+#     return $self->Clone::clone(shift || 2);
+    return Clone::clone($self, $depth);
 } # clone
 
 
 ################################################################################
 =head2 size
 
- Title   : size
- Usage   : $assembly->size;
- Function: Number of components in the current Assembly
+ Function: Number of modelled components in the current complex assembly
  Example : $assembly->size;
- Returns : ents in the current Assembly
+ Returns : Number of components in the current complex assembly
  Args    : NA
-
 
 =cut
 sub size {
-    my $self = shift;
-    return scalar(keys %{$self->{comp}});
+    my ($self) = @_;
+    return $self->models->keys->length;
 }
-
-
-################################################################################
-=head2 add
-
- Title   : add
- Usage   :
- Function:
- Example :
- Returns : 
- Args    :
-
-Add a L<SBG::Domain> to this complex, indexed by it's 'label' field.
-Access them using 
-
- L<comp>("yourlabel");
-
-NB If two domains have the same label, the latter will overwrite the former
-
-=cut
-sub add {
-   my ($self,@doms) = @_;
-   for (@doms) {
-       $self->comp($_->label) = $_;
-   }
-} # add
 
 
 ################################################################################
 =head2 clashes
 
- Title   : clashes
- Usage   :
  Function:
  Example :
  Returns : 
  Args    :
 
-Determine whether a given L<SBG::Domain> (containing a centre-of-mass with a
-radius of gyration), would create a clash/overlap in space with any of the
-L<SBG::Domain>s in this Assembly.
+Determine whether a given L<SBG::Domain> would create a clash/overlap in space
+with any of the L<SBG::Domain>s in this complex.
 
 =cut
 sub clashes {
     my ($self, $newdom) = @_;
-    my $thresh = $config->val("assembly", "lin_thresh");
-#     my $thresh = $config->val("assembly", "vol_thresh");
-    $logger->trace("Checking $newdom at thresh: ", $thresh);
     # Get all of the objects in this assembly. 
     # If any of them clashes with the to-be-added objects, then disallow
-    foreach my $key (keys %{$self->{comp}}) {
+    # TODO config this elsewhere
+    my $thresh = .5;
+    foreach my $key ($self->names) {
         # Measure the overlap between $newdom and each component
-        my $existingdom = $self->comp($key);
+        my $existingdom = $self->model($key);
         $logger->trace("$newdom vs $existingdom");
-        
-
-#         my $raw = $newdom->voverlap($existingdom);
-#         my $overlap = $raw / min($newdom->volume, $existingdom->volume);
-        my $raw = $newdom->overlap($existingdom);
-        my $overlap = $raw / (2 * min($newdom->rg,$existingdom->rg));
-        if ($overlap > $thresh) {
-            $logger->info(sprintf
-                          "%s (%6.2f) clashes w/ existing %s (%6.2f) by %6.2f",
-                          $newdom, $newdom->volume, 
-                          $existingdom, $existingdom->volume,
-                          $overlap);
-            return 1;
-        }
+        return 1 if $newdom->overlaps($existingdom,$thresh);
     }
     $logger->info("$newdom fits");
     return 0;
@@ -244,17 +296,14 @@ sub clashes {
 sub transform {
    my ($self,$trans) = @_;
    foreach my $name ($self->names) {
-       $self->comp($name)->transform($trans);
+       $self->model($name)->transform($trans);
    }
-
 } # transform
 
 
 ################################################################################
 =head2 min_rmsd
 
- Title   : min_rmsd
- Usage   :
  Function:
  Example :
  Returns : minrmsd, mintrans, minname
@@ -270,20 +319,23 @@ sub min_rmsd {
     my ($model, $truth) = @_;
     my $minrmsd;
     my $mintrans;
-    my $minname;
+    my $minname = '';
     # Only consider common components
     my @cnames = intersection([$model->names], [$truth->names]);
     foreach my $name (@cnames) {
-        my $mdom = $model->comp($name);
-        my $tdom = $truth->comp($name);
-        $logger->trace("Joining on: $name");
+        my $mdom = $model->model($name);
+        my $tdom = $truth->model($name);
+        $logger->trace("Attempting join via: $name");
         my $trans = superpose($tdom, $mdom);
-        next unless $trans;
+        unless ($trans) {
+            $logger->debug("Cannot join via: $name");
+            next;
+        }
         # Product of these transformations: (applying $trans, then from $mdom)
-        $trans = $mdom->transformation * $trans;
+        $trans = $mdom->transformation x $trans;
         $truth->transform($trans);
-        $logger->debug("Resulting RMSD on $name: ", $mdom - $tdom);
-        my $rmsd = $model - $truth;
+        $logger->debug("Resulting RMSD on $name: ", $mdom->rmsd($tdom));
+        my $rmsd = $model->rmsd($truth);
         $logger->debug("Resulting RMSD on complex: $rmsd");
         # Don't forget to reset back to original frame of reference
         $truth->transform($trans->inverse);
@@ -294,17 +346,117 @@ sub min_rmsd {
             $minname = $name;
         }
     }
+    $minrmsd ||= 'nan';
     $logger->debug("Min RMSD: $minrmsd ($minname)");
-    return $minrmsd unless wantarray;
-    return $minrmsd, $mintrans, $minname
+    return ! wantarray ? $minrmsd : ($minrmsd, $mintrans, $minname);
+
 } # min_rmsd
+
+
+# Superpose a complex onto another
+sub csuperpose {
+    my ($self, $other, $andwrite, $showall) = @_;
+    # The transformation required to put $other into fram-of-reference of $self
+    my ($minrmsd, $mintrans, $minname) = $self->min_rmsd($other);
+    $other->transform($mintrans);
+
+    if ($andwrite) {
+        my @doms;
+        if ($showall) {
+            @doms = ( @{ $self->models->values }, @{ $other->models->values });
+        } else {
+            my @cnames = intersection([$self->names], [$other->names]);
+            @doms = map { $self->model($_), $other->model($_) } @cnames;
+        }
+        my $file = SBG::STAMP::gtransform(doms=>\@doms);
+        return $file;
+    }
+}
+
+
+# How well do the domains of one complex overlap those of another
+# NB This superposes $other into frame of reference of $self
+# TODO DES this is, but shouldn't be, specific to Domain::CofM here
+sub overlap {
+    my ($self, $other) = @_;
+    # First superpose:
+    # The transformation required to put $other into fram-of-reference of $self
+    my ($minrmsd, $mintrans, $minname) = $self->min_rmsd($other);
+    $other->transform($mintrans);
+
+    my @cnames = intersection([$self->names], [$other->names]);
+    # Weight by min radius of the corresponding domains
+    my %weights = map { $_ => min($self->model($_)->radius(), 
+                                  $other->model($_)->radius()) } @cnames;
+    my $maxweight = sum(values %weights);
+    my $overlaps = [];
+    foreach my $name (@cnames) {
+        my $selfdom = $self->model($name);
+        my $otherdom = $other->model($name);
+        # The fraction of the maximum possibe overlap between the two
+        # Weighted by (min) radius of corresponding domains
+        my $fracoverlap = 
+            $selfdom->evaluate($otherdom) * $weights{$name} / $maxweight;
+        $overlaps->push($fracoverlap);
+        $logger->debug($name, " weighted fractional overlap: ", $fracoverlap);
+    }
+    # undo transformation here
+    $other->transform($mintrans->inverse);
+    return $overlaps->mean;
+    
+}
+
+
+################################################################################
+=head2 complexrmsd
+
+ Function: RMSD of entire model vs. the corresponding subset of the native
+ Example : 
+ Returns : RMSD between the complexes
+ Args    : 
+
+The second complex will be considered the reference. Only the components having
+the same name as those in the first complex will be used. E.g. comparing a dimer
+to a tetramer, the second complex will be reduced to the dimer corresponding to
+the components in the dimer. They must have the same names.
+
+=cut
+sub complexrmsd {
+    my ($model, $truth) = @_;
+
+    # Subset $truth . Only consider common components
+    my @cnames = intersection([$model->names], [$truth->names]);
+    $logger->debug($model->names->length, " and ", $truth->names->length,
+                   " components. ", scalar(@cnames), " in common");
+    my $subcomplex = new SBG::Complex;
+    # Take the original doms from the native complex, if correspondance in model
+    $subcomplex->model($_, $truth->model($_)) for @cnames;
+
+    # transform -g both into single PDB files
+    my $modelpdb = $model->gtransform;
+    my $subcomplexpdb = $subcomplex->gtransform;
+
+    # Create two domain files, with descriptor { ALL }
+    my ($model_fh, $model_dom) = tempfile;
+    print $model_fh "$modelpdb model { ALL }\n";
+    close $model_fh;
+    my ($subcomplex_fh, $subcomplex_dom) = tempfile;
+    print $subcomplex_fh "$subcomplexpdb subcomplex { ALL }\n";
+    close $subcomplex_fh;
+
+    # Run stamp, model is the query, subcomplex is the database
+    my $just1 = 1; # Get the whole set of values back from the first scan
+    my $fields = SBG::STAMP::stamp($model_dom, $subcomplex_dom, $just1);
+    return unless $fields;
+
+    $logger->trace("RMSD:", $fields->{'RMS'});
+    return $fields->{'RMS'};
+}
 
 
 ################################################################################
 =head2 asarray
 
- Title   : asarray
- Usage   :
  Function:
  Example :
  Returns : 
@@ -314,41 +466,42 @@ Return all the L<SBG::Domain>s contained in this complex
 
 =cut
 sub asarray {
-   my ($self,@args) = @_;
-   return sort { $a->label cmp $b->label } values %{$self->{comp}};
+    my $a = (shift)->interactions->values->sort;
+    return wantarray ? @$a : $a;
 } # asarray
 
 
 ################################################################################
 =head2 names
 
- Title   : names
- Usage   :
  Function:
  Example :
- Returns : Names (i.e. 'label') of all component L<SBG::Domain>s, sorted
+ Returns : Names of the component proteins being modelled in this complex
  Args    :
 
+List is sorted
 
 =cut
 sub names {
-   my ($self,@args) = @_;
-   return sort keys %{$self->{comp}};
+    my $a = (shift)->models->keys->sort;
+    return wantarray ? @$a : $a;
 }
 
 
 ################################################################################
 =head2 rmsd
 
- Title   : rmsd
- Usage   :
  Function:
  Example :
  Returns : 
  Args    :
 
-Average RMSD between mapped (by label) component Domains
-Undefined when no common component domains.
+RMSD between centres-of-mass from this complex and those of another complex.
+
+Domains are associated by name. Domains present in one complex but not the other
+are not considered.
+
+Undefined when no common template domains.
 
 =cut
 sub rmsd {
@@ -356,19 +509,39 @@ sub rmsd {
    my $count;
    my $sum;
    foreach my $name ($self->names) {
-       my $c1 = $self->comp($name);
-       my $c2 = $other->comp($name);
-       next unless defined($c1) && defined($c2);
-       my $cofm1 = $c1->cofm;
-       my $cofm2 = $c2->cofm;
-       next unless 
-           defined($cofm1) && defined($cofm2) && $cofm1->dims == $cofm2->dims;
-
-       my $sqdist = SBG::Domain::sqdist($cofm1, $cofm2);
+       my $d1 = $self->model($name) or next;
+       my $d2 = $other->model($name) or next;
+       my $sqdist = $d1->sqdist($d2);
        $sum += $sqdist;
        $count++;
    }
+   return unless $count;
    return sqrt($sum / $count);
+}
+
+
+# Transform domains saved in this complex to a PDB file
+# See L<SBG::STAMP::gtransform>
+sub gtransform {
+    my ($self) = @_;
+    SBG::STAMP::gtransform(doms=>$self->models->values);
+}
+
+
+sub rasmol {
+    my ($self) = @_;
+    my $rasmol = config()->val(qw/rasmol executable/) || 'rasmol';
+    my $cmd = "$rasmol " . $self->gtransform;
+    system($cmd) == 0 or
+        carp ("Failed: $cmd\n");
+}
+
+
+sub asstamp {
+    my ($self) = @_;
+    my $str;
+    $str .= $_->asstamp for @{ $self->models->values };
+    return $str;
 }
 
 
@@ -376,19 +549,12 @@ sub rmsd {
 # Private
 
 sub _asstring {
-    my $self = shift;
-    join ",", sort keys %{$self->{iaction}};
-}
-
-
-sub _eq {
-    my $self = shift;
-    my $other = shift;
-    return "$self" eq "$other";
+    (shift)->interactions->keys->sort->join(',');
 }
 
 
 ################################################################################
+__PACKAGE__->meta->make_immutable;
 1;
 
 
