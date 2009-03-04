@@ -26,58 +26,64 @@ L<SBG::Traversal> , L<SBG::Complex>
 ################################################################################
 
 package SBG::Assembler;
-use SBG::Root -base;
+use Moose;
+
+extends qw/Moose::Object Exporter/;
+our @EXPORT_OK = qw(linker);
+
+use Moose::Autobox;
 
 use SBG::Domain;
-use SBG::CofM;
-use SBG::STAMP;
-
+use SBG::STAMP qw/superpose/;
 use SBG::Complex;
 use SBG::ComplexIO;
 
-our @EXPORT_OK = qw(linker);
-
+use SBG::Log;
 
 ################################################################################
 # Private
 
+# Number of solved partial solutions
 our $solution = 1;
+# For debugging: Individual steps within one solution
 our $step = 1;
-# TODO permanent solution to output filenames
-our $dir = ".";
-mkdir $dir;
-our $base = $dir . '/solution-%05d';
+
+my $file_pattern = '%smodel-%05d';
+
 
 # Callback for printing
-sub got_solution {
+sub sub_solution {
     my ($complex, $graph, $nodecover, $templates) = @_;
-    # Uninteresting:
-#     return unless @$templates > 1;     
-#     return unless $complex->size > 3;
-    return unless $complex->size > 2;
     our $solution;
     our $step;
-    my $file = sprintf("${base}.dom", $solution);
-    $logger->info("Solution $solution: @$nodecover\n",
-                  "\t@$templates\n\t$file");
 
-    my $io = new SBG::ComplexIO(-file=>">$file");
-    return unless $io;
+    # Uninteresting:
+    return unless $templates->length > 1;     
 
-#     # TODO add in other junk: @$templates and @$nodecover
-    foreach my $t (@$templates) {
-#         my $ix = $graph->get_interaction_by_id($t);
-    }
-    # Write the domains with their transformations
+    # Flush console for fancy in-place printing
+    local $| = 1;
+    printf "\033[1K\r" . 
+    "Solution# %4d: Components: %3d ",
+    $solution, scalar(@$nodecover); # , join(', ', @$nodecover);
+
+    $logger->debug("\n\n====== Solution $solution\n",
+                   "@$nodecover\n",
+                   "@$templates\n",
+        );
+
+    # Append an optional name an a model solution counter
+    my $file = sprintf($file_pattern, 
+                       $complex->name ? $complex->name . '-' : '',
+                       $solution);
+    $complex->store($file . '.stor');
+    # Write the DOM version as well
+    my $io = new SBG::ComplexIO(file=>">$file" . '.dom');
     $io->write($complex);
-
-    my $n = 50;
-#     die "Stopping after $n solutions, on purpose " if $solution >= $n;
 
     $solution++;    
     $step = 1;
 
-} # got_solution
+} # sub_solution
 
 
 
@@ -90,7 +96,7 @@ sub got_solution {
 
 # Where in Assembly do we save the templates/doms that we accept?
 # $complex->comp() = $dom; and $complex->iaction($key) = $ix;
-sub try_interaction {
+sub sub_test {
     my ($complex, $graph, $src, $dest, $templ_id) = @_;
     $logger->trace(join('|',$src,$dest,$templ_id));
     my $success = 0;
@@ -98,89 +104,38 @@ sub try_interaction {
 
     # Interaction object from ID
     my $ix = $graph->get_interaction_by_id($templ_id);
-    # Get Domain objects used as templates in this interaction
-    my $srcdom = $ix->template($src);
-    my $destdom = $ix->template($dest);
 
-    # Get reference domain of $src component
-    my $srcrefdom = $complex->comp($src);
-    unless (defined $srcrefdom) {
-        # Base case: no previous structural constraint.
-        # I.e. We're in a new frame of reference: implicitly sterically OK
-        # Initialize new object, based on previous
-        $complex->comp($src) = SBG::CofM::cofm($srcdom);
-        # dest domain also has no explicit transformation
-        $complex->comp($dest) = SBG::CofM::cofm($destdom);
-        $complex->iaction($ix) = $ix;
-        return $success = 1;
-    }
+    $success = $complex->attach($src, $dest, $ix);
 
-    $destdom = linker($srcrefdom, $srcdom, $destdom);
-    return $success = 0 unless $destdom;
-
-    # Check new coords of destdom for clashes across currently assembly
-    $success = ! $complex->clashes($destdom);
-
+    return unless $success;
 
 #     step2img($destdom, $complex);
 #     step2dom($destdom, $complex);
     $step++;
 
-    return unless $success;
-    
-    $complex->iaction($ix) = $ix;
-    
-    # Update frame-of-reference of interaction partner ($dest)
-    # NB Any previous $assembly->comp($dest) gets overwritten
-    # This is compatible with the backtracking of SBG::Traversal
-    $complex->comp($dest) = $destdom;
     return $success;
-} # try_interaction
+
+} # sub_test
 
 
-# Transform $destdom via the linking transformation that puts src onto srcref
-sub linker { 
-    my ($srcrefdom, $srcdom, $destdom) = @_;
-    $logger->trace("linking $srcdom onto $srcrefdom, ",
-                   "in order to orient $destdom");
-    # Superpose $srcdom into prev frame of reference from $src component
-    # This defines the (additional) transform we need to apply to $destdom
-    my $xform = superpose($srcdom, $srcrefdom);
-    unless (defined($xform)) {
-        $logger->error("Cannot link via: superpose($srcdom,$srcrefdom)");
-        return;
-    }
-    # Get CofM of dest template domain (the one to be transformed)
-    $destdom = SBG::CofM::cofm($destdom);
-
-    # Then apply that transformation to the interaction partner $dest
-    # Product of relative with absolute transformation
-    # Any previous transformation (reference domain) has to also be included
-
-# TODO explain order of ops here
-    $destdom->transform($xform);
-    $destdom->transform($srcrefdom->transformation);
-
-    return $destdom;
-}
-
-
+# TODO update
 sub step2dom {
     my ($destdom, $complex) = @_;
     our $solution;
     our $step;
     $logger->trace(sprintf("step-%04d-%05d", $solution, $step));
     my @doms = ($destdom, $complex->asarray);
-    my $file = sprintf($dir . "/step-%04d-%05d.dom", $solution, $step);
+    my $file = sprintf("step-%04d-%05d.dom", $solution, $step);
     my $io = new SBG::DomainIO(-file=>">$file");
     $io->write($_) for @doms;
 }
 
 
+# TODO update
 sub step2img {
     my ($destdom, $complex) = @_;
     our ($solution, $step);
-    my $img = sprintf($dir . "/step-%04d-%05d.ppm", $solution, $step);
+    my $img = sprintf("step-%04d-%05d.ppm", $solution, $step);
     my $saved = $destdom->label;
     $destdom->label("testing");
     my $pdbfile = transform(-doms=>[$destdom, $complex->asarray]);
@@ -193,6 +148,7 @@ sub step2img {
 
 
 ################################################################################
+__PACKAGE__->meta->make_immutable;
 1;
 
 

@@ -1,0 +1,171 @@
+#!/usr/bin/env perl
+
+=head1 NAME
+
+B<assemble> - Assemble components into complexes
+
+=head1 SYNOPSIS
+
+
+
+=head1 DESCRIPTION
+
+
+=head1 OPTIONS
+
+=head2 -h Print this help page
+
+=head1 SEE ALSO
+
+L<SBG::Assembler> , L<SBG::Network> , L<SBG::SearchI>
+
+=cut
+
+################################################################################
+
+
+use strict;
+use warnings;
+use feature 'say';
+use Pod::Usage;
+use Getopt::Long;
+use Moose::Autobox;
+use File::Basename;
+use List::MoreUtils qw/each_arrayref/;
+
+# Interaction network
+use SBG::Network;
+# Template search
+use SBG::Search::SCOP;
+# Network traversal Algorithm
+use SBG::Traversal;
+# Callback functions
+use SBG::Assembler;
+# Solution holder
+use SBG::Complex;
+use SBG::Seq;
+use SBG::Node;
+use SBG::Storable;
+use SBG::Domain;
+use SBG::Domain::CofM;
+
+################################################################################
+
+
+my %ops;
+my $result = GetOptions(\%ops,
+                        'h|help',
+                        'c|complete',
+                        'network=s',
+                        'pdbid=s',
+    );                  
+if ($ops{'h'}) { pod2usage(-exitval=>1, -verbose=>2); }
+
+
+################################################################################
+
+if ($ops{'network'}) {
+    my $net = retrieve $ops{'network'};
+    _print_net($net);
+    _one_net($net, basename($ops{'network'},'.stor'));
+
+} elsif ($ops{'pdbid'}) {
+    my @accnos = SBG::Search::SCOP::domains($ops{'pdbid'}) or 
+        pod2usage(-exitval=>1);
+    
+    say "accession_numbers:\n@accnos\n";
+    my @seqs = map { new SBG::Seq(-accession_number=>$_) } @accnos;
+    my @nodes = map { new SBG::Node($_) } @seqs;
+    
+    my $net = new SBG::Network;
+    $net->add($_) for @nodes;
+    say "Searching for interaction templates ...";
+    $net->build(new SBG::Search::SCOP);
+    say scalar($net->interactions), " interactions";
+    
+    my @nets = _part_write($net);
+
+} else {
+    pod2usage(-exitval=>1);
+}
+
+
+exit;
+
+################################################################################
+
+sub _print_net {
+    my ($net, $i, $n) = @_;
+    $i ||= 1;
+    $n ||= 1;
+    printf 
+        "(sub-)network ( %d / %d ) \n\t" .
+        "%4d nodes, %4d edges, %4d interactions ...\n",
+        $i, $n, 
+        scalar($net->vertices), scalar($net->edges), 
+        scalar($net->interactions);
+}
+
+
+sub _part_write {
+    my ($net, $name) = @_;
+    $name = $name ? ($name . '-') : '';
+    $net->store($name . 'network.stor');
+
+    my $complex = _subcomplex($net);
+    $complex->store($name . 'complex.stor');
+    
+    my @networks = $net->partition();
+    my $n = scalar(@networks);
+    print STDERR "Partitioned into $n connected sub-networks\n";
+
+    for (my $i = 0; $i < @networks; $i++) {
+        my $subnet = $networks[$i];
+        my $netfile = sprintf("%ssubnet-%04d.stor", $name, $i+1);
+        my $cfile = sprintf("%ssubcomplex-%04d.stor", $name, $i+1);
+        $subnet->store($netfile);
+        my $subcomplex = _subcomplex($subnet);
+        $subcomplex->store($cfile);
+        print STDERR "\t$netfile\t$cfile\n";
+    }
+    return @networks;
+}
+
+
+# Creates a complex, based on a subnet
+sub _subcomplex {
+    my ($net) = @_;
+    my @accnos = map { "$_" } $net->nodes;
+    my @fields = map { { SBG::Search::SCOP::parse_scopid($_) } } @accnos;
+    my @domains = map { new SBG::Domain::CofM(%$_) } @fields;
+
+    my $complex = new SBG::Complex;
+    my $ea = each_arrayref \@accnos, \@domains;
+    while (my ($accno, $dom) = $ea->()) {
+        $complex->model($accno, $dom);
+    }
+    return $complex;
+}
+
+
+sub _one_net {
+    my ($net,$name) = @_;
+
+    # Min components in complex
+    my $minsize = $ops{'c'} ? $net->vertices : 3;
+
+    # Traversal algorithm, on the network
+    # -test is the function to call when trying to place an interaction
+    # -partial is the function to call when one complex solution is complete
+    my $t = new SBG::Traversal(graph=>$net, 
+                               sub_test=>\&SBG::Assembler::sub_test, 
+                               sub_solution=>\&SBG::Assembler::sub_solution,
+                               minsize=>$minsize,
+        );
+    # Each result is a complex, this is a placeholder for the aglorithm's state
+    my $state = new SBG::Complex(name=>$name);
+    # Go!
+    $t->traverse($state);
+    print "\n";
+
+}
