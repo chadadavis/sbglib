@@ -50,24 +50,31 @@ print $obj->color("favourite"), "\n";
 
 See also B<field> from L<Spiffy> and B<has> from L<Moose>
 
+If $names is also given, it creates an access for the HashRef itself
+
 =cut
 sub hashfield {
-    my ($name) = @_;
-    my ($pkg) = caller();
-    # Fully qualified name of method to be created
-    my $full = "${pkg}::${name}";
+    my ($name, $names) = @_;
 
     my $code = <<END;
-sub {
-    my (\$self,\$key,\$val) = \@_;
-    \$self->{"$name"} ||= {};
-    \$self->{"$name"}{\$key} = \$val if defined \$val;
-    \$self->{"$name"}{\$key};
-}
+    sub {
+        my (\$self,\$key,\$val) = \@_;
+        \$self->{"$name"} ||= {};
+        \$self->{"$name"}{\$key} = \$val if defined \$val;
+        \$self->{"$name"}{\$key};
+    }
 END
-#     print STDERR "$full = $code";
+    # Fully qualified name of method to be created
+    my ($pkg) = caller();
+    my $full = "${pkg}::${name}";
     *$full = eval $code;
-    return *$full;
+
+    return unless $names;
+
+    # Also create an accessor for the HashRef itself?
+    $full = "${pkg}::${names}";
+    $code = "sub { (shift)->{\"$name\"} || {} }";
+    *$full = eval $code;
 } 
 
 
