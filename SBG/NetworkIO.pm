@@ -216,49 +216,6 @@ sub graphviz {
 } # graphviz
 
 
-# Do output from scratch in order to accomodate multiple edges
-# TODO DOC
-# TODO options? Can GraphViz module still be used to parse these out?
-sub graphvizmulti {
-    my ($graph, $file) = @_;
-    return unless $graph && $file;
-
-    my $pdb = "http://www.rcsb.org/pdb/explore/explore.do?structureId=";
-
-    my $str = join("\n",
-                   "graph {",
-                   "\tnode [fontsize=6];",
-                   "\tedge [fontsize=8, color=grey];",
-                   ,"");
-    # For each connection between two nodes, get all of the templates
-    foreach my $e ($graph->edges) {
-        # Don't ask me why u and v are reversed here. But it's correct.
-        my ($v, $u) = @$e;
-        # Names of templates for this edge
-        my @templ_ids = $graph->get_edge_attribute_names($u, $v);
-        foreach my $t (@templ_ids) {
-            # The actual interaction object for this template
-            my $ix = $graph->get_interaction_by_id($t);
-            # Look up what domains model which halves of this interaction
-            my $udom = $ix->template($u);
-            my $vdom = $ix->template($v);
-             $str .= "\t\"" . $udom->id . "\" -- \"" . $vdom->id . "\" [" . 
-                join(', ', 
-#                      "label=\"" . $ix->weight . "\"",
-                     "headlabel=\"" . $udom->pdbid . "\"",
-                     "taillabel=\"" . $vdom->pdbid . "\"",
-                     "headtooltip=\"" . $udom->descriptor . "\"",
-                     "tailtooltip=\"" . $vdom->descriptor . "\"",
-                     "headURL=\"" . $pdb . $udom->pdbid . "\"",
-                     "tailURL=\"" . $pdb . $vdom->pdbid . "\"",
-                     "];\n");
-        }
-    }
-
-    $str .= "}\n";
-    open my $fh, ">$file";
-    print $fh $str;
-}
 
 ################################################################################
 __PACKAGE__->meta->make_immutable;

@@ -30,6 +30,7 @@ with 'SBG::Storable';
 with 'SBG::Dumpable';
 
 use Carp;
+use File::Temp qw/tempfile/;
 use SBG::List qw/pairs/;
 
 use overload (
@@ -48,7 +49,10 @@ use overload (
  Returns : 
  Args    : 
 
-NB. Due to a bug in Graph::AdjacencyMap::Vertex, we prefer to use
+Normally the refvertexed=>1 option should be used to store objects at the graph
+nodes.
+
+Due to a bug in Graph::AdjacencyMap::Vertex, we prefer to use
 Graph::AdjacencyMap::Light. This can be achieved by setting revertexed=>0,
 though, intuitively, we would prefer refvertexed=>1, as a Node in the Graph is
 an object, and not just a string.
@@ -59,8 +63,6 @@ to not be able to store/retrieve a SBG::Network correctly.
 =cut
 sub new () {
     my $class = shift;
-    # refvertexed because the nodes are object refs, rather than strings or so
-
     my $self = $class->SUPER::new(refvertexed=>0, @_);
     bless $self, $class;
     return $self;
@@ -147,6 +149,56 @@ sub build {
     }
     
     return $self;
+}
+
+
+# Do output from scratch in order to accomodate multiple edges
+# TODO DOC
+# TODO options? Can GraphViz module still be used to parse these out?
+sub graphviz {
+    my ($graph, $file) = @_;
+
+    my $fh;
+    ($fh, $file) = tempfile(UNLINK=>0) unless $file;
+    return unless $graph && $file;
+
+    my $pdb = "http://www.rcsb.org/pdb/explore/explore.do?structureId=";
+
+    my $str = join("\n",
+                   "graph {",
+                   "\tnode [fontsize=6];",
+                   "\tedge [fontsize=8, color=grey];",
+                   ,"");
+    # For each connection between two nodes, get all of the templates
+    foreach my $e ($graph->edges) {
+        # Don't ask me why u and v are reversed here. But it's correct.
+        my ($v, $u) = @$e;
+        # Names of templates for this edge
+        my @templ_ids = $graph->get_edge_attribute_names($u, $v);
+        foreach my $t (@templ_ids) {
+            # The actual interaction object for this template
+            my $ix = $graph->get_interaction_by_id($t);
+            # Look up what domains model which halves of this interaction
+            my $uname = $ix->template($u)->seq;
+            my $vname = $ix->template($v)->seq;
+            my $udom = $ix->template($u)->domain;
+            my $vdom = $ix->template($v)->domain;
+             $str .= "\t\"" . $uname . "\" -- \"" . $vname . "\" [" . 
+                join(', ', 
+#                      "label=\"" . $ix->weight . "\"",
+                     "headlabel=\"" . $udom->pdbid . "\"",
+                     "taillabel=\"" . $vdom->pdbid . "\"",
+                     "headtooltip=\"" . $udom->descriptor . "\"",
+                     "tailtooltip=\"" . $vdom->descriptor . "\"",
+                     "headURL=\"" . $pdb . $udom->pdbid . "\"",
+                     "tailURL=\"" . $pdb . $vdom->pdbid . "\"",
+                     "];\n");
+        }
+    }
+
+    $str .= "}\n";
+    print $fh $str;
+    return $file;
 }
 
 
