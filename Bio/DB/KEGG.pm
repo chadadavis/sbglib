@@ -163,7 +163,7 @@ sub get_Seq_by_id {
     my $iostr = new IO::String($record);
     my $seqio = new Bio::SeqIO(-fh=>$iostr, -format=>'KEGG');
     my $seq = $seqio->next_seq;
-    return undef unless $seq;
+    return unless $seq;
 
     # Optionally replace the primary sequence (DNA) with the AA sequence
     my $annot = $seq->annotation();
