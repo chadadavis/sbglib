@@ -19,16 +19,15 @@ L<SBG::Search> , L<SBG::Network> , L<SBG::Interaction>
 
 ################################################################################
 
-package SBG::SCOPSearch;
+package SBG::Search::SCOP;
 use Moose;
 
-extends 'Exporter';
-our @EXPORT_OK = qw/domains/;
+extends qw/Moose::Object Exporter/;
+our @EXPORT_OK = qw/domains complex parse_scopid/;
 
 with 'SBG::SearchI';
 
 use Carp;
-use Module::Load;
 use Text::ParseWords;
 
 use Bio::Seq;
@@ -38,6 +37,7 @@ use SBG::Template;
 use SBG::Interaction;
 use SBG::List qw/uniq/;
 use SBG::Log;
+use SBG::Complex;
 
 # TODO Needs to be in a DB
 # Maps e.g. 2hz1A.a.1.1.1-1 to { A 2 _ to A 124 _ }
@@ -45,28 +45,6 @@ our $scopdb = "/g/russell1/data/pdbrep/scop_1.73.dom";
 # Maps e.g. 1ir2B.c.1.14.1-1 to:
 # 1rlcL.c.1.14.1-1 1.000e-177 89.00 
 our $templatedb = "/g/russell2/davis/p/ca/benchmark/search_bench_part8.out-robs";
-
-
-=head2 type
-
-The sub-type to use for any dynamically created objects. Should be
-L<SBG::Domain> or a sub-class of that. Default "L<SBG::Domain>" .
-
-=cut
-has 'type' => (
-    is => 'rw',
-    isa => 'ClassName',
-    required => 1,
-    default => 'SBG::Domain',
-    );
-
-# ClassName does not validate if the class isn't already loaded. Preload it here.
-before 'type' => sub {
-    my ($self, $classname) = @_;
-    return unless $classname;
-    load($classname);
-};
-
 
 
 ################################################################################
@@ -114,6 +92,19 @@ sub domains {
 }
 
 
+# For a given PDB ID, build the complex containing only the domains for which
+# interaction templates exist.
+# NB this graph might not be connected
+sub complex {
+    my ($pdbid, $type) = @_;
+    $type ||= 'SBG::Domain';
+    my @components = domains($pdbid);
+    my $complex = new SBG::Complex;
+    $complex->model($_, $type->new(parse_scopid($_))) for @components;
+    return $complex;
+}
+
+
 ################################################################################
 =head2 _grep_db
 
@@ -156,6 +147,7 @@ sub _grep_db {
         "egrep \'^ -- Can model $pdb ($comp1 $comp2|$comp2 $comp1) on\' " . 
         $templatedb;
     my @lines = `$cmd`;
+    return unless @lines > 0;
     $logger->trace(sprintf "pair: %s: %3d hits: %s -- %s",
                    $pdb, scalar(@lines), $comp1, $comp2);
     my @interactions;
@@ -170,11 +162,11 @@ sub _grep_db {
         my ($templ1, $templ2) = ($4, $5);
         my $scores = $6;
 
-        my ($pdbid1, $chainid1, $scopid1) = _parse_scopid($templ1);
-        my ($pdbid2, $chainid2, $scopid2) = _parse_scopid($templ2);
-        my ($file1, undef, $descr1) = _get_descriptor($templ1);
-        my ($file2, undef, $descr2) = _get_descriptor($templ2);
-        
+        # Now we can create some domains
+        my $dom1 = $self->type->new(parse_scopid($templ1));
+        my $dom2 = $self->type->new(parse_scopid($templ2));
+        my $template1 = new SBG::Template(seq=>$seq1,domain=>$dom1);
+        my $template2 = new SBG::Template(seq=>$seq2,domain=>$dom2);
 
         # Parse scores
         my ($eval1, $sid1, $eval2, $sid2, 
@@ -184,11 +176,6 @@ sub _grep_db {
             undef, undef, $i2z, undef, $i2p,
             ) = parse_line('\s+', 0, $scores);
 
-        # Now we can create some domains
-        my $dom1 = $self->type->new(pdbid=>$pdbid1,descriptor=>$descr1);
-        my $dom2 = $self->type->new(pdbid=>$pdbid2,descriptor=>$descr2);
-        my $template1 = new SBG::Template(seq=>$seq1,domain=>$dom1);
-        my $template2 = new SBG::Template(seq=>$seq2,domain=>$dom2);
 
         $template1->score('eval', $eval1);
         $template2->score('eval', $eval2);
@@ -211,29 +198,29 @@ sub _grep_db {
 
 
 
-# Returns : PDBid,chainid,scop_sccs
-#my ($pdbid, $chainid, $sccs) = parse_scopid("1jzlB.a.1.1.2-1");
-sub _parse_scopid {
-    my $scopid = shift;
-    unless ($scopid =~ /^(\d.{3})(.*?)\.(.*?)$/) {
-        carp("Couldn't parse SCOP ID: $scopid");
+# Given: 2hz1A.a.1.1.1-1, returns hash:
+# (pdbid=>$pdbid, descriptor=>$descriptor, scopid=>$sccs, file=>$file);
+# (pdbid=>'2hz1', descriptor=>"A 2 _ to A 124 _",
+#  scopid=>'a.1.1.1-1', file=>"/data/pdb/2hz1.brk")
+# TODO BUG file is bogus here, ignore it
+sub parse_scopid {
+    my ($longid) = @_;
+    unless ($longid =~ /^(\d.{3})(.*?)\.(.*?)$/) {
+        carp("Couldn't parse SCOP ID: $longid");
         return;
     }
-    return ($1,$2,$3);
-}
-
-
-# Given: 2hz1A.a.1.1.1-1, returns:
-# ("/data/pdb/2hz1.brk","2hz1A.a.1.1.1-1","A 2 _ to A 124 _")
-# Returns filepath,scopid,stamp_descriptor
-sub _get_descriptor {
-    my $scopid = shift;
-    $_ = `grep $scopid $scopdb` or return;
-    unless (/^(\S+) ($scopid) { (.*?) }$/) {
-        carp "SCOP ID not found: $scopid\n";
+    my ($pdbid, $chainid, $sccs) = ($1, $2, $3);
+    
+    # Given: 2hz1A.a.1.1.1-1, this matches:
+    # ("/data/pdb/2hz1.brk","2hz1A.a.1.1.1-1","A 2 _ to A 124 _")
+    my $match = `grep $longid $scopdb`;
+    unless ($match =~ /^(\S+) ($longid) { (.*?) }$/) {
+        carp "SCOP ID not found: $longid\n";
         return;
     }
-    return ($1, $2, $3);
+    my ($file, $descriptor) = ($1, $3);
+    my %fields = (pdbid=>$pdbid, descriptor=>$descriptor, scopid=>$sccs);
+    return wantarray ? %fields : \%fields;
 }
 
 
