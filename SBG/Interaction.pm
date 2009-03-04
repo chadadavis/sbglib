@@ -24,14 +24,14 @@ L<Bio::Network::Interaction> , L<SBG::Node>
 
 package SBG::Interaction;
 use Moose;
-extends 'Bio::Network::Interaction';
+extends qw/Bio::Network::Interaction/;
 with 'SBG::Storable';
 
 use SBG::HashFields;
 
 use overload (
     '""' => '_asstring',
-    'cmp' => '_compare',
+    fallback => 1,
     );
 
 
@@ -54,7 +54,7 @@ $interaction->template($node1,$dom1);
 $interaction->template($node2,$dom2);
 
 =cut
-hashfield 'template';
+hashfield 'template', 'templates';
 
 
 ################################################################################
@@ -126,21 +126,17 @@ See L<SBG::NetworkIO>
 sub ascsv {
     my ($self,) = @_;
     my ($node1, $node2) = sort $self->nodes;
-    my ($dom1, $dom2) = map { $self->template($_) } ($node1, $node2);
+    my ($templ1, $templ2) = map { $self->template($_) } ($node1, $node2);
+    my ($dom1, $dom2) = map { $_->domain } ($templ1, $templ2);
     my ($pdb1, $pdb2) = map { $_->pdbid } ($dom1, $dom2);
     my ($descr1, $descr2) = map { $_->descriptor } ($dom1, $dom2);
-    return "$node1\t$node2\t$pdb1 { $descr1 } $pdb2 { $descr2 }";
+    return "$node1\t$node2\t$pdb1\t{ $descr1 }\t$pdb2\t{ $descr2 }";
 }
 
 
 sub _asstring {
     my ($self) = @_;
     return $self->primary_id;
-}
-
-sub _compare {
-    my ($a, $b) = @_;
-    return $a->primary_id cmp $b->primary_id;
 }
 
 

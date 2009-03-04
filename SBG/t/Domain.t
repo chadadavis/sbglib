@@ -37,6 +37,10 @@ ok(! $dom->wholechain);
 $equiv = new SBG::Domain(pdbid=>'2nn6', descriptor=>'A 10 _ to A 233 _');
 ok($equiv == $dom);
 
+# Multi-segment descriptor
+
+$dom = new SBG::Domain(pdbid=>'1xyz', 
+                       descriptor=>'A 3 _ to A 189 _ A 353 _ to A 432 _');
 
 __END__
 

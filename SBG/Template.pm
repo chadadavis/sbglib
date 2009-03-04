@@ -60,8 +60,9 @@ has 'domain' => (
 =head2 score
 
 keys: eval seqid
+
 =cut
-hashfield 'score';
+hashfield 'score', 'scores';
 
 
 sub _asstring {

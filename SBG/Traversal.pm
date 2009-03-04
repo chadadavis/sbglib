@@ -37,7 +37,6 @@ package SBG::Traversal;
 use Moose;
 use Moose::Util::TypeConstraints;
 use Moose::Autobox;
-use autobox;
 use Clone qw(clone);
 use Graph;
 use Graph::UnionFind;
@@ -273,7 +272,7 @@ sub traverse {
         $self->_altcover({});
         $self->_nodecover({});
         # Start with a fresh state object, not defiled from previous rounds
-        my $clone = $state->clone();
+        my $clone = Clone::clone($state);
         # Go!
         $self->_do_nodes($uf, $clone, 0);
     }

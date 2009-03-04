@@ -108,10 +108,10 @@ Or, to just convert to a string, without any file I/O:
 
 =cut
 override 'write' => sub {
-    my ($self, $dom) = @_;
+    my ($self, $dom, %ops) = @_;
     defined($dom) or return;
     my $fh = $self->fh or return;
-    my $str = $dom->asstamp;
+    my $str = $dom->asstamp(%ops);
     print $fh $str;
     return $self;
 }; # write

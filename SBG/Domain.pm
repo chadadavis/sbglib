@@ -95,6 +95,7 @@ has 'descriptor' => (
  Returns : 
  Args    :
 
+SCCS: e.g.: a.1.1.1-1
 
 =cut
 has 'scopid' => (
@@ -298,6 +299,7 @@ String representing domain in STAMP format
 sub asstamp {
     my ($self, %o) = @_;
     # Default to on, unless already set
+    $o{trans} = 1 unless defined $o{trans};
     my $str = 
         join(" ",
              $self->file  || '',
@@ -306,9 +308,11 @@ sub asstamp {
              $self->descriptor || '',
         );
     # Append any transformation
-    my $transstr = $self->transformation->ascsv if $self->transformation;
-    $str .= $transstr ? (" \n${transstr}\}") : " \}";
-    $str .= "\n";
+    if ($o{trans} && $self->transformation) {
+        $str .= " \n" . $self->transformation->ascsv . "\}\n";
+    } else {
+        $str .=  " \}\n";
+    }
     return $str;
 
 } # asstamp
@@ -425,7 +429,7 @@ sub _descriptor_short {
 sub _from_scop {
     my ($self,$scopid) = @_;
 
-    cluck("Not implemented");
+#     cluck("Not implemented");
 
 } # _from_scop
 

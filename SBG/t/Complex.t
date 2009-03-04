@@ -1,32 +1,41 @@
 #!/usr/bin/env perl
 
 use Test::More 'no_plan';
+use SBG::Test 'float_is';
+use feature 'say';
+use Carp;
+use Data::Dumper;
+use FindBin;
+use File::Temp qw/tempfile/;
+my $dir = $FindBin::RealBin;
+$, = ' ';
+
+################################################################################
 
 use SBG::Complex;
 use SBG::Domain;
+use Moose::Autobox;
 
-my $d = new SBG::Domain(-label=>'2br2d');
-my $b = new SBG::Domain(-label=>'2br2b');
+my $d = new SBG::Domain(pdbid=>'2br2', descriptor=>'CHAIN D');
+my $b = new SBG::Domain(pdbid=>'2br2', descriptor=>'CHAIN B');
+
 my $complex = new SBG::Complex;
 
-# Test lvalue routines, for adding Domain's to a Complex
-# Test the ->comp($key) method (returns an lvalue)
+$complex->model('RRP43', $b);
+$complex->model('RRP41', $d);
 
-# TODO
-# $complex->comp($b->label) = $b;
-# is($b,$complex->comp($b->label), "Lvalue assignment to Complex::comp(\$key)");
-# Also test the "add"
-$complex->add($b, $d);
-is($d,$complex->comp($d->label), "SBG::Complex::add(SBG::Domain)");
+is($b, $complex->model('RRP43'), "Added to complex");
+is($d, $complex->model('RRP41'), "Added to complex");
 
-my @doms = $complex->asarray;
-is(2, @doms, "Complex stores Domain's");
+my $models = $complex->models->keys;
+is($models->length, 2, "Complex stores Domain's");
 
 # Test clone()
 my $clone = $complex->clone;
 @doms = sort @doms;
 my @cdoms = sort $clone->asarray;
 is(@doms, @cdoms, "Clone contains same # of components");
+
 for (my $i = 0; $i < @doms; $i++) {
     ok($doms[$i] == $cdoms[$i], "Clone also contains $doms[$i]");
 }

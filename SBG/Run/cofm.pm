@@ -70,7 +70,7 @@ sub cofm {
     $res = run($pdbid, $descriptor) unless defined($res);
 
     unless ($res) {
-        carp "Cannot get centre-of-mass for ${pdbid} ${descriptor}";
+        carp "Cannot get centre-of-mass for ${pdbid} \{ ${descriptor} \}";
         return;
     }
 
@@ -168,6 +168,10 @@ sub run {
         }
     }
 
+    unless (%res) {
+        return;
+    }
+    
     # Check that $descriptor eq $found_descriptor 
     carp "Descriptors unequal:$descriptor:$res{descriptor}:" unless
         $descriptor eq $res{descriptor};

@@ -10,6 +10,24 @@ SBG::Domain::CofM - Represents a structure as a sphere around a centre-of-mass
 
 =head1 DESCRIPTION
 
+7-point Centre-of-mass: e.g.:
+
+ATOM      0  CA  ALA Z   0      43.946  51.829   1.183  1.00 10.00
+ATOM      1  CA  ALA Z   1      48.946  51.829   1.183  1.00 10.00
+ATOM      1  CA  ALA Z   1      38.946  51.829   1.183  1.00 10.00
+ATOM      2  CA  ALA Z   2      43.946  56.829   1.183  1.00 10.00
+ATOM      2  CA  ALA Z   2      43.946  46.829   1.183  1.00 10.00
+ATOM      3  CA  ALA Z   3      43.946  51.829   6.183  1.00 10.00
+ATOM      3  CA  ALA Z   3      43.946  51.829  -3.817  1.00 10.00
+
+The C-alphas of Alanine residues,
+1: X+5 , X-5
+2: Y+5 , Y-5
+3: Z+5 , Z-5
+
+Using affine transforms, it's straight-forward to transform all 7 CA atoms from
+the seven Alanine residues in one matrix multiplication. The coordinate matrix
+simply has to be transposed first, then multiplied by the Transform.
 
 =head1 SEE ALSO
 
@@ -55,12 +73,14 @@ use SBG::Run::cofm qw/cofm/;
 
 
 # Define own subtype to enable type coersion. 
-subtype 'PDL3' => as "PDL::Matrix";
+subtype 'PDL3' => as 'PDL::Matrix';
 
 # In coercion, always append a 1 for affine matrix multiplication
 coerce 'PDL3'
     => from 'ArrayRef' => via { mpdl [@$_, 1] }
     => from 'Str' => via { mpdl ((split)[0..2], 1) };
+
+subtype 'PDL7x3' => as 'PDL::Matrix';
 
 
 =head2 centre
@@ -303,9 +323,12 @@ sub overlaps {
     $thresh ||= 0;
     my $minradius = List::Util::min($self->radius(), $obj->radius());
 
-    my $overlapfrac = 
-        $self->overlap($obj) / (2 * $minradius);
-
+    my $overlap = $self->overlap($obj);
+    if ($overlap < -150) {
+        $logger->warn(
+            "$self is quite far ($overlap) from $obj. Still connected?");
+    }
+    my $overlapfrac = $overlap / (2 * $minradius);
     return $overlapfrac > $thresh;
 }
 

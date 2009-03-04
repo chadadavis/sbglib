@@ -15,7 +15,7 @@ use File::Temp qw(tempfile);
 use SBG::Seq;
 use SBG::Interaction;
 use Bio::Network::Node;
-use SBG::SCOPSearch;
+use SBG::Search::SCOP;
 
 my $net = new SBG::Network;
 my $seq1 = new SBG::Seq(-accession_number=>'RRP43');
@@ -46,12 +46,12 @@ for (keys %iactions) {
 
 $net = new SBG::Network;
 
-my @accnos = SBG::SCOPSearch::domains('2os7');
+my @accnos = SBG::Search::SCOP::domains('2os7');
 my @seqs = map { new SBG::Seq(-accession_number=>$_) } @accnos;
 my @nodes = map { new SBG::Node($_) } @seqs;
 $net->add($_) for @nodes;
 
-$net->build(new SBG::SCOPSearch);
+$net->build(new SBG::Search::SCOP);
 say "iactions: " . join("\n", sort $net->interactions);
 
 my $subnets = $net->partition;

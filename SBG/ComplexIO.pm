@@ -15,96 +15,87 @@ SBG::ComplexIO - Reads L<SBG::Complex>s using L<SBG::DomainIO>
 
 =SEE ALSO
 
-L<SBG::Complex> , L<SBG::DomainIO> , L<SBG::IO>
+L<SBG::Complex> , L<SBG::DomainIO>
 
 =cut
 
+################################################################################
+
 package SBG::ComplexIO;
-use SBG::Root -Base;
-use base qw(SBG::IO);
+use Moose;
+extends 'SBG::DomainIO';
 
 use IO::String;
 
 use SBG::Complex;
-use SBG::DomainIO;
-use SBG::CofM;
 use SBG::Transform;
 
 
+
 ################################################################################
+=head2 read
 
-sub new () {
-    my $class = shift;
-    # Delegate to parent class
-    my $self = new SBG::IO(@_);
-    return unless $self;
-    # And add our ISA spec
-    bless $self, $class;
-    return $self;
-} # new
+ Function: Read many L<SBG::Domain> objects from a STAMP file
+ Example :
+ Returns : 
+ Args    :
 
 
-sub read {
-    my $domio = new SBG::DomainIO(-fh=>$self->fh);
-    my $dom;
+=cut
+override 'read' => sub {
+    my ($self) = @_;
     my $complex = new SBG::Complex();
-    while ($dom = $domio->read) {
-        # Get any centre-of-mass
-        my $cdom = SBG::CofM::cofm($dom);
-        # Update it:
-        # TODO DES
-        # Apply saved transformation to native CofM point
-        $cdom->transform($dom->transformation);
+    while (my $dom = super()) {
         # Add Dom to complex
-        $complex->add($cdom);
+        $complex->template($dom->uniqueid, $dom);
     }
     return $complex;
-}
+};
 
-# Returns the string that was printed to the file
-# Add a newline by default as well
-sub write {
-    my $complex = shift;
-    my $names = shift || [$complex->names];
-    my @names = sort @$names;
-    # Save output in string, to return it as well
-    my $str;
-    my $strfh = new IO::String($str);
+
+################################################################################
+=head2 write
+
+ Function:
+ Example :
+ Returns : $self
+ Args    :
+
+=cut
+override 'write' => sub {
+    my ($self,$complex,$names) = @_;
+    $names ||= [$complex->names];
+    my $strfh = $self->fh;
 
     my @alphabet = ('A' .. 'Z');
-    my @chains = @alphabet[0..@names];
+    my @chains = @alphabet[0..@$names];
     # Unique topology identifier: (i.e. connectivity, not templates used)
-    my @iactions = values %{$complex->{iaction}};
+    my @iactions = values %{$complex->{interaction}};
     # Sort the nodes in a single edge. 
     my @edges = map { join(',', sort($_->nodes)) } @iactions;
     # Then sort over all these edge labels
     my $topology = join(';', sort(@edges));
 
-    print $strfh "\% Components: ", join(" ", @names), "\n";
+    print $strfh "\% Components: ", join(" ", @$names), "\n";
     print $strfh "\% Chains: ", join(" ", @chains), "\n";
     print $strfh "\% Topology: $topology\n";
     print $strfh "\% Templates:\n";
     foreach my $iaction (sort @iactions) {
-        print $strfh "\% Template: ", $iaction->regurgitate, "\n";
+        print $strfh "\% Template: ", $iaction->ascsv, "\n";
     }
     print $strfh "\n";
 
     # Print all Domain objects (STAMP format)
-    my $domio = new SBG::DomainIO(-fh=>$strfh);
     my $chainid = 0;
-    foreach my $key (@names) {
-        my $dom = $complex->comp($key);
+    foreach my $key (@$names) {
+        my $dom = $complex->model($key);
         print $strfh "\% CHAIN ", $chains[$chainid++], " $key\n";
-        $domio->write($dom,-id=>'stampid');
+        $self->SUPER::write($dom);
     }
-
     print $strfh "\n";
-    my $fh = $self->fh;
-    print $fh $str if $fh;
-    return $str;
-
-} # write
+    return $self;
+};
 
 ################################################################################
-
+__PACKAGE__->meta->make_immutable;
 1;

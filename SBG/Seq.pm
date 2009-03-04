@@ -24,7 +24,7 @@ L<Bio::Seq>
 
 package SBG::Seq;
 use Moose;
-extends 'Bio::Seq';
+extends qw/Bio::Seq/;
 with 'SBG::Storable';
 
 use overload (

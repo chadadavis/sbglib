@@ -1,13 +1,19 @@
 #!/usr/bin/env perl
 
 use Test::More 'no_plan';
-use SBG::Test qw(float_is);
+use SBG::Test 'float_is';
 use feature 'say';
+use Carp;
+use Data::Dumper;
+use FindBin;
+use File::Temp qw/tempfile/;
+my $dir = $FindBin::RealBin;
 $, = ' ';
 
 use PDL::Lite;
 use PDL::Matrix;
 
+use SBG::Domain;
 use SBG::Domain::CofM;
 
 ################################################################################
@@ -95,9 +101,20 @@ ok($s->store("cofm.stor"), "Serializing to cofm.stor");
 # transform is the cum. cofm But still, should maintain current cofm, for sake
 # of overlap detection
 
+
+__END__
+
 # TODO
 use SBG::Domain::CofMVol;
 # Test voverlap and voverlaps
 
 $s = new SBG::Domain::CofM(pdbid=>'2nn6', descriptor=>'A 50 _ to A 120 _');
 
+
+__END__
+# Copy construction
+sub type { 'SBG::Domain::CofM' }
+my $dom = new SBG::Domain(pdbid=>'2nn6', descriptor=>'A 50 _ to A 120 _');
+say 'dom:', Dumper $dom;
+my $cdom = type()->new(%$dom);
+say 'cdom:', Dumper $cdom;

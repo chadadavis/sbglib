@@ -6,7 +6,7 @@ use File::Basename;
 use SBG::Domain;
 use SBG::DomainIO;
 use SBG::STAMP;
-use SBG::CofM;
+use SBG::Domain::CofM;
 
 use PDL::Matrix;
 

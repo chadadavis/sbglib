@@ -10,12 +10,13 @@ SBG::List - Utilities on Arrays
 
 or
 
-use autobox ARRAY => SBG::List;
+use Moose::Autobox;
+use autobox ARRAY => 'SBG::List';
 
 
 =head1 DESCRIPTION
 
-...
+TODO explain how this works/conflicts with Moose::Autobox
 
 =head1 SEE ALSO
 
@@ -61,6 +62,7 @@ thresh
 ################################################################################
 
 # Recursively flattens an array (nested array of arrays) into one long array
+# See also L<Moose::Autobox::Array::flatten_deep> for OO interface
 sub flatten { 
     my @a;
     foreach (@_) {

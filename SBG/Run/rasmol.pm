@@ -45,6 +45,10 @@ use SBG::Config qw/val/;
           pdb
           img
 
+NB This does not seem to work with rasmol-gtk 
+Use rasmol-classic, or just rasmol.
+Set this in the config.ini
+
 =cut
 sub pdb2img {
     my (%o) = @_;

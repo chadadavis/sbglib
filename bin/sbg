@@ -34,7 +34,6 @@ use Scalar::Util qw/blessed/;
 use SBG::Storable qw/module_for retrieve can_do/;
 
 use Moose::Autobox;
-use autobox;
 
 ################################################################################
 

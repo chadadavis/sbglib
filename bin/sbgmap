@@ -28,7 +28,9 @@ sbgmap SBG::Domain::descriptor files.stor [more-files.stor]
 
 ################################################################################
 
-# CPAN
+# Don't use strict/warnings here, as that would enforce the incoming function
+# use strict;
+# use warnings;
 use Getopt::Long;
 use Pod::Usage;
 
@@ -41,15 +43,12 @@ my $result = GetOptions(\%ops,
     );
 if ($ops{'h'}) { pod2usage(-exitval=>1, -verbose=>2); }
 
-my $function = shift;
+my $function = eval shift;
 my @files = @ARGV;
 @files or pod2usage(-exitval=>2);
 my @objs = flatten retrieve_files(@files);
 my $res;
 
-@res = map { &$function($_) } @objs;
-
+my @res = map { $function->($_) } @objs;
 print join("\n", @res), "\n";
-
-
 

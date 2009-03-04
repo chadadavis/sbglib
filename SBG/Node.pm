@@ -26,7 +26,7 @@ L<Bio::Network::Node> , L<SBG::Network>
 
 package SBG::Node;
 use Moose;
-extends 'Bio::Network::Node';
+extends qw/Bio::Network::Node/;
 with 'SBG::Storable';
 
 use overload (

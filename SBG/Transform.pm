@@ -184,7 +184,7 @@ sub inverse {
 
  Function: Aransformation of A (or $self), relative to B
  Example : my $A_relative_to_B = $A_transform->relativeto($B_transform);
- Returns : 
+ Returns : L<SBG::Transform>
  Args    : Two L<SBG::Transform>, i.e. $self an $some_other
 
 Creates a new L<SBG::Transform> without modifying existing ones. I.e the result

@@ -16,7 +16,7 @@ use List::MoreUtils qw(first_index);
 
 # Tolerate rounding differences between clib (STAMP) and PDL (SBG)
 use PDL::Ufunc;
-my $toler = 0.25;
+my $toler = 0.5;
 
 # TODO test do_stamp alone (i.e. on a family of domains)
 
@@ -25,18 +25,20 @@ $io = pdbc('2nn6', 'A');
 # Define the type of Domain object we want back
 $io->type('SBG::Domain::CofM');
 $dom = $io->read;
-is($dom->pdbid, '2nn6');
-is($dom->descriptor, 'CHAIN A');
+is($dom->pdbid, '2nn6', 'pdbid');
+is($dom->descriptor, 'CHAIN A', 'descriptor');
 
 
 # get domains for two chains of interest
 my $doma = SBG::Domain::CofM->new(pdbid=>'2br2', descriptor=>'CHAIN A');
+my $domb = SBG::Domain::CofM->new(pdbid=>'2br2', descriptor=>'CHAIN B');
 my $domd = SBG::Domain::CofM->new(pdbid=>'2br2', descriptor=>'CHAIN D');
 
 # Get superposition, in both directions
 my $tt;
 $tt = superpose($doma, $domd);
 ok($tt, "superpose'd A onto D");
+
 my $aontod = $tt && $tt->matrix;
 ok($tt, "superpose'd D onto A");
 $tt = superpose($domd, $doma);

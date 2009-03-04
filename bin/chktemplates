@@ -1,26 +1,25 @@
 #!/usr/bin/env perl
 
 use strict;
-use SBG::Eval;
-use SBG::DomainIO;
-use SBG::Domain;
 
 # Command line:
 # ./chktemplates 2j57_templates.csv
 
 my $f = ".t.dom";
 
-
+my $re_dom = '(\S+)\s+(\{.*?\})';
 while (<>) {
     chomp;
     next unless $_;
-    my $id = 0;
+    my ($id1, $d1, $id2, $d2) = /^% Template:.*?$re_dom\s+$re_dom/ or next;
+
+
+    my $str = " ${id1}-1 $d1\n ${id2}-2 $d2\n\n";
     unlink $f;
     open my $fh, ">$f";
-    my ($id1, $d1, $id2, $d2) = /(\S+)\s+(\{.*?\})/g;
-    print $fh " $id1", $id++, " $d1\n";
-    print $fh " $id2", $id++, " $d2\n";
+    print $fh $str;
     close $fh;
+
     print `cat $f`;
     `tras $f`;
 }
