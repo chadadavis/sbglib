@@ -77,8 +77,8 @@ sub sub_solution {
                        $solution);
     $complex->store($file . '.stor');
     # Write the DOM version as well
-    my $io = new SBG::ComplexIO(file=>">$file" . '.dom');
-    $io->write($complex);
+#     my $io = new SBG::ComplexIO(file=>">$file" . '.dom');
+#     $io->write($complex);
 
     $solution++;    
     $step = 1;
