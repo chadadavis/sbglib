@@ -224,6 +224,15 @@ has '_solved' => (
     );
 
 
+# TODO DOC
+# Number of paths aborted (i.e. time saved) during traversal
+has 'rejects' => (
+    is => 'rw',
+    isa => 'Int',
+    default => 0,
+);
+
+
 ################################################################################
 # Public
 
@@ -363,7 +372,8 @@ sub _test_alt {
 
     if (! $success) {
         # Current edge was rejected, but alternative multiedges may remain
-        _d $d, "Failed";
+        $self->rejects($self->rejects + 1);
+        _d $d, "Aborted path " . $self->rejects;
         # Continue using the same state, in case the failure must be remembered
         $self->_do_edges($uf, $stateclone, $d);
     } else {
@@ -484,6 +494,10 @@ sub _array2D {
 }
 
 
+sub DESTROY {
+    my ($self) = @_;
+    _d0 "Traversal done: rejected paths: " . $self->rejects;
+}
 
 ###############################################################################
 
