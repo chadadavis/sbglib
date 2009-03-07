@@ -381,6 +381,25 @@ sub asarray {
 
 
 ################################################################################
+=head2 hash
+
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
+
+
+=cut
+sub hash {
+    my ($self, $prec) = @_;
+    $prec = 0 unless defined $prec;
+    my @a = $self->asarray;
+    return sprintf("%.${prec}f %.${prec}f %.${prec}f", @a);
+
+}
+
+
+################################################################################
 # Private
 
 

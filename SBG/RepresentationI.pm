@@ -43,6 +43,19 @@ requires 'dist';
 
 
 ################################################################################
+=head2 hash
+
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
+
+
+=cut
+requires 'hash';
+
+
+################################################################################
 =head2 sqdist
 
  Function: Squared linar distance between objects

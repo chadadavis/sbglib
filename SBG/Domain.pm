@@ -43,7 +43,6 @@ use SBG::Types qw/$re_chain $re_chain_seg/;
 
 use SBG::Transform;
 use Scalar::Util qw(refaddr);
-use Carp qw/cluck/;
 
 use overload (
     '""' => '_asstring',
@@ -134,6 +133,14 @@ has 'transformation' => (
     isa => 'SBG::Transform',
     required => 1,
     default => sub { new SBG::Transform },
+    );
+
+
+
+has 'clash' => (
+    is => 'rw',
+    isa => 'Num',
+    default => 0,
     );
 
 
@@ -319,6 +326,22 @@ sub asstamp {
 
 
 ################################################################################
+=head2 hash
+
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
+
+
+=cut
+sub hash {
+    my ($self) = @_;
+    return "$self";
+}
+
+
+################################################################################
 # Private
 
 
@@ -331,7 +354,6 @@ sub asstamp {
  Args    : NA
 
 =cut
-use Carp qw/cluck/;
 sub _asstring {
     my ($self) = @_;
     my $s = ($self->pdbid || '') . ($self->_descriptor_short || '');
@@ -352,16 +374,19 @@ This includes the external 3D representation of the domain.
 =cut
 sub _equal {
     my ($self, $other) = @_;
+    # Must be of the same type
     return 0 unless defined $other && blessed($self) eq blessed($other);
+    # Shortcut: Obviously equal if at same memory location
     return 1 if refaddr($self) == refaddr($other);
     # Fields, from most general to more specific
     my @fields = qw(pdbid descriptor file);
     foreach (@fields) {
+        # If any field is different, the containing objects are different
         return 0 if 
             $self->$_ && $other->$_ && $self->$_ ne $other->$_;
     }
+    # Transformations. If not defined, then assume the objects are equivalent 
     my $res = _attr_eq($self->transformation, $other->transformation);
-    # If not defined, then assume the objects are equivalent 
     return defined($res) ? $res : 1;
 
 } # _equal
@@ -384,9 +409,13 @@ otherwise: returns $a == $b
 =cut
 sub _attr_eq {
     my ($a, $b) = @_;
+    # Not unequal if both undefined
     return unless defined($a) || defined($b);
+    # Unequal if one defined and other undefined
     return 0 if defined($a) xor defined($b);
+    # Unequal if of different types
     return 0 unless blessed($a) eq blessed($b);
+    
     return $a == $b;
 }
 
