@@ -42,6 +42,7 @@ use Moose;
 use MooseX::StrictConstructor;
 use Moose::Util::TypeConstraints;
 
+
 extends 'SBG::Domain';
 
 with qw(SBG::Storable);
@@ -54,6 +55,7 @@ use overload (
     fallback => 1,
     );
 
+use Carp qw/cluck/;
 use PDL::Lite;
 use PDL::Ufunc;
 use PDL::Math;
@@ -64,7 +66,6 @@ use List::Util; # qw(min);
 
 use SBG::Transform;
 use SBG::Log; # imports $logger
-use Carp qw/cluck/;
 use SBG::Run::cofm qw/cofm/;
 
 
@@ -72,15 +73,21 @@ use SBG::Run::cofm qw/cofm/;
 # Fields and accessors
 
 
+
+
+
 # Define own subtype to enable type coersion. 
 subtype 'PDL3' => as 'PDL::Matrix';
+
 
 # In coercion, always append a 1 for affine matrix multiplication
 coerce 'PDL3'
     => from 'ArrayRef' => via { mpdl [@$_, 1] }
     => from 'Str' => via { mpdl ((split)[0..2], 1) };
 
+
 subtype 'PDL7x3' => as 'PDL::Matrix';
+
 
 
 =head2 centre

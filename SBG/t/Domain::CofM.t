@@ -1,5 +1,6 @@
 #!/usr/bin/env perl
 
+
 use Test::More 'no_plan';
 use SBG::Test 'float_is';
 use feature 'say';
@@ -15,6 +16,7 @@ use PDL::Matrix;
 
 use SBG::Domain;
 use SBG::Domain::CofM;
+
 
 ################################################################################
 # Sanity check

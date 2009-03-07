@@ -33,7 +33,6 @@ our @EXPORT_OK = qw(linker);
 
 use Moose::Autobox;
 
-use SBG::Domain;
 use SBG::STAMP qw/superpose/;
 use SBG::Complex;
 use SBG::ComplexIO;
@@ -118,6 +117,16 @@ sub sub_test {
 } # sub_test
 
 
+
+################################################################################
+__PACKAGE__->meta->make_immutable;
+1;
+
+
+__END__
+
+
+
 # TODO update
 sub step2dom {
     my ($destdom, $complex) = @_;
@@ -144,13 +153,4 @@ sub step2img {
     my $optstr = "select *A\ncolor grey\nselect (!*A and within(10.0, *A))\ncolor HotPink";
     pdb2img(-pdb=>$pdbfile, -script=>$optstr, -img=>$img);
 }
-
-
-
-################################################################################
-__PACKAGE__->meta->make_immutable;
-1;
-
-
-__END__
 

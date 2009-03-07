@@ -51,7 +51,6 @@ L<SBG::Domain> , L<SBG::IO>
 
 package SBG::DomainIO;
 use Moose;
-use Moose::Util::TypeConstraints;
 
 extends 'SBG::IO';
 
