@@ -468,7 +468,10 @@ sub _next_alt {
 } # _next_alt
 
 
-# Partial solution
+# Partial solution.  
+# Assumes that the edges alternatives can be strinigified and
+# that the strinfications are unique.
+
 sub _do_solution {
     my ($self, $state, $d) = @_;
 
