@@ -160,14 +160,18 @@ sub attach {
     $destdom = $self->linker($refdom, $srcdom, $destdom);
     return $success = 0 unless $destdom;
 
-    # Check new coords of destdom for clashes across currently assembly
-    $success = ! $self->clashes($destdom);
-    return $success = 0 unless $success;
-    
+    # Check new coords of destdom for clashes, across doms in currently assembly
+    my $meanoverlapfrac = $self->trydomain($destdom);
+
+    # TODO DES this is poor logic, side effect 1 means bogus, but less than 1
+    $success = $meanoverlapfrac < 1;
+    return unless $success;
+
     # Domain does not clash after being oriented, can be saved in complex now
     # Update frame-of-reference of interaction partner ($dest)
     # NB Any previous $self->domain($dest) gets overwritten
     # This is compatible with the backtracking of SBG::Traversal
+    $destdom->clash($meanoverlapfrac);
     $self->model($dest, $destdom);
     $self->interaction($ix, $ix);
     return $success;
@@ -253,7 +257,7 @@ sub size {
 
 
 ################################################################################
-=head2 clashes
+=head2 trydomain
 
  Function:
  Example :
@@ -264,21 +268,35 @@ Determine whether a given L<SBG::Domain> would create a clash/overlap in space
 with any of the L<SBG::Domain>s in this complex.
 
 =cut
-sub clashes {
+sub trydomain {
     my ($self, $newdom) = @_;
     # Get all of the objects in this assembly. 
     # If any of them clashes with the to-be-added objects, then disallow
-    # TODO config this elsewhere
+    # TODO config this config.ini
     my $thresh = .5;
+    my $overlaps = [];
     foreach my $key ($self->names) {
         # Measure the overlap between $newdom and each component
         my $existingdom = $self->model($key);
         $logger->trace("$newdom vs $existingdom");
-        return 1 if $newdom->overlaps($existingdom,$thresh);
+        my $overlapfrac = $newdom->evaluate($existingdom);
+        # Nonetheless, if one clashes severely, bail out
+        return 1 if $overlapfrac > $thresh;
+        # Don't worry about domains that aren't overlapping at all (ie < 0)
+        $overlaps->push($overlapfrac) if $overlapfrac > 0;
     }
-    $logger->info("$newdom fits");
-    return 0;
-} # clashes
+    my $mean = $overlaps->mean || 0;
+    $logger->info("$newdom fits w/ mean overlap fraction: ", $mean);
+    return $mean;
+} 
+
+
+sub clashes {
+    my ($self) = @_;
+    my $doms = $self->models->values;
+    my $clashes = [ map { $_->clash } @$doms ];
+    return $clashes->mean;
+}
 
 
 ################################################################################
@@ -395,10 +413,13 @@ sub overlap {
         my $otherdom = $other->model($name);
         # The fraction of the maximum possibe overlap between the two
         # Weighted by (min) radius of corresponding domains
-        my $fracoverlap = 
-            $selfdom->evaluate($otherdom) * $weights{$name} / $maxweight;
+
+# TODO BUG the weighting is somehow broken
+#         my $fracoverlap = 
+#             $selfdom->evaluate($otherdom) * $weights{$name} / $maxweight;
+        my $fracoverlap = $selfdom->evaluate($otherdom);
         $overlaps->push($fracoverlap);
-        $logger->debug($name, " weighted fractional overlap: ", $fracoverlap);
+        $logger->debug($name, " (weighted?) fractional overlap: ", $fracoverlap);
     }
     # undo transformation here
     $other->transform($mintrans->inverse);
@@ -506,17 +527,29 @@ Undefined when no common template domains.
 =cut
 sub rmsd {
    my ($self,$other) = @_;
-   my $count;
-   my $sum;
-   foreach my $name ($self->names) {
-       my $d1 = $self->model($name) or next;
-       my $d2 = $other->model($name) or next;
-       my $sqdist = $d1->sqdist($d2);
-       $sum += $sqdist;
-       $count++;
+   # Only consider common components
+   my @cnames = intersection([$self->names], [$other->names]);
+   # squared distances between corresponding components
+   my $sqdistances = [];
+   foreach my $name (@cnames) {
+       my $d1 = $self->model($name);
+       my $d2 = $other->model($name);
+       $sqdistances->push($d1->sqdist($d2));
    }
-   return unless $count;
-   return sqrt($sum / $count);
+   my $mean = $sqdistances->mean;
+   return unless $mean;
+   return sqrt($mean);
+}
+
+
+# TODO DES Doesn't belong in this class?
+
+sub hash {
+    my ($self) = @_;
+    my $doms = $self->models->values;
+    my $hashes = [ map { $_->hash } @$doms ];
+    $hashes = $hashes->sort;
+    return $hashes->join(' ');
 }
 
 
