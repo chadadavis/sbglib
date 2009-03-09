@@ -57,7 +57,8 @@ use overload (
 
 use Carp qw/cluck/;
 use PDL::Lite;
-use PDL::Ufunc;
+use PDL::Core qw/list/;
+use PDL::Ufunc; # for sumover()
 use PDL::Math;
 use PDL::Matrix;
 use Math::Trig qw(:pi);
@@ -81,13 +82,13 @@ subtype 'PDL3' => as 'PDL::Matrix';
 
 
 # In coercion, always append a 1 for affine matrix multiplication
+# Transpose these row vector to column vectors, to allow transformation later
 coerce 'PDL3'
-    => from 'ArrayRef' => via { mpdl [@$_, 1] }
-    => from 'Str' => via { mpdl ((split)[0..2], 1) };
+    => from 'ArrayRef' => via { mpdl(@$_, 1)->transpose }
+    => from 'Str' => via { mpdl((split)[0..2], 1)->transpose };
 
-
-subtype 'PDL7x3' => as 'PDL::Matrix';
-
+# TODO, use 7pt centre-of-mass
+# subtype 'PDL7x3' => as 'PDL::Matrix';
 
 
 =head2 centre
@@ -232,12 +233,11 @@ sub sqdist {
     $logger->trace("$self - $other");
     # Vector diff
     my $diff = $selfc - $otherc;
-    # Remove dimension 0 of 2D-matrix, producing a 1-D vector
-    # And remove the last field (just a 1, for affine multiplication)
-    $diff = $diff->slice('(0),0:2');
     my $squared = $diff ** 2;
-    my $sum = sumover($squared);
-    return $sum;
+    # Squeezing allows this to work either on column or row vectors
+    my $sum = sumover($squared->squeeze);
+    # Convert to scalar
+    return $sum->sclr;
 }
 
 
@@ -256,16 +256,14 @@ Apply a new transformation to this spheres centre.
 If you simply want to access the current cumulative transformation saved in this
 object, use L<transformation>.
 
+NB This needs to be a column vector, to be transformed, otherwise, use transpose
+
 =cut
 override 'transform' => sub {
     my ($self, $newtrans) = @_;
     return $self unless defined($newtrans) && defined($self->centre);
-    # Need to transpose row vector to a column vector first. 
-    # Then let Transform do the work.
 
-    my $newcentre = $newtrans->transform($self->centre->transpose);
-    # Transpose back before saving
-    $self->centre($newcentre->transpose);
+    $self->centre($newtrans->transform($self->centre));
 
     # Update cumulative transformation. Managed by parent
     super();
@@ -378,11 +376,9 @@ sub evaluate {
 sub asarray {
     my ($self) = @_;
     return unless defined $self->centre;
-    my @a = 
-        ($self->centre->at(0,0), 
-         $self->centre->at(0,1), 
-         $self->centre->at(0,2),
-        ); 
+    my @a = list $self->centre;
+    # Remove the trailing '1' used for homogenous coords.
+    pop @a;
     return @a;
 }
 

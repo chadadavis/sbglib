@@ -34,6 +34,7 @@ use Carp;
 use PDL::Lite;
 use PDL::Core;
 use PDL::Matrix;
+use PDL::MatrixOps;
 use PDL::IO::Storable;
 use PDL::IO::Misc;
 use PDL::Ufunc;
@@ -53,12 +54,14 @@ use overload (
 =head2 matrix
 
 The 4x4 affine transformation matrix
+Using homogenous coordinates (ie 4D)
+Default is the identity matrix
 =cut
 has 'matrix' => (
     is => 'rw',
     isa => 'PDL::Matrix',
     required => 1,
-    default => sub { mpdl [ [1,0,0,0], [0,1,0,0], [0,0,1,0], [0,0,0,1] ] },
+    default => sub { mpdl identity 4 },
     trigger => sub { my $self = shift; $self->_tainted(1) if @_ },
     );
 
