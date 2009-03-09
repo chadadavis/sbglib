@@ -41,10 +41,10 @@ use SBG::Complex;
 
 # TODO Needs to be in a DB
 # Maps e.g. 2hz1A.a.1.1.1-1 to { A 2 _ to A 124 _ }
-our $scopdb = "/g/russell1/data/pdbrep/scop_1.73.dom";
+our $scopdb = "~/p/ca/benchmark/scop_1.73.dom.gz";
 # Maps e.g. 1ir2B.c.1.14.1-1 to:
 # 1rlcL.c.1.14.1-1 1.000e-177 89.00 
-our $templatedb = "/g/russell2/davis/p/ca/benchmark/search_bench_part8.out-robs";
+our $templatedb = "~/p/ca/benchmark/search_bench_part8.out-robs.gz";
 
 
 ################################################################################
@@ -80,7 +80,7 @@ sub domains {
     my ($pdbid) = @_;
     $pdbid = lc $pdbid;
     # Grep the lines from database
-    my $cmd = "grep -P \'^Can model $pdbid (\\S+) (\\S+)\' $templatedb";
+    my $cmd = "zgrep -P \'^Can model $pdbid (\\S+) (\\S+)\' $templatedb";
     my @lines = `$cmd`;
     my @components;
     my @a;
@@ -144,7 +144,7 @@ sub _grep_db {
 
     # Grep the lines from database
     my $cmd = 
-        "egrep \'^ -- Can model $pdb ($comp1 $comp2|$comp2 $comp1) on\' " . 
+        "zgrep -E \'^ -- Can model $pdb ($comp1 $comp2|$comp2 $comp1) on\' " . 
         $templatedb;
     my @lines = `$cmd`;
     return unless @lines > 0;
@@ -213,7 +213,7 @@ sub parse_scopid {
     
     # Given: 2hz1A.a.1.1.1-1, this matches:
     # ("/data/pdb/2hz1.brk","2hz1A.a.1.1.1-1","A 2 _ to A 124 _")
-    my $match = `grep $longid $scopdb`;
+    my $match = `zgrep $longid $scopdb`;
     unless ($match =~ /^(\S+) ($longid) { (.*?) }$/) {
         carp "SCOP ID not found: $longid\n";
         return;
