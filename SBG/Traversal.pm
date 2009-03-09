@@ -131,7 +131,8 @@ Call back function. It is called when a solution has been reached, as:
 It is not called when an already-seen solution is re-encountered. It is called
 only once for any unique set of alternate edge IDs.
 
-It does not need to return a value.
+It may return whether it used/accepted the solution or not;
+
 
 =head3 B<$stateclone> 
 
@@ -231,6 +232,21 @@ has 'rejects' => (
     isa => 'Int',
     default => 0,
 );
+
+
+has 'asolutions' => (
+    is => 'rw',
+    isa => 'Int',
+    default => 0,
+);
+
+has 'rsolutions' => (
+    is => 'rw',
+    isa => 'Int',
+    default => 0,
+
+);
+
 
 
 ################################################################################
@@ -479,14 +495,20 @@ sub _do_solution {
     my $alts = $self->_altcover->keys->sort;
     return unless $alts->length;
     return if $self->minsize > $nodes->length;
-    my $solution_label = $alts->join(',');
-    if ($self->_solved->at($solution_label)) {
-        _d $d, "Duplicate";
+
+#     my $solution_label = $alts->join(',');
+#     if ($self->_solved->at($solution_label)) {
+#         _d $d, "Duplicate";
+#     } else {
+#         $self->_solved->put($solution_label, 1);
+    my $callback = $self->sub_solution;
+    if ($callback->($state, $self->graph, $nodes, $alts)) {
+        $self->asolutions($self->asolutions+1);
     } else {
-        $self->_solved->put($solution_label, 1);
-        my $callback = $self->sub_solution;
-        $callback->($state, $self->graph, $nodes, $alts);
+        $self->rsolutions($self->rsolutions+1);
     }
+#     }
+
 } # _do_solution
 
 
@@ -500,6 +522,8 @@ sub _array2D {
 sub DESTROY {
     my ($self) = @_;
     _d0 "Traversal done: rejected paths: " . $self->rejects;
+    _d0 "Traversal done: rejected solutions: " . $self->rsolutions;
+    _d0 "Traversal done: accepted solutions: " . $self->asolutions;
 }
 
 ###############################################################################

@@ -39,6 +39,8 @@ use SBG::ComplexIO;
 
 use SBG::Log;
 
+use SBG::GeometricHash;
+
 ################################################################################
 # Private
 
@@ -47,25 +49,46 @@ our $solution = 1;
 # For debugging: Individual steps within one solution
 our $step = 1;
 
-my $file_pattern = '%smodel-%05d';
+my $file_pattern = '%sclass-%04d-model-%05d';
 
+our $gh = new SBG::GeometricHash(binsize=>1.5);
 
-# Callback for printing
+# Callback for output/saving/printing
+# Bugs: assume L<SBG::Domain::CofM> implementation in L<SBG::Complex>
 sub sub_solution {
     my ($complex, $graph, $nodecover, $templates) = @_;
     our $solution;
     our $step;
-
+    our $dups;
+    our $gh;
+    my $success = 1;
     # Uninteresting:
     return unless $templates->length > 1;     
+
+    my $doms = $complex->models->values;
+    # TODO DES BUG cannot assume centre exists here
+    my @points = map { $_->centre } @$doms;
+
+
+    # Check dup;
+    my $class = $gh->class(@points);
+    if ($class) {
+        $dups++;
+        $logger->debug('Total duplicates: ', $dups);
+        $success = 0;
+    } else {
+        $class = $gh->put(undef, @points);
+        $success = 1;
+    }
+
 
     # Flush console for fancy in-place printing
     local $| = 1;
     printf "\033[1K\r" . 
-    "Solution# %4d: Components: %3d ",
-    $solution, scalar(@$nodecover); # , join(', ', @$nodecover);
+    "Class: %4d Solution# %4d: Components: %3d ",
+    $class, $solution, scalar(@$nodecover);
 
-    $logger->debug("\n\n====== Solution $solution\n",
+    $logger->debug("\n\n====== Class: $class Solution $solution\n",
                    "@$nodecover\n",
                    "@$templates\n",
         );
@@ -73,7 +96,7 @@ sub sub_solution {
     # Append an optional name an a model solution counter
     my $file = sprintf($file_pattern, 
                        $complex->name ? $complex->name . '-' : '',
-                       $solution);
+                       $class, $solution);
     $complex->store($file . '.stor');
     # Write the DOM version as well
 #     my $io = new SBG::ComplexIO(file=>">$file" . '.dom');
@@ -81,6 +104,8 @@ sub sub_solution {
 
     $solution++;    
     $step = 1;
+
+    return $success;
 
 } # sub_solution
 
