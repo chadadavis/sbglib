@@ -14,10 +14,6 @@ use SBG::Domain::CofM;
 use List::MoreUtils qw(first_index);
 
 
-# Tolerate rounding differences between clib (STAMP) and PDL (SBG)
-use PDL::Ufunc;
-my $toler = 0.5;
-
 # TODO test do_stamp alone (i.e. on a family of domains)
 
 # Test pdbc
@@ -44,6 +40,12 @@ ok($tt, "superpose'd D onto A");
 $tt = superpose($domd, $doma);
 my $dontoa = $tt && $tt->matrix;
 
+
+# Tolerate rounding differences between clib (STAMP) and PDL
+use PDL::Ufunc;
+use PDL::Core;
+my $toler = 0.5;
+
 # The value computed externally by STAMP, the reference values
 my $atod_transstr = <<STOP;
    -0.54889    0.24755   -0.79839       -52.19956  
@@ -61,19 +63,14 @@ my $dtoa_ans = new SBG::Transform(string=>$dtoa_transstr)->matrix;
 my $atod_ans = new SBG::Transform(string=>$atod_transstr)->matrix;
 
 
-unless(
-    ok(all($aontod >= $atod_ans - $toler) && all($aontod <= $atod_ans + $toler),
-       "superpose 2br2A onto 2br2D: agrees w/ STAMP to w/in $toler A")
-    ) {
-    print STDERR "Expected:\n$atod_ans\nGot:\n$aontod\n";
-}
 
-unless(
-    ok(all($dontoa >= $dtoa_ans - $toler) && all($dontoa <= $dtoa_ans + $toler),
-       "superpose 2br2D onto 2br2A: agrees w/ STAMP to w/in $toler A")
-    ) {
+ok(all(approx($aontod, $atod_ans, $toler)),
+   "superpose 2br2A onto 2br2D: agrees w/ STAMP to w/in $toler A") or 
+    print STDERR "Expected:\n$atod_ans\nGot:\n$aontod\n";
+
+ok(all(approx($dontoa, $dtoa_ans, $toler)),
+   "superpose 2br2D onto 2br2A: agrees w/ STAMP to w/in $toler A") or
     print STDERR "Expected:\n$dtoa_ans\nGot:\n$dontoa\n";    
-}
 
 
 # Test transform()
@@ -157,12 +154,10 @@ STOP
 my $btod_ans = new SBG::Transform(string=>$btod_transstr)->matrix;
 # Get the underlying PDL
 $trans5 = $trans5->matrix;
-unless(
-    ok(all($trans5 >= $btod_ans - $toler) && all($trans5 <= $btod_ans + $toler),
-       "Database transformation verified, to within $toler A")
-    ) {
+
+ok(all(approx($trans5, $btod_ans, $toler)), 
+   "Database transformation verified, to within $toler A") or 
     print STDERR "Expected:\n$btod_ans\nGot:\n$trans5\n";
-}
 
 
 # Test sub-segments of chains

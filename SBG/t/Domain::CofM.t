@@ -35,7 +35,8 @@ isa_ok($s->centre, "PDL::Matrix");
 
 # new()
 $s = new SBG::Domain::CofM(centre=>[-6.61,-32.62,-53.18]);
-is($s->centre, mpdl (-6.61,-32.62,-53.18,1));
+# (transpose to get a column vector)
+is($s->centre, mpdl(-6.61,-32.62,-53.18,1)->transpose);
 
 # asarray()
 $s = new SBG::Domain::CofM();
@@ -93,7 +94,8 @@ float_is($s->radius, $trg, $prec);
 
 
 # Storable
-ok($s->store("cofm.stor"), "Serializing to cofm.stor");
+my $file = ($ENV{TMPDIR} || '/tmp') . '/cofm.stor';
+ok($s->store($file), "Serializing to $file");
 
 
 # TODO test applying non-trivial transformation 
