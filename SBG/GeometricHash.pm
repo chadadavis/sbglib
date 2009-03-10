@@ -17,6 +17,12 @@ SBG::GeometricHash -
 3D geometric hash, for indexing things described by points in 3D, e.g. molecular
  structures.
 
+Each point can have a label.  When querying with a label, the labels must much.
+If a model is saved with labels, but the query provides no labels, any model
+will match, labelled or not.  I.e. using a label requires matching, if you don't
+care about labels, they don't get in the way, though.
+
+
 
 =head1 SEE ALSO
 
@@ -33,8 +39,6 @@ The interface is based on L<Moose::Autobox::Hash>
        kv
        slice
        meta
-       print
-       say
 
 =cut
 
@@ -52,8 +56,21 @@ use PDL::Ufunc;
 use PDL::Transform;
 use PDL::NiceSlice;
 
+use Math::Trig;
 
-# _gh is a hash of ArrayRef
+################################################################################
+
+################################################################################
+=head2 new
+
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
+
+_gh is a hash of ArrayRef
+
+=cut
 sub new {
     my ($class, %self) = @_;
     my $self = { %self };
@@ -88,27 +105,29 @@ To get all the scores for all of the potential model matches, see L<at>
 
 =cut
 sub exists {
-    my ($self,@points) = @_;
+    my ($self,$points) = @_;
 
-    my %h = $self->at(@points);
+    my %h = $self->at($points);
     # Get models that cover all points
-    my @fullmatches = grep { @points == $h{$_} } keys %h;
+    my @fullmatches = grep { @$points == $h{$_} } keys %h;
     return unless @fullmatches;
     return wantarray ? @fullmatches : $fullmatches[0];
 }
 
-
+ 
+# TODO DOC
+# The name of the model/class without the indices used for the basis
 sub class {
-    my ($self,@points) = @_;
-    my $class = $self->exists(@points);
+    my ($self,$points) = @_;
+    my $class = $self->exists($points);
     return unless $class;
-    my @a = split /,/, $class; # /
+    my @a = split / /, $class;
     return $a[0];
-
 }
 
 
 # What should be returned here?
+# The true keys (coords), or the conceptual keys (model IDs)
 # TODO
 sub keys {
     my ($self) = @_;
@@ -128,10 +147,10 @@ Returns a hash of votes for specific models.
 
 =cut
 sub at {
-    my ($self,@points) = @_;
+    my ($self,$points,$labels) = @_;
 
     # Get an array of points into a matrix;
-    my $model = _model(@points);
+    my $model = _model($points);
 
     # TODO add rotation to _basis
 #     # Determine a basis transformation, to put model in a common frame of ref
@@ -142,21 +161,44 @@ sub at {
     # Binning
     $model = $self->_quantize($model);
 
-    return $self->_votes($model);
+    return $self->_votes($model, $labels);
 
 } # at
 
 
+# Model at a specify point key, possibly matching a label
+sub _atkey {
+    my ($self, $point, $label) = @_;
+    if ($label) {
+        # Label must match, if provided
+        return $self->{_gh}{$point}{$label};
+    } else {
+        # No label: match any/all
+        my @keys = keys %{ $self->{_gh}{$point} };
+        my @values = map { @{ $self->{_gh}{$point}{$_} } } @keys;
+        return [ _uniq(@values) ];
+    }
+}
+
+
+sub _uniq { 
+    my %h;
+    $h{$_} = 1 for @_;
+    return keys %h;
+}
+
+
 sub _votes {
-    my ($self, $model) = @_;
+    my ($self, $model, $labels) = @_;
     my $gh = $self->{'_gh'};
     my %votes;
     # For each 3D point, hash it and append the model name to that point's list
     for (my $i = 0; $i < $model->dim(1); $i++) {
         # Each row is a 3D point
-        my $point = $model(,$i);
-        my $models = $gh->{$point} || [];
-        $votes{$_}++ for @$models;
+        my $point = join(' ',$model(,$i)->list);
+        my $label = $labels ? $labels->[$i] : '';
+        my $candidates = $self->_atkey($point, $label) || [];
+        $votes{$_}++ for @$candidates;
     }
     return %votes;
 }
@@ -171,19 +213,20 @@ sub _votes {
  Args    : 
 
 If no model name is provided, generic class ID numbers will be created.
+
 =cut 
 sub put { 
-    my ($self,$modelid, @points) = @_;
+    my ($self,$modelid, $points, $labels) = @_;
     our $classid;
     $modelid ||= ++$classid;
 
     # Get an array of points into a matrix;
-    my $model = _model(@points);
+    my $model = _model($points);
 
     # For each pair of points, define a basis and hash all the points
-    for (my $i = 0; $i < @points; $i++) {
-        for (my $j = 0; $j < @points; $j++) {        
-            $self->_one_basis($modelid, $model, $i, $j);
+    for (my $i = 0; $i < @$points; $i++) {
+        for (my $j = 0; $j < @$points; $j++) {        
+            $self->_one_basis($modelid, $model, $i, $j, $labels);
             
 # TODO DES abort this until rotations working:
             last;
@@ -202,7 +245,7 @@ sub put {
 
 
 sub _one_basis {
-    my ($self,$modelid, $model, $i, $j) = @_;
+    my ($self,$modelid, $model, $i, $j, $labels) = @_;
 
     # TODO add rotation to _basis
 #     # Determine a basis transformation, to put model in a common frame of ref
@@ -215,19 +258,21 @@ sub _one_basis {
 
     for (my $p = 0; $p < $model->dim(1); $p++) {
         # Each row is a 3D point
-        my $point = $model(,$p);
-        $self->_append($point, $modelid, $i, $j);
+        my $point = join(' ',$model(,$p)->list);
+        my $label = $labels ? $labels->[$p] : '';
+        $self->_append($point, $label, $modelid, $i, $j);
     }
 }
 
 
 sub _append {
-    my ($self, $point, $modelid, $i, $j) = @_;
+    my ($self, $point, $label, $modelid, $i, $j) = @_;
 
     # For each 3D point, hash it and append the model name to that point's list
     my $gh = $self->{'_gh'};
-    $gh->{$point} ||= [];
-    push @{ $gh->{$point} }, "${modelid},${i},${j}";
+    $gh->{$point} ||= {};
+    $gh->{$point}{$label} ||= [];
+    push @{ $gh->{$point}{$label} }, join(' ', $modelid, $i, $j);
 }
 
 
@@ -244,8 +289,8 @@ Result is row-major order, i.e. each row is a 3D point.
 
 =cut
 sub _model {
-    my (@points) = @_;
-    my $m = pdl(@points)->squeeze;
+    my ($points) = @_;
+    my $m = pdl(@$points)->squeeze;
     # Drop last column, assuming these were homogenous vectors
     # (i.e. take columns, 0,1,2 (x,y,z)
     $m = $m(0:2,);
@@ -277,7 +322,6 @@ because floor() is not applicable to PDL data. Instead we use PDL::long() which
 just converts to an integer.
 
 =cut
-# NB This is done inplace. I.e. $matrix is modified
 sub _quantize {
     my ($self, $matrix, $binsize) = @_;
     $binsize ||= $self->{binsize};
@@ -313,6 +357,10 @@ sub _basis {
     my $dist = _dist($diff);
 
     # Angles of rotation from coordinates axes, in degrees
+    
+# rad2deg(atan2(Y,X));
+# 
+# 
     my $ryz = 60; # about x axis
     my $rzx = 45; # about y axis
     my $rxy = 0; # about z axis (no rotation, as we'll already be in X axis)

@@ -31,25 +31,25 @@ my $b = mpdl([ 2.22,3.33,5.55, 1 ])->transpose;
 my $c = mpdl([ 5.55,3.33,9.99, 1 ])->transpose;
 
 my $gh = new SBG::GeometricHash(binsize=>.1);
-$gh->put("newmodel1", $origin, $a, $b, $c);
-$gh->put("newmodel2", $b, $c, $a);
+$gh->put("newmodel1", [$origin, $a, $b, $c], [qw/o a b c/]);
+$gh->put("newmodel2", [$b, $c, $a]);
 
 say Dumper $gh;
 
 my %h;
-%h = $gh->at($origin, $a, $b, $c);
+%h = $gh->at([$origin, $a, $b, $c]);
 say Dumper \%h;
 
-%h = $gh->at($origin, $a, $b);
+%h = $gh->at([$origin, $a, $b], [qw/o a b/]);
 say Dumper \%h;
 
-%h = $gh->at($origin, $a, $c);
+%h = $gh->at([$origin, $a, $c]);
 say Dumper \%h;
 
-%h = $gh->at($c, $b, $origin, $a);
+%h = $gh->at([$c, $b, $origin, $a]);
 say Dumper \%h;
 
-say $gh->exists($b, $c);
+say "Full covers: ", $gh->exists([$c, $a, $b, $c]);
 
 say "done";
 

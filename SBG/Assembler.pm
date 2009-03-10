@@ -55,6 +55,7 @@ our $gh = new SBG::GeometricHash(binsize=>1.5);
 
 # Callback for output/saving/printing
 # Bugs: assume L<SBG::Domain::CofM> implementation in L<SBG::Complex>
+
 sub sub_solution {
     my ($complex, $graph, $nodecover, $templates) = @_;
     our $solution;
@@ -65,20 +66,19 @@ sub sub_solution {
     # Uninteresting:
     return unless $templates->length > 1;     
 
-    my $doms = $complex->models->values;
+    my $labels = $complex->models->keys;
+    my @doms = map { $complex->model($_) } @$labels;
     # TODO DES BUG cannot assume centre exists here
-    my @points = map { $_->centre } @$doms;
+    my @points = map { $_->centre } @doms;
 
     # Check dup;
-    my $class = $gh->class(@points);
+    my $class = $gh->class(\@points, $labels);
     if (defined $class) {
         $dups++;
         $logger->debug('Total duplicates: ', $dups);
         $success = 0;
-#         print "\n";
     } else {
-#         print "\n";
-        $class = $gh->put(undef, @points);
+        $class = $gh->put(undef, \@points, $labels);
         $success = 1;
     }
 
@@ -86,7 +86,6 @@ sub sub_solution {
     # Flush console for fancy in-place printing
     local $| = 1;
     printf "\033[1K\r" . 
-#     printf "" . 
     "Class: %4d Solution# %4d: Components: %3d ",
     $class, $solution, scalar(@$nodecover);
 
