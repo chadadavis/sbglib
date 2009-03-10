@@ -207,7 +207,7 @@ Distance between this Sphere and some other, measured from their centres
 sub dist { 
     my ($self, $other) = @_;
     my $sqdist = $self->sqdist($other);
-    return unless $sqdist;
+    return unless defined($sqdist);
     return sqrt($sqdist);
 } # dist
 
@@ -297,9 +297,13 @@ sub overlap {
     my $dist = $self->dist($other);
     # Radii of two spheres
     my $sum_radii = ($self->radius + $other->radius);
-    # Overlaps when distance between centres < sum of two radii
+    # Overlaps when distance between centres < sum of two radi
+
     my $diff = $sum_radii - $dist;
     $logger->debug("$diff overlap on ($self) and ($other)");
+
+
+
     return $diff;
 }
 

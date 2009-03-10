@@ -124,8 +124,9 @@ sub superpose {
     }
 
     # Check database cache
-    my $trydb = superpose_query($fromdom, $ontodom);
-    return $trydb if $trydb;
+    # Useless, if we need Sc and seqID and all those meta-data
+#     my $trydb = superpose_query($fromdom, $ontodom);
+#     return $trydb if $trydb;
 
     # Check local disk cache
     my $cached = cacheget($fromdom, $ontodom);
@@ -197,6 +198,7 @@ sub _dbconnect {
     $dbh = DBI->connect($dbistr);
     return $dbh;
 }
+
 
 # Takes two domain objects
 sub superpose_query {
@@ -352,6 +354,7 @@ sub do_stamp {
         }
         $iodoms->close;
         # Run stamp and add %keep to %current
+        # TODO DES Need to get more data back from stamp() here
         my %keep = stamp($tmp_probe, $tmp_doms);
         $current{$_} = 1 for keys %keep;
 
