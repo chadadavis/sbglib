@@ -56,7 +56,10 @@ use PDL::Ufunc;
 use PDL::Transform;
 use PDL::NiceSlice;
 
-use Math::Trig;
+use Math::Trig qw/rad2deg/;
+use Math::Round qw/nearest/;
+
+use SBG::Log;
 
 ################################################################################
 
@@ -105,9 +108,9 @@ To get all the scores for all of the potential model matches, see L<at>
 
 =cut
 sub exists {
-    my ($self,$points) = @_;
+    my ($self,$points,$labels) = @_;
 
-    my %h = $self->at($points);
+    my %h = $self->at($points, $labels);
     # Get models that cover all points
     my @fullmatches = grep { @$points == $h{$_} } keys %h;
     return unless @fullmatches;
@@ -118,8 +121,8 @@ sub exists {
 # TODO DOC
 # The name of the model/class without the indices used for the basis
 sub class {
-    my ($self,$points) = @_;
-    my $class = $self->exists($points);
+    my ($self,$points, $labels) = @_;
+    my $class = $self->exists($points, $labels);
     return unless $class;
     my @a = split / /, $class;
     return $a[0];
@@ -151,12 +154,14 @@ sub at {
 
     # Get an array of points into a matrix;
     my $model = _model($points);
+    $logger->trace($model);
+    # Determine a basis transformation, to put model in a common frame of ref
+    my $t = _basis($model, 0, 1);
+    # Transform all points using this basis
+    $model = $t->apply($model);
 
-    # TODO add rotation to _basis
-#     # Determine a basis transformation, to put model in a common frame of ref
-#     my $t = _basis($model, 0, 1);
-#     # Transform all points using this basis
-#     $model = $t->apply($model);
+# TODO DEL
+    print STDERR 'at', $model;
 
     # Binning
     $model = $self->_quantize($model);
@@ -223,15 +228,14 @@ sub put {
     # Get an array of points into a matrix;
     my $model = _model($points);
 
+    $logger->trace($model);
+
     # For each pair of points, define a basis and hash all the points
     for (my $i = 0; $i < @$points; $i++) {
         for (my $j = 0; $j < @$points; $j++) {        
+            next if $i == $j;
             $self->_one_basis($modelid, $model, $i, $j, $labels);
-            
-# TODO DES abort this until rotations working:
-            last;
         }
-        last;
     }
         
     return $modelid;
@@ -246,12 +250,16 @@ sub put {
 
 sub _one_basis {
     my ($self,$modelid, $model, $i, $j, $labels) = @_;
+    $logger->trace(join(' ', $modelid, $i, $j));
+    # Determine a basis transformation, to put model in a common frame of ref
+    my $t = _basis($model, $i, $j);
+    # Transform all points using this basis
+    $model = $t->apply($model);
 
-    # TODO add rotation to _basis
-#     # Determine a basis transformation, to put model in a common frame of ref
-#     my $t = _basis($model, $i, $j);
-#     # Transform all points using this basis
-#     $model = $t->apply($model);
+
+#     if ($i == 0 && $j == 1) {
+        print STDERR "one_basis", $model;
+#     }
 
     # Binning
     $model = $self->_quantize($model);
@@ -317,17 +325,24 @@ to:
  [ 5  0]
  [-5 15]
 
-NB The bin that straddles 0 will be twice the size it should be.  This is
-because floor() is not applicable to PDL data. Instead we use PDL::long() which
-just converts to an integer.
+NB The bin that straddles 0 is twice as large, since it holds the numbers that approach it from both sides. 
 
 =cut
 sub _quantize {
     my ($self, $matrix, $binsize) = @_;
     $binsize ||= $self->{binsize};
-
+    my $qmat = zeroes($matrix->dims);
+    # For rows
+    for (my $i = 0; $i < $matrix->dim(1); $i++) {
+        my @row = $matrix(,$i)->list;
+        # Round
+        @row = map { nearest($binsize, $_) } @row;
+        $qmat(,$i) .= pdl(@row);
+    }
+    return $qmat
     # Convert to integer in the middle step, throws away less significant digits
-    return $binsize * long ($matrix / $binsize);
+#     return $binsize * long ($matrix / $binsize);
+
 }
 
 
@@ -346,7 +361,7 @@ first point at the origin and the second point at X=1
 =cut
 sub _basis {
     my ($model, $i, $j) = @_;
-
+    $logger->trace("$i $j");
    # First two points define a basis vector.
    # This is transformed to the unit vector from (0,0,0)->(1,0,0), in the X axis
     my $b0 = $model(,$i);
@@ -354,24 +369,41 @@ sub _basis {
 
     # Vector from $b0 to $b1
     my $diff = $b1 - $b0;
+    my ($x, $y, $z) = $diff->list; 
     my $dist = _dist($diff);
 
-    # Angles of rotation from coordinates axes, in degrees
-    
-# rad2deg(atan2(Y,X));
-# 
-# 
-    my $ryz = 60; # about x axis
-    my $rzx = 45; # about y axis
-    my $rxy = 0; # about z axis (no rotation, as we'll already be in X axis)
+    # Angles of rotation from coordinates axes, in degrees, clockwise
+    # first, from y toward x, about z axis, projects into XZ plane
+    my $ry2x = rad2deg atan2 $y, $x;
+    $logger->warn("X and Y both 0, basis undefined") if 0==$x && 0==$y;
+    # second, from x toward z, about y axis, projects into ZY plane
+    my $rx2z = rad2deg atan2 $x, $z;
+    $logger->warn("X and Z both 0, basis undefined") if 0==$x && 0==$z;
+    # third, from z toward y, about x axis, projects into YX plane
+#     my $rz2y = rad2deg atan2 $z, $y;
+    my $rz2y = 0; # No further rotation, we're in the Z-axis here
+    # rotation about 3 axes
+    my $rot = [$rz2y, $rx2z, $ry2x];
 
+    # scale, s.t. vector $b0 -> $b1 is fixed length
+    # (NB this scaling factor should be larger than the binsize)
+    my $scale = 10.0 / $dist;
+    # translation, s.t. b0 moves to origin
+    my $translation = zeroes(3)-$b0, 
     # A Linear transformation, including translation, scaling, rotation
-    my $t = t_linear(dims=>3,
-                     pre=>zeroes(3)-$b0, # translation, s.t. b0 moves to origin
-                     scale=>1/$dist, # scale, s.t. vector $b0 -> $b1 is length 1
-#                      rot=>[$ryz, $rzx, $rxy], # rotation about 3 axes
-    );
+    $logger->trace($b0);
+    $logger->trace($b1);
+    $logger->trace($translation);
+    $logger->trace("Scale:$scale");
+    $logger->trace("Rot @$rot");
+    my $t_o = t_offset($translation);
+#     $logger->trace($t_o);
+    my $t_s = t_scale($scale, dims=>3);
+#     $logger->trace($t_s);
+    my $t_r = t_rot($rot,dims=>3);
+#     $logger->trace($t_r);
 
+    my $t = $t_r x $t_s x $t_o;
     return $t;
 
 } # _basis
