@@ -69,14 +69,15 @@ sub sub_solution {
     # TODO DES BUG cannot assume centre exists here
     my @points = map { $_->centre } @$doms;
 
-
     # Check dup;
     my $class = $gh->class(@points);
-    if ($class) {
+    if (defined $class) {
         $dups++;
         $logger->debug('Total duplicates: ', $dups);
         $success = 0;
+#         print "\n";
     } else {
+#         print "\n";
         $class = $gh->put(undef, @points);
         $success = 1;
     }
@@ -85,6 +86,7 @@ sub sub_solution {
     # Flush console for fancy in-place printing
     local $| = 1;
     printf "\033[1K\r" . 
+#     printf "" . 
     "Class: %4d Solution# %4d: Components: %3d ",
     $class, $solution, scalar(@$nodecover);
 
