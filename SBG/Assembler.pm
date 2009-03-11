@@ -38,6 +38,7 @@ use SBG::Complex;
 use SBG::ComplexIO;
 
 use SBG::Log;
+use SBG::Config qw/config/;
 
 use SBG::GeometricHash;
 
@@ -51,7 +52,8 @@ our $step = 1;
 
 my $file_pattern = '%sclass-%04d-model-%05d';
 
-our $gh = new SBG::GeometricHash(binsize=>1.5);
+my $binsize = config()->val(qw/assembly binsize/) || 1.5;
+our $gh = new SBG::GeometricHash(binsize=>$binsize);
 
 # Callback for output/saving/printing
 # Bugs: assume L<SBG::Domain::CofM> implementation in L<SBG::Complex>

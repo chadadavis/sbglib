@@ -27,7 +27,7 @@ use PDL::NiceSlice;
 
 use SBG::GeometricHash;
 
-my $gh = new SBG::GeometricHash(binsize=>2);
+my $gh = new SBG::GeometricHash(binsize=>1);
 
 # Some 3D Points
 my $origin = mpdl([ 0,0,0, 1])->transpose;
@@ -36,48 +36,43 @@ my $oy = mpdl([ 0,5,0, 1])->transpose;
 my $oz = mpdl([ 0,0,5, 1])->transpose;
 
 my $points;
-# NB testing single points in axis is problematic if either 
-# X and Y are both 0, or
-# if X and Z are both 0
-# $gh->put("newmodel0", [$origin, $ox]);
-$points = [ $origin, $ox];
-# is ($gh->class($points), 'newmodel0', 'ox');
+# NB testing single points in axis is problematic if X==Y==0
+$points = [ $origin, $ox, $oy];
+$gh->put("newmodel0", $points);
+$points = [ $oy, $ox, $origin];
+is ($gh->class($points), 'newmodel0', 'permuted order');
 $points = _perm($points);
-# is ($gh->class($points), 'newmodel0', 'ox _perm');
+is ($gh->class($points), 'newmodel0', 'permutated order, rotated');
 
 
 my $a = mpdl([ 1.11,2.22,4.44, 1 ])->transpose;
 my $b = mpdl([ 2.22,3.33,5.55, 1 ])->transpose;
 my $c = mpdl([ 5.55,3.33,9.99, 1 ])->transpose;
 my $d = mpdl([ 6.66,7.77,4.44, 1 ])->transpose;
-$gh->put("newmodel1", [$origin, $a, $b, $c], [qw/o a b c/]);
-# $gh->put("newmodel2", [$b, $c, $d, $a]);
+$points = [$origin, $a, $b, $c];
+# Associate simple labels to the points
+$gh->put("newmodel1", $points, [qw/o a b c/]);
+# Anonymous points
+$points = [$b, $c, $d, $a];
+$gh->put("newmodel2", $points);
 
 # No transformation, no labels
-# is ($gh->class([$origin, $a, $b, $c]), 'newmodel1', "Match without labels");
+is ($gh->class([$origin, $a, $b, $c]), 'newmodel1', "No trans, w/o labels");
 
 # No transformation, but labels must match
-# is ($gh->class([$b, $origin, $a], [qw/b o a/]), 'newmodel1', "Match with labels");
+is ($gh->class([$b, $origin, $a], [qw/b o a/]), 'newmodel1', "No trans w/ labels");
 
 # Match a model not at origin
-# is ($gh->class([$d, $a, $b]), 'newmodel2', "Match non-centered without labels");
+is ($gh->class([$d, $a, $b]), 'newmodel2', "No trans, non-centered");
 
-$points = [ $c, $b, $origin]; # Should hit "newmodel1 3 2"
-is ($gh->class($points), 'newmodel1', "Pre-transform");
 
-my $base = mpdl([ 0,0,10, 1 ])->transpose;
-my $other1 = mpdl([  2.8, -6, -10.4 , 1 ])->transpose;
-my $other2 = mpdl([ -0.4, -2,  -2.8 , 1 ])->transpose;
-$points = [ $origin, $base, $other1, $other2];
-is ($gh->class($points), 'newmodel1', "Quasi-transform");
-
-# Rotate, scale, translate, then query
+$points = [ $c, $b, $origin]; # Should hit "newmodel1 3 2 0"
 $points = _perm($points);
 is ($gh->class($points), 'newmodel1', 
-    "Match with transform, without labels");
+    "Non-axis points, rotated");
 
-# is ($gh->class($points, [qw/c b o/]), 'newmodel1', 
-#     "Match with transform, with labels");
+is ($gh->class($points, [qw/c b o/]), 'newmodel1', 
+    "Non-axis points, rotated, w/ labels");
 
 # say "Full covers: ", $gh->exists([$c, $a, $b]);
 
@@ -89,23 +84,24 @@ sub _perm {
     # A Linear transformation, including translation, scaling, rotation
 #     my $t_o = t_offset(zeroes 3);
     my $t_o = t_offset(pdl(2,3,4));
-#     my $t_s = t_scale(1, dims=>3);
-    my $t_s = t_scale(2.5, dims=>3);
-    # Some arbitrary rotation about two axes
+
+    # Some arbitrary rotations
     # Don't rotate around all axes, as the basis only uses two to define a ref
 #     my $roty2x = t_rot([0,0,90], dims=>3);
     my $roty2x = t_rot([0,0,45], dims=>3);
+
 #     my $rotx2z = t_rot([0,90,0], dims=>3);
     my $rotx2z = t_rot([0,45,0], dims=>3);
 
-    # Compose transforms
-    # TODO BUG 
-    # Why does rot2 have to be applied before rot ?
-    my $t = $roty2x x $rotx2z;
+#     my $rotz2y = t_rot([90,0,0], dims=>3);
+    my $rotz2y = t_rot([45,0,0], dims=>3);
 
-    print STDERR "points:@$points\n";
+    # Compose some transforms
+    my $t = $rotx2z x $rotx2z x $roty2x x $rotz2y x $t_o;
+
+#     print STDERR "before tranf:@$points\n";
     $points = [ map { $t->apply(pdl($_->list)) } @$points ];
-    print STDERR "points:@$points\n";
+#     print STDERR "after transf:@$points\n";
 
     # These are now regular piddles and not matrix piddles, but OK for testing
     return $points;

@@ -3,26 +3,18 @@
 use strict;
 
 use File::Basename;
-use SBG::Domain;
-use SBG::DomainIO;
+use SBG::Complex;
 use SBG::STAMP;
+use SBG::Storable;
 
-my ($file1, $file2) = @ARGV;
-die unless $file1 && $file2;
-my $base1 = basename $file1, '.dom';
-my $base2 = basename $file2, '.dom';
+my ($fa, $fb) = @ARGV;
 
-my $dom1 = new SBG::DomainIO(-file=>$file1)->read;
-my $dom2 = new SBG::DomainIO(-file=>$file2)->read;
+my $a = retrieve $fa;
+my $b = retrieve $fb;
+print STDERR "$fa :\n\t$a\n";
+print STDERR "$fb :\n\t$b\n";
 
-print "$dom1\n$dom2\n";
-my $trans = superpose($dom1, $dom2);
+print $a->csuperpose($b, 1, 1), "\n";
 
-my $concat = "$base1-$base2";
-my $d = new SBG::Domain(-label=>"t-$concat",-transformation=>$trans);
-
-my $tfile = "${concat}.trans";
-my $str = new SBG::DomainIO(-file=>">$tfile")->write($d,-id=>'label');
-print STDERR "\n$tfile\n\n$str";
 
 

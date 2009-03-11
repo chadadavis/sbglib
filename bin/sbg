@@ -52,7 +52,8 @@ if ($ops{'h'}) {
 
 @args = load_args(@args);
 my @res = $method ? $obj->$method(@args) : "$obj";
-print "@res\n";
+print "@res";
+print "\n" unless $res[$#res] =~ /\n$/;
 
 
 ################################################################################

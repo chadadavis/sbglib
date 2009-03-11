@@ -156,19 +156,17 @@ sub at {
     my $model = _model($points);
     $logger->trace($model);
 
-# TODO DEL
-    print STDERR 'before basis', $model;
-
     # Determine a basis transformation, to put model in a common frame of ref
-    my $t = _basis($model, 0, 1);
+    # Arbitrarily use first three points here, but any three would work
+    my $t = _basis($model, 0, 1, 2);
     # Transform all points using this basis
     $model = $t->apply($model);
 
-# TODO DEL
-    print STDERR 'at', $model;
-
     # Binning
     $model = $self->_quantize($model);
+
+# TODO DEL
+#     print STDERR 'at', $model;
 
     return $self->_votes($model, $labels);
 
@@ -234,11 +232,15 @@ sub put {
 
     $logger->trace($model);
 
-    # For each pair of points, define a basis and hash all the points
+    # For each triple of points, define a basis,
+    # Then hash all of the points after transforming into that basis
     for (my $i = 0; $i < @$points; $i++) {
         for (my $j = 0; $j < @$points; $j++) {        
             next if $i == $j;
-            $self->_one_basis($modelid, $model, $i, $j, $labels);
+            for (my $k = 0; $k < @$points; $k++) {        
+                next if $j == $k || $i == $k;
+                $self->_one_basis($modelid, $model, $i, $j, $k, $labels);
+            }
         }
     }
         
@@ -253,39 +255,40 @@ sub put {
 
 
 sub _one_basis {
-    my ($self,$modelid, $model, $i, $j, $labels) = @_;
-    $logger->trace(join(' ', $modelid, $i, $j));
+    my ($self,$modelid, $model, $i, $j, $k, $labels) = @_;
+    $logger->trace(join(' ', $modelid, $i, $j, $k));
     # Determine a basis transformation, to put model in a common frame of ref
-    my $t = _basis($model, $i, $j);
+    my $t = _basis($model, $i, $j, $k);
     # Transform all points using this basis
     $model = $t->apply($model);
+
+    # Binning
+    $model = $self->_quantize($model);
 
 
 # TODO DEL
 #     if ($i == 0 && $j == 1) {
-        print STDERR "one_basis $i $j", $model;
+#         print STDERR "one_basis $i $j $k", $model;
 #     }
 
-    # Binning
-    $model = $self->_quantize($model);
 
     for (my $p = 0; $p < $model->dim(1); $p++) {
         # Each row is a 3D point
         my $point = join(' ',$model(,$p)->list);
         my $label = $labels ? $labels->[$p] : '';
-        $self->_append($point, $label, $modelid, $i, $j);
+        $self->_append($point, $label, $modelid, $i, $j, $k);
     }
 }
 
 
 sub _append {
-    my ($self, $point, $label, $modelid, $i, $j) = @_;
+    my ($self, $point, $label, $modelid, $i, $j, $k) = @_;
 
     # For each 3D point, hash it and append the model name to that point's list
     my $gh = $self->{'_gh'};
     $gh->{$point} ||= {};
     $gh->{$point}{$label} ||= [];
-    push @{ $gh->{$point}{$label} }, join(' ', $modelid, $i, $j);
+    push @{ $gh->{$point}{$label} }, join(' ', $modelid, $i, $j, $k);
 }
 
 
@@ -365,68 +368,64 @@ first point at the origin and the second point at X=1
    # The first two points define a basis vector.
    # This is transformed to a vector of fixed lenth along one coord. axis
 
+    # $model_$i is the new origin. 
+    # $model_$j will lie on the X-axis
+    # $model_$k will lie in the XY-plane
+
+NB TODO DES could also support scaling
+But scale just first vector, both vectors separately, or both vectors together?
+
 =cut
 sub _basis {
-    my ($model, $i, $j) = @_;
-    $logger->trace("$i $j");
+    my ($model, $i, $j, $k) = @_;
+    $logger->trace("$i $j $k");
 
-    # Vector from origin, as long as $model_$i to $model_$j
-    my $end = $model(,$j) - $model(,$i);
-    # Shift vector's beginning the origin using this translation
+    # $model_$i is the new origin
     my $translation = zeroes(3) - $model(,$i);
     my $t_o = t_offset($translation);
+    $logger->trace("Translation:$translation");
 
-    # scale, s.t. vector is fixed length
-    # (NB this scaling factor should be larger than the binsize)
-    my $scale = 10.0 / _dist($end);
-    my $t_s = t_scale($scale, dims=>3);
-    $end = $t_s->apply($end);
-    my ($x, $y, $z) = $end->list; 
+    # $model_$j will lie on the X-axis
+    my $b1 = $model(,$j) - $model(,$i);
+    # $model_$k will lie in the XY-plane
+    my $b2 = $model(,$k) - $model(,$i);
 
-    # Angles of rotation from coordinate axes, in degrees, clockwise
-
-    # first, from y toward x, about z axis, projects into XZ plane
+    # First rotation, from Y-axis toward X-axis, about Z-axis
+    # This gets b1 into the XZ plane
+    my ($x,$y,$z) = $b1->list;
     $logger->warn("Y and X both 0, basis undefined") if 0==$y && 0==$x;    
     my $ry2x = rad2deg atan2 $y, $x;
     $logger->trace("y=>x $ry2x deg ($x,$y,$z)");
     my $t_ry2x = t_rot([0,0,$ry2x],dims=>3);
-    # Update, before performing subsequent rotations, as coords have changed
-    $end = $t_ry2x->apply($end);
-    ($x,$y,$z) = $end->list;
+    $b1 = $t_ry2x->apply($b1);
+    $b2 = $t_ry2x->apply($b2);
 
-    # second, from x toward z, about y axis, projects into ZY plane
+    # Second rotation, from X-axis toward Z-axis, about Y-axis
+    # Negative rotation here, to get b1 onto the XY plane.
+    # Now b1 will be in the X-axis, since XZ plane and XY plane => X-axis
+    ($x, $y, $z) = $b1->list;
     $logger->warn("X and Z both 0, basis undefined") if 0==$x && 0==$z;
-    my $rx2z = rad2deg atan2 $x, $z;
+    # $z = rise and $x = run here, since we're rotating backward
+    # Sign still needs to be negative as well, however
+    my $rx2z = - rad2deg atan2 $z, $x;
     $logger->trace("x=>z $rx2z deg ($x,$y,$z)");
-
-# TODO DEL
-    if (0) {
     my $t_rx2z = t_rot([0,$rx2z,0],dims=>3);
-    # Update, before performing subsequent rotations, as coords have changed
-    $end = $t_rx2z->apply($end);
-    ($x,$y,$z) = $end->list;
+    $b1 = $t_rx2z->apply($b1);
+    $b2 = $t_rx2z->apply($b2);
+
+    # Third rotation, from Z-axis to Y-axis, about X-axis
+    # This will leave $b1 in the X-axis, $b0 is rotated into the XY plane
+    ($x, $y, $z) = $b2->list;
     $logger->warn("Z and Y both 0, basis undefined") if 0==$z && 0==$y;
     my $rz2y = rad2deg atan2 $z, $y;
-    my $t_rz2y = t_rot([$rz2y,0,0],dims=>3);
     $logger->trace("z=>y $rz2y deg ($x,$y,$z)");
+    my $t_rz2y = t_rot([$rz2y,0,0],dims=>3);
 
-    my $rot = [$rz2y,$rx2z,$ry2x];
-    }
-
-    # No need for rotation Z to Y, as we'll be in Z-axis already
-    my $rot = [0,$rx2z,$ry2x];
-    my $t_r = t_rot($rot, dims=>3);
-
-
-    $logger->trace("Translation:$translation");
-    $logger->trace("Scale:$scale");
+    # Composite transform:
+    my $rot = [ $rz2y, $rx2z, $ry2x ];
     $logger->trace("Rot @$rot");
-
-    # Don't scale before rotating, as the rotation assumes not-yet scaled coords
-#     my $t = $t_s x $t_r x $t_o;
-    my $t = $t_r x $t_s x $t_o;
-#     my $t = $t_rz2y x $t_rx2z x $t_ry2x x $t_s x $t_o;
-#     my $t = $t_o x $t_s x $t_rz2y x $t_rx2z x $t_ry2x;
+    # Right-to-left composition of transformation matrices
+    my $t = $t_rz2y x $t_rx2z x $t_ry2x x $t_o;
     return $t;
 
 } # _basis

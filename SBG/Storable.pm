@@ -77,7 +77,7 @@ See also L<bless> , L<overload>
 =cut
 sub retrieve {
    my ($file) = @_;
-   return $file unless -r $file;
+   return unless -r $file;
    my $obj = Storable::retrieve($file);
    module_for($obj);
    my $class = blessed($obj);
