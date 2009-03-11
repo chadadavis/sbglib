@@ -1,5 +1,7 @@
 #!/usr/bin/env perl
 
+use strict;
+use warnings;
 use Test::More 'no_plan';
 # use SBG::Test 'float_is';
 use SBG::Log;
@@ -33,6 +35,7 @@ my $ox = mpdl([ 5,0,0, 1])->transpose;
 my $oy = mpdl([ 0,5,0, 1])->transpose;
 my $oz = mpdl([ 0,0,5, 1])->transpose;
 
+my $points;
 # NB testing single points in axis is problematic if either 
 # X and Y are both 0, or
 # if X and Z are both 0
@@ -62,9 +65,10 @@ $gh->put("newmodel1", [$origin, $a, $b, $c], [qw/o a b c/]);
 $points = [ $c, $b, $origin]; # Should hit "newmodel1 3 2"
 is ($gh->class($points), 'newmodel1', "Pre-transform");
 
-$czy = mpdl([ 5.55,9.99,-3.33, 1 ])->transpose;
-$bzy = mpdl([ 2.22,5.55,-3.33, 1 ])->transpose;
-$points = [ $czy, $bzy, $origin];
+my $base = mpdl([ 0,0,10, 1 ])->transpose;
+my $other1 = mpdl([  2.8, -6, -10.4 , 1 ])->transpose;
+my $other2 = mpdl([ -0.4, -2,  -2.8 , 1 ])->transpose;
+$points = [ $origin, $base, $other1, $other2];
 is ($gh->class($points), 'newmodel1', "Quasi-transform");
 
 # Rotate, scale, translate, then query
@@ -83,22 +87,26 @@ is ($gh->class($points), 'newmodel1',
 sub _perm {
     my ($points) = @_;
     # A Linear transformation, including translation, scaling, rotation
-#     my $t_o = t_offset(pdl(2,3,4));
-    my $t_o = t_offset(zeroes 3);
-#     my $t_s = t_scale(2.5, dims=>3);
-    my $t_s = t_scale(1, dims=>3);
+#     my $t_o = t_offset(zeroes 3);
+    my $t_o = t_offset(pdl(2,3,4));
+#     my $t_s = t_scale(1, dims=>3);
+    my $t_s = t_scale(2.5, dims=>3);
+    # Some arbitrary rotation about two axes
+    # Don't rotate around all axes, as the basis only uses two to define a ref
+#     my $roty2x = t_rot([0,0,90], dims=>3);
+    my $roty2x = t_rot([0,0,45], dims=>3);
+#     my $rotx2z = t_rot([0,90,0], dims=>3);
+    my $rotx2z = t_rot([0,45,0], dims=>3);
 
-#     my $rot = [2,30,10];
-#     my $rot = [0,0,90]; 
-#     my $rot = [0,90,0];
-#     my $rot = [90,0,0];
-    my $rot = [0,0,0];
-    my $t_r = t_rot($rot, dims=>3);
+    # Compose transforms
+    # TODO BUG 
+    # Why does rot2 have to be applied before rot ?
+    my $t = $roty2x x $rotx2z;
 
-    my $t = $t_r x $t_s x $t_o;
-    print STDERR "Before perm:@$points";
+    print STDERR "points:@$points\n";
     $points = [ map { $t->apply(pdl($_->list)) } @$points ];
-    print STDERR "After perm:@$points";
+    print STDERR "points:@$points\n";
+
     # These are now regular piddles and not matrix piddles, but OK for testing
     return $points;
 }

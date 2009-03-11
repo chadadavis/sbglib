@@ -155,6 +155,10 @@ sub at {
     # Get an array of points into a matrix;
     my $model = _model($points);
     $logger->trace($model);
+
+# TODO DEL
+    print STDERR 'before basis', $model;
+
     # Determine a basis transformation, to put model in a common frame of ref
     my $t = _basis($model, 0, 1);
     # Transform all points using this basis
@@ -257,8 +261,9 @@ sub _one_basis {
     $model = $t->apply($model);
 
 
+# TODO DEL
 #     if ($i == 0 && $j == 1) {
-        print STDERR "one_basis", $model;
+        print STDERR "one_basis $i $j", $model;
 #     }
 
     # Binning
@@ -357,53 +362,71 @@ sub _quantize {
 Determine the basis transformation, which is the transformation that puts the
 first point at the origin and the second point at X=1
 
+   # The first two points define a basis vector.
+   # This is transformed to a vector of fixed lenth along one coord. axis
 
 =cut
 sub _basis {
     my ($model, $i, $j) = @_;
     $logger->trace("$i $j");
-   # First two points define a basis vector.
-   # This is transformed to the unit vector from (0,0,0)->(1,0,0), in the X axis
-    my $b0 = $model(,$i);
-    my $b1 = $model(,$j);
 
-    # Vector from $b0 to $b1
-    my $diff = $b1 - $b0;
-    my ($x, $y, $z) = $diff->list; 
-    my $dist = _dist($diff);
+    # Vector from origin, as long as $model_$i to $model_$j
+    my $end = $model(,$j) - $model(,$i);
+    # Shift vector's beginning the origin using this translation
+    my $translation = zeroes(3) - $model(,$i);
+    my $t_o = t_offset($translation);
 
-    # Angles of rotation from coordinates axes, in degrees, clockwise
-    # first, from y toward x, about z axis, projects into XZ plane
-    my $ry2x = rad2deg atan2 $y, $x;
-    $logger->warn("X and Y both 0, basis undefined") if 0==$x && 0==$y;
-    # second, from x toward z, about y axis, projects into ZY plane
-    my $rx2z = rad2deg atan2 $x, $z;
-    $logger->warn("X and Z both 0, basis undefined") if 0==$x && 0==$z;
-    # third, from z toward y, about x axis, projects into YX plane
-#     my $rz2y = rad2deg atan2 $z, $y;
-    my $rz2y = 0; # No further rotation, we're in the Z-axis here
-    # rotation about 3 axes
-    my $rot = [$rz2y, $rx2z, $ry2x];
-
-    # scale, s.t. vector $b0 -> $b1 is fixed length
+    # scale, s.t. vector is fixed length
     # (NB this scaling factor should be larger than the binsize)
-    my $scale = 10.0 / $dist;
-    # translation, s.t. b0 moves to origin
-    my $translation = zeroes(3)-$b0, 
-    # A Linear transformation, including translation, scaling, rotation
-    $logger->trace($b0);
-    $logger->trace($b1);
-    $logger->trace($translation);
+    my $scale = 10.0 / _dist($end);
+    my $t_s = t_scale($scale, dims=>3);
+    $end = $t_s->apply($end);
+    my ($x, $y, $z) = $end->list; 
+
+    # Angles of rotation from coordinate axes, in degrees, clockwise
+
+    # first, from y toward x, about z axis, projects into XZ plane
+    $logger->warn("Y and X both 0, basis undefined") if 0==$y && 0==$x;    
+    my $ry2x = rad2deg atan2 $y, $x;
+    $logger->trace("y=>x $ry2x deg ($x,$y,$z)");
+    my $t_ry2x = t_rot([0,0,$ry2x],dims=>3);
+    # Update, before performing subsequent rotations, as coords have changed
+    $end = $t_ry2x->apply($end);
+    ($x,$y,$z) = $end->list;
+
+    # second, from x toward z, about y axis, projects into ZY plane
+    $logger->warn("X and Z both 0, basis undefined") if 0==$x && 0==$z;
+    my $rx2z = rad2deg atan2 $x, $z;
+    $logger->trace("x=>z $rx2z deg ($x,$y,$z)");
+
+# TODO DEL
+    if (0) {
+    my $t_rx2z = t_rot([0,$rx2z,0],dims=>3);
+    # Update, before performing subsequent rotations, as coords have changed
+    $end = $t_rx2z->apply($end);
+    ($x,$y,$z) = $end->list;
+    $logger->warn("Z and Y both 0, basis undefined") if 0==$z && 0==$y;
+    my $rz2y = rad2deg atan2 $z, $y;
+    my $t_rz2y = t_rot([$rz2y,0,0],dims=>3);
+    $logger->trace("z=>y $rz2y deg ($x,$y,$z)");
+
+    my $rot = [$rz2y,$rx2z,$ry2x];
+    }
+
+    # No need for rotation Z to Y, as we'll be in Z-axis already
+    my $rot = [0,$rx2z,$ry2x];
+    my $t_r = t_rot($rot, dims=>3);
+
+
+    $logger->trace("Translation:$translation");
     $logger->trace("Scale:$scale");
     $logger->trace("Rot @$rot");
-    my $t_o = t_offset($translation);
-#     $logger->trace($t_o);
-    my $t_s = t_scale($scale, dims=>3);
-#     $logger->trace($t_s);
-    my $t_r = t_rot($rot,dims=>3);
-#     $logger->trace($t_r);
 
+    # Don't scale before rotating, as the rotation assumes not-yet scaled coords
+#     my $t = $t_s x $t_r x $t_o;
     my $t = $t_r x $t_s x $t_o;
+#     my $t = $t_rz2y x $t_rx2z x $t_ry2x x $t_s x $t_o;
+#     my $t = $t_o x $t_s x $t_rz2y x $t_rx2z x $t_ry2x;
     return $t;
 
 } # _basis
