@@ -56,6 +56,10 @@ $gh->put("newmodel1", $points, [qw/o a b c/]);
 $points = [$b, $c, $d, $a];
 $gh->put("newmodel2", $points);
 
+# exact() must match full size of hashed model
+isnt ($gh->exact([$a,$b,$c]), 'newmodel2', "Subset doesn't match exactly");
+is ($gh->exact([$d,$b,$c,$a]), 'newmodel2', "Full set does match exactly");
+
 # No transformation, no labels
 is ($gh->class([$origin, $a, $b, $c]), 'newmodel1', "No trans, w/o labels");
 

@@ -2,7 +2,7 @@
 
 =head1 NAME
 
-SBG::GeometricHash - 
+SBG::GeometricHash - A 3-dimensional geometric hash, with optional point labels
 
 =head1 SYNOPSIS
 
@@ -21,6 +21,11 @@ Each point can have a label.  When querying with a label, the labels must much.
 If a model is saved with labels, but the query provides no labels, any model
 will match, labelled or not.  I.e. using a label requires matching, if you don't
 care about labels, they don't get in the way, though.
+
+Now provides a	method exact() that allows one to only retrieve	models that were\
+ the same size	(same #	of points) as the current query.
+For simply finding models that	are a superset of the current query, the	method \
+class() is appropriate.
 
 
 
@@ -106,6 +111,10 @@ is not true.
 
 To get all the scores for all of the potential model matches, see L<at>
 
+NB this matches when a query is completely covered by a known hashed model.
+But it does not imply that a query covers the corresponding model.
+I.e. the answer is always a superset, but not exact. For that, see L<exact>
+
 =cut
 sub exists {
     my ($self,$points,$labels) = @_;
@@ -129,13 +138,20 @@ sub class {
 }
 
 
-# What should be returned here?
-# The true keys (coords), or the conceptual keys (model IDs)
-# TODO
-sub keys {
-    my ($self) = @_;
+# Matches exactly, i.e a model is only matched when it is the same size as the
+# query
+sub exact {
+    my ($self,$points, $labels) = @_;
+    # Models that cover the query
+    my @covers = $self->exists($points, $labels);
+    # Models the same size as the query:
+    my ($bijection) = grep { @a=split; $a[1] == @$points } @covers;
+    return unless $bijection;
+    my @f = split / /, $bijection;
+    return $f[0];
 
 }
+
 
 
 ################################################################################
@@ -180,14 +196,17 @@ sub _atkey {
         # Label must match, if provided
         return $self->{_gh}{$point}{$label};
     } else {
-        # No label: match any/all
+        # No label: try to match any/all
         my @keys = keys %{ $self->{_gh}{$point} };
+        # For all labels as keys:
         my @values = map { @{ $self->{_gh}{$point}{$_} } } @keys;
+        # Remove duplicates
         return [ _uniq(@values) ];
     }
 }
 
 
+# Make an array uniq (i.e. becomes a 'set'), by stringification
 sub _uniq { 
     my %h;
     $h{$_} = 1 for @_;
@@ -195,11 +214,12 @@ sub _uniq {
 }
 
 
+# For each point in the query model, add up the votes for all the hashed models
 sub _votes {
     my ($self, $model, $labels) = @_;
     my $gh = $self->{'_gh'};
     my %votes;
-    # For each 3D point, hash it and append the model name to that point's list
+    # For each 3D point, hash it 
     for (my $i = 0; $i < $model->dim(1); $i++) {
         # Each row is a 3D point
         my $point = join(' ',$model(,$i)->list);
@@ -268,7 +288,7 @@ sub _one_basis {
 
 # TODO DEL
 #     if ($i == 0 && $j == 1) {
-#         print STDERR "one_basis $i $j $k", $model;
+#         print STDERR "one_basis $size $i $j $k", $model;
 #     }
 
 
@@ -276,19 +296,19 @@ sub _one_basis {
         # Each row is a 3D point
         my $point = join(' ',$model(,$p)->list);
         my $label = $labels ? $labels->[$p] : '';
-        $self->_append($point, $label, $modelid, $i, $j, $k);
+        $self->_append($point, $label, $modelid, $model->dim(1), $i, $j, $k);
     }
 }
 
 
 sub _append {
-    my ($self, $point, $label, $modelid, $i, $j, $k) = @_;
+    my ($self, $point, $label, $modelid, $size, $i, $j, $k) = @_;
 
     # For each 3D point, hash it and append the model name to that point's list
     my $gh = $self->{'_gh'};
     $gh->{$point} ||= {};
     $gh->{$point}{$label} ||= [];
-    push @{ $gh->{$point}{$label} }, join(' ', $modelid, $i, $j, $k);
+    push @{ $gh->{$point}{$label} }, join(' ', $modelid, $size, $i, $j, $k);
 }
 
 
