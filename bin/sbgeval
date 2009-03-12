@@ -56,9 +56,9 @@ my $truthfile = shift or pod2usage(-exitval=>1);
 my $truth = retrieve $truthfile;
 
 my $pattern = 
-    "%4s %20s %3d %28s %3d %4d %6.2f %5.2f %6.2f %5.2f %7.3f %12g %12g %6.2f\n";
+    "%4s %20s %3d %40s %3d %4d %6.2f %5.2f %6.2f %5.2f %7.3f %12g %12g %6.2f\n";
 my $header  = sprintf 
-    "#%3s %20s %3s %28s %3s %4s %6s %5s %6s %5s %7s %12s %12s %6s\n",
+    "#%3s %20s %3s %40s %3s %4s %6s %5s %6s %5s %7s %12s %12s %6s\n",
     qw/PDB Benchmark N Model N Iact Cover RMSD Olap iRMSD Z Pval Eval SeqID/;
 print $header;
 
