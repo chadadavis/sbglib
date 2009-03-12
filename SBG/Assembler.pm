@@ -46,50 +46,66 @@ use SBG::GeometricHash;
 # Private
 
 # Number of solved partial solutions
-our $solution = 1;
+our $solution = 0;
 # For debugging: Individual steps within one solution
 our $step = 1;
-
-my $file_pattern = '%sclass-%04d-model-%05d';
-
+# Number of solutions matching an existing class
+our $dups = 0;
+# Number of unique solutions, only first solution in a class is saved
+our $classes = 0;
+# Size distribution of unique solutions (i.e. of classes)
+our %sizes;
+# 3D geometric hash
 my $binsize = config()->val(qw/assembly binsize/) || 1.5;
 our $gh = new SBG::GeometricHash(binsize=>$binsize);
 
+my $file_pattern = '%sclass-%04d-model-%05d';
+
 # Callback for output/saving/printing
 # Bugs: assume L<SBG::Domain::CofM> implementation in L<SBG::Complex>
-
 sub sub_solution {
     my ($complex, $graph, $nodecover, $templates) = @_;
-    our $solution;
-    our $step;
-    our $dups;
-    our $gh;
+
     my $success = 1;
-    # Uninteresting:
+    # Uninteresting unless at least two interfaces in solution
     return unless $templates->length > 1;     
 
     my $labels = $complex->models->keys;
     my @doms = map { $complex->model($_) } @$labels;
     # TODO DES BUG cannot assume centre exists here
+    # if these are not SBG::Domain::CofM instances
     my @points = map { $_->centre } @doms;
 
+    $solution++;    
+    $step = 1;
+
     # Check dup;
-    my $class = $gh->class(\@points, $labels);
+#     my $class = $gh->class(\@points, $labels);
+    # exact() requires that the sizes match on both sides (i.e. no subsets)
+    my $class = $gh->exact(\@points, $labels);
     if (defined $class) {
         $dups++;
-        $logger->debug('Total duplicates: ', $dups);
+#         $logger->debug('Total duplicates: ', $dups);
         $success = 0;
     } else {
         $class = $gh->put(undef, \@points, $labels);
+        $classes = $class unless $class < $classes;
+        # Count number of occurences of unique complex solution of this size
+        $sizes{scalar(@$nodecover)}++;
         $success = 1;
     }
 
-
     # Flush console for fancy in-place printing
     local $| = 1;
-    printf "\033[1K\r" . 
-    "Class: %4d Solution# %4d: Components: %3d ",
-    $class, $solution, scalar(@$nodecover);
+    my $sizeheader = join(' ', map { "\#$_: %3d"} sort keys %sizes);
+    printf 
+        "\033[1K\r" . 
+        "#Solutions %4d #Unique %4d #Dups %4d Size dist.: $sizeheader ",
+        $solution, $classes, $dups,
+        map { $sizes{$_} } sort keys %sizes,
+        ;
+
+    return unless $success;
 
     $logger->debug("\n\n====== Class: $class Solution $solution\n",
                    "@$nodecover\n",
@@ -105,8 +121,6 @@ sub sub_solution {
 #     my $io = new SBG::ComplexIO(file=>">$file" . '.dom');
 #     $io->write($complex);
 
-    $solution++;    
-    $step = 1;
 
     return $success;
 
