@@ -56,11 +56,13 @@ my $truthfile = shift or pod2usage(-exitval=>1);
 my $truth = retrieve $truthfile;
 
 my $pattern = 
-    "%4s %20s %3d %40s %3d %4d %6.2f %5.2f %6.2f %5.2f %7.3f %12g %12g %6.2f\n";
+    "%4s %20s %3d %40s %3d %4d %6.2f %5.2f %6.2f %5.2f %7.3f %12g %12g %6.2f %5.2f %5.2f %4d %4d %4d %6.2f %6.2f %12g\n";
 my $header  = sprintf 
-    "#%3s %20s %3s %40s %3s %4s %6s %5s %6s %5s %7s %12s %12s %6s\n",
-    qw/PDB Benchmark N Model N Iact Cover RMSD Olap iRMSD Z Pval Eval SeqID/;
+    "#%3s %20s %3s %40s %3s %4s %6s %5s %6s %5s %7s %12s %12s %6s %5s %5s %4s %4s %4s %6s %6s %12s\n",
+    qw/PDB Benchmark N Model N Iact Cover RMSD Olap iRMSD i2Z i2P i2E i2SID Sc RMS Al Fit Eq %I %S P(m)/;
+
 print $header;
+
 
 foreach my $modelfile (@ARGV) { 
     my $model = retrieve $modelfile;
@@ -77,6 +79,7 @@ foreach my $modelfile (@ARGV) {
     my $pvals = [];
     my $evals = [];
     my $seqids = [];
+
 
     my $iaction_keys = $model->interactions->keys;
     foreach my $iaction_key (@$iaction_keys) {
@@ -97,9 +100,35 @@ foreach my $modelfile (@ARGV) {
         }
     }
 
+    # STAMP scores
+    my $Scs = [];
+    my $RMSs = [];
+    my $Aligns = [];
+    my $Fits = [];
+    my $Eqs = [];
+    my $Is = [];
+    my $Ss = [];
+    my $Ps = [];
+
+    my $domain_keys = $model->models->keys;
+    foreach my $domain (@$domain_keys) {
+        my $l = $model->model($domain)->linker;
+#         print "$domain\n";
+        next unless $l->_tainted;
+#         print "linker:\n$l\n";
+
+        $Scs->push($l->{'Sc'});
+        $RMSs->push($l->{'RMS'});
+        $Aligns->push($l->{'Align'});
+        $Fits->push($l->{'Fit'});
+        $Eqs->push($l->{'Eq'});
+        $Is->push($l->{'I'});
+        $Ss->push($l->{'S'});
+        $Ps->push($l->{'P'});
+    }
+
     $, = "\t";
     printf $pattern,
-#     print $pattern,
     basename($ENV{PWD}), $truthfile, $truth->size, 
     $modelfile, $model->size, scalar(@$iaction_keys), 
     100 * $model->size/$truth->size, 
@@ -109,8 +138,16 @@ foreach my $modelfile (@ARGV) {
     $irmsds->mean, 
     $zscores->mean, 
     $pvals->mean, 
-    $evals->mean || 'nan', 
-    $seqids->mean || 'nan',
+    ($evals->mean || 'nan'), 
+    ($seqids->mean || 'nan'),
+    $Scs->mean,
+    $RMSs->mean,
+    $Aligns->mean,
+    $Fits->mean,
+    $Eqs->mean,
+    $Is->mean,
+    $Ss->mean,
+    $Ps->mean,
     ;
 
 }
