@@ -23,6 +23,8 @@ package SBG::Dumpable;
 use Moose::Role;
 use Data::Dumper;
 
+$Data::Dumper::Indent = 1;
+
 our @EXPORT = qw(Dumper);
 
 ################################################################################
