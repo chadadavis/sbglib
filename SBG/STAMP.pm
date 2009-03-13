@@ -253,7 +253,7 @@ sub superpose_query {
 
 sub _cache_file {
     my ($fromdom, $ontodom) = @_;
-    my $file = $cachedir . '/' . $fromdom->id . '-' . $ontodom->id . '.trans';
+    my $file = $cachedir . '/' . $fromdom->id . '-' . $ontodom->id . '.ntrans';
     $logger->trace("Cache: $file");
     return $file;
 }
@@ -262,7 +262,8 @@ sub cacheneg {
     my ($fromdom, $ontodom) = @_;
     $logger->trace();
     my $file = _cache_file($fromdom, $ontodom);
-    my $io = new SBG::DomainIO(file=>">$file");
+    my $fh;
+    open $fh, ">$file";
     # But write nothing ...
 }
 

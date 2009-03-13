@@ -127,6 +127,7 @@ has 'file' => (
 This attribute is imported automatically in consuming classes. But you may
 override it.
 
+This defines where the domain is in space at any point in time.
 =cut
 has 'transformation' => (
     is => 'rw',
@@ -136,7 +137,18 @@ has 'transformation' => (
     );
 
 
+# Record linkages to other domains This does not define where the domain
+# currently is, but identifies the linking transformation that was used to join
+# it into another complex.
+has 'linker' => (
+    is => 'rw',
+    isa => 'SBG::Transform',
+    required => 1,
+    default => sub { new SBG::Transform },
+    );
 
+
+# Record clashes for subsequent scoring
 has 'clash' => (
     is => 'rw',
     isa => 'Num',
@@ -430,15 +442,14 @@ sub _attr_eq {
 
 Converts: first line to second:
 
- 'B 234 _ to B 333 _ CHAIN D E 5 _ to E 123 _';
- 'B234B333DE5E123';
+ 'B 234 _ to B 333 _ CHAIN D E 5 _ to E 123 _'
+ 'B234_B333_DE5_E123_'
 
 =cut
 sub _descriptor_short {
     my ($self) = @_;
     my $descriptor = $self->descriptor;
     $descriptor =~ s/CHAIN//g;
-    $descriptor =~ s/_//g;
     $descriptor =~ s/to//gi;
     $descriptor =~ s/\s+//g;
     return $descriptor;

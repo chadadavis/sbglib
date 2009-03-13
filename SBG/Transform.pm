@@ -39,7 +39,10 @@ use PDL::IO::Storable;
 use PDL::IO::Misc;
 use PDL::Ufunc;
 
+use List::MoreUtils qw/mesh/;
+
 use SBG::Types;
+use SBG::Log;
 
 use overload (
     'x' => '_mult',
@@ -305,12 +308,47 @@ sub _load {
  Returns : 
  Args    :
 
+# TODO DES duplicated with STAMP::stamp
+
 =cut
 sub _load_file {
-    my ($self) = @_;
-    my $rasc = zeroes(4,4);
-    $rasc->rasc($self->file);
-    return $rasc;
+    my ($self, $file) = @_;
+    $file ||= $self->file;
+    my $fh;
+    open $fh, $file;
+    my $matstr;
+    our @keys = qw/Domain1 Domain2 Sc RMS Len1 Len2 Align Fit Eq Secs I S P/;
+    # Load metadata from header lines
+    my %fields;
+    while (<$fh>) {
+        next unless /(\%\s)*Pair\s+\d+\s+(.*)$/;
+        my @fields = split /\s+/, $2;
+        @fields = @fields[0..$#keys];
+
+        unless (@fields == @keys) {
+# TODO DEL
+            print STDERR join("\t", @keys), "\n", join("\t", @fields), "\n";
+            exit;
+        }
+
+        # Hash @keys to @t
+        %fields = List::MoreUtils::mesh @keys, @fields;
+        while (<$fh>) {
+            # Match opening { but no closing } this ensures a transform block
+            next unless /\{[^}]+$/;
+            # Three lines;
+            $matstr .= <$fh> . <$fh> . <$fh>;
+        }
+    }
+    unless ($matstr) {
+        $logger->error("No transformation found in ", $file);
+    }
+
+    # TODO DES
+    $self->{$_} = $fields{$_} for keys %fields;
+
+    close $fh;
+    return $self->_load_string($matstr);
 }
 
 
@@ -322,12 +360,23 @@ sub _load_file {
  Returns : 
  Args    :
 
+Sets the internal transformation matrix, given a string like:
+
+"
+  -0.64850   -0.34315    0.67949  -26.63386 
+   0.71843    0.01913    0.69534  -24.89855 
+  -0.25160    0.93909    0.23412    6.94888 
+"
+
+White-space is collapsed.
 
 =cut
 sub _load_string {
-    my ($self) = @_;
-    my $rasc = zeroes(4,4);
-    my @lines = split /\n/, $self->string;
+    my ($self, $str) = @_;
+    $str ||= $self->string;
+#     my $rasc = zeroes(4,4);
+    my $rasc = identity(4);
+    my @lines = split /\n/, $str;
     # Skip empty lines
     @lines = grep { ! /^\s*$/ } @lines;
     for (my $i = 0; $i < @lines; $i++) {
@@ -340,6 +389,10 @@ sub _load_string {
             $rasc->slice("$j,$i") .= $fields[$j];
         }
     }
+
+# TODO DEL
+    $logger->trace($rasc);
+
     return $rasc;
 } # _load_string
 

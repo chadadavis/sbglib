@@ -192,7 +192,9 @@ sub linker {
         $logger->error("Cannot link via: superpose($srcdom,$srcrefdom)");
         return;
     }
-    # A concrete (w/ coordinates) instance of this domain
+
+
+    # Concrete (w/ coordinates) instance of this domain, of class $self->type()
     $destdom = $self->type->new(%$destdom);
 
     # Then apply that transformation to the interaction partner $dest
@@ -202,6 +204,8 @@ sub linker {
 # TODO explain order of ops here (do this in STAMP.pm, not here)
     $destdom->transform($xform);
     $destdom->transform($srcrefdom->transformation);
+    # Note the linker transformation used, for scoring later
+    $destdom->linker($xform);
 
     return $destdom;
 }
