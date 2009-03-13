@@ -395,6 +395,8 @@ first point at the origin and the second point at X=1
 NB TODO DES could also support scaling
 But scale just first vector, both vectors separately, or both vectors together?
 
+http://en.wikipedia.org/wiki/Atan2
+
 =cut
 sub _basis {
     my ($model, $i, $j, $k) = @_;
@@ -414,19 +416,23 @@ sub _basis {
     # This gets b1 into the XZ plane
     my ($x,$y,$z) = $b1->list;
     $logger->warn("Y and X both 0, basis undefined") if 0==$y && 0==$x;    
+    # Angle between line (0,0)->(x,y) and the x-axis, which is the angle to
+    # rotate by, from the y-axis, toward the x-axis, about the z-axis
     my $ry2x = rad2deg atan2 $y, $x;
     $logger->trace("y=>x $ry2x deg ($x,$y,$z)");
     my $t_ry2x = t_rot([0,0,$ry2x],dims=>3);
     $b1 = $t_ry2x->apply($b1);
     $b2 = $t_ry2x->apply($b2);
 
-    # Second rotation, from X-axis toward Z-axis, about Y-axis
-    # Negative rotation here, to get b1 onto the XY plane.
-    # Now b1 will be in the X-axis, since XZ plane and XY plane => X-axis
+    # Second rotation, from X-axis toward Z-axis, about Y-axis Negative rotation
+    # here, to get b1 onto the XY plane. Now b1 will be in the X-axis, since XZ
+    # plane and XY plane intersect at the X-axis.
     ($x, $y, $z) = $b1->list;
     $logger->warn("X and Z both 0, basis undefined") if 0==$x && 0==$z;
-    # $z = rise and $x = run here, since we're rotating backward
-    # Sign still needs to be negative as well, however
+    # $z = rise and $x = run here, since we're rotating backward. Sign still
+    # needs to be negative as well, however.  This is the angle between the line
+    # (0,0)->(x,z) and the X-axis (not Z-axis). Since PDL::Transform rotates
+    # from X-axis, toward Z-axis, sign is negative
     my $rx2z = - rad2deg atan2 $z, $x;
     $logger->trace("x=>z $rx2z deg ($x,$y,$z)");
     my $t_rx2z = t_rot([0,$rx2z,0],dims=>3);
@@ -434,9 +440,11 @@ sub _basis {
     $b2 = $t_rx2z->apply($b2);
 
     # Third rotation, from Z-axis to Y-axis, about X-axis
-    # This will leave $b1 in the X-axis, $b0 is rotated into the XY plane
+    # This will leave $b1 on the X-axis, $b0 is rotated into the XY plane
     ($x, $y, $z) = $b2->list;
     $logger->warn("Z and Y both 0, basis undefined") if 0==$z && 0==$y;
+    # Angle between line (0,0)->(y,z) and the y-axis, which is the angle to
+    # rotate by, from the z-axis, toward the y-axis, about the x-axis
     my $rz2y = rad2deg atan2 $z, $y;
     $logger->trace("z=>y $rz2y deg ($x,$y,$z)");
     my $t_rz2y = t_rot([$rz2y,0,0],dims=>3);
