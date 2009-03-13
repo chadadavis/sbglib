@@ -502,7 +502,7 @@ sub _do_solution {
 #     } else {
 #         $self->_solved->put($solution_label, 1);
     my $callback = $self->sub_solution;
-    if ($callback->($state, $self->graph, $nodes, $alts)) {
+    if ($callback->($state, $self->graph, $nodes, $alts, $self->rejects)) {
         $self->asolutions($self->asolutions+1);
     } else {
         $self->rsolutions($self->rsolutions+1);

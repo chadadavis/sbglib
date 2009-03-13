@@ -64,7 +64,7 @@ my $file_pattern = '%sclass-%04d-model-%05d';
 # Callback for output/saving/printing
 # Bugs: assume L<SBG::Domain::CofM> implementation in L<SBG::Complex>
 sub sub_solution {
-    my ($complex, $graph, $nodecover, $templates) = @_;
+    my ($complex, $graph, $nodecover, $templates, $rejects) = @_;
 
     my $success = 1;
     # Uninteresting unless at least two interfaces in solution
@@ -100,8 +100,9 @@ sub sub_solution {
     my $sizeheader = join(' ', map { "\#$_: %3d"} sort keys %sizes);
     printf 
         "\033[1K\r" . 
-        "#Solutions %4d #Unique %4d #Dups %4d Size dist.: $sizeheader ",
-        $solution, $classes, $dups,
+        "#Aborted %4d #Solutions %4d #Dups %4d #Unique %4d Size dist.: " .
+        "$sizeheader ", 
+        $rejects, $solution, $dups, $classes,
         map { $sizes{$_} } sort keys %sizes,
         ;
 
