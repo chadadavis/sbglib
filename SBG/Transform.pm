@@ -297,7 +297,7 @@ sub headers {
     our @keys;
     my $str = '';
     $str .= join("\t", qw/% No/, @keys) . "\n";
-    my @vals = map { defined($self->{$_}) || '' } @keys;
+    my @vals = map { defined($self->{$_}) ? $self->{$_} : '' } @keys;
     $str .= join("\t", qw/%Pair 1/, @vals) . "\n";
     return $str;
 }
