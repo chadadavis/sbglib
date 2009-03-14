@@ -470,6 +470,7 @@ sub stamp {
         shift @t; # Loose the 'Scan' header
         # Hash @keys to @t
         %fields = List::MoreUtils::mesh @keys, @t;
+        $logger->trace("fields:", join(' ', %fields));
         # If the incoming domain had a trans, but it doesn't afterward, the name
         # can be different, remove qualifier:
         $fields{'Domain1'} =~ s/-0x.*//;
