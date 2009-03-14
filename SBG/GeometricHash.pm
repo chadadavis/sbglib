@@ -146,6 +146,7 @@ sub exact {
     my @covers = $self->exists($points, $labels);
     # Models the same size as the query:
     my ($bijection) = grep { @a=split; $a[1] == @$points } @covers;
+    $logger->debug($bijection || '<none>');
     return unless $bijection;
     my @f = split / /, $bijection;
     return $f[0];

@@ -52,7 +52,8 @@ sub _init {
 
     # Default logging level
     # In order of increasing severity: $TRACE $DEBUG $INFO $WARN $ERROR $FATAL
-    my $level = '$TRACE';
+##    my $level = '$TRACE';
+    my $level = '$INFO';
     $logger->level(eval $level);
     
     # Log appenders (i.e. where the logs get sent)
