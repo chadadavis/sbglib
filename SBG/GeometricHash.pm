@@ -406,7 +406,6 @@ sub _basis {
     # $model_$i is the new origin
     my $translation = zeroes(3) - $model(,$i);
     my $t_o = t_offset($translation);
-    $logger->trace("Translation:$translation");
 
     # $model_$j will lie on the X-axis
     my $b1 = $model(,$j) - $model(,$i);
