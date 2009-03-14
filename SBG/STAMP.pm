@@ -160,15 +160,15 @@ sub superpose_local {
     my ($fromdom, $ontodom) = @_;
     $logger->trace("$fromdom onto $ontodom");
 
-    my @doms = do_stamp($fromdom, $ontodom);
-    unless (@doms) {
+    my ($doms, $fields) = do_stamp($fromdom, $ontodom);
+    unless (@$doms) {
         # Cannot be STAMP'd. Add to negative cache
         cacheneg($fromdom,$ontodom);
         return;
     }
 
     # Reorder @doms based on the order of $fromdom, $ontodom
-    my $ordered = reorder(\@doms, 
+    my $ordered = reorder($doms, 
                           [ $fromdom->id, $ontodom->id],
                           sub { $_->id });
     
@@ -177,10 +177,19 @@ sub superpose_local {
     # The *absolute* transformation, that puts [0] into frame-of-ref of [1]
     my ($from, $to) = @$ordered;
     my $trans = $from->transformation->relativeto($to->transformation);
+
+    # TODO DES bad style doing this here
+    # Store the meta data directly in this object
+    $trans->{$_} = $fields->{$_} for keys %$fields;
+
+    # Set from's transformation to be the one that's relative to to's
+    $from->transformation($trans);
+    # Reset to's transform (to the identity)
+    $to->transformation(new SBG::Transform);
     $logger->debug("Transformation: ", $fromdom->id, ' ', $ontodom->id, "\n$trans");    
 
     # Positive cache
-    cachepos($fromdom,$ontodom,$trans);
+    cachepos($from, $to);
     return $trans;
 
 } # superpose_local
@@ -270,11 +279,18 @@ sub cacheneg {
 # Trans is the Transformation object to be contained in the From domain that
 # would superpose it onto the Onto domain.
 sub cachepos {
-    my ($fromdom, $ontodom, $trans) = @_;
+    my ($fromdom, $ontodom) = @_;
     $logger->trace();
     my $file = _cache_file($fromdom, $ontodom);
     my $io = new SBG::IO(file=>">$file");
-    $io->write($trans->ascsv);
+    # STAMP scores, etc.
+    $io->write($fromdom->transformation->headers);
+    # Write onto domain (has no transform, it's the reference);
+    $io->write($ontodom->asstamp);
+    # Write from domain (has the transform)
+    $io->write($fromdom->asstamp);
+    # Succesful if the file exists and is not empty
+    return -s $file;
 }
 
 # Returns:
@@ -329,6 +345,11 @@ sub do_stamp {
     # Number of disjoint domain sets
 #     my $n_disjoins=0;
 
+    # The hash of domains stamp() identifies as keep'able
+    my $keep;
+    # The STAMP scores
+    my $fields;
+
     # While there are domains not-yet-tried
     while (keys(%tried) < @dom_ids && keys(%current) < @dom_ids) {
 
@@ -356,12 +377,12 @@ sub do_stamp {
         $iodoms->close;
         # Run stamp and add %keep to %current
         # TODO DES Need to get more data back from stamp() here
-        my %keep = stamp($tmp_probe, $tmp_doms);
-        $current{$_} = 1 for keys %keep;
+        ($keep, $fields) = stamp($tmp_probe, $tmp_doms);
+        $current{$_} = 1 for keys %$keep;
 
         # Sort transformations, if there were any
         my @keep_doms;
-        @keep_doms = sorttrans(\%keep) if keys(%keep);
+        @keep_doms = sorttrans($keep) if keys(%$keep);
         # Unless this only contains the probe, results are useful
         unless ( @keep_doms == 1 && $keep_doms[0]->id eq $probe ) {
             push @all_doms, @keep_doms;
@@ -370,7 +391,7 @@ sub do_stamp {
         }
 
     } # while
-    return @all_doms;
+    return \@all_doms, $fields;
 
 } # do_stamp
 
@@ -434,7 +455,11 @@ sub stamp {
 
     # Parse out the 'Scan' lines from stamp output
     our @keys = qw/Domain1 Domain2 Fits Sc RMS Len1 Len2 Align Fit Eq Secs I S P/;
+    # Hash key names to stamp scores
+    my %fields;
+
     my %KEEP = ();
+
     while(<$fh>) {
         next if /skipped/ || /error/ || /missing/;
         next unless /^Scan/;
@@ -444,7 +469,7 @@ sub stamp {
         my @t = split(/\s+/);
         shift @t; # Loose the 'Scan' header
         # Hash @keys to @t
-        my %fields = List::MoreUtils::mesh @keys, @t;
+        %fields = List::MoreUtils::mesh @keys, @t;
         # If the incoming domain had a trans, but it doesn't afterward, the name
         # can be different, remove qualifier:
         $fields{'Domain1'} =~ s/-0x.*//;
@@ -460,7 +485,7 @@ sub stamp {
 
         return \%fields if $just1;
     }
-    return %KEEP;
+    return \%KEEP, \%fields;
 } # stamp
 
 

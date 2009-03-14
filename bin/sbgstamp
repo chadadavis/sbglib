@@ -20,9 +20,9 @@ while (my $dom = $in->read) {
     push @doms, $dom;
 }
 
-my @stamped = do_stamp(@doms);
+my $stamped = do_stamp(@doms);
 
-stampprint(\@stamped);
+stampprint($stamped);
 
 exit;
 

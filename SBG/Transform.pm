@@ -51,6 +51,10 @@ use overload (
     );
 
 
+# STAMP score fields
+our @keys = qw/Domain1 Domain2 Sc RMS Len1 Len2 Align Fit Eq Secs I S P/;
+
+
 ################################################################################
 # Accessors
 
@@ -255,10 +259,13 @@ Appends newline B<\n>
 =cut
 sub ascsv {
     my ($self) = @_;
-    return "" unless $self->_tainted;
+    return "" unless $self->_tainted && defined($self->matrix);
 
     my $mat = $self->matrix;
     my ($n,$m) = $mat->dims;
+
+    print STDERR "mat:$mat:\n" unless ($n && $m);
+
     my $str;
     # Don't do the final row (affine). Stop at $n - 1
     for (my $i = 0; $i < $n - 1; $i++) {
@@ -272,6 +279,30 @@ sub ascsv {
 
 
 ################################################################################
+=head2 asstamp
+
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
+
+%     No.  Domain1         Domain2         Sc     RMS    Len1 Len2  Align NFit Eq. Secs.   %I   %S   P(m)
+%Pair   1  1qf6            1nj8            0.67   1.81    110  268   137   30  26    3   7.69  84.62 1.00e+00
+
+
+=cut
+sub headers {
+    my ($self) = @_;
+    return "" unless $self->_tainted;
+    our @keys;
+    my $str = '';
+    $str .= join("\t", qw/% No/, @keys) . "\n";
+    my @vals = map { defined($self->{$_}) || '' } @keys;
+    $str .= join("\t", qw/%Pair 1/, @vals) . "\n";
+    return $str;
+}
+
+################################################################################
 =head2 _load
 
  Function: Sets matrix based on previously assigned L<string> or L<file>
@@ -282,7 +313,7 @@ sub ascsv {
 =cut
 sub _load {
     my ($self,@args) = @_;
-    my $rasc;
+    my $rasc = identity(4);
 
     if ($self->file) {
         $rasc = $self->_load_file();
@@ -291,10 +322,12 @@ sub _load {
     } else {
         carp "Need either a 'string' or 'file' to load";
     }
+    return $self unless defined($rasc);
     # Put a 1 in the cell 3,3 (bottom right) for affine matrix multiplication
     $rasc->slice('3,3') .= 1;
     # Finally, make it a PDL::Matrix
     $self->matrix(mpdl $rasc);
+
     return $self;
 
 } # _load
@@ -303,12 +336,21 @@ sub _load {
 ################################################################################
 =head2 _load_file
 
- Function: Overwrite with 3x4 from CSV file (using rasc() from PDL )
+ Function: Loads a STAMP transformation from a file
  Example :
  Returns : 
  Args    :
 
+The file is expected to contain a STAMP score line beginning with 'Pair' etc.
+
 # TODO DES duplicated with STAMP::stamp
+
+# TODO DES metadata is stored directly in this object w/o accessors
+
+# TODO DES Need separate functions to parse:
+1 Header lines with meta data
+1.1 Stamp block(s)
+1.1.1 Transformation matrix, 3 lines
 
 =cut
 sub _load_file {
@@ -317,37 +359,38 @@ sub _load_file {
     my $fh;
     open $fh, $file;
     my $matstr;
-    our @keys = qw/Domain1 Domain2 Sc RMS Len1 Len2 Align Fit Eq Secs I S P/;
+    our @keys;
+
     # Load metadata from header lines
     my %fields;
+    # First find the "Pair" line
     while (<$fh>) {
         next unless /(\%\s)*Pair\s+\d+\s+(.*)$/;
         my @fields = split /\s+/, $2;
         @fields = @fields[0..$#keys];
-
         unless (@fields == @keys) {
-# TODO DEL
-            print STDERR join("\t", @keys), "\n", join("\t", @fields), "\n";
-            exit;
+            $logger->error("Expected ", scalar(@keys), " keys. Got: @fields");
+            return;
         }
 
         # Hash @keys to @t
         %fields = List::MoreUtils::mesh @keys, @fields;
+        # Now find the stamp block
         while (<$fh>) {
             # Match opening { but no closing } this ensures a transform block
             next unless /\{[^}]+$/;
-            # Three lines;
+            # The three lines that make up the 3x4 transformation matrix
             $matstr .= <$fh> . <$fh> . <$fh>;
         }
     }
     unless ($matstr) {
         $logger->error("No transformation found in ", $file);
+        return;
     }
 
-    # TODO DES
+    # Store the meta data directly in this object
     $self->{$_} = $fields{$_} for keys %fields;
 
-    close $fh;
     return $self->_load_string($matstr);
 }
 
@@ -374,25 +417,28 @@ White-space is collapsed.
 sub _load_string {
     my ($self, $str) = @_;
     $str ||= $self->string;
-#     my $rasc = zeroes(4,4);
+    unless ($str) {
+        $logger->error("No string to parse");
+        return;
+    }
     my $rasc = identity(4);
-    $logger->trace($str);
+    $logger->trace("In:\n", $str);
     my @lines = split /\n/, $str;
     # Skip empty lines
     @lines = grep { ! /^\s*$/ } @lines;
-    for (my $i = 0; $i < @lines; $i++) {
+    # Only take 3 lines
+    for (my $i = 0; $i < 3; $i++) {
         # Whitespace-separated
         my @fields = split /\s+/, $lines[$i];
         # Skip emtpy fields (i.e. when the first field is just whitespace)
         @fields = grep { ! /^\s*$/ } @fields;
-        for (my $j = 0; $j < @fields; $j++) {
+        # Only only take 4 fields
+        for (my $j = 0; $j < 4 ; $j++) {
             # Column major order, i.e. (j,i) not (i,j)
             $rasc->slice("$j,$i") .= $fields[$j];
         }
     }
-
-# TODO DEL
-    $logger->trace($rasc);
+    $logger->trace("Out:\n",$rasc);
 
     return $rasc;
 } # _load_string
