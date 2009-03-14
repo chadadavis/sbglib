@@ -55,7 +55,7 @@ our @EXPORT = qw($logger);
 sub level {
     my ($level) = @_;
     $LEVEL = $level;
-    _init();
+    $logger->level(eval $LEVEL);
     $logger->info("Log level set to $LEVEL");
 }
 
@@ -81,7 +81,7 @@ sub _init {
     my $layout = Log::Log4perl::Layout::PatternLayout->
 #         new("%d %H $ENV{USER} PID:%P %5p> %M (%F{1}) Line: %L - %m%n");
 #         new("%5p %15F{1} %4L %-25M - %m%n");
-        new("%5p %-25M - %m%n");
+        new("%5p %-30M %m%n");
     # Set the layout of the appender
     $appender->layout($layout);
     # Register the appender with the logger
