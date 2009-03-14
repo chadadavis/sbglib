@@ -13,7 +13,15 @@ B<assemble> - Assemble components into complexes
 
 =head1 OPTIONS
 
-=head2 -h Print this help page
+=head2 -h|elp Print this help page
+
+=head2 -l|og Set logging level
+
+In increasing order: TRACE DEBUG INFO WARN ERROR FATAL
+
+I.e. setting B<-l WARN> (the default) will log warnings errors and fatal
+messages, but no info or debug messages to the log file (B<log.log>)
+
 
 =head1 SEE ALSO
 
@@ -49,6 +57,10 @@ use SBG::Storable;
 use SBG::Domain;
 use SBG::Domain::CofM;
 
+use SBG::Log;
+SBG::Log::level('$WARN');
+
+
 ################################################################################
 
 
@@ -58,18 +70,22 @@ my $result = GetOptions(\%ops,
                         'c|complete',
                         'network=s',
                         'pdbid=s',
+                        'l|log=s',
     );                  
 if ($ops{'h'}) { pod2usage(-exitval=>1, -verbose=>2); }
 
+SBG::Log::level('$' . $ops{'l'}) if $ops{'l'};
 
 ################################################################################
 
 if ($ops{'network'}) {
+
     my $net = retrieve $ops{'network'};
     _print_net($net);
     _one_net($net, basename($ops{'network'},'.stor'));
 
 } elsif ($ops{'pdbid'}) {
+
     my @accnos = SBG::Search::SCOP::domains($ops{'pdbid'}) or 
         pod2usage(-exitval=>1);
     

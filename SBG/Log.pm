@@ -19,7 +19,11 @@ To use the logging facility (L<Log::Log4perl>), just any of:
 
 =head1 DESCRIPTION
 
-...
+NB There is negligible penalty for using the logging system when logging
+messages are not printed. I.e. logging slows down an application. But logging
+does not have to be completely avoided or turned off to increase speed. Simply
+set the log level to e.g. B<$ERROR> to only log errors.
+
 
 =head1 SEE ALSO
 
@@ -38,6 +42,8 @@ use Data::Dumper;
 use Log::Log4perl qw(:levels :resurrect);
 
 our $logger;
+# In order of increasing severity: $TRACE $DEBUG $INFO $WARN $ERROR $FATAL
+our $LEVEL = '$WARN';
 
 use base qw/Exporter/;
 our @EXPORT = qw($logger);
@@ -45,16 +51,22 @@ our @EXPORT = qw($logger);
 
 ################################################################################
 
+# Change the log level
+sub level {
+    my ($level) = @_;
+    $LEVEL = $level;
+    _init();
+    $logger->info("Log level set to $LEVEL");
+}
+
+
 sub _init {
 
     # Initialize system logger
     $logger = Log::Log4perl->get_logger("sbg");
 
     # Default logging level
-    # In order of increasing severity: $TRACE $DEBUG $INFO $WARN $ERROR $FATAL
-##    my $level = '$TRACE';
-    my $level = '$INFO';
-    $logger->level(eval $level);
+    $logger->level(eval $LEVEL);
     
     # Log appenders (i.e. where the logs get sent)
     # Log file written in the working directory
@@ -74,8 +86,6 @@ sub _init {
     $appender->layout($layout);
     # Register the appender with the logger
     $logger->add_appender($appender);
-
-#     warn "Logging to: $logfile\n";
 
     # First log message is the banner
     $logger->debug("\n\n", "=" x 80);
@@ -100,6 +110,10 @@ use AutoLoader;
 # Error messages diverted to STDERR
 # Any other level messages (e.g. $DEBUG, etc) just get ignored
 sub error {
+    my $self = shift;
+    return warn "@_\n";
+}
+sub warn {
     my $self = shift;
     return warn "@_\n";
 }
