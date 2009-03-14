@@ -50,7 +50,7 @@ use SBG::Log;
 sub _d {
     my $d = shift;
 #     print STDERR ("\t" x $d), @_, "\n";
-    $logger->debug("\t" x $d, @_);
+    $logger->debug("  " x $d, @_);
 }
 sub _d0 { _d(0,@_); }
 
