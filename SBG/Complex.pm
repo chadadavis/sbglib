@@ -189,7 +189,7 @@ sub linker {
     # This defines the (additional) transform we need to apply to $destdom
     my $xform = superpose($srcdom, $srcrefdom);
     unless (defined($xform)) {
-        $logger->error("Cannot link via: superpose($srcdom,$srcrefdom)");
+        $logger->info("Cannot link via: superpose($srcdom,$srcrefdom)");
         return;
     }
 

@@ -376,6 +376,7 @@ sub _load_string {
     $str ||= $self->string;
 #     my $rasc = zeroes(4,4);
     my $rasc = identity(4);
+    $logger->trace($str);
     my @lines = split /\n/, $str;
     # Skip empty lines
     @lines = grep { ! /^\s*$/ } @lines;
