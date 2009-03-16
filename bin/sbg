@@ -32,6 +32,8 @@ use Pod::Usage;
 use Scalar::Util qw/blessed/;
 
 use SBG::Storable qw/module_for retrieve can_do/;
+use SBG::Log;
+SBG::Log::level('$WARN');
 
 use Moose::Autobox;
 
@@ -39,10 +41,13 @@ use Moose::Autobox;
 
 my %ops;
 my $result = GetOptions(\%ops, 
+                        'l|log=s',
                         'h|help',
     );
 my ($file,$method,@args) = @ARGV;
 $file or pod2usage(-exitval=>2);
+SBG::Log::level('$' . $ops{'l'}) if $ops{'l'};
+
 my $obj = retrieve($file);
 
 if ($ops{'h'}) { 
