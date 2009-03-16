@@ -10,15 +10,7 @@ SBG::Domain::CofM - Represents a structure as a sphere around a centre-of-mass
 
 =head1 DESCRIPTION
 
-7-point Centre-of-mass: e.g.:
-
-ATOM      0  CA  ALA Z   0      43.946  51.829   1.183  1.00 10.00
-ATOM      1  CA  ALA Z   1      48.946  51.829   1.183  1.00 10.00
-ATOM      1  CA  ALA Z   1      38.946  51.829   1.183  1.00 10.00
-ATOM      2  CA  ALA Z   2      43.946  56.829   1.183  1.00 10.00
-ATOM      2  CA  ALA Z   2      43.946  46.829   1.183  1.00 10.00
-ATOM      3  CA  ALA Z   3      43.946  51.829   6.183  1.00 10.00
-ATOM      3  CA  ALA Z   3      43.946  51.829  -3.817  1.00 10.00
+7-point Centre-of-mass
 
 The C-alphas of Alanine residues,
 1: X+5 , X-5
@@ -72,9 +64,6 @@ use SBG::Run::cofm qw/cofm/;
 
 ################################################################################
 # Fields and accessors
-
-
-
 
 
 # Define own subtype to enable type coersion. 

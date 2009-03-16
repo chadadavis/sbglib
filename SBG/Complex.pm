@@ -377,6 +377,8 @@ sub min_rmsd {
 
 
 # Superpose a complex onto another
+# Chains A,C,E, etc are the model ($self)
+# Chains B,D,F, etc are the comparison/benchmark ($other)
 sub csuperpose {
     my ($self, $other, $andwrite, $showall) = @_;
     # The transformation required to put $other into fram-of-reference of $self
