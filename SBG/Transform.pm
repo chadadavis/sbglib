@@ -94,11 +94,6 @@ has 'file' => (
     trigger => sub { (shift)->_load },
     );
 
-has '_opcount' => (
-    is => 'rw',
-    isa => 'Int',
-    default => 0,
-    );
 
 # Note if not-yet-modified
 has '_tainted' => (
@@ -139,7 +134,6 @@ Resets the internal matrix
 sub reset {
     my $self = shift;
     $self->_tainted(0);
-    $self->opcount(0);
     return $self->matrix(_build_matrix());
 }
 
@@ -233,6 +227,7 @@ If the thing needs to be B<transpose()>'d, that is up to you to do that (before 
 after).
 
 =cut
+# sub apply 
 sub transform {
     my ($self, $thing) = @_;
     return $thing unless $self->_tainted;
@@ -455,6 +450,7 @@ sub _load_string {
 Matrix multiplication. Order of operations mattters.
 
 =cut
+# sub compose {
 sub _mult {
     my ($self, $other) = @_;
     unless (ref($self) eq ref($other)) {
@@ -465,9 +461,8 @@ sub _mult {
     return $self unless $other->_tainted;
     return $other unless $self->_tainted;
     my $m = $self->matrix x $other->matrix;
-    # Carry over the opcount (debuggin)
-    return new SBG::Transform(matrix=>$m, 
-                              _opcount=>1 + $self->_opcount + $other->_opcount);
+
+    return new SBG::Transform(matrix=>$m);
 } # _mult
 
 
