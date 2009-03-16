@@ -27,68 +27,70 @@ package SBG::DB::cofm;
 use base qw/Exporter/;
 our @EXPORT_OK = qw/query/;
 
+use IO::String;
+use PDL::Matrix;
 use DBI;
+
 use SBG::Config;
+
 
 ################################################################################
 =head2 query
 
  Function: Fetches centre-of-mass and radius of gyration of known PDB chains
- Example : ($x,$y,$z,$rg,$rmax,$file,$descr)=SBG::DB::cofm::query('2nn6','A');
- Returns : XYZ coordinates, radii, path to file, STAMP descriptor
+ Example : my $hash=SBG::DB::cofm::query('2nn6','A');
+ Returns : XYZ of CofM, ATOM lines, radii, PDB file, STAMP descriptor
  Args    : pdbid - string (not case sensitive)
            chainid - character (case sensitive)
 
-Looks for cached results in database (defined in B<embl.ini>).
+Looks for cached results in database (defined in B<config.ini>).
 
 Only appropriate for full-chain queries. 
 Otherwise, see L<SBG::Run::cofm>
 
+The resulting hashref contains keys: 
+
+ Cx, Cy, Cz, Rg, Rmax, description, file, descriptor
+
 NB: The DB cache stores uppercase PDB IDs.
+
+Checks for PDB chain IDs, but not PQS chain IDs.  It is not feasible to naively
+check PQS as the chain ID might differ from the PDB.
 
 =cut
 sub query {
     my ($pdbid, $chainid) = @_;
+    $pdbid = uc $pdbid;
+    my $pdbstr = "pdb|$pdbid|$chainid";
     my $db = SBG::Config::val(qw/cofm db/) || "trans_1_5";
-
-    # Static handle, prepare it only once
-    our $dbh;
-    our $cofm_sth;
-
     my $host = SBG::Config::val(qw/cofm host/);
     my $dbistr = "dbi:mysql:dbname=$db";
     $dbistr .= ";host=$host" if $host;
-    $dbh = DBI->connect($dbistr);
+    # Static handle, prepare it only once
+    our $dbh;
+    our $cofm_sth;
+    $dbh ||= DBI->connect($dbistr);
     $cofm_sth ||= $dbh->prepare("select " .
                                 "cofm.Cx, cofm.Cy, cofm.Cz," .
                                 "cofm.Rg,cofm.Rmax," .
+                                "cofm.description," . 
                                 "entity.file," . 
                                 "entity.description as descriptor " .
                                 "from cofm, entity " .
                                 "where " .
                                 "bad = 0 and " .
                                 "cofm.id_entity=entity.id and " .
-# NB don't naively check PQS as the chain ID might be different
-#                                 "(entity.acc=? or entity.acc=?)"
                                 "(entity.acc=?)"
         );
     unless ($cofm_sth) {
         carp $dbh->errstr;
         return;
     }
-
-    $pdbid = uc $pdbid;
-
-    my $pdbstr = "pdb|$pdbid|$chainid";
-    my $pqsstr = "pdb|$pdbid|$chainid";
-    # NB don't naively check PQS as the chain ID might be different
-#     if (! $cofm_sth->execute($pdbstr, $pqsstr)) {
     if (! $cofm_sth->execute($pdbstr)) {
         carp $cofm_sth->errstr;
         return;
     }
-
-    # ($x, $y, $z, $rg, $rmax, $file, $descriptor);
+    # (Cx, Cy, Cz, Rg, Rmax, description, file, descriptor);
     return $cofm_sth->fetchrow_hashref();
 } # query
 

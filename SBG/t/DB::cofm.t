@@ -23,8 +23,12 @@ float_is($res->{'Cy'}, $ty, $prec);
 float_is($res->{'Cz'}, $tz, $prec);
 float_is($res->{'Rg'}, $trg, $prec);
 float_is($res->{'Rmax'}, $trmax, $prec);
-is($res->{'descriptor'}, 'CHAIN A', 'descriptor');
-ok($res->{'file'}, "File: $file");
+is($res->{'descriptor'}, 'CHAIN A', 'descriptor: "CHAIN A"');
+ok($res->{'file'}, "File: " . $res->{'file'});
+
+my @atomlines = $res->{'description'} =~ /^ATOM/gm;
+is(scalar(@atomlines), 7, "7 Points: CofM,X+/-5,Y+/-5,Z+/-5");
+
 
 __END__
 
