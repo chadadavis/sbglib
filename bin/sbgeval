@@ -15,6 +15,13 @@ B<sbgeval> - Evaluate a complex against models of it
 
 =head2 -h Print this help page
 
+=head2 -l|og Set logging level
+
+In increasing order: TRACE DEBUG INFO WARN ERROR FATAL
+
+I.e. setting B<-l WARN> (the default) will log warnings errors and fatal
+messages, but no info or debug messages to the log file (B<log.log>)
+
 =head1 SEE ALSO
 
 
@@ -46,8 +53,11 @@ use SBG::Storable;
 my %ops;
 my $result = GetOptions(\%ops,
                         'h|help',
+                        'l|log=s',
     );                  
 if ($ops{'h'}) { pod2usage(-exitval=>1, -verbose=>2); }
+
+SBG::Log::init($ops{'l'}) if $ops{'l'};
 
 
 ################################################################################
