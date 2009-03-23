@@ -28,6 +28,11 @@ ok($desc =~ /^\s*($re_descriptor)\s*$/, "Multi-segment descriptor");
 my $desc = 'A 3 _ to A 189 _ A 353 _ to A 432 _';
 ok($desc =~ /^\s*($re_descriptor)\s*$/, "Multi-segment descriptor");
 
+my $desc = 'A 3 A to A 189 B A 353 B to A 432 _';
+ok($desc =~ /^\s*($re_descriptor)\s*$/, 
+   "Multi-segment descriptor with insertion codes");
+
+
 ################################################################################
 # Requires (outside functionality that I assume)
 

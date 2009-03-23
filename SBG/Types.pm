@@ -25,14 +25,19 @@ use Moose;
 use Moose::Util::TypeConstraints;
 
 extends qw/Moose::Object Exporter/;
-our @EXPORT_OK = qw/
-$pdb41 $re_pdb $re_chain_id $re_chain $re_seg $re_chain_seg $re_descriptor
-/;
+our @EXPORT_OK = qw(
+$pdb41 $re_pdb 
+$re_chain_id $re_chain 
+$re_descriptor $re_ic $re_pos
+$re_seg $re_chain_seg 
+);
+
 
 # A file path 
 subtype 'SBG.File' 
     => as 'Str'
     => where { -f $_ };
+
 
 # File open mode specifiers. See perldoc -f open
 our $re_mode = '\+?(<|>|>>)?';
@@ -48,28 +53,48 @@ subtype 'SBG.ChainID'
     => as 'Str',
     => where { /^$re_chain_id$/ };
 
+
 our $re_pdb = '\d\w{3}';
 subtype 'SBG.PDBID'
     => as 'Str',
     => where { /^$re_pdb$/ };
 
+
 # Splits e.g. 2nn6A into (2nn6,A)
+# Captures: $1 is PDB ID, $2 is 1-char chain ID
 our $pdb41 = "($re_pdb)($re_chain_id)";
 
+
 our $re_chain = 'CHAIN\s+' . $re_chain_id;
-# This is strict
+
+
+# Residue insertion code (character, STAMP uses _ for undefined)
+our $re_ic = '[_a-zA-Z]';
+
 
 # NB: Residue IDs can be negative
 our $re_pos = '-?\d+';
-# NB: Back referencing same chain with \g-1 (this goes back to prev. match)
+
+
+# A segment, e.g. A 134 _ to A 233 A
 our $re_seg = 
-    '('.$re_chain_id.')\s+'.$re_pos.'\s+_\s+to\s+\g-1\s+'.$re_pos.'\s+_';
+    $re_chain_id . '\s+' . $re_pos . '\s+' . $re_ic . '\s+to\s+' .
+    $re_chain_id . '\s+' . $re_pos . '\s+' . $re_ic;
+
+
 # A whole chain or a subsegment
+# Captures: $1 is chain descriptor, $2 is segment descriptor
 our $re_chain_seg = "($re_chain)|($re_seg)";
+
+
 # (whole-chain or segment), repeated, white-space separated
+# Captures: ...
 our $re_chain_segs =  "($re_chain_seg)(\\s+($re_chain_seg))*";
+
+
 # A STAMP descriptor can also be "ALL" for all residues of all chains
 our $re_descriptor = "ALL|($re_chain_segs)";
+
 
 subtype 'SBG.Descriptor'
     => as 'Str',
