@@ -53,9 +53,9 @@ my $iomixed = new SBG::DomainIO(file=>"$dir/model.dom", type=>'SBG::Domain::CofM
 my @transes;
 while (my $dom = $iomixed->read) {
     push @transes, $dom->transformation if $dom->transformation;
-    say "dom: ", $dom->uniqueid;
+    say "dom: ", $dom->id;
 }
-is(4, @transes, "4/6 Domains have explicit transformation");
+is(scalar(@transes), 4, "4/6 Domains have explicit transformation");
 
 
 __END__

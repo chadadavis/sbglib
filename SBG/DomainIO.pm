@@ -139,18 +139,20 @@ NB You can change L<type> in between invocations of L<read>
 override 'read' => sub {
     my ($self) = @_;
     my $fh = $self->fh or return;
-    while (<$fh>) {
-        chomp;
+    while (my $line = <$fh>) {
+        chomp $line;
         # Comments and blank lines
-        next if /^\s*\%/;
-        next if /^\s*\#/;
-        next if /^\s*$/;
+        next if $line =~ /^\s*\%/;
+        next if $line =~ /^\s*\#/;
+        next if $line =~ /^\s*$/;
 
         # Create/parse new domain header, May not always have a file name
-        unless (/^(\S*)\s+($re_pdb)(\S+)\s+\{\s*($re_descriptor)(\s+\})?\s*$/) {
-            carp("Cannot parse:$_:");
+        unless ($line =~ 
+                /^(\S*)\s+($re_pdb)(\S*)\s*\{\s*($re_descriptor)(\s*\})?\s*$/) {
+            carp("Cannot parse:$line:");
             return;
         }
+
         # $1 is (possible) file
         # $2 is pdbid
         # $3 is rest of STAMP label
@@ -161,7 +163,7 @@ override 'read' => sub {
         $dom->file($1) if $1;
 
         # Header ends, i.e. contains no transformation
-        if (/\}\s*$/) { 
+        if ($line =~ /\}\s*$/) { 
             return $dom;
         }
         # Parse transformtion
