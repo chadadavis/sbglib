@@ -32,12 +32,9 @@ use base qw/Exporter/;
 our @EXPORT_OK = qw/cofm/;
 
 use Carp;
-use IO::String;
-use PDL::Lite;
-use PDL::Matrix;
 use Text::ParseWords;
 
-use SBG::Types qw/$re_chain_id/;
+use SBG::Types qw/$re_chain $re_chain_id $re_ic $re_pos/;
 use SBG::DB::cofm;
 use SBG::Config qw/val/;
 use SBG::Domain;
@@ -96,31 +93,34 @@ Runs external B<cofm> appliation. Must be in your environment's B<$PATH>
 
 'descriptor' and 'pdbid' must be defined 
 
-E.g. 
+Examples:
+Single chain:
 
  Domain   1 /g/russell3/pqs/1li4.mmol 1li4A
         chain A 430 CAs =>  430 CAs in total
 
+Multiple chains:
  Domain   1 /g/russell3/pqs/1li4.mmol 1li4a
         chain A 430 CAs  chain B 430 CAs =>  860 CAs in total
-or: 
 
+Segment:
  Domain   1 /g/russell3/pqs/1li4.mmol 1li4A-single
         from A    3   to A  189   187 CAs =>  187 CAs in total
 
-or:
+Multiple segments:
  Domain   1 /g/russell3/pqs/1li4.mmol 1li4A-double
         from A    3   to A  189   187 CAs  from A  353   to A  432    80 CAs =>  267 CAs in total
 
-And then, a few lines later:
+With insertion codes:
+Domain   1 /usr/local/data/pdb/pdb2frq.ent.gz 2frqB
+        from B  100   to B  131 A  33 CAs =>   33 CAs in total
+
+And then, a few lines later (the header line with the centre of mass):
 
  REMARK Domain 1 Id 1li4a N = 860 Rg = 34.441 Rmax = 58.412 Ro = 44.760 0.000 85.323
 
 All of the ATOM lines are saved, as new-line separated text in the 'description'
 
-BUG: Insertion code ignored by cofm?
-No, just not always there ...:
-        from B  100   to B  131 A  33 CAs =>   33 CAs in total
 
 =cut
 sub _run {
@@ -138,49 +138,29 @@ sub _run {
         return;
     }
 
+
     my %res;
     while (<$cofmfh>) {
         if (/^Domain\s+\S+\s+(\S+)/i) {
             $res{file} = $1;
-        } elsif (my @chs = /chain\s+($re_chain_id)/ig) {
-            # Maybe multiple chains here
-            my @tchs = map { "CHAIN $_" } @chs;
-            $res{descriptor} = join(' ', @tchs);
-            
-        } elsif (my @descrs = /from\s+(\S+)\s+(\S+)\s+to\s+\1\s+(\S+)/ig) {
-            # TODO BUG What about insertion code here?
-            # Maybe multiple segments here. Capture all and re-format
-            my @groupdescrs;
-            while (@descrs) {
-                # Region = chain, start, end
-                my @reg = (shift(@descrs), shift(@descrs), shift(@descrs));
-                push @groupdescrs, \@reg if @reg == 3;
-            }
-            # Convert each array triple into the STAMP descriptor string
-            my @regions = 
-                map { my ($c,$s,$e) = @$_; "$c $s _ to $c $e _" } @groupdescrs;
-            # Concat all descriptor strings
-            $res{descriptor} = join(' ', @regions);
         } elsif (/^REMARK Domain/) {
             my @a = quotewords('\s+', 0, $_);
             # Extract coords for radius-of-gyration and xyz of centre-of-mass
             $res{Rg} = $a[10];
             $res{Rmax} = $a[13];
             ($res{Cx}, $res{Cy}, $res{Cz}) = ($a[16], $a[17], $a[18]);
-        } elsif (/^ATOM/) {
-            $res{description} .= $_;
+
+# Don't need to parse this, easily computable
+#         } elsif (/^ATOM/) {
+#             $res{description} .= $_;
+
         }
-        
     }
 
     unless (%res) {
         return;
     }
     
-    # Check that $descriptor eq $found_descriptor 
-    carp "Descriptors unequal:$descriptor:$res{descriptor}:" unless
-        $descriptor eq $res{descriptor};
-
     # keys: (Cx, Cy,Cz, Rg, Rmax, description, file, descriptor)
     return \%res;
 
@@ -213,51 +193,6 @@ sub _spitdom {
     return $path;
 }
 
-
-################################################################################
-=head2 _atom2pdl
-
- Function: 
- Example : 
- Returns : 
- Args    : 
-
-Parses ATOM lines and converts to nx3-dimensional L<PDL::Matrix>
-
-Any lines not beginning wth ATOM are skipped.
-
-E.g.:
-
- ATOM      0  CA  ALA Z   0      80.861  12.451 122.080  1.00 10.00
- ATOM      1  CA  ALA Z   1      85.861  12.451 122.080  1.00 10.00
- ATOM      1  CA  ALA Z   1      75.861  12.451 122.080  1.00 10.00
- ATOM      2  CA  ALA Z   2      80.861  17.451 122.080  1.00 10.00
- ATOM      2  CA  ALA Z   2      80.861   7.451 122.080  1.00 10.00
- ATOM      3  CA  ALA Z   3      80.861  12.451 127.080  1.00 10.00
- ATOM      3  CA  ALA Z   3      80.861  12.451 117.080  1.00 10.00
-
-31 - 38        Real(8.3)     x            Orthogonal coordinates for X in Angstroms.
-39 - 46        Real(8.3)     y            Orthogonal coordinates for Y in Angstroms.
-47 - 54        Real(8.3)     z            Orthogonal coordinates for Z in Angstroms.
-
-TODO DES belongs in a more general module. At least Domain::CofM
-
-=cut
-sub _atom2pdl {
-    my ($atomstr) = @_;
-    my $io = new IO::String($atomstr);
-    my @mat;
-    for (my $i = 0; <$io>; $i++) {
-        next unless /^ATOM/;
-        my $str = $_;
-        # Columns 31,39,47 store the 8-char coords (not necessarily separated)
-        # substr() is 0-based
-        my @xyz = map { substr($str,$_,8) } (30,38,46);
-        # Append array with an arrayref of X,Y,Z fields
-        push @mat, [ @xyz ];
-    }
-    return mpdl @mat;
-}
 
 
 ################################################################################

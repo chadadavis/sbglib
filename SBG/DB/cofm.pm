@@ -73,7 +73,7 @@ sub query {
     $cofm_sth ||= $dbh->prepare("select " .
                                 "cofm.Cx, cofm.Cy, cofm.Cz," .
                                 "cofm.Rg,cofm.Rmax," .
-                                "cofm.description," . 
+#                                 "cofm.description," . 
                                 "entity.file," . 
                                 "entity.description as descriptor " .
                                 "from cofm, entity " .
