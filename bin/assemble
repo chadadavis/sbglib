@@ -34,7 +34,6 @@ L<SBG::Assembler> , L<SBG::Network> , L<SBG::SearchI>
 
 use strict;
 use warnings;
-use feature 'say';
 use Pod::Usage;
 use Getopt::Long;
 use Moose::Autobox;
@@ -58,7 +57,9 @@ use SBG::Domain;
 use SBG::Domain::CofM;
 
 use SBG::Log;
-SBG::Log::level('$WARN');
+use SBG::Config qw/config/;
+use SBG::GeometricHash;
+
 
 
 ################################################################################
@@ -74,30 +75,36 @@ my $result = GetOptions(\%ops,
     );                  
 if ($ops{'h'}) { pod2usage(-exitval=>1, -verbose=>2); }
 
-SBG::Log::level('$' . $ops{'l'}) if $ops{'l'};
+SBG::Log::init($ops{'l'}) if $ops{'l'};
+
 
 ################################################################################
 
+# Autoflush
+$| = 1;
+
 if ($ops{'network'}) {
 
+    print "Subnet: ", $ops{'network'}, "\n";
     my $net = retrieve $ops{'network'};
     _print_net($net);
     _one_net($net, basename($ops{'network'},'.stor'));
 
 } elsif ($ops{'pdbid'}) {
 
+    print "PDB: ", $ops{'pdbid'}, "\n";
     my @accnos = SBG::Search::SCOP::domains($ops{'pdbid'}) or 
         pod2usage(-exitval=>1);
     
-    say "accession_numbers:\n@accnos\n";
+    print "\taccession_numbers:\n\t@accnos\n";
     my @seqs = map { new SBG::Seq(-accession_number=>$_) } @accnos;
     my @nodes = map { new SBG::Node($_) } @seqs;
     
     my $net = new SBG::Network;
     $net->add($_) for @nodes;
-    say "Searching for interaction templates ...";
+    print "\tSearching for interaction templates ... ";
     $net->build(new SBG::Search::SCOP);
-    say scalar($net->interactions), " interactions";
+    print scalar($net->interactions), " interactions\n";
     
     my @nets = _part_write($net);
 
@@ -105,6 +112,7 @@ if ($ops{'network'}) {
     pod2usage(-exitval=>1);
 }
 
+print "\n";
 
 exit;
 
@@ -115,8 +123,8 @@ sub _print_net {
     $i ||= 1;
     $n ||= 1;
     printf 
-        "(sub-)network ( %d / %d ) \n\t" .
-        "%4d nodes, %4d edges, %4d interactions ...\n",
+        "\tsubnetwork ( %d / %d ) \n" .
+        "\t%4d nodes, %4d edges, %4d interactions ...\n",
         $i, $n, 
         scalar($net->vertices), scalar($net->edges), 
         scalar($net->interactions);
@@ -125,24 +133,44 @@ sub _print_net {
 
 sub _part_write {
     my ($net, $name) = @_;
+
+    # Save whole network first
     $name = $name ? ($name . '-') : '';
     $net->store($name . 'network.stor');
-
+    $net->graphviz($name . 'network.dot');
     my $complex = _subcomplex($net);
     $complex->store($name . 'complex.stor');
-    
+
+    # 3D geometric hash
+    my $binsize = config()->val(qw/assembly binsize/) || 1.5;
+    my $gh = new SBG::GeometricHash(binsize=>$binsize);
+
+    print "\tPartitioning ... ";
     my @networks = $net->partition();
     my $n = scalar(@networks);
-    print STDERR "Partitioned into $n connected sub-networks\n";
+    print "$n connected sub-networks\n";
+    warn "\tNo connected sub-networks\n" unless $n > 0;
 
     for (my $i = 0; $i < @networks; $i++) {
         my $subnet = $networks[$i];
-        my $netfile = sprintf("%ssubnet-%04d.stor", $name, $i+1);
-        my $cfile = sprintf("%ssubcomplex-%04d.stor", $name, $i+1);
-        $subnet->store($netfile);
         my $subcomplex = _subcomplex($subnet);
+        my $lname = $name;
+        my $labels = $subcomplex->models->keys;
+        my @doms = map { $subcomplex->model($_) } @$labels;
+        # TODO DES BUG cannot assume SBG::Domain::CofM::centre here
+        my @points = map { $_->centre } @doms;
+        my $class = $gh->exact(\@points); # , $labels); # No labels
+        if (defined $class) {
+            print "\tSubnet ",$i+1," seems to duplicate subnet $class\n";
+            # Use hidden filename
+            $lname = sprintf ".dup-%04d-", $class;
+        } else {
+            $class = $gh->put($i+1, \@points, $labels);
+        }
+        my $netfile = sprintf("%ssubnet-%04d.stor", $lname, $i+1);
+        $subnet->store($netfile);
+        my $cfile = sprintf("%ssubcomplex-%04d.stor", $lname, $i+1);
         $subcomplex->store($cfile);
-        print STDERR "\t$netfile\t$cfile\n";
     }
     return @networks;
 }
@@ -182,6 +210,5 @@ sub _one_net {
     my $state = new SBG::Complex(name=>$name);
     # Go!
     $t->traverse($state);
-    print "\n";
 
 }
