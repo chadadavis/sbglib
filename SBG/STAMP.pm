@@ -115,7 +115,8 @@ You will still need to then transform $fromdom.
 
 =cut
 sub superpose {
-    my ($fromdom, $ontodom) = @_;
+    my ($fromdom, $ontodom, %ops) = @_;
+    $ops{'cache'} = 1 unless defined $ops{'cache'};
     $logger->trace("$fromdom onto $ontodom");
 
     if ($fromdom eq $ontodom) {
@@ -129,7 +130,7 @@ sub superpose {
 #     return $trydb if $trydb;
 
     # Check local disk cache
-    my $cached = cacheget($fromdom, $ontodom);
+    my $cached = cacheget($fromdom, $ontodom) if $ops{'cache'};
     if (defined $cached) {
         if ($cached) {
             # Positive cache hit

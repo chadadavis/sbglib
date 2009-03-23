@@ -34,6 +34,7 @@ with 'SBG::Storable';
 use Moose::Autobox;
 use autobox ARRAY => 'SBG::List';
 
+
 use File::Temp qw/tempfile/;
 use Carp;
 
@@ -43,8 +44,11 @@ use SBG::Config qw/config/;
 use SBG::Log;
 use SBG::STAMP qw/superpose stamp/;
 
+use SBG::Domain;
+use SBG::DomainIO;
 # Default Domain subtype
 use SBG::Domain::CofM;
+
 
 use overload (
     '""' => '_asstring',
@@ -296,6 +300,7 @@ sub trydomain {
 } 
 
 
+# Mean clash score within a complex (between components)
 sub clashes {
     my ($self) = @_;
     my $doms = $self->models->values;
@@ -377,6 +382,7 @@ sub min_rmsd {
 
 
 # Superpose a complex onto another
+# Uses min_rmsd to find a suitable superposition into a common frame of ref.
 # Chains A,C,E, etc are the model ($self)
 # Chains B,D,F, etc are the comparison/benchmark ($other)
 sub csuperpose {
@@ -448,17 +454,24 @@ the same name as those in the first complex will be used. E.g. comparing a dimer
 to a tetramer, the second complex will be reduced to the dimer corresponding to
 the components in the dimer. They must have the same names.
 
+NB This only works when the corresponding complexes are very similar to each
+other.
+
 =cut
 sub complexrmsd {
     my ($model, $truth) = @_;
 
     # Subset $truth . Only consider common components
     my @cnames = intersection([$model->names], [$truth->names]);
-    $logger->debug($model->names->length, " and ", $truth->names->length,
-                   " components. ", scalar(@cnames), " in common");
     my $subcomplex = new SBG::Complex;
     # Take the original doms from the native complex, if correspondance in model
     $subcomplex->model($_, $truth->model($_)) for @cnames;
+
+# TODO DES Just use the whole true complex, in case component names are different
+    $subcomplex = $truth;
+
+    $logger->debug($model->names->length, " and ", $truth->names->length,
+                   " components. ", scalar(@cnames), " in common");
 
     # transform -g both into single PDB files
     my $modelpdb = $model->gtransform;
@@ -466,11 +479,26 @@ sub complexrmsd {
 
     # Create two domain files, with descriptor { ALL }
     my ($model_fh, $model_dom) = tempfile;
-    print $model_fh "$modelpdb model { ALL }\n";
+    print $model_fh "$modelpdb 9abc-model { ALL }\n";
     close $model_fh;
     my ($subcomplex_fh, $subcomplex_dom) = tempfile;
-    print $subcomplex_fh "$subcomplexpdb subcomplex { ALL }\n";
+    print $subcomplex_fh "$subcomplexpdb 9xyz-subcomplex { ALL }\n";
     close $subcomplex_fh;
+
+    my $modelio = SBG::DomainIO->new(
+        file=>$model_dom, type=>'SBG::Domain');
+    my $modelasdom = $modelio->read;
+    my $subcomplexio = SBG::DomainIO->new(
+        file=>$subcomplex_dom, type=>'SBG::Domain');
+    my $subcomplexasdom = $subcomplexio->read;
+
+# TODO DES
+    # Don't cache this transform, because these aren't real: 9abc and 9xyz
+    my $trans = SBG::STAMP::superpose(
+        $subcomplexasdom, $modelasdom, ('cache'=>0));
+    $subcomplexasdom->transform($trans);
+    return SBG::STAMP::gtransform(doms=>[$modelasdom, $subcomplexasdom]);
+
 
     # Run stamp, model is the query, subcomplex is the database
     my $just1 = 1; # Get the whole set of values back from the first scan
@@ -541,22 +569,14 @@ sub rmsd {
    foreach my $name (@cnames) {
        my $d1 = $self->model($name);
        my $d2 = $other->model($name);
+       # centre-based version
        $sqdistances->push($d1->sqdist($d2));
+       # crosshair-based version( list() converts PDL to Perl array)
+#        $sqdistances->push($d1->sqdev($d2)->list);
    }
    my $mean = $sqdistances->mean;
    return unless $mean;
    return sqrt($mean);
-}
-
-
-# TODO DES Doesn't belong in this class?
-
-sub hash {
-    my ($self) = @_;
-    my $doms = $self->models->values;
-    my $hashes = [ map { $_->hash } @$doms ];
-    $hashes = $hashes->sort;
-    return $hashes->join(' ');
 }
 
 
