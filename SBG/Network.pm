@@ -32,6 +32,7 @@ with 'SBG::Dumpable';
 use Carp;
 use File::Temp qw/tempfile/;
 use SBG::List qw/pairs/;
+use SBG::Log;
 
 use overload (
     '""' => '_asstring',
@@ -159,7 +160,12 @@ sub graphviz {
     my ($graph, $file) = @_;
 
     my $fh;
-    ($fh, $file) = tempfile(UNLINK=>0) unless $file;
+    if ($file) {
+        open($fh, ">$file") or
+            $logger->error("Cannot write to: ", $file, " ($!)");
+    } else {
+        ($fh, $file) = tempfile(UNLINK=>0);
+    }
     return unless $graph && $file;
 
     my $pdb = "http://www.rcsb.org/pdb/explore/explore.do?structureId=";
