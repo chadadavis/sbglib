@@ -381,7 +381,8 @@ sub min_rmsd {
 } # min_rmsd
 
 
-# Superpose a complex onto another
+# Superpose a complex onto another, using min_rmsd
+
 # Uses min_rmsd to find a suitable superposition into a common frame of ref.
 # Chains A,C,E, etc are the model ($self)
 # Chains B,D,F, etc are the comparison/benchmark ($other)
