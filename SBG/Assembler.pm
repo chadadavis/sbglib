@@ -97,7 +97,7 @@ sub sub_solution {
 
     # Flush console for fancy in-place printing
     local $| = 1;
-    my $sizeheader = join(' ', map { "\#$_: %3d"} sort keys %sizes);
+    my $sizeheader = join(' ', map { "\#${_}-mer %3d"} sort keys %sizes);
     printf 
         "\033[1K\r" . 
         "#Aborted %4d #Solutions %4d #Dups %4d #Unique %4d Size dist.: " .

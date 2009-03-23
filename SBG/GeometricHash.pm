@@ -244,7 +244,7 @@ If no model name is provided, generic class ID numbers will be created.
 
 =cut 
 sub put { 
-    my ($self,$modelid, $points, $labels) = @_;
+    my ($self, $modelid, $points, $labels) = @_;
     our $classid;
     $modelid ||= ++$classid;
 
