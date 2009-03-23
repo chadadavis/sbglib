@@ -6,18 +6,29 @@ SBG::Log - Logging setup
 
 =head1 SYNOPSIS
 
-use SBG::Log;
+ use SBG::Log;
+ # Without any initialisation, WARN and ERROR go to STDERR, others ignored
+ $logger->debug("x is: $x"); # not printed anywhere
+ $logger->error("cannot open: $file)"; # printed to STDERR
 
-To use the logging facility (L<Log::Log4perl>), just any of:
-
- $logger->trace("x is $x");
- $logger->debug("x is $x");
- $logger->info("x is $x");
- $logger->warn("x is $x");
- $logger->error("x is $x");
- $logger->fatal("x is $x");
+ # initialize logging. Default level is 'WARN', default file is './log.log'
+ SBG::Log::init('DEBUG', '/tmp/somewhere.log');
+ $logger->debug("x is: $x"); # Appended to /tmp/somewhere.log
+ $logger->trace("very detailed info"); # Not saved, since TRACE is higher 
+ $logger->error("bad things"); # Saved to logfile, but no longer to STDERR
 
 =head1 DESCRIPTION
+
+By default there is no logging. WARN and ERROR messages will just go to
+STDERR. When logging, WARN and ERROR and any other applicable messages all go to
+the log file.
+
+For a given level, all messages of higher severity are also logged. The list:
+
+ TRACE DEBUG INFO WARN ERROR FATAL
+
+E.g. when set to ERROR, only ERROR and FATAL get logged. When set to DEBUG,
+everything but TRACE gets logged. 
 
 NB There is negligible penalty for using the logging system when logging
 messages are not printed. I.e. logging slows down an application. But logging
@@ -35,53 +46,49 @@ L<Log::Log4perl>
 
 package SBG::Log;
 
-use Carp;
-use Data::Dumper;
-
-# Comment out just this one line to stop all logging
-use Log::Log4perl qw(:levels :resurrect);
-
-our $logger;
-# In order of increasing severity: $TRACE $DEBUG $INFO $WARN $ERROR $FATAL
-our $LEVEL = '$WARN';
-
 use base qw/Exporter/;
 our @EXPORT = qw($logger);
+
+use Carp;
+use Data::Dumper;
+use Log::Log4perl qw(:levels :resurrect);
+
+# No logging by default
+# WARN and ERRROR messages to STDERR, others ignored
+our $logger = bless {}, "SBG::_Dummy";
 
 
 ################################################################################
 
-# Change the log level
-sub level {
-    my ($level) = @_;
-    $LEVEL = $level;
-    $logger->level(eval $LEVEL);
-    $logger->info("Log level set to $LEVEL");
-}
 
+################################################################################
+=head2 init
 
-sub _init {
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
+
+In order of increasing severity: $TRACE $DEBUG $INFO $WARN $ERROR $FATAL
+
+=cut
+sub init {
+    my ($level, $logfile) = @_;
+    $level ||= 'WARN';
+    $logfile ||= 'log.log';
 
     # Initialize system logger
     $logger = Log::Log4perl->get_logger("sbg");
 
-    # Default logging level
-    $logger->level(eval $LEVEL);
+    # Default logging level 
+    $logger->level(eval '$' . $level);
     
     # Log appenders (i.e. where the logs get sent)
-    # Log file written in the working directory
-    my $logfile = 'log.log';
     my $appender = Log::Log4perl::Appender->
-        new("Log::Dispatch::File",
-            filename => $logfile,
-            mode => "append",
-            );
+        new("Log::Dispatch::File", filename => $logfile, mode => "append");
     
     # Define log format for appender
-    my $layout = Log::Log4perl::Layout::PatternLayout->
-#         new("%d %H $ENV{USER} PID:%P %5p> %M (%F{1}) Line: %L - %m%n");
-#         new("%5p %15F{1} %4L %-25M - %m%n");
-        new("%5p %-30M %m%n");
+    my $layout = Log::Log4perl::Layout::PatternLayout->new("%5p %-30M %m%n");
     # Set the layout of the appender
     $appender->layout($layout);
     # Register the appender with the logger
@@ -90,33 +97,27 @@ sub _init {
     # First log message is the banner
     $logger->debug("\n\n", "=" x 80);
 
+    return $logger;
 }
 
 
-BEGIN {
+################################################################################
 
-    # Only called when logging enabled
-###l4p if (1) { _init(); } else
-    {
-    warn "No logging\n";
-    # Otherwise make $logger a dummy object
-    $logger = bless {}, "SBG::_Dummy";
-    }
-}
-
-# Object of this class accept any method calls and always do nothing
 package SBG::_Dummy;
 use AutoLoader;
-# Error messages diverted to STDERR
+
+# warn/error messages diverted to STDERR
 # Any other level messages (e.g. $DEBUG, etc) just get ignored
 sub error {
     my $self = shift;
     return warn "@_\n";
 }
-sub warn {
-    my $self = shift;
-    return warn "@_\n";
-}
+sub warn { error(@_) }
+sub fatal { error(@_) }
+sub logwarn { error(@_) }
+sub error_warn { error(@_) }
+
+# Objects of this class accept any method calls and always do nothing.
 sub AUTOLOAD { return 1; }
 
 
