@@ -179,8 +179,9 @@ sub superpose_local {
     my ($from, $to) = @$ordered;
     my $trans = $from->transformation->relativeto($to->transformation);
 
-    # TODO DES bad style doing this here
+
     # Store the meta data directly in this object
+    # TODO DES bad style doing this here
     $trans->{$_} = $fields->{$_} for keys %$fields;
 
     # Set from's transformation to be the one that's relative to to's

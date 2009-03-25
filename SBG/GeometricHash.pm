@@ -34,7 +34,7 @@ class() is appropriate.
 1. Wolfson, H. & Rigoutsos, I. Geometric hashing: an overview. Computational
 Science & Engineering, IEEE 4, 10-21(1997).
 
-The interface is based on L<Moose::Autobox::Hash>
+The (incomplete) interface is based on L<Moose::Autobox::Hash>
 
        at
        put
@@ -161,7 +161,7 @@ sub exact {
  Function: 
  Example : 
  Returns : 
- Args    : $model a L<PDL::Matrix> of dimension nx3
+ Args    : $points an ArrayRef of L<PDL::Matrix>, each of dimension 1x3
 
 Returns a hash of votes for specific models.
 
@@ -207,7 +207,7 @@ sub _atkey {
 }
 
 
-# Make an array uniq (i.e. becomes a 'set'), by stringification
+# Make an array uniq (i.e. becomes a 'set'), by stringification (via hashing)
 sub _uniq { 
     my %h;
     $h{$_} = 1 for @_;

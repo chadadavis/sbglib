@@ -14,13 +14,15 @@ SBG::Traversal - A recursive back-tracking traversal of a L<Graph>
 =head1 DESCRIPTION
 
 Similar to BFS (breadth-first search), but specifically for multigraphs in which
-each the many edges between two nodes represent mutually exclusive alternatives.
+each of the many edges between two nodes represent mutually exclusive
+alternatives.
 
-The gist is, since we have multigraphs, an edge is not traversed one time, and
-edge is traversed as many times as possible. We rely on a callback function to
-tell us when to stop traversing a given edge. 
+The gist is, since we have multigraphs, an edge is not traversed one time,
+rather an edge is traversed as many times as possible, as long as alternatives
+on that edge remain. We rely on a callback function to tell us when to stop
+traversing a given edge.
 
-Works on Graph, but assumes that multiple edges are stored as attributes of a
+Works on L<Graph>, but assumes that multiple edges are stored as attributes of a
 single edge between unique nodes. This is the pattern used by
 L<Bio::Network::ProteinNet>. It does not strictly require
 L<Bio::Network::ProteinNet> but will work best in that case.
@@ -78,15 +80,9 @@ traversal. It is called as:
 
  my $success = $sub_test($stateclone, $graph, $src, $dest, $alt_edge_id);
 
-It should return: -1/0/1
-
- -1: Failed to traverse the edge this time, using the given edge alternative
-  0: Exhausted all possibilities for traversing this edge, on any alternative
- +1: Succeeded in traversing this edges, though other multiedges may remain
-
 =head3 B<$stateclone> 
 
-An optional HashRef that you may pass to L<traverse>. Otehrwise an empty HashRef
+An optional HashRef that you may pass to L<traverse>. Otherwise an empty HashRef
 is used for you to store any state information. This object is cloned as
 necessary during the traversal (i.e. rolling back state is automatic).
 
@@ -234,12 +230,14 @@ has 'rejects' => (
 );
 
 
+# Count solutions accepted by the callback function
 has 'asolutions' => (
     is => 'rw',
     isa => 'Int',
     default => 0,
 );
 
+# Count solutions rejected by the callback function
 has 'rsolutions' => (
     is => 'rw',
     isa => 'Int',
@@ -355,13 +353,13 @@ sub _do_edges {
     unless ($alt_id) {
         # No more unprocessed multiedges remain between these nodes: $src,$dest
         _d $d, "No more alternative edges for $src $dest";
-        # Try any other outstanding edges at this level first, though
+        # Try any other outstanding edges at this depth first, though
         $self->_do_edges($uf, $state, $d);
         return;
     }
 
     # As child nodes in traversal may change partial solutions, clone these
-    # This implicitly allow us to backtrack later if $sub_test() fails, etc
+    # This implicitly allows us to backtrack later if $sub_test() fails, etc
     my $stateclone = $state->clone();
 
     # Do we want to go ahead and traverse this edge?
@@ -373,7 +371,7 @@ sub _do_edges {
     # of the edges. Assumption is that multi-edges are incompatible. That's why
     # we wait until now to re-push them.
     $self->_edgeq->push($current);
-    # Go back to using the original state that we had before this alternative
+    # Go back to using the original $state that we had before this alternative
     $self->_do_edges($uf, $state, $d);
 } # _do_edges
 
