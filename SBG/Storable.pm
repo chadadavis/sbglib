@@ -27,7 +27,6 @@ package SBG::Storable;
 use Moose::Role;
 
 use Storable qw();
-use Carp;
 use Scalar::Util qw/blessed/;
 use Module::Load qw/load/;
 use Class::MOP::Class;

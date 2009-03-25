@@ -95,18 +95,20 @@ sub sub_solution {
         $success = 1;
     }
 
+    return unless $success;
+
     # Flush console for fancy in-place printing
     local $| = 1;
     my $sizeheader = join(' ', map { "\#${_}-mer %3d"} sort keys %sizes);
     printf 
         "\033[1K\r" . 
-        "#Aborted %4d #Solutions %4d #Dups %4d #Unique %4d Size dist.: " .
+        "#Aborted %5d #Solutions %5d #Dups %5d #Unique %5d Size dist.: " .
         "$sizeheader ", 
         $rejects, $solution, $dups, $classes,
         map { $sizes{$_} } sort keys %sizes,
         ;
 
-    return unless $success;
+
 
     $logger->debug("\n\n====== Class: $class Solution $solution\n",
                    "@$nodecover\n",

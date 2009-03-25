@@ -23,7 +23,6 @@ package SBG::Test;
 use base qw(Exporter);
 
 use feature 'say';
-use Carp;
 use Data::Dumper;
 use Test::More;
 

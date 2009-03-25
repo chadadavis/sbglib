@@ -26,7 +26,6 @@ our @EXPORT_OK = qw(pdb2scop lca equiv parse_scopid get_descriptor);
 
 use strict;
 use warnings;
-use Carp;
 use List::MoreUtils qw(each_arrayref all);
 
 

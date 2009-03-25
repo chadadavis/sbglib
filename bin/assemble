@@ -123,9 +123,9 @@ sub _print_net {
     $i ||= 1;
     $n ||= 1;
     printf 
-        "\tsubnetwork ( %d / %d ) \n" .
+#         "\tsubnetwork ( %d / %d ) \n" .
         "\t%4d nodes, %4d edges, %4d interactions ...\n",
-        $i, $n, 
+#         $i, $n, 
         scalar($net->vertices), scalar($net->edges), 
         scalar($net->interactions);
 }

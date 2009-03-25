@@ -68,7 +68,7 @@ sub _build_config {
     my ($self,$inifile) = @_;
     $inifile ||= _find_config();
     unless (-r $inifile) {
-        carp "No configuration: $inifile\n";
+        carp "Cannot read configuration: $inifile\n";
         return new Config::IniFiles;
     }
     return new Config::IniFiles(-file=>$inifile);

@@ -24,8 +24,6 @@ use Moose;
 
 with 'SBG::SearchI';
 
-use Carp;
-
 use SBG::InteractionIO;
 use SBG::Interaction;
 use SBG::Template;

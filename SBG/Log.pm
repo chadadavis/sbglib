@@ -49,8 +49,6 @@ package SBG::Log;
 use base qw/Exporter/;
 our @EXPORT = qw($logger);
 
-use Carp;
-use Data::Dumper;
 use Log::Log4perl qw(:levels :resurrect);
 
 # No logging by default
