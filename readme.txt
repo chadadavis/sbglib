@@ -1,6 +1,7 @@
 
 This repository houses code common to Bioinformatics-related developement in the SBG (Structural Bioinformatics Group) at EMBL.
 
+
 See (Intranet):
 http://www.russell.embl.de/private/wiki/index.php/libSBG
 
