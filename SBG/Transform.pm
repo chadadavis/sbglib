@@ -30,7 +30,6 @@ use Moose;
 with 'SBG::Storable';
 with 'SBG::Dumpable';
 
-use Carp;
 use PDL::Lite;
 use PDL::Core;
 use PDL::Matrix;
@@ -288,7 +287,7 @@ sub ascsv {
 =cut
 sub headers {
     my ($self) = @_;
-    return "" unless $self->_tainted;
+    return "\n" unless $self->_tainted;
     our @keys;
     my $str = '';
     $str .= join("\t", qw/% No/, @keys) . "\n";
@@ -315,7 +314,7 @@ sub _load {
     } elsif ($self->string) {
         $rasc = $self->_load_string();
     } else {
-        carp "Need either a 'string' or 'file' to load";
+        $logger->error("Need either a 'string' or 'file' to load");
     }
     return $self unless defined($rasc);
     # Put a 1 in the cell 3,3 (bottom right) for affine matrix multiplication
@@ -454,7 +453,7 @@ Matrix multiplication. Order of operations mattters.
 sub _mult {
     my ($self, $other) = @_;
     unless (ref($self) eq ref($other)) {
-        carp "Types differ: " . ref($self) . ' vs. ' . ref($other);
+        $logger->error("Types differ: " . ref($self) . ' vs. ' . ref($other));
         return;
     }
     # Don't waste time multiplying identities
