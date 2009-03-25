@@ -27,7 +27,6 @@ our @EXPORT_OK = qw/domains complex parse_scopid/;
 
 with 'SBG::SearchI';
 
-use Carp;
 use Text::ParseWords;
 
 use Bio::Seq;
@@ -206,7 +205,7 @@ sub _grep_db {
 sub parse_scopid {
     my ($longid) = @_;
     unless ($longid =~ /^(\d.{3})(.*?)\.(.*?)$/) {
-        carp("Couldn't parse SCOP ID: $longid");
+        $logger->error("Couldn't parse SCOP ID: $longid");
         return;
     }
     my ($pdbid, $chainid, $sccs) = ($1, $2, $3);
@@ -215,7 +214,7 @@ sub parse_scopid {
     # ("/data/pdb/2hz1.brk","2hz1A.a.1.1.1-1","A 2 _ to A 124 _")
     my $match = `zgrep $longid $scopdb`;
     unless ($match =~ /^(\S+) ($longid) { (.*?) }$/) {
-        carp "SCOP ID not found: $longid\n";
+        $logger->error("SCOP ID not found: $longid");
         return;
     }
     my ($file, $descriptor) = ($1, $3);

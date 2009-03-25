@@ -29,7 +29,6 @@ extends qw/Bio::Network::ProteinNet/;
 with 'SBG::Storable';
 with 'SBG::Dumpable';
 
-use Carp;
 use File::Temp qw/tempfile/;
 use SBG::List qw/pairs/;
 use SBG::Log;
@@ -133,7 +132,7 @@ TODO doc
 sub build {
     my ($self, $searcher) = @_;
     unless ($searcher && $searcher->does('SBG::SearchI')) {
-        carp "Need a SBG::SearchI to do the template search";
+        $logger->erorr("Need a SBG::SearchI to do the template search");
         return;
     }
     # For all pairs

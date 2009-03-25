@@ -25,7 +25,8 @@ use Moose;
 use Moose::Util::TypeConstraints;
 
 use SBG::Types;
-use Carp;
+use SBG::Log;
+
 use File::Temp;
 use IO::String;
 use IO::File;
@@ -104,7 +105,7 @@ sub BUILD {
     my $file = $self->file or return;
     $self->fh(new IO::File($file));
     unless ($self->fh) {
-        carp "Cannot open: $file";
+        $logger->error("Cannot open: $file");
         return;
     }
     # Clean file name

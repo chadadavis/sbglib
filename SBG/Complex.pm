@@ -36,7 +36,6 @@ use autobox ARRAY => 'SBG::List';
 
 
 use File::Temp qw/tempfile/;
-use Carp;
 
 use SBG::HashFields;
 use SBG::List qw/min union sum intersection/;
@@ -594,7 +593,7 @@ sub rasmol {
     my $rasmol = config()->val(qw/rasmol executable/) || 'rasmol';
     my $cmd = "$rasmol " . $self->gtransform;
     system($cmd) == 0 or
-        carp ("Failed: $cmd\n");
+        $logger->error("Failed: $cmd\n");
 }
 
 

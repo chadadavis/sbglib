@@ -31,7 +31,6 @@ package SBG::Run::cofm;
 use base qw/Exporter/;
 our @EXPORT_OK = qw/cofm/;
 
-use Carp;
 use Text::ParseWords;
 
 use SBG::Types qw/$re_chain $re_chain_id $re_ic $re_pos/;
@@ -71,7 +70,8 @@ sub cofm {
     $res = _run($pdbid, $descriptor) unless defined($res);
 
     unless ($res) {
-        carp "Cannot get centre-of-mass for ${pdbid} \{ ${descriptor} \}";
+        $logger->warn(
+            "Cannot get centre-of-mass for ${pdbid} \{ ${descriptor} \}");
         return;
     }
 
@@ -134,7 +134,7 @@ sub _run {
     my $cmd = "$cofm -f $path -v |";
     open my $cofmfh, $cmd;
     unless ($cofmfh) {
-        carp "Failed:\n\t$cmd\n\t$!";
+        $logger->error("Failed:\n\t$cmd\n\t$!");
         return;
     }
 
@@ -187,7 +187,7 @@ sub _spitdom {
     $io->write($dom);
     $io->close;
     unless (-s $path) {
-        carp "Failed to write Domain to tempfile: $path";
+        $logger->error("Failed to write Domain to tempfile: $path");
         return;
     }
     return $path;

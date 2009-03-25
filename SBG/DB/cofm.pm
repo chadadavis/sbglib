@@ -32,7 +32,7 @@ use PDL::Matrix;
 use DBI;
 
 use SBG::Config;
-
+use SBG::Log;
 
 ################################################################################
 =head2 query
@@ -83,11 +83,11 @@ sub query {
                                 "(entity.acc=?)"
         );
     unless ($cofm_sth) {
-        carp $dbh->errstr;
+        $logger->error($dbh->errstr);
         return;
     }
     if (! $cofm_sth->execute($pdbstr)) {
-        carp $cofm_sth->errstr;
+        $logger->error($cofm_sth->errstr);
         return;
     }
     # (Cx, Cy, Cz, Rg, Rmax, description, file, descriptor);

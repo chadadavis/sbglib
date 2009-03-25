@@ -54,12 +54,12 @@ use Moose;
 
 extends 'SBG::IO';
 
-use Carp;
 use Module::Load;
 
 use SBG::Types qw/$re_pdb $re_descriptor/;
 use SBG::Domain;
 use SBG::Transform;
+use SBG::Log;
 
 ################################################################################
 # Accessors
@@ -149,7 +149,7 @@ override 'read' => sub {
         # Create/parse new domain header, May not always have a file name
         unless ($line =~ 
                 /^(\S*)\s+($re_pdb)(\S*)\s*\{\s*($re_descriptor)(\s*\})?\s*$/) {
-            carp("Cannot parse:$line:");
+            $logger->error("Cannot parse:$line:");
             return;
         }
 
@@ -196,7 +196,7 @@ sub _read_trans {
     my $fh = $self->fh or return;
     my $transstr;
     while (<$fh>) {
-        # No chomp, keep this as CSV formatted text
+        # No homp, keep this as CSV formatted text
 #         chomp;
         # Comments and blank lines
         next if /^\s*\%/;
