@@ -41,7 +41,9 @@ our @EXPORT = qw(hashfield);
  Returns : 
  Args    :
 
-Creates a method to access a dynamically-created hash in your class
+Creates a method to access a dynamically-created hash in your class. The hash is
+one-dimensional.
+
 E.g. in the body of your class:
 Allows you to then:
 my $obj = new MyClass(); 
