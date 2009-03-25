@@ -4,7 +4,9 @@ use Test::More 'no_plan';
 use feature 'say';
 use SBG::Run::cofm qw/cofm/;
 use SBG::Test qw/float_is/;
+use Data::Dumper;
 $, = ' ';
+
 
 # Precision
 my $prec = 4;
@@ -17,9 +19,6 @@ $res = _test1('2nn6', "A 50 _ to A 120 _",
 $res = _test1('2frq', 'B 100 _ to B 131 A B 150 _ to B 155 B', 
               70.445, 30.823, 55.482, 17.395, 26.443);
 
-my $m = SBG::Run::cofm::_atom2pdl($res->{'description'});
-
-print $m;
 
 TODO: {
     local $TODO;
@@ -37,10 +36,7 @@ sub _test1 {
     float_is($res->{Cz}, $tz, $prec);
     float_is($res->{Rg}, $trg, $prec);
     float_is($res->{Rmax}, $trmax, $prec);
-    is($res->{descriptor}, $descriptor, 'descriptor');
     ok($res->{file}, "File defined: $file");
-    my @atomlines = $res->{'description'} =~ /^ATOM/gm;
-    is(scalar(@atomlines), 7, "7 Points: CofM,X+/-5,Y+/-5,Z+/-5");
     return $res;
 }
 

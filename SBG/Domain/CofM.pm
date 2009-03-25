@@ -18,8 +18,7 @@ The C-alphas of Alanine residues,
 3: Z+5 , Z-5
 
 Using affine transforms, it's straight-forward to transform all 7 CA atoms from
-the seven Alanine residues in one matrix multiplication. The coordinate matrix
-simply has to be transposed first, then multiplied by the Transform.
+the seven Alanine residues in one matrix multiplication. 
 
 =head1 SEE ALSO
 
@@ -34,7 +33,6 @@ use Moose;
 use MooseX::StrictConstructor;
 use Moose::Util::TypeConstraints;
 
-
 extends 'SBG::Domain';
 
 with qw(SBG::Storable);
@@ -47,12 +45,14 @@ use overload (
     fallback => 1,
     );
 
-use Carp qw/cluck/;
+use IO::String;
 use PDL::Lite;
 use PDL::Core qw/list/;
 use PDL::Ufunc; # for sumover()
 use PDL::Math;
 use PDL::Matrix;
+use PDL::NiceSlice;
+
 use Math::Trig qw(:pi);
 # List::Util::min conflicts with PDL::min Must be fully qualified to use
 use List::Util; # qw(min); 
@@ -76,8 +76,6 @@ coerce 'PDL3'
     => from 'ArrayRef' => via { mpdl(@$_, 1)->transpose }
     => from 'Str' => via { mpdl((split)[0..2], 1)->transpose };
 
-# TODO, use 7pt centre-of-mass
-# subtype 'PDL7x3' => as 'PDL::Matrix';
 
 
 =head2 centre
@@ -99,6 +97,17 @@ has 'centre' => (
     coerce => 1,
     required => 1,
     default => sub { [0,0,0] },
+    );
+
+
+=head2 matrix
+
+For saving cross-hair atoms around centre-of-mass
+
+=cut
+has 'matrix' => (
+    is => 'rw',
+    isa => 'PDL::Matrix',
     );
 
 
@@ -136,14 +145,9 @@ has 'radius_type' => (
 # Public methods
 
 
-sub BUILD {
-    my ($self) = @_;
-    $self->load;
-}
-
 
 ################################################################################
-=head2 load
+=head2 BUILD
 
  Function: load centre-of-mass data into object, 
  Example :
@@ -152,15 +156,18 @@ sub BUILD {
 
 
 =cut
-sub load {
+sub BUILD {
     my ($self,@args) = @_;
     return unless $self->pdbid && $self->descriptor;
 
-    my $res = cofm($self->pdbid, $self->descriptor) or return;
+    my $res = SBG::Run::cofm::cofm($self->pdbid, $self->descriptor) or return;
 
     # Fetch the radius according to the type chosen, then update radius attr
     $self->radius($res->{ $self->radius_type });
     $self->centre( [ $res->{Cx}, $res->{Cy}, $res->{Cz} ] );
+
+# TODO DES don't actually need this yet
+#     $self->matrix(_crosshairs($self->centre));
 
 } # load
 
@@ -168,16 +175,47 @@ sub load {
 ################################################################################
 =head2 rmsd
 
- Function: 
+ Function: Alias to L<dist>
  Example : 
  Returns : 
  Args    : 
 
-
+Each column of matrix is a point in 3D
 =cut
 sub rmsd {
-    return dist(@_);
+    my ($self, $other) = @_;
+
+    # Single-point (cofm) version
+    return sqrt($self->sqdist($other));
+
+    # Vector of (squared) distances between the corresponding 7 points
+#     my $sqdistances = $self->sqdev($other);
+#     return sqrt(average($sqdistances));
+
 }
+
+################################################################################
+=head2 sqdev
+
+ Function: Squared deviation(s) between points of one object vs those of another
+ Example : 
+ Returns : L<PDL::Matrix> vector of length N, if each object has N points
+ Args    : 
+
+NB if you want this as regular Perl array, do ->list() on the result:
+
+ my $sq_deviations = $dom->sqdev($otherdom);
+ my @array = $sq_deviations->list();
+
+=cut
+sub sqdev {
+    my ($self, $other) = @_;
+
+    # Vector of (squared) distances between the corresponding points
+    return sumover(($self->matrix - $other->matrix)**2);
+
+} # sqdev
+
 
 
 ################################################################################
@@ -220,7 +258,7 @@ sub sqdist {
     my $otherc = $other->centre;
     return unless $selfc->dims == $otherc->dims;
     $logger->trace("$self - $other");
-    # Vector diff
+    # Element-wise diff
     my $diff = $selfc - $otherc;
     my $squared = $diff ** 2;
     # Squeezing allows this to work either on column or row vectors
@@ -250,9 +288,13 @@ NB This needs to be a column vector, to be transformed, otherwise, use transpose
 =cut
 override 'transform' => sub {
     my ($self, $newtrans) = @_;
-    return $self unless defined($newtrans) && defined($self->centre);
+    return $self unless 
+        defined($newtrans) && defined($self->centre);
 
     $self->centre($newtrans->transform($self->centre));
+
+# Don't need to maintain this, only relevant when relative to true structure
+#     $self->matrix($newtrans->transform($self->matrix));
 
     # Update cumulative transformation. Managed by parent
     super();
@@ -290,8 +332,6 @@ sub overlap {
 
     my $diff = $sum_radii - $dist;
     $logger->debug("$diff overlap on ($self) and ($other)");
-
-
 
     return $diff;
 }
@@ -345,11 +385,10 @@ To what extent is $self a good approximation/representation of $obj.
 =cut
 sub evaluate {
     my ($self,$obj) = @_;
-
     my $minradius = List::Util::min($self->radius(), $obj->radius());
+    return unless $minradius;
     my $overlapfrac = 
         $self->overlap($obj) / (2 * $minradius);
-
     return $overlapfrac;
 
 } # evaluate
@@ -373,25 +412,6 @@ sub asarray {
     # Remove the trailing '1' used for homogenous coords.
     pop @a;
     return @a;
-}
-
-
-################################################################################
-=head2 hash
-
- Function: 
- Example : 
- Returns : 
- Args    : 
-
-
-=cut
-sub hash {
-    my ($self, $prec) = @_;
-    $prec = 0 unless defined $prec;
-    my @a = $self->asarray;
-    return sprintf("%.${prec}f %.${prec}f %.${prec}f", @a);
-
 }
 
 
@@ -436,6 +456,70 @@ override '_equal' => sub {
     return 0 unless all($self->centre == $other->centre);
     return 1;
 };
+
+
+################################################################################
+=head2 _atom2pdl
+
+ Function: 
+ Example : 
+ Returns : L<PDL::Matrix> of dim Nx4. Fourth is all '1' for homogenous coords
+ Args    : 
+
+Parses ATOM lines and converts to nx3-dimensional L<PDL::Matrix>
+
+Any lines not beginning wth ATOM are skipped.
+
+E.g.:
+
+ ATOM      0  CA  ALA Z   0   80.861  12.451 122.080  1.00 10.00
+ ATOM      1  CA  ALA Z   1   85.861  12.451 122.080  1.00 10.00
+ ATOM      1  CA  ALA Z   1   75.861  12.451 122.080  1.00 10.00
+ ATOM      2  CA  ALA Z   2   80.861  17.451 122.080  1.00 10.00
+ ATOM      2  CA  ALA Z   2   80.861   7.451 122.080  1.00 10.00
+ ATOM      3  CA  ALA Z   3   80.861  12.451 127.080  1.00 10.00
+ ATOM      3  CA  ALA Z   3   80.861  12.451 117.080  1.00 10.00
+
+31 - 38      Real(8.3)     x       Orthogonal coordinates for X in Angstroms.
+39 - 46      Real(8.3)     y       Orthogonal coordinates for Y in Angstroms.
+47 - 54      Real(8.3)     z       Orthogonal coordinates for Z in Angstroms.
+
+=cut
+sub _atom2pdl {
+    my ($atomstr) = @_;
+    my $io = new IO::String($atomstr);
+    my @mat;
+    for (my $i = 0; <$io>; $i++) {
+        next unless /^ATOM/;
+        my $str = $_;
+        # Columns 31,39,47 tsore the 8-char coords (not necessarily separated)
+        # substr() is 0-based
+        my @xyz = map { substr($str,$_,8) } (30,38,46);
+        # Append array with an arrayref of X,Y,Z fields (plus 1, homogenous)
+        push @mat, [ @xyz, 1 ];
+    }
+    # Put points in columns
+    return mpdl(@mat)->transpose;
+}
+
+
+sub _crosshairs {
+    my ($centre) = @_;
+    my $size = 5;
+    # The fourth dimension is for homogenous coordinates
+    # Since $centre is already homogenous, the resulting matrix will be too
+    my $x = mpdl($size,0,0,0)->transpose;
+    my $y = mpdl(0,$size,0,0)->transpose;
+    my $z = mpdl(0,0,$size,0)->transpose;
+    my $matrix = mpdl($centre, 
+                      $centre+$x, $centre-$x,
+                      $centre+$y, $centre-$y,
+                      $centre+$z, $centre-$z,
+        );
+    # Don't need to transpose here, as these are already column vectors.
+    # Just squeeze to remove extraneous dimensions
+    return $matrix->squeeze;
+}
 
 
 
