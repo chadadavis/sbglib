@@ -13,6 +13,10 @@ sbg myfile.stor <object-method> <parameters> ...
 
 =head1 OPTIONS
 
+=head2 -k
+
+Keep all temporary files, for debugging
+
 =head2 -h 
 
 Print this help page
@@ -29,6 +33,7 @@ L<SBG::Storable>
 use Getopt::Long;
 use Pod::Usage;
 
+use File::Temp;
 use Scalar::Util qw/blessed/;
 
 use SBG::Storable qw/module_for retrieve can_do/;
@@ -42,11 +47,14 @@ my %ops;
 my $result = GetOptions(\%ops, 
                         'l|log=s',
                         'h|help',
+                        'k|keep',
     );
 my ($file,$method,@args) = @ARGV;
 $file or pod2usage(-exitval=>2);
 
 SBG::Log::init($ops{'l'}) if $ops{'l'};
+$File::Temp::KEEP_ALL = 1 if $ops{'k'};
+
 
 my $obj = retrieve($file);
 
