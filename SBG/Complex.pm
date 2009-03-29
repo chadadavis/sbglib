@@ -589,23 +589,56 @@ sub rmsd {
 }
 
 
-# Transform domains saved in this complex to a PDB file
-# See L<SBG::STAMP::gtransform>
+################################################################################
+=head2 gtransform
+
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
+
+Transform domains saved in this complex to a PDB file
+
+See L<SBG::STAMP::gtransform>
+
+=cut
 sub gtransform {
     my ($self, %ops) = @_;
     SBG::STAMP::gtransform(doms=>$self->models->values, %ops);
 }
 
 
+################################################################################
+=head2 rasmol
+
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
+
+If no file is provided, a temporary file is created and returned
+
+=cut
 sub rasmol {
-    my ($self) = @_;
+    my ($self, $file) = @_;
     my $rasmol = config()->val(qw/rasmol executable/) || 'rasmol';
-    my $cmd = "$rasmol " . $self->gtransform;
+    my $cmd = "$rasmol " . $self->gtransform(out=>$file);
     system($cmd) == 0 or
         $logger->error("Failed: $cmd\n");
 }
 
 
+
+################################################################################
+=head2 asstamp
+
+ Function: Returns the STAMP representation of all domains as a string
+ Example : 
+ Returns : 
+ Args    : 
+
+
+=cut
 sub asstamp {
     my ($self) = @_;
     my $str;
