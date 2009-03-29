@@ -54,6 +54,7 @@ use overload (
     fallback => 1,
     );
 
+our $tmpdir = config->val(qw/tmp tmpdir/) || $ENV{TMPDIR} || '/tmp';
 
 ################################################################################
 # Fields and accessors
@@ -460,6 +461,7 @@ other.
 =cut
 sub complexrmsd {
     my ($model, $truth) = @_;
+    our $tmpdir;
 
     # Subset $truth . Only consider common components
     my @cnames = intersection([$model->names], [$truth->names]);
@@ -467,23 +469,29 @@ sub complexrmsd {
     # Take the original doms from the native complex, if correspondance in model
     $subcomplex->model($_, $truth->model($_)) for @cnames;
 
-# TODO DES Just use the whole true complex, in case component names are different
+    # Just use the whole true complex, in case component names are different
     $subcomplex = $truth;
 
     $logger->debug($model->names->length, " and ", $truth->names->length,
                    " components. ", scalar(@cnames), " in common");
 
     # transform -g both into single PDB files
-    my $modelpdb = $model->gtransform;
-    my $subcomplexpdb = $subcomplex->gtransform;
+    my $modelpdbio = new File::Temp(DIR=>$tmpdir);
+    my $modelpdb = $model->gtransform(out=>$modelpdbio->filename);
+    my $subcomplexpdbio = new File::Temp(DIR=>$tmpdir);
+    my $subcomplexpdb = $subcomplex->gtransform(out=>$subcomplexpdbio->filename);
 
     # Create two domain files, with descriptor { ALL }
-    my ($model_fh, $model_dom) = tempfile;
+    my $model_fh = new File::Temp(
+        "complexrmsdXXXX", DIR=>$tmpdir, SUFFIX=>'.dom');
+    my $model_dom = $model_fh->filename;
     print $model_fh "$modelpdb 9abc-model { ALL }\n";
-    close $model_fh;
-    my ($subcomplex_fh, $subcomplex_dom) = tempfile;
+    $model_fh->flush;
+    my $subcomplex_fh = new File::Temp(
+        "complexrmsdXXXX", DIR=>$tmpdir, SUFFIX=>'.dom');
+    my $subcomplex_dom = $subcomplex_fh->filename;
     print $subcomplex_fh "$subcomplexpdb 9xyz-subcomplex { ALL }\n";
-    close $subcomplex_fh;
+    $subcomplex_fh->flush;
 
     my $modelio = SBG::DomainIO->new(
         file=>$model_dom, type=>'SBG::Domain');
@@ -497,7 +505,8 @@ sub complexrmsd {
     my $trans = SBG::STAMP::superpose(
         $subcomplexasdom, $modelasdom, ('cache'=>0));
     $subcomplexasdom->transform($trans);
-    return SBG::STAMP::gtransform(doms=>[$modelasdom, $subcomplexasdom]);
+    return SBG::STAMP::gtransform(
+        doms=>[$modelasdom, $subcomplexasdom], out=>'transformed.pdb');
 
 
     # Run stamp, model is the query, subcomplex is the database
@@ -583,8 +592,8 @@ sub rmsd {
 # Transform domains saved in this complex to a PDB file
 # See L<SBG::STAMP::gtransform>
 sub gtransform {
-    my ($self) = @_;
-    SBG::STAMP::gtransform(doms=>$self->models->values);
+    my ($self, %ops) = @_;
+    SBG::STAMP::gtransform(doms=>$self->models->values, %ops);
 }
 
 

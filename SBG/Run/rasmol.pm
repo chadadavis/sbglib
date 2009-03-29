@@ -53,7 +53,7 @@ Set this in the config.ini
 sub pdb2img {
     my (%o) = @_;
     $o{pdb} or return;
-    (undef, $o{img}) = tempfile(SUFFIX=>'.ppm') unless $o{img};
+    $o{img} = $o{pdb} . '.ppm' unless $o{img};
     $logger->trace("$o{pdb} => $o{img}");
     my $rasmol = val(qw/rasmol executable/) || 'rasmol';
     my $fh;

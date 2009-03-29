@@ -59,9 +59,13 @@ foreach my $subnet (@$subnets) {
     say "Subnet:$subnet";
 }
 
+my $subnet = $subnets->[0];
+my $dotfile = $subnet->graphviz();
+ok(-s $dotfile, "graphviz: $dotfile");
+`dot -Tpng $dotfile | display`;
+
 
 __END__
 
-# TODO
 
 

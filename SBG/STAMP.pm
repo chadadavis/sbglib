@@ -47,10 +47,12 @@ use SBG::Log;
 
 # TODO use Cache::FileCache
 our $cachedir;
+our $tmpdir;
 
 BEGIN {
 
-    $cachedir = val(qw/stamp cache/) || "/tmp/stampcache";
+    $tmpdir = val(qw/tmp tmpdir/) || $ENV{TMPDIR} || '/tmp';
+    $cachedir = val(qw/stamp cache/) || "$tmpdir/stampcache";
     mkdir $cachedir;
     $logger->debug("STAMP cache: $cachedir");
 
@@ -71,17 +73,21 @@ BEGIN {
 =cut
 sub gtransform {
     my (%o) = @_;
-    my $doms = $o{doms};
-    # Input file (domains/transformations)
+    our $tmpdir;
+    my $ioin;
+    # If no input domain file given, process given domains
     unless ($o{in}) {
+        my $doms = $o{doms};
         $logger->debug("transform'ing domains: @$doms");
         return unless @$doms;
-        (undef, $o{in}) = tempfile;
-        my $io = new SBG::DomainIO(file=>">$o{in}");
-        $io->write($_) for @$doms;
+        $ioin = new SBG::DomainIO(tempfile=>1);
+        $ioin->write($_) for @$doms;
     }
+    $o{in} = $ioin->file;
     # Output PDB file
-    (undef, $o{out}) = tempfile(UNLINK=>0) unless $o{out};
+    my $ioout = new File::Temp(
+        TEMPLATE=>'transform_XXXXX', DIR=>$tmpdir, SUFFIX=>'.pdb') unless $o{out};
+    $o{out} ||= $ioout->filename;
     $logger->trace("Complex DOM file: $o{in}");
     $logger->trace("Complex PDB file: $o{out}");
     my $cmd = "transform -f $o{in} -g -o $o{out} >/dev/null";
@@ -142,7 +148,7 @@ sub superpose {
     }
 
     # Otherwise, try locally
-    return superpose_local($fromdom, $ontodom);
+    return superpose_local($fromdom, $ontodom, %ops);
 
 } # superpose
 
@@ -158,7 +164,8 @@ sub superpose {
 
 =cut
 sub superpose_local {
-    my ($fromdom, $ontodom) = @_;
+    my ($fromdom, $ontodom, %ops) = @_;
+    $ops{'cache'} = 1 unless defined $ops{'cache'};
     $logger->trace("$fromdom onto $ontodom");
 
     my ($doms, $fields) = do_stamp($fromdom, $ontodom);
@@ -191,7 +198,7 @@ sub superpose_local {
     $logger->debug("Transformation: ", $fromdom->id, ' ', $ontodom->id, "\n$trans");    
 
     # Positive cache
-    cachepos($from, $to);
+    cachepos($from, $to) if $ops{'cache'};
     return $trans;
 
 } # superpose_local
@@ -351,6 +358,8 @@ sub do_stamp {
     my $keep;
     # The STAMP scores
     my $fields;
+    # Temp prefix for scan file
+    my $tp;
 
     # While there are domains not-yet-tried
     while (keys(%tried) < @dom_ids && keys(%current) < @dom_ids) {
@@ -361,14 +370,14 @@ sub do_stamp {
         $tried{$probe}=1;
 
         # Write probe domain to file
-        my (undef, $tmp_probe) = tempfile();
-        my $ioprobe = new SBG::DomainIO(file=>">$tmp_probe");
+        my $ioprobe = new SBG::DomainIO(tempfile=>1);
+        my $tmp_probe = $ioprobe->file;
         $ioprobe->write($domains{$probe}, trans=>0);
         $ioprobe->close;
         $logger->debug("probe:$probe");
         # Write other domains to single file
-        my (undef, $tmp_doms) = tempfile();
-        my $iodoms = new SBG::DomainIO(file=>">$tmp_doms");
+        my $iodoms = new SBG::DomainIO(tempfile=>1);
+        my $tmp_doms = $iodoms->file;
         foreach my $dom (@dom_ids) {
             if((!defined($current{$dom})) && ($dom ne $probe)) {
                 $iodoms->write($domains{$dom}, trans=>0);
@@ -379,12 +388,13 @@ sub do_stamp {
         $iodoms->close;
         # Run stamp and add %keep to %current
         # TODO DES Need to get more data back from stamp() here
-        ($keep, $fields) = stamp($tmp_probe, $tmp_doms);
+        ($keep, $fields, $tp) = stamp($tmp_probe, $tmp_doms);
         $current{$_} = 1 for keys %$keep;
 
         # Sort transformations, if there were any
         my @keep_doms;
-        @keep_doms = sorttrans($keep) if keys(%$keep);
+        @keep_doms = sorttrans($keep, prefix=>$tp) if keys(%$keep);
+        unlink "${tp}.scan" unless $File::Temp::KEEP_ALL;
         # Unless this only contains the probe, results are useful
         unless ( @keep_doms == 1 && $keep_doms[0]->id eq $probe ) {
             push @all_doms, @keep_doms;
@@ -443,9 +453,11 @@ sub stamp {
     my ($tmp_probe, $tmp_doms, $just1) = @_;
     our $com;
     $com ||= _stamp_config();
+    my $tp = _tmp_prefix();
     $com .= join(' ', ' ',
-        "-l $tmp_probe",  # probe (i.e. query) sequence
-        "-d $tmp_doms",   # database domains
+                 "-l $tmp_probe",  # probe (i.e. query) sequence
+                 "-d $tmp_doms",   # database domains
+                 "-prefix", $tp->filename, # tmp path to scan file (prefix.scan)
         );
 
     $logger->trace("\n$com");
@@ -488,7 +500,7 @@ sub stamp {
 
         return \%fields if $just1;
     }
-    return \%KEEP, \%fields;
+    return \%KEEP, \%fields, $tp;
 } # stamp
 
 
@@ -500,8 +512,6 @@ sub _stamp_config {
     my $minfit = val('stamp', 'minfit') || 30;
     # Min Sc value to accept
     my $scancut = val('stamp', 'scancut') || 2.0;
-    # Temporary output file prefix
-    my $tmp_prefix = val('stamp', 'prefix') || 'stamp_trans';
 
     my $stamp_pars = val('stamp', 'params') || join(' ',
         '-n 2',         # number of fits 
@@ -514,12 +524,19 @@ sub _stamp_config {
     $stamp_pars .= join(' ', ' ',
         "-minfit $minfit",
         "-scancut $scancut", 
-        "-prefix $tmp_prefix", # output scan file prefix
         );
 
     my $com = "$stamp $stamp_pars";
     $logger->trace("\n$com");
     return $com;
+}
+
+
+# tempfile unlinked when object leaves scope (garbage collected)
+sub _tmp_prefix {
+    our $tmpdir;
+    my $tmp = new File::Temp(TEMPLATE=>"scan_XXXXX", DIR=>$tmpdir);
+    return $tmp;
 }
 
 
@@ -540,11 +557,11 @@ sub sorttrans {
     my ($KEEP, %o) = @_;
     $o{sort} ||= 'Sc';
     $o{cutoff} ||= 0.5;
+    $o{prefix} ||= 'stamp_trans';
     $logger->trace("keep:" . join(' ',keys(%$KEEP)) . " $o{sort}:$o{cutoff}");
-    my $tmp_prefix = val('stamp', 'prefix') || 'stamp_trans';
-    # File containing STAMP scan results
-    my $tmp_scan = "${tmp_prefix}.scan";
 
+    # File containing STAMP scan results
+    my $tmp_scan = "$o{prefix}.scan";
     my $sorttrans = val("stamp", "sorttrans") || 'sorttrans';
     my $params = "-i";
     my $com = join(' ', 
@@ -566,7 +583,6 @@ sub sorttrans {
         push(@doms, $d);
     }
     $io->close;
-    unlink $tmp_scan;
     $logger->trace("Re-read domains:@doms");
 
     my @theids  = map { $_->id } @doms;
@@ -631,7 +647,8 @@ Depending on the configuration of STAMP, domains may be searched in PQS first.
 sub pdbc {
     my $str = join("", @_);
     return unless $str;
-    my (undef, $path) = tempfile();
+    my $io = new SBG::DomainIO(tempfile=>1);
+    my $path = $io->file;
     my $cmd;
     $cmd = "pdbc -d $str > ${path}";
     $logger->trace($cmd);
@@ -642,7 +659,7 @@ sub pdbc {
         $logger->error("Failed:\n\t$cmd\n\t$!");
         return 0;
     }
-    return new SBG::DomainIO(file=>"<$path");
+    return $io;
 
 } # pdbc
 

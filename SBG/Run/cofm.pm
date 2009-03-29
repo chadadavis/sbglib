@@ -38,7 +38,7 @@ use SBG::DB::cofm;
 use SBG::Config qw/val/;
 use SBG::Domain;
 use SBG::DomainIO;
-
+use SBG::Log;
 
 ################################################################################
 =head2 cofm
@@ -127,7 +127,8 @@ sub _run {
     my ($pdbid, $descriptor) = @_;
     return unless $pdbid && $descriptor;
     # Get dom into a stamp-formatted file
-    my $path = _spitdom($pdbid, $descriptor) or return;
+    my $io = _spitdom($pdbid, $descriptor) or return;
+    my $path = $io->file;
 
     # NB the -v option is necessary if you want the filename of the PDB file
     my $cofm = val(qw/cofm executable/) || 'cofm';
@@ -183,14 +184,14 @@ sub _spitdom {
     my ($pdbid, $descriptor) = @_;
     my $dom = new SBG::Domain(pdbid=>$pdbid,descriptor=>$descriptor);
     my $io = new SBG::DomainIO(tempfile=>1);
-    my $path = $io->file;
     $io->write($dom);
     $io->close;
+    my $path = $io->file;
     unless (-s $path) {
-        $logger->error("Failed to write Domain to tempfile: $path");
+        $logger->error("Failed to write Domain to: $path");
         return;
     }
-    return $path;
+    return $io;
 }
 
 

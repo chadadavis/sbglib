@@ -5,6 +5,8 @@ use SBG::Test 'float_is';
 use feature 'say';
 use Carp;
 use Data::Dumper;
+use File::Temp;
+$File::Temp::KEEP_ALL = 1;
 $, = ' ';
 
 use SBG::STAMP qw/pdbc superpose gtransform/;
@@ -12,6 +14,7 @@ use SBG::Domain;
 use SBG::DomainIO;
 use SBG::Domain::CofM;
 use List::MoreUtils qw(first_index);
+
 
 
 # TODO test do_stamp alone (i.e. on a family of domains)

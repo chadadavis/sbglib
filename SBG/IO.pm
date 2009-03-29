@@ -26,6 +26,7 @@ use Moose::Util::TypeConstraints;
 
 use SBG::Types;
 use SBG::Log;
+use SBG::Config qw/config/;
 
 use File::Temp;
 use IO::String;
@@ -36,10 +37,12 @@ use IO::File;
 
 =head2 fh
 
+Needs to be a file handle, e.g. L<IO::String>, L<File::Temp>, or any native Perl
+file handle.
+
 =cut
 has 'fh' => (
     is => 'rw',
-    isa => 'Maybe[FileHandle]',
     handles => [qw/flush close/],
     );
 
@@ -71,10 +74,7 @@ Use L<file> to later fetch the name of the created file
 has 'tempfile' => (
     is => 'rw',
     isa => 'Bool',
-    trigger => sub { 
-        my(undef, $f) = File::Temp::tempfile(); 
-        (shift)->file(">$f")
-    },
+    trigger => \&_tempfile,
     );
 
 
@@ -102,13 +102,15 @@ has 'string' => (
 =cut
 sub BUILD {
     my ($self) = @_;
+    return if $self->fh;
     my $file = $self->file or return;
+    # $file should contain mode characters here still
     $self->fh(new IO::File($file));
     unless ($self->fh) {
         $logger->error("Cannot open: $file");
         return;
     }
-    # Clean file name
+    # Clean mode characters from beginning of file name before saving
     $file =~ s/^[+<>]*//g;
     $self->file($file);
     return $self;
@@ -171,6 +173,32 @@ sub write {
     print $fh @a;
     return $self;
 } # write
+
+
+
+################################################################################
+=head2 _tempfile
+
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
+
+
+=cut
+sub _tempfile {
+    my ($self,) = @_;
+
+    my $tmpdir = config->val(qw/tmp tmpdir/) || $ENV{TMPDIR} || '/tmp';
+    my $tfile= new File::Temp(DIR=>$tmpdir);
+
+    $self->fh($tfile);
+    $self->file($self->fh()->filename);
+    # Save a reference to the object so that it doesn't go out of scope
+    $self->{'_fh'} = $tfile;
+    $logger->trace($self->file);
+    return $self;
+} # _tempfile
 
 
 ################################################################################

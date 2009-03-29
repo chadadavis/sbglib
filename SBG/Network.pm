@@ -157,15 +157,11 @@ sub build {
 # TODO options? Can GraphViz module still be used to parse these out?
 sub graphviz {
     my ($graph, $file) = @_;
-
+    $file ||= 'graph.dot';
     my $fh;
-    if ($file) {
-        open($fh, ">$file") or
-            $logger->error("Cannot write to: ", $file, " ($!)");
-    } else {
-        ($fh, $file) = tempfile(UNLINK=>0);
-    }
-    return unless $graph && $file;
+    open $fh, ">$file" or 
+        $logger->error("Cannot write to: ", $file, " ($!)");
+    return unless $graph && $fh;
 
     my $pdb = "http://www.rcsb.org/pdb/explore/explore.do?structureId=";
 
