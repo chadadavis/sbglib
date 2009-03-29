@@ -33,58 +33,151 @@ The (incomplete) interface is based on L<Moose::Autobox::Hash>
        exists
        keys
        values
-       kv
-       slice
-       meta
+       delete
 
 =cut
 
 ################################################################################
 
 package SBG::PointHash;
+use Moose;
+
+# use Moose::Autobox;
+with 'Moose::Autobox::Hash';
 
 
 use Math::Round qw/nearest/;
 
-use SBG::HashFields;
+=head 2
 
-=head2 pt
+B<cellsize> defines the resolution of the points in 3D space
 
-HashRef field. Stores stringified points
 =cut
-hashfield 'pt', 'pts';
+has 'cellsize' => (
+    is => 'ro',
+    isa => 'Num',
+    default => 1,
+    );
 
+# 
+has '_hash' => (
+    is => 'ro',
+    isa => 'HashRef',
+    default => sub { {} },
+    );
+
+
+1;
+
+__END__
 
 ################################################################################
 # Public
 
 
+
+
+
 ################################################################################
-=head2 new
+=head2 put
 
  Function: 
  Example : 
  Returns : 
  Args    : 
 
-_gh is a hash of ArrayRef
+# TODO FET allow point to have a size. When larger than cell size, occupies
+# neighboring cells as well
 
 =cut
-sub new {
-    my ($class, %self) = @_;
-    my $self = { %self };
-    bless $self, $class;
-    $self->{_hash} ||= {};
-    $self->{binsize} ||= 1;
-    return $self;
-}
+sub put {
+    my ($self,$coords,$val,%ops) = @_;
+    $val = 1 unless defined $val;
+    $coords = $self->_round($coords);
+    warn "coords: @$coords\n";
+    $self->_hash->{"@$coords"} = $val;
 
-
-
-
-
+} # put
 
 
 ################################################################################
+=head2 at
+
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
+
+
+=cut
+sub at {
+    my ($self,$coords) = @_;
+    $coords = $self->_round($coords);
+    $self->_hash->{"@$coords"};
+
+} # at
+
+
+################################################################################
+=head2 exists
+
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
+
+
+=cut
+sub exists {
+    my ($self,$coords) = @_;
+    $coords = $self->_round($coords);
+    exists $self->_hash->{"@$coords"};
+
+} # exists
+
+
+################################################################################
+=head2 delete
+
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
+
+
+=cut
+sub delete {
+    my ($self,$coords) = @_;
+    $coords = $self->_round($coords);
+    delete $self->_hash->{"@$coords"};
+
+} # delete
+
+
+################################################################################
+=head2 keys
+
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
+
+
+=cut
+sub keys {
+    my ($self,) = @_;
+    $self->_hash->keys;
+
+} # keys
+
+
+sub _round {
+    my ($self, $coords) = @_;
+    [ map { nearest($self->cellsize(), $_) } @$coords ];
+}
+
+
+################################################################################
+__PACKAGE__->meta->make_immutable;
 1;
 

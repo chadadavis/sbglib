@@ -28,8 +28,6 @@ L<SBG::Traversal> , L<SBG::Complex>
 package SBG::Assembler;
 use Moose;
 
-extends qw/Moose::Object Exporter/;
-our @EXPORT_OK = qw(linker);
 
 use Moose::Autobox;
 

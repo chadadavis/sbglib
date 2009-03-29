@@ -83,7 +83,7 @@ sub qsubarray {
     $process_script = File::Spec->rel2abs($process_script);
     $input_file = File::Spec->rel2abs($input_file);
     my $name = basename($input_file);
-    my ($tmpfh, $jobscript) = tempfile("tempjob_XXXXX");
+    my ($tmpfh, $jobscript) = tempfile("qsubarrayXXXXX");
     close $tmpfh;
     # Count number of inputs (numer of sub jobs, cluster needs to know this)
     my $last = nlines($input_file) - 1; 
