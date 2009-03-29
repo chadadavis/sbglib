@@ -321,6 +321,7 @@ sub _do_nodes {
         $self->_edgeq->push([$current, $neighbor]);
     }
     # Continue processing all outstanding nodes before moving to edges
+    # TODO DES eliminate tail recursion
     $self->_do_nodes($uf, $state, $d);
     _d $d, "<= Node: $current";
 } # _do_nodes
@@ -358,6 +359,7 @@ sub _do_edges {
         # No more unprocessed multiedges remain between these nodes: $src,$dest
         _d $d, "No more alternative edges for $src $dest";
         # Try any other outstanding edges at this depth first, though
+        # TODO DES eliminate tail recursion
         $self->_do_edges($uf, $state, $d);
         return;
     }
@@ -376,6 +378,7 @@ sub _do_edges {
     # we wait until now to re-push them.
     $self->_edgeq->push($current);
     # Go back to using the original $state that we had before this alternative
+    # TODO DES eliminate tail recursion
     $self->_do_edges($uf, $state, $d);
 } # _do_edges
 
@@ -393,6 +396,7 @@ sub _test_alt {
         $self->rejects($self->rejects + 1);
         _d $d, "Aborted path " . $self->rejects;
         # Continue using the same state, in case the failure must be remembered
+        # TODO DES possible to eliminate indirect  tail recursion here?
         $self->_do_edges($uf, $stateclone, $d);
     } else {
         # Edge alternative succeeded. 
@@ -410,6 +414,7 @@ sub _test_alt {
         $ufclone->union($src, $dest);
         # Recursive call to traverse rest of graph, beyond this edge
         # Continue using the same state, in case the success must be remembered
+        # NB Cannot eliminate recursion here as we still need a rollback after
         $self->_do_edges($ufclone, $stateclone, $d);
         # Backtrack to before this alternative was accepted
         $self->_altcover->delete($alt_id);

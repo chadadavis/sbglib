@@ -13,15 +13,15 @@ $| = 1;
 
 ################################################################################
 
-use PA;
-use Point;
+use SBG::PA::Assembler;
+use SBG::PA::Point;
 use Graph::Undirected;
 # use Graph::Traversal::DFS;
 use SBG::Traversal;
 use SBG::Log;
 
 # Vertices in graph
-our $graphsize = 50;
+our $graphsize = 100;
 # our $graphsize = 15;
 # Multiplier for random XYZ coords (i.e. each between 0 and $spread)
 our $spread=5;
@@ -168,6 +168,7 @@ sub _subgraph {
 sub _randomgraph {
     my ($size) = @_;
     $size ||= 50;
+    warn "Graph size: $size\n";
     my @points = map { Point::random($spread) } (1..$size);
 #     my $graph = new Graph(refvertexed=>1,undirected=>1,multiedged=>1);
     my $graph = new Graph(refvertexed=>1,undirected=>1);
