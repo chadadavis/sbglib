@@ -27,6 +27,10 @@ single edge between unique nodes. This is the pattern used by
 L<Bio::Network::ProteinNet>. It does not strictly require
 L<Bio::Network::ProteinNet> but will work best in that case.
 
+For L<Graph> edge attribute names must be defined 
+ 
+ $graph->get_edge_attribute_names($u, $v);
+
 =head1 SEE ALSO
 
 L<Graph::Traversal> 
@@ -188,7 +192,7 @@ has '_nodeq' => (
 # Reset for each different starting node
 has '_nodecover' => (
     is => 'rw',
-    isa => 'HashRef[Bool]',
+    isa => 'HashRef',
     required => 1,
     default => sub { {} },
     );
@@ -196,7 +200,7 @@ has '_nodecover' => (
 # Cover of edge alternatives
 has '_altcover' => (
     is => 'rw',
-    isa => 'HashRef[Bool]',
+    isa => 'HashRef',
     required => 1,
     default => sub { {} },
     );
@@ -393,9 +397,11 @@ sub _test_alt {
     } else {
         # Edge alternative succeeded. 
         _d $d, "Succeeded. Node $dest reachable";
-        $self->_altcover->put($alt_id, 1);
-        $self->_nodecover->put($src, 1);
-        $self->_nodecover->put($dest, 1);
+        $self->_altcover->put($alt_id, $alt_id);
+        unless ($self->_nodecover->exists($src)) {
+            $self->_nodecover->put($src, $src);
+        }
+        $self->_nodecover->put($dest, $dest);
         $self->_nodeq->push($dest);
 
         # $src and $dest are now in the same connected component. 
@@ -489,8 +495,9 @@ sub _next_alt {
 sub _do_solution {
     my ($self, $state, $d) = @_;
 
-    my $nodes = $self->_nodecover->keys->sort;
-    my $alts = $self->_altcover->keys->sort;
+
+    my $nodes = $self->_nodecover->values;
+    my $alts = $self->_altcover->values;
     return unless $alts->length;
     return if $self->minsize > $nodes->length;
 
@@ -500,14 +507,25 @@ sub _do_solution {
 #     } else {
 #         $self->_solved->put($solution_label, 1);
     my $callback = $self->sub_solution;
+    $logger->debug("Solution: ", join(' ', @{$self->_nodecover->keys}));
     if ($callback->($state, $self->graph, $nodes, $alts, $self->rejects)) {
         $self->asolutions($self->asolutions+1);
+        $logger->trace("Accepted solution");
     } else {
         $self->rsolutions($self->rsolutions+1);
+        $logger->trace("Rejected solution");
     }
 #     }
 
 } # _do_solution
+
+# Sort hash by value
+sub _byvalue {
+    my ($hash) = @_;
+    my $keys = $hash->keys;
+    my $values = [ sort { $hash->at($a) <=> $hash->at($b) } @$keys ];
+    return $values;
+}
 
 
 # Convert 2D array to string list, e.g.:
