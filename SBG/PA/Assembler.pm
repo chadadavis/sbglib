@@ -25,11 +25,10 @@ L<SBG::Traversal>
 
 ################################################################################
 
-package PA;
+package SBG::PA::Assembler;
 
 use File::Temp qw/tempfile/;
 
-use Point;
 use SBG::GeometricHash;
 use PDL::Matrix;
 

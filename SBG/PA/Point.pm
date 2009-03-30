@@ -24,7 +24,7 @@ use Point
 
 ################################################################################
 
-package Point;
+package SBG::PA::Point;
 use Moose;
 
 use Math::Round qw/nearest/;
@@ -76,7 +76,7 @@ sub random {
     $spread ||= 5;
     my $label = ('A'..'Z')[rand 26];
     my ($x,$y,$z) = map { $spread*rand() } (1..3);
-    return new Point('label'=>$label,'pt'=>[$x,$y,$z]);
+    return new SBG::PA::Point('label'=>$label,'pt'=>[$x,$y,$z]);
 }
 
 
