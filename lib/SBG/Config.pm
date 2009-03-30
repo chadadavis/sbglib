@@ -106,11 +106,18 @@ sub _find_config {
     # The base of the module hierarchy
     my $basepath = $callerpkgfull;
     $basepath =~ s/$callerpkg//;
-    $basepath = catfile($basepath, $conffile);
-    # The current directory of the shell
+    # Distribution's lib root
+    my $basefile = catfile($basepath, $conffile);
+    # Perl lib root
+    my $basefile1 = catfile($basepath, '..', $conffile);
+    # Unpacked distribution root
+    my $basefile2 = catfile($basepath, '..', $conffile);
+    # The current directory of the client's shell
     my $nopath = $conffile;
     return $pkgpath if -r $pkgpath;
-    return $basepath if -r $basepath;
+    return $basefile if -r $basefile;
+    return $basefile1 if -r $basefile1;
+    return $basefile2 if -r $basefile2;
     return $nopath if -r $nopath;
     return;
 }
