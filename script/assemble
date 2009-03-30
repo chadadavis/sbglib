@@ -47,7 +47,7 @@ use SBG::Search::SCOP;
 # Network traversal Algorithm
 use SBG::Traversal;
 # Callback functions
-use SBG::Assembler;
+use SBG::CA::Assembler;
 # Solution holder
 use SBG::Complex;
 use SBG::Seq;
@@ -202,8 +202,8 @@ sub _one_net {
     # -test is the function to call when trying to place an interaction
     # -partial is the function to call when one complex solution is complete
     my $t = new SBG::Traversal(graph=>$net, 
-                               sub_test=>\&SBG::Assembler::sub_test, 
-                               sub_solution=>\&SBG::Assembler::sub_solution,
+                               sub_test=>\&SBG::CA::Assembler::sub_test, 
+                               sub_solution=>\&SBG::CA::Assembler::sub_solution,
                                minsize=>$minsize,
         );
     # Each result is a complex, this is a placeholder for the aglorithm's state

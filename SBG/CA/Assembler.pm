@@ -25,7 +25,7 @@ L<SBG::Traversal> , L<SBG::Complex>
 
 ################################################################################
 
-package SBG::Assembler;
+package SBG::CA::Assembler;
 use Moose;
 
 
