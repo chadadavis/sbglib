@@ -117,7 +117,7 @@ sub sub_solution_pathhash {
 
     $paths{$pathid} = 1;
 
-#     print "@path\n";
+    print "@path\n";
     return 1;
 }
 

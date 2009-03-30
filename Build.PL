@@ -5,6 +5,7 @@ my $build = Module::Build->new
     (
      module_name => 'SBG::PA::Point',
      license  => 'perl',
+     dist_abstract => 'abstract',
      requires => {
          'perl'          => '5.10.0',
          'Math::Round'  => '0.06',

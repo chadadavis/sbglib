@@ -34,6 +34,8 @@ use overload (
     fallback => 1,
     );
 
+our $VERSION = "0.1";
+
 =head2 pt
 
 =cut

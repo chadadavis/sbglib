@@ -20,7 +20,8 @@ use SBG::Traversal;
 use SBG::Log;
 
 # Vertices in graph
-our $graphsize = 50;
+# our $graphsize = 50;
+our $graphsize = 90;
 # Multiplier for random XYZ coords (i.e. each between 0 and $spread)
 our $spread=5;
 # Min dist between Vertices to creat an edge
