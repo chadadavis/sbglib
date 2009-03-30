@@ -16,13 +16,11 @@ $| = 1;
 use SBG::PA::Assembler;
 use SBG::PA::Point;
 use Graph::Undirected;
-# use Graph::Traversal::DFS;
 use SBG::Traversal;
 use SBG::Log;
 
 # Vertices in graph
-our $graphsize = 100;
-# our $graphsize = 15;
+our $graphsize = 50;
 # Multiplier for random XYZ coords (i.e. each between 0 and $spread)
 our $spread=5;
 # Min dist between Vertices to creat an edge
@@ -35,12 +33,12 @@ our $minsize = 3;
 SBG::Log::init('TRACE');
 
 
-$Point::resolution = 2;
+$SBG::PA::Point::resolution = 2;
 
 # NB Don't actually have to partition here, as Traversal starts at each node 
 my $graph = _randomgraph($graphsize);
 
-my $dotfile = PA::graphviz($graph, "graph.dot");
+my $dotfile = SBG::PA::Assembler::graphviz($graph, "graph.dot");
 # say $dotfile;
 
 
@@ -52,15 +50,18 @@ my $i = 0;
 foreach my $nodeset (@partitions) {
     my $subgraph = _subgraph($graph, @$nodeset);
     next unless $subgraph->vertices > 2;
-    my $dotfile = PA::graphviz($subgraph, sprintf("subgraph-%03d.dot", ++$i));
+    my $dotfile = SBG::PA::Assembler::graphviz(
+        $subgraph, sprintf("subgraph-%03d.dot", ++$i));
     warn "subgraph of size ", scalar($subgraph->vertices()), " $dotfile\n";
 }
 }
 
 my $t = new SBG::Traversal(graph=>$graph, 
-                           sub_test=>\&PA::sub_test, 
+                           sub_test=>
+                           \&SBG::PA::Assembler::sub_test, 
 #                            sub_solution=>\&PA::sub_solution_gh,
-                           sub_solution=>\&PA::sub_solution_pathhash,
+                           sub_solution=>
+                           \&SBG::PA::Assembler::sub_solution_pathhash,
                            minsize=>$minsize,
     );
 $t->traverse;
@@ -169,7 +170,7 @@ sub _randomgraph {
     my ($size) = @_;
     $size ||= 50;
     warn "Graph size: $size\n";
-    my @points = map { Point::random($spread) } (1..$size);
+    my @points = map { SBG::PA::Point::random($spread) } (1..$size);
 #     my $graph = new Graph(refvertexed=>1,undirected=>1,multiedged=>1);
     my $graph = new Graph(refvertexed=>1,undirected=>1);
     for (my $i=0;$i<@points;$i++) {
