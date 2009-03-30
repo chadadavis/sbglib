@@ -23,13 +23,11 @@ L<SBG::Complex> , L<SBG::DomainIO>
 
 package SBG::ComplexIO;
 use Moose;
-extends 'SBG::DomainIO';
+extends qw/Moose::Object SBG::DomainIO/;
 
 use IO::String;
-
 use SBG::Complex;
 use SBG::Transform;
-
 
 
 ################################################################################
@@ -47,7 +45,7 @@ override 'read' => sub {
     my $complex = new SBG::Complex();
     while (my $dom = super()) {
         # Add Dom to complex
-        $complex->template($dom->uniqueid, $dom);
+        $complex->model($dom->uniqueid, $dom);
     }
     return $complex;
 };

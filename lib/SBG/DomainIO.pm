@@ -52,7 +52,7 @@ L<SBG::Domain> , L<SBG::IO>
 package SBG::DomainIO;
 use Moose;
 
-extends 'SBG::IO';
+extends qw/Moose::Object SBG::IO/;
 
 use Module::Load;
 

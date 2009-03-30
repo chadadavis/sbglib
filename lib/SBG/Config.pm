@@ -6,7 +6,7 @@ SBG::Config - Ini file parsing
 
 =head1 SYNOPSIS
 
- my $thresh = $config->val("MySection", "MyThreshold");
+ my $thresh = config()->val("MySection", "MyThreshold");
 
 This assumes there is a bit in the ini file like:
 
@@ -19,7 +19,7 @@ This assumes there is a bit in the ini file like:
 
 =head1 SEE ALSO
 
-L<Moose::Role>, L<Config::IniFiles>
+L<Config::IniFiles>
 
 =cut
 
@@ -30,23 +30,49 @@ package SBG::Config;
 use base qw(Exporter);
 our @EXPORT_OK = qw(config val);
 
+use strict;
+use warnings;
+
 use File::Spec::Functions;
 use File::Basename;
 use Config::IniFiles;
 use Carp;
 
-our $config;
-
+# Singleton Config::IniFiles object
+our $_config;
     
+
 ################################################################################
+=head2 config
+
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
 
 
+=cut
 sub config {
-    our $config;
-    $config ||= _build_config(undef, @_);
-    return $config;
+    our $_config;
+    # Update global if not yet initialized, or if new config file given
+    if (@_ || ! defined($_config)) {
+        $_config = _build_config(undef, @_);
+    }
+    return $_config;
 }
 
+
+################################################################################
+=head2 val
+
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
+
+Alias to L<Config::IniFiles::val>
+
+=cut
 sub val {
     return config()->val(@_);
 }
@@ -67,11 +93,14 @@ Finally, check current directory
 sub _build_config {
     my ($self,$inifile) = @_;
     $inifile ||= _find_config();
+    my $_config;
     unless (-r $inifile) {
         carp "Cannot read configuration: $inifile\n";
-        return new Config::IniFiles;
+        $_config = new Config::IniFiles;
+    } else {
+        $_config = new Config::IniFiles(-file=>$inifile);
     }
-    return new Config::IniFiles(-file=>$inifile);
+    return $_config;
 
 } # _init_ini
 
@@ -102,6 +131,8 @@ sub _find_config {
     $callerpkg .= '.pm';
     # Perl's %INC tells where modules where loaded from
     my $callerpkgfull = $INC{$callerpkg};
+#     warn "callerpkgfull:$callerpkgfull:\n";
+
     my $pkgpath = catfile(dirname($callerpkgfull), $conffile);
     # The base of the module hierarchy
     my $basepath = $callerpkgfull;
@@ -121,6 +152,7 @@ sub _find_config {
     return $nopath if -r $nopath;
     return;
 }
+
 
 ################################################################################
 1;

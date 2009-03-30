@@ -23,7 +23,7 @@ package SBG::Domain::CofMVol;
 use Moose;
 use MooseX::StrictConstructor;
 
-extends 'SBG::Domain::CofM';
+extends qw/SBG::Domain::CofM/;
 
 with qw(SBG::Storable);
 with qw(SBG::Dumpable);

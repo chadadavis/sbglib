@@ -35,7 +35,7 @@ use Text::ParseWords;
 
 use SBG::Types qw/$re_chain $re_chain_id $re_ic $re_pos/;
 use SBG::DB::cofm;
-use SBG::Config qw/val/;
+use SBG::Config qw/config/;
 use SBG::Domain;
 use SBG::DomainIO;
 use SBG::Log;
@@ -131,9 +131,10 @@ sub _run {
     my $path = $io->file;
 
     # NB the -v option is necessary if you want the filename of the PDB file
-    my $cofm = val(qw/cofm executable/) || 'cofm';
+    my $cofm = config()->val(qw/cofm executable/) || 'cofm';
     my $cmd = "$cofm -f $path -v |";
-    open my $cofmfh, $cmd;
+    my $cofmfh;
+    open $cofmfh, $cmd;
     unless ($cofmfh) {
         $logger->error("Failed:\n\t$cmd\n\t$!");
         return;

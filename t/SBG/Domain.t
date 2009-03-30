@@ -23,14 +23,12 @@ is($d->descriptor, 'CHAIN A', 'Constructor cleans up descriptor');
 
 # Basic checks
 $dom = new SBG::Domain(pdbid=>'2nn6', descriptor=>'CHAIN A');
-is($dom->pdbid, '2nn6');
-is($dom->descriptor, 'CHAIN A');
-is($dom->fromchain, 'A');
-ok($dom->wholechain);
+is($dom->pdbid, '2nn6', 'pdbid');
+is($dom->descriptor, 'CHAIN A', 'descriptor');
+is($dom->wholechain, 'A', 'wholechain');
 ok($dom->continuous);
 
 $dom->descriptor('A 10 _ to A 233 _');
-is($dom->fromchain, 'A');
 ok($dom->continuous);
 ok(! $dom->wholechain);
 

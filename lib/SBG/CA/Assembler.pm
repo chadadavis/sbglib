@@ -53,9 +53,6 @@ our $dups = 0;
 our $classes = 0;
 # Size distribution of unique solutions (i.e. of classes)
 our %sizes;
-# 3D geometric hash
-my $binsize = config()->val(qw/assembly binsize/) || 1.5;
-our $gh = new SBG::GeometricHash(binsize=>$binsize);
 
 my $file_pattern = '%sclass-%04d-model-%05d';
 
@@ -63,6 +60,11 @@ my $file_pattern = '%sclass-%04d-model-%05d';
 # Bugs: assume L<SBG::Domain::CofM> implementation in L<SBG::Complex>
 sub sub_solution {
     my ($complex, $graph, $nodecover, $templates, $rejects) = @_;
+    our $binsize;
+    $binsize = config()->val(qw/assembly binsize/) || 1.5;
+    # 3D geometric hash
+    our $gh;
+    $gh ||= new SBG::GeometricHash(binsize=>$binsize);
 
     my $success = 1;
     # Uninteresting unless at least two interfaces in solution

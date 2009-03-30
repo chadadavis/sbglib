@@ -34,14 +34,18 @@ with 'SBG::Storable';
 use Moose::Autobox;
 use autobox ARRAY => 'SBG::List';
 
-
 use File::Temp qw/tempfile/;
 
 use SBG::HashFields;
+
 use SBG::List qw/min union sum intersection/;
+
 use SBG::Config qw/config/;
+
 use SBG::Log;
+
 use SBG::STAMP qw/superpose stamp/;
+
 
 use SBG::Domain;
 use SBG::DomainIO;
@@ -49,12 +53,14 @@ use SBG::DomainIO;
 use SBG::Domain::CofM;
 
 
+
 use overload (
     '""' => '_asstring',
     fallback => 1,
     );
 
-our $tmpdir = config->val(qw/tmp tmpdir/) || $ENV{TMPDIR} || '/tmp';
+our $tmpdir;
+
 
 ################################################################################
 # Fields and accessors
@@ -461,7 +467,7 @@ other.
 =cut
 sub complexrmsd {
     my ($model, $truth) = @_;
-    our $tmpdir;
+    _init_tmp();
 
     # Subset $truth . Only consider common components
     my @cnames = intersection([$model->names], [$truth->names]);
@@ -650,8 +656,16 @@ sub asstamp {
 ################################################################################
 # Private
 
+
 sub _asstring {
     (shift)->interactions->keys->sort->join(',');
+}
+
+
+sub _init_tmp {
+    our $tmpdir;
+    $tmpdir ||= config()->val(qw/tmp tmpdir/) || $ENV{TMPDIR} || '/tmp';
+    mkdir $tmpdir unless -d $tmpdir;
 }
 
 

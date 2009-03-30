@@ -31,7 +31,7 @@ use IO::String;
 use PDL::Matrix;
 use DBI;
 
-use SBG::Config;
+use SBG::Config qw/config/;
 use SBG::Log;
 
 ################################################################################
@@ -62,8 +62,8 @@ sub query {
     my ($pdbid, $chainid) = @_;
     $pdbid = uc $pdbid;
     my $pdbstr = "pdb|$pdbid|$chainid";
-    my $db = SBG::Config::val(qw/cofm db/) || "trans_1_5";
-    my $host = SBG::Config::val(qw/cofm host/);
+    my $db = config()->val(qw/cofm db/) || "trans_1_5";
+    my $host = config()->val(qw/cofm host/);
     my $dbistr = "dbi:mysql:dbname=$db";
     $dbistr .= ";host=$host" if $host;
     # Static handle, prepare it only once

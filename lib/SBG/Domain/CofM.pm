@@ -33,7 +33,7 @@ use Moose;
 use MooseX::StrictConstructor;
 use Moose::Util::TypeConstraints;
 
-extends 'SBG::Domain';
+extends qw/SBG::Domain/;
 
 with qw(SBG::Storable);
 with qw(SBG::Dumpable);

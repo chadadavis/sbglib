@@ -21,9 +21,10 @@ my $net = $io->read;
 # GraphViz
 SKIP: {
     skip "GraphViz needs update";
-my $graphout = "$installdir/t/graph.dot";
-SBG::NetworkIO::graphviz($net, $graphout,-edge_color=>'grey');
-ok(-r $graphout, "GraphViz creation: $graphout");
+    my $graphout = "graph.dot";
+    SBG::NetworkIO::graphviz($net, $graphout,-edge_color=>'grey');
+    ok(-r $graphout, "GraphViz creation: $graphout");
+    unlink $graphout;
 }
 
 # For the sake of testing, define some incompatible sets of templates.  Anything
@@ -111,9 +112,9 @@ sub got_an_answer {
     @$nodecover = sort @$nodecover;
     @ids = sort @ids;
     @$templates = sort @$templates;
-    print STDERR 
-        "Solution: ",
-        "Nodes @$nodecover, Templates: @ids : \n@$templates\n";
+#     print STDERR 
+#         "Solution: ",
+#         "Nodes @$nodecover, Templates: @ids : \n@$templates\n";
 
     $state->{solutions} = [];
     $answers{"@$nodecover @ids"} = 1;

@@ -36,7 +36,6 @@ sub _test1 {
     float_is($res->{Cz}, $tz, $prec);
     float_is($res->{Rg}, $trg, $prec);
     float_is($res->{Rmax}, $trmax, $prec);
-    ok($res->{file}, "File defined: $file");
     return $res;
 }
 

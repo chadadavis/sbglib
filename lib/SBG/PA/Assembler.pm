@@ -39,7 +39,8 @@ sub sub_test {
 
     # Check that peptides stays linear, no branching
     # Only need to check $src, not $dest, since traversal doesn't do cycles
-    return unless $state->{'active'}{$src} < 2;
+    my $already = $state->{'active'}{$src};
+    return if $already && $already > 1;
 
     # Check spacial clash, AA already present here?
     my $occupied = $state->{'pthash'}{$dest->hash};

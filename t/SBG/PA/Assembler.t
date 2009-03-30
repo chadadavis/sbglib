@@ -21,7 +21,7 @@ use SBG::Log;
 
 # Vertices in graph
 # our $graphsize = 50;
-our $graphsize = 90;
+our $graphsize = 20;
 # Multiplier for random XYZ coords (i.e. each between 0 and $spread)
 our $spread=5;
 # Min dist between Vertices to creat an edge
@@ -39,9 +39,24 @@ $SBG::PA::Point::resolution = 2;
 # NB Don't actually have to partition here, as Traversal starts at each node 
 my $graph = _randomgraph($graphsize);
 
-my $dotfile = SBG::PA::Assembler::graphviz($graph, "graph.dot");
-# say $dotfile;
+ok($graph, "Random graph of size: " . scalar($graph->vertices()));
 
+my $dotfile = SBG::PA::Assembler::graphviz($graph, "graph.dot");
+ok(-r $dotfile, "Plotting");
+unlink $dotfile;
+
+my $t = new SBG::Traversal(graph=>$graph, 
+                           sub_test=>
+                           \&SBG::PA::Assembler::sub_test, 
+#                            sub_solution=>\&PA::sub_solution_gh,
+                           sub_solution=>
+                           \&SBG::PA::Assembler::sub_solution_pathhash,
+                           minsize=>$minsize,
+    );
+my $accepted = $t->traverse();
+ok($accepted, "Solutions: $accepted");
+
+exit;
 
 
 if (0) {
@@ -57,17 +72,6 @@ foreach my $nodeset (@partitions) {
 }
 }
 
-my $t = new SBG::Traversal(graph=>$graph, 
-                           sub_test=>
-                           \&SBG::PA::Assembler::sub_test, 
-#                            sub_solution=>\&PA::sub_solution_gh,
-                           sub_solution=>
-                           \&SBG::PA::Assembler::sub_solution_pathhash,
-                           minsize=>$minsize,
-    );
-$t->traverse;
-
-exit;
 
 
 ################################################################################
@@ -170,7 +174,7 @@ sub _subgraph {
 sub _randomgraph {
     my ($size) = @_;
     $size ||= 50;
-    warn "Graph size: $size\n";
+#     warn "Graph size: $size\n";
     my @points = map { SBG::PA::Point::random($spread) } (1..$size);
 #     my $graph = new Graph(refvertexed=>1,undirected=>1,multiedged=>1);
     my $graph = new Graph(refvertexed=>1,undirected=>1);

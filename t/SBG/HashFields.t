@@ -1,5 +1,7 @@
 #!/usr/bin/env perl
 
+package SBG::HashFieldsTest;
+
 use Test::More 'no_plan';
 use SBG::Test 'float_is';
 use feature 'say';
@@ -12,19 +14,17 @@ $, = ' ';
 
 ################################################################################
 
-package SBG::HashFieldsTest;
 use Moose;
 use SBG::HashFields;
 use Moose::Autobox;
 use autobox;
-use Data::Dumper;
 
 hashfield('myfield', 'myfields');
 # sub myfields { (shift)->{'myfield'} }
 
 my $obj = new SBG::HashFieldsTest;
-# $obj->myfield('key', 33);
-say Dumper $obj;
+$obj->myfield('key', 33);
+is($obj->myfield('key'), 33);
 my $hf = $obj->myfields;
-say Dumper $hf;
+ok($hf);
 

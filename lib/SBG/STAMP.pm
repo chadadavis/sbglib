@@ -36,27 +36,21 @@ use IO::String;
 use Data::Dumper;
 use List::MoreUtils qw/mesh/;
 
+
 use SBG::Transform;
 use SBG::Domain;
 use SBG::DomainIO;
 use SBG::List qw(reorder);
-use SBG::Config qw/val/;
+use SBG::Config qw/config/;
 use SBG::Log;
+
 
 ################################################################################
 
 # TODO use Cache::FileCache
-our $cachedir;
+# Lazy initialisation of directories later ...
 our $tmpdir;
-
-BEGIN {
-
-    $tmpdir = val(qw/tmp tmpdir/) || $ENV{TMPDIR} || '/tmp';
-    $cachedir = val(qw/stamp cache/) || "$tmpdir/stampcache";
-    mkdir $cachedir;
-    $logger->debug("STAMP cache: $cachedir");
-
-}
+our $cachedir;
 
 
 ################################################################################
@@ -73,7 +67,7 @@ BEGIN {
 =cut
 sub gtransform {
     my (%o) = @_;
-    our $tmpdir;
+    _init_tmp();
     my $ioin;
     # If no input domain file given, process given domains
     unless ($o{in}) {
@@ -209,8 +203,8 @@ sub _dbconnect {
     my ($db) = @_;
     our $dbh;
     return $dbh if $dbh;
-    $db ||= val('trans', 'db') || "trans_1_4";
-    my $host = val(qw/trans host/);
+    $db ||= config()->val('trans', 'db') || "trans_1_4";
+    my $host = config()->val(qw/trans host/);
     my $dbistr = "dbi:mysql:dbname=$db";
     $dbistr .= ";host=$host" if $host;
     $dbh = DBI->connect($dbistr);
@@ -241,8 +235,8 @@ sub superpose_query {
         return;
     }
 
-    my $pdbstr1 = 'pdb|' . uc($fromdom->pdbid) . '|' . $fromdom->fromchain;
-    my $pdbstr2 = 'pdb|' . uc($ontodom->pdbid) . '|' . $ontodom->fromchain;
+    my $pdbstr1 = 'pdb|' . uc($fromdom->pdbid) . '|' . $fromdom->wholechain;
+    my $pdbstr2 = 'pdb|' . uc($ontodom->pdbid) . '|' . $ontodom->wholechain;
 
     if (! $trans_sth->execute($pdbstr1)) {
         $logger->error($trans_sth->errstr);
@@ -271,6 +265,7 @@ sub superpose_query {
 
 sub _cache_file {
     my ($fromdom, $ontodom) = @_;
+    _init_cache();
     my $file = $cachedir . '/' . $fromdom->id . '-' . $ontodom->id . '.ntrans';
     $logger->trace("Cache: $file");
     return $file;
@@ -507,13 +502,13 @@ sub stamp {
 sub _stamp_config {
 
     # Get config setttings
-    my $stamp = val('stamp', 'executable') || 'stamp';
+    my $stamp = config()->val('stamp', 'executable') || 'stamp';
     # Number of fits (residues?) that were performed
-    my $minfit = val('stamp', 'minfit') || 30;
+    my $minfit = config()->val('stamp', 'minfit') || 30;
     # Min Sc value to accept
-    my $scancut = val('stamp', 'scancut') || 2.0;
+    my $scancut = config()->val('stamp', 'scancut') || 2.0;
 
-    my $stamp_pars = val('stamp', 'params') || join(' ',
+    my $stamp_pars = config()->val('stamp', 'params') || join(' ',
         '-n 2',         # number of fits 
         '-slide 5',     # query slides every 5 AAs along DB sequence
         '-s',           # scan mode: only query compared to each DB sequence
@@ -534,7 +529,7 @@ sub _stamp_config {
 
 # tempfile unlinked when object leaves scope (garbage collected)
 sub _tmp_prefix {
-    our $tmpdir;
+    _init_tmp();
     my $tmp = new File::Temp(TEMPLATE=>"scan_XXXXX", DIR=>$tmpdir);
     return $tmp;
 }
@@ -562,7 +557,7 @@ sub sorttrans {
 
     # File containing STAMP scan results
     my $tmp_scan = "$o{prefix}.scan";
-    my $sorttrans = val("stamp", "sorttrans") || 'sorttrans';
+    my $sorttrans = config()->val("stamp", "sorttrans") || 'sorttrans';
     my $params = "-i";
     my $com = join(' ', 
                    $sorttrans, $params,
@@ -625,43 +620,18 @@ sub _next_probe {
 } # _next_probe
 
 
-################################################################################
-=head2 pdbc
+sub _init_tmp {
+    our $tmpdir;
+    $tmpdir ||= config()->val(qw/tmp tmpdir/) || $ENV{TMPDIR} || '/tmp';
+    mkdir $tmpdir unless -d $tmpdir;
+}
 
- Function: Runs STAMP's pdbc and opens its output as the internal input stream.
- Example : my $domio = pdbc('2nn6');
-           my $dom = $domio->read();
-           # or all in one:
-           my $first_dom = pdbc(pdbid=>'2nn6')->read();
- Returns : $self (success) or undef (failure)
- Args    : @ids - begins with one PDB ID, followed by any number of chain IDs
 
-Depending on the configuration of STAMP, domains may be searched in PQS first.
-
- my $io = new SBG::DomainIO;
- $io->pdbc('2nn6');
- # Get the first domain (i.e. chain) from 2nn6
- my $dom = $io->read;
-
-=cut
-sub pdbc {
-    my $str = join("", @_);
-    return unless $str;
-    my $io = new SBG::DomainIO(tempfile=>1);
-    my $path = $io->file;
-    my $cmd;
-    $cmd = "pdbc -d $str > ${path}";
-    $logger->trace($cmd);
-    # NB checking system()==0 fails, even when successful
-    system($cmd);
-    # So, just check that file was written to instead
-    unless (-s $path) {
-        $logger->error("Failed:\n\t$cmd\n\t$!");
-        return 0;
-    }
-    return $io;
-
-} # pdbc
+sub _init_cache {
+    our $cachedir;
+    $cachedir ||= config()->val(qw/stamp cache/) || "$tmpdir/stampcache";
+    mkdir $cachedir unless -d $cachedir;
+}
 
 
 ################################################################################

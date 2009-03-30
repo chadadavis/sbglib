@@ -15,18 +15,10 @@ use SBG::DomainIO;
 use SBG::Domain::CofM;
 use List::MoreUtils qw(first_index);
 
-
-
-# TODO test do_stamp alone (i.e. on a family of domains)
-
-# Test pdbc
-$io = pdbc('2nn6', 'A');
-# Define the type of Domain object we want back
-$io->type('SBG::Domain::CofM');
-$dom = $io->read;
-is($dom->pdbid, '2nn6', 'pdbid');
-is($dom->descriptor, 'CHAIN A', 'descriptor');
-
+TODO: {
+    local $TODO = "test do_stamp alone (i.e. on a family of domains)";
+    ok(0);
+}
 
 # get domains for two chains of interest
 my $doma = SBG::Domain::CofM->new(pdbid=>'2br2', descriptor=>'CHAIN A');
@@ -148,6 +140,9 @@ my $domb5 = new SBG::Domain::CofM(pdbid=>'2br2', descriptor=>'CHAIN B');
 my $domd5 = new SBG::Domain::CofM(pdbid=>'2br2', descriptor=>'CHAIN D');
 my $trans5 = SBG::STAMP::superpose_query($domb5, $domd5);
 ok($trans5, "Got transform from database cache");
+# Get the underlying PDL of the computed transform to be tested
+$trans5 = $trans5->matrix;
+
 my $btod_transstr = <<STOP;
    0.11085    0.04257    0.99292         9.31432  
    0.99240   -0.05858   -0.10828       -10.07972  
@@ -155,8 +150,6 @@ my $btod_transstr = <<STOP;
 STOP
 # Convert this into PDL matrixes
 my $btod_ans = new SBG::Transform(string=>$btod_transstr)->matrix;
-# Get the underlying PDL
-$trans5 = $trans5->matrix;
 
 ok(all(approx($trans5, $btod_ans, $toler)), 
    "Database transformation verified, to within $toler A") or 

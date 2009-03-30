@@ -257,7 +257,8 @@ See als L<fromchain>
 =cut
 sub wholechain {
     my ($self) = @_;
-    return $self->descriptor =~ /^$re_chain$/;
+    my ($chain) = $self->descriptor =~ /^\s*CHAIN\s+(.)\s*$/i;
+    return $chain;
 }
 
 
@@ -285,23 +286,6 @@ sub continuous {
     return $self->descriptor =~ /^(ALL)|$re_chain_seg$/;
 
 } # continuous
-
-
-################################################################################
-=head2 fromchain
-
-Returns the chain of this domain, if it comes from a single chain.
-
-To determine if this domain is exactly one whole chain, use L<wholechain>. For
-the whole STAMP descriptor, use L<descriptor>.
-=cut
-sub fromchain {
-    my ($self) = @_;
-    my $d = $self->_descriptor_short;
-    my $ch = substr($d, 0, 1);
-    # If the squashed descriptor looks like "A" or "A23A443" or "A2A44A55A66"
-    return $d =~ /^($ch(\d+$ch\d+)?)+$/ ? $ch : undef;
-}
 
 
 ################################################################################

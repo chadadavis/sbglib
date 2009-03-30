@@ -26,11 +26,12 @@ my $searcher = new SBG::Search::SCOP;
 $searcher->type('SBG::Domain::CofM');
 my @iactions = $searcher->search(@seqs);
 
-for (@iactions) {
-    say $_;
-}
+is(scalar(@iactions), 5, "Found 5 expected interactions");
 
 my $complex = SBG::Search::SCOP::complex('2os7');
-say 'gtransform: ', gtransform(doms=>$complex->models->values);
+my $file = "transformed.pdb";
+gtransform(doms=>$complex->models->values,out=>$file);
+ok(-r $file, "gtransformed: $file");
+unlink $file;
 
 

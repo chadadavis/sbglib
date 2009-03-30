@@ -28,7 +28,7 @@ ok($iofh && $iofh->fh, "new(fh=>\$fh)");
 $io = new SBG::IO(tempfile=>1);
 $io->write("Writing via tempfile=>1 option");
 $io->flush;
-my $file = $io->file;
+$file = $io->file;
 ok(-s $file, "Tempfile ($file) not empty");
 
 # Test writing temp file, using file handle

@@ -29,7 +29,7 @@ use warnings;
 use File::Temp qw(tempfile tempdir);
 
 use SBG::Log;
-use SBG::Config qw/val/;
+use SBG::Config qw/config/;
 
 ################################################################################
 
@@ -55,7 +55,7 @@ sub pdb2img {
     $o{pdb} or return;
     $o{img} = $o{pdb} . '.ppm' unless $o{img};
     $logger->trace("$o{pdb} => $o{img}");
-    my $rasmol = val(qw/rasmol executable/) || 'rasmol';
+    my $rasmol = config()->val(qw/rasmol executable/) || 'rasmol';
     my $fh;
     my $cmd = "$rasmol -nodisplay >/dev/null";
 #     my $cmd = "$rasmol -nodisplay ";

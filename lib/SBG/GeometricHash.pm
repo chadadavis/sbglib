@@ -52,7 +52,7 @@ The (incomplete) interface is based on L<Moose::Autobox::Hash>
 package SBG::GeometricHash;
 
 use PDL::Lite;
-use PDL::Core;
+use PDL::Core qw/pdl zeroes/;
 use PDL::Basic qw/sequence/;
 use PDL::Primitive qw/random/;
 use PDL::Matrix;
@@ -145,6 +145,7 @@ sub exact {
     # Models that cover the query
     my @covers = $self->exists($points, $labels);
     # Models the same size as the query:
+    my @a;
     my ($bijection) = grep { @a=split; $a[1] == @$points } @covers;
     $logger->debug($bijection || '<none>');
     return unless $bijection;

@@ -303,6 +303,8 @@ sub traverse {
         # Go!
         $self->_do_nodes($uf, $clone, 0);
     }
+    # Number accepted solutions;
+    return $self->asolutions;
 } # traverse
 
 

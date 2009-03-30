@@ -35,11 +35,11 @@ ok(-r $graphout, "GraphViz (multiedged) conversion: $graphmultiout");
 
 };
 
-my $file = shift || "$dir/ex_disconnected.csv";
+$file = shift || "$dir/ex_disconnected.csv";
 # my $file = shift || "$dir/ex_small.csv";
 
-my $io = new SBG::NetworkIO(file=>$file);
-my $net = $io->read;
+$io = new SBG::NetworkIO(file=>$file);
+$net = $io->read;
 
 my @graphs = $net->partition();
 foreach my $g (@graphs) {
