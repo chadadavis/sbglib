@@ -119,9 +119,9 @@ sub logwarn { error(@_) }
 sub error_warn { error(@_) }
 
 # Others get ignored
-sub trace;
-sub debug;
-sub info;
+sub trace {1;}
+sub debug {1;}
+sub info {1;}
 
 
 

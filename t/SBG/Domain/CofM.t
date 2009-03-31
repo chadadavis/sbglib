@@ -102,7 +102,7 @@ float_is($s->radius, $trg, $prec);
 
 
 # Storable
-my $file = ($ENV{TMPDIR} || '/tmp') . '/cofm.stor';
+my (undef, $file) = tempfile(SUFFIX=>".stor");
 ok($s->store($file), "Serializing to $file");
 
 

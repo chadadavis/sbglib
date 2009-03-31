@@ -16,7 +16,7 @@ use SBG::Domain::CofM;
 use List::MoreUtils qw(first_index);
 
 TODO: {
-    local $TODO = "test do_stamp alone (i.e. on a family of domains)";
+    local $TODO = 'test do_stamp alone (i.e. on a family of domains)';
     ok(1);
 }
 

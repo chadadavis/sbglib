@@ -41,13 +41,13 @@ for (my $i = 0; $i < @doms; $i++) {
 }
 
 TODO: {
-    local $TODO = "test: if ($comp->clashes($dom)) { ... }";
+    local $TODO = 'test: if ($comp->clashes($dom)) { ... }';
     ok(1);
 
-    local $TODO = "Test Complex::rmsd()";
+    local $TODO = 'Test Complex::rmsd()';
     ok(1);
 
-    local $TODO = "test ($rmsd, $trans) = $model_complex->min_rmsd($truth)";
+    local $TODO = 'test ($rmsd, $trans) = $model_complex->min_rmsd($truth)';
     ok(1);
 
 }

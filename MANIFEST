@@ -6,8 +6,6 @@ t/00-load.t
 t/.pod-coverage.t
 t/pod.t
 Makefile.PL
-META.yml
-Build.PL
 config.ini
 env.bash
 uml.gaphor
@@ -95,7 +93,6 @@ t/SBG/Network.t
 t/SBG/NetworkIO.t
 t/SBG/Node.t
 t/SBG/PA/Assembler.t
-t/SBG/PA/log.log
 t/SBG/Run/cofm.t
 t/SBG/Run/pdbc.t
 t/SBG/Run/rasmol.t
