@@ -17,7 +17,7 @@ hold state-information while L<SBG::Traversal> traverses an L<SBG::Network>.
 In short, an L<SBG::Complex> is one of many
 solutions to the protein complex assembly problem for a give set of proteins.
 
-=SEE ALSO
+=head1 SEE ALSO
 
 L<SBG::ComplexIO> , L<SBG::Assembler> , L<SBG::Traversal>
 

@@ -351,7 +351,10 @@ sub _load_file {
     my ($self, $file) = @_;
     $file ||= $self->file;
     my $fh;
-    open $fh, $file;
+    unless (open $fh, $file) {
+        $logger->error("Cannot read: $file ($!)");
+        return;
+    }
     my $matstr;
     our @keys;
 

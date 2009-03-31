@@ -6,9 +6,8 @@ use inc::Module::Install;
 
 all_from => 'lib/SBG.pm';
 
-requires 'Bio::Network::Node' => '0'; 
-requires 'Bio::Network::ProteinNet' => '0'; 
-requires 'Bio::Seq' => '0';
+requires 'Bio::Seq' => '1.006';
+requires 'Bio::Network::ProteinNet' => '1.006'; 
 requires 'feature' => '0'; 
 requires 'File::Basename' => '0'; 
 requires 'File::Temp' => '0'; 
@@ -30,7 +29,7 @@ requires 'Moose::Autobox' => '0';
 requires 'Moose::Role' => '0'; 
 requires 'Moose::Util::TypeConstraints' => '0'; 
 requires 'MooseX::StrictConstructor' => '0'; 
-requires 'PDL' => '0';
+requires 'PDL' => '2.4.4';
 requires 'PDL::Basic' => '0'; 
 requires 'PDL::Core' => '0'; 
 requires 'PDL::IO::Misc' => '0'; 
@@ -46,14 +45,13 @@ requires 'PDL::Ufunc' => '0';
 requires 'Test::More' => '0'; 
 requires 'Text::ParseWords' => '0'; 
 
-requires_external_bin 'stamp';
-requires_external_bin 'cofm';
-requires_external_bin 'pdbc';
+# requires_external_bin 'stamp';
+# requires_external_bin 'cofm';
+# requires_external_bin 'pdbc';
 
-# TODO TEST all *.t file in all subdir of ./t
-# test => { TESTS => 't/SBG/*.t' };
+# Automagically install above deps from CPAN
+auto_install(force=>1);
 
-auto_install();
-
-WriteAll();
+# Test all *.t files, two levels deep
+WriteMakefile(test => {TESTS => 't/*.t t/*/*.t t/*/*/*.t'});
 

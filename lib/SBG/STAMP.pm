@@ -456,8 +456,8 @@ sub stamp {
         );
 
     $logger->trace("\n$com");
-    open my $fh,"$com |";
-    unless ($fh) {
+    my $fh;
+    unless (open my $fh,"$com |") {
         $logger->error("Error running stamp:\n$com");
         return;
     }

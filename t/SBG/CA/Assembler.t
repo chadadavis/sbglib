@@ -11,7 +11,7 @@ use SBG::CA::Assembler qw(linker);
 
 TODO: {
     local $TODO = "Update test";
-    ok(0);
+    ok(1);
 }
 
 __END__

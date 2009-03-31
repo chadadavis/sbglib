@@ -159,8 +159,10 @@ sub graphviz {
     my ($graph, $file) = @_;
     $file ||= 'graph.dot';
     my $fh;
-    open $fh, ">$file" or 
+    unless (open $fh, ">$file") {
         $logger->error("Cannot write to: ", $file, " ($!)");
+        return;
+    }
     return unless $graph && $fh;
 
     my $pdb = "http://www.rcsb.org/pdb/explore/explore.do?structureId=";

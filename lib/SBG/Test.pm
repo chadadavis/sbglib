@@ -44,6 +44,7 @@ our @EXPORT_OK = qw(float_is);
 =cut
 sub float_is ($$;$$) {
    my ($val1, $val2, $precision, $msg) = @_;
+   return unless defined($val1) && defined($val2);
    $precision ||= '';
    my $sval1 = sprintf("%.${precision}g",$val1);
    my $sval2 = sprintf("%.${precision}g",$val2);

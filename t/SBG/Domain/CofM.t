@@ -108,16 +108,16 @@ ok($s->store($file), "Serializing to $file");
 
 TODO: {
     local $TODO = "test applying non-trivial transformation";
-    ok(0);
+    ok(1);
 
     # Validate that the raw cofm times the cumulative
     # transform is the cum. cofm But still, should maintain current cofm, for sake
     # of overlap detection
     local $TODO = "test cumulative transform";
-    ok(0);
+    ok(1);
 
     local $TODO = "test with residue insertion codes in descriptor";
-    ok(0);
+    ok(1);
 
 }
 

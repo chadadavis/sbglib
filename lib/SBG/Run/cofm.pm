@@ -134,8 +134,7 @@ sub _run {
     my $cofm = config()->val(qw/cofm executable/) || 'cofm';
     my $cmd = "$cofm -f $path -v |";
     my $cofmfh;
-    open $cofmfh, $cmd;
-    unless ($cofmfh) {
+    unless (open $cofmfh, $cmd) {
         $logger->error("Failed:\n\t$cmd\n\t$!");
         return;
     }

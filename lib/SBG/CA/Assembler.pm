@@ -17,7 +17,7 @@ functions specific to L<SBG::Complex>.
 An L<SBG::Complex> is one of many solutions to the protein complex assembly
 problem for a give set of proteins.
 
-=SEE ALSO
+=head1 SEE ALSO
 
 L<SBG::Traversal> , L<SBG::Complex>
 

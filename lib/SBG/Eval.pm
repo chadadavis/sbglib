@@ -55,7 +55,12 @@ sub get_descriptor {
     my $scopid = shift;
     # Static opened file handle
     our $fh;
-    $fh or open $fh, $scopdb;
+    unless ($fh) {
+        unless (open $fh, $scopdb) {
+            $logger->error("Cannot open: $scopdb ($!)");
+            return;
+        }
+    }
     seek $fh, 0, 0;
     while (<$fh>) {
         next unless /^(\S+) ($scopid) { (.*?) }$/;

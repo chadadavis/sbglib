@@ -132,8 +132,10 @@ sub graphviz {
 
     my $fh;
     if ($file) {
-        open($fh, ">$file") or
+        unless (open($fh, ">$file")) {
             warn("Cannot write to: ", $file, " ($!)");
+            return;
+        }
     } else {
         ($fh, $file) = tempfile(UNLINK=>0);
     }

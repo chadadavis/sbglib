@@ -40,10 +40,10 @@ use SBG::Complex;
 
 # TODO Needs to be in a DB
 # Maps e.g. 2hz1A.a.1.1.1-1 to { A 2 _ to A 124 _ }
-our $scopdb = "~/p/ca/benchmark/scop_1.73.dom.gz";
+our $scopdb = "/g/russell2/davis/p/ca/benchmark/scop_1.73.dom.gz";
 # Maps e.g. 1ir2B.c.1.14.1-1 to:
 # 1rlcL.c.1.14.1-1 1.000e-177 89.00 
-our $templatedb = "~/p/ca/benchmark/search_bench_part8.out-robs.gz";
+our $templatedb = "/g/russell2/davis/p/ca/benchmark/search_bench_part8.out-robs.gz";
 
 
 ################################################################################

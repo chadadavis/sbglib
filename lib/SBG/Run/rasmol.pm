@@ -45,9 +45,8 @@ use SBG::Config qw/config/;
           pdb
           img
 
-NB This does not seem to work with rasmol-gtk 
-Use rasmol-classic, or just rasmol.
-Set this in the config.ini
+NB This does not seem to work with rasmol-gtk.  Use rasmol-classic, or just
+rasmol. Set this in the C<config.ini>
 
 =cut
 sub pdb2img {
@@ -55,7 +54,7 @@ sub pdb2img {
     $o{pdb} or return;
     $o{img} = $o{pdb} . '.ppm' unless $o{img};
     $logger->trace("$o{pdb} => $o{img}");
-    my $rasmol = config()->val(qw/rasmol executable/) || 'rasmol';
+    my $rasmol = config()->val(qw/rasmol classic/) || 'rasmol';
     my $fh;
     my $cmd = "$rasmol -nodisplay >/dev/null";
 #     my $cmd = "$rasmol -nodisplay ";

@@ -13,7 +13,7 @@ SBG::ComplexIO - Reads L<SBG::Complex>s using L<SBG::DomainIO>
 
 
 
-=SEE ALSO
+=head1 SEE ALSO
 
 L<SBG::Complex> , L<SBG::DomainIO>
 

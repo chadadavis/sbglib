@@ -61,7 +61,7 @@ exit;
 
 if (0) {
 my @partitions = $graph->connected_components;
-say scalar(@partitions), " trees";
+print scalar(@partitions), " trees";
 my $i = 0;
 foreach my $nodeset (@partitions) {
     my $subgraph = _subgraph($graph, @$nodeset);

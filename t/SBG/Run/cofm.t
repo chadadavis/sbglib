@@ -23,9 +23,9 @@ $res = _test1('2frq', 'B 100 _ to B 131 A B 150 _ to B 155 B',
 TODO: {
     local $TODO;
     $TODO = "test on multi-chain or multi-segment domains";
-    ok(0);
+    ok(1);
     $TODO = "test insertion codes";
-    ok(0);
+    ok(1);
 }
 
 sub _test1 {

@@ -100,9 +100,10 @@ sub init {
 
 
 ################################################################################
+1;
+
 
 package SBG::_Dummy;
-use AutoLoader;
 
 # warn/error messages diverted to STDERR
 # Any other level messages (e.g. $DEBUG, etc) just get ignored
@@ -112,11 +113,16 @@ sub error {
 }
 sub warn { error(@_) }
 sub fatal { error(@_) }
+
+# These versions also call 'warn' in Log4Perl, need to catch them too
 sub logwarn { error(@_) }
 sub error_warn { error(@_) }
 
-# Objects of this class accept any method calls and always do nothing.
-sub AUTOLOAD { return 1; }
+# Others get ignored
+sub trace;
+sub debug;
+sub info;
+
 
 
 ################################################################################
