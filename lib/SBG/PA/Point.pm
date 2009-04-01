@@ -56,10 +56,31 @@ has 'label' => (
     required => 1,
     );
 
+=head2 score
+
+=cut
+has 'score' => (
+    is => 'ro',
+    isa => 'Num',
+    default => 0,
+    required => 1,
+    );
+
+=head2 pval
+
+=cut
+has 'pval' => (
+    is => 'ro',
+    isa => 'Num',
+    default => 1,
+    required => 1,
+    );
+
+
 
 # Rounding resolution, can be a float
 # See Math::Round::nearest()
-our $resolution = 1;
+our $resolution = .1;
 
 
 
@@ -122,7 +143,7 @@ sub hash {
 
 sub _asstring {
     my ($self) = @_;
-    return $self->label . $self->hash();
+    return sprintf("%s-\(%.3f  %.3f  %.3f  %.3f  %.3f\)",$self->label,@{$self->pt},$self->score, $self->pval);
 }
 
 
