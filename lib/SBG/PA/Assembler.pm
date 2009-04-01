@@ -31,6 +31,7 @@ use File::Temp qw/tempfile/;
 
 use SBG::GeometricHash;
 use PDL::Matrix;
+use SBG::Log;
 
 our $gh = new SBG::GeometricHash(binsize=>1);
 
@@ -52,7 +53,7 @@ sub sub_test {
         $state->{'active'}{$src}++;
         $state->{'active'}{$dest}++;
     } else {
-#         print "Clash: $dest on $occupied\n";
+        $logger->debug("Clash: $dest on $occupied");
     }
 
     return ! $occupied;
@@ -106,13 +107,15 @@ sub sub_solution_pathhash {
     my ($state, $graph, $nodecover, $edges, $rejects) = @_;
     our %paths;
 
+    $logger->trace(join('|', @$nodecover));
+
     # Get the subgraph and find the path from one end to other
     my $sg = _subgraph2($graph, @$edges);
     my @path = _orderedpath($sg);
 
     my $pathid = join(' ', @path);
     if ($paths{$pathid}) {
-#         print "Dup path: $pathid\n";
+        $logger->trace("Dup path: $pathid");
         return;
     }
 
