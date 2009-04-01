@@ -34,7 +34,7 @@ our $minsize = 3;
 SBG::Log::init('TRACE');
 
 
-$SBG::PA::Point::resolution = 2;
+$SBG::PA::Point::resolution = 1;
 
 # NB Don't actually have to partition here, as Traversal starts at each node 
 my $graph = _randomgraph($graphsize);
