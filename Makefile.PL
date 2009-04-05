@@ -25,6 +25,7 @@ requires 'Log::Dispatch::File' => '0';
 requires 'Math::Round' => '0'; 
 requires 'Math::Trig' => '0'; 
 requires 'Module::Build' => '0'; 
+requires 'Module::Install' => '0'; # Ironically, no autoinstall of self
 requires 'Module::Load' => '0'; 
 requires 'Moose' => '0.72'; 
 requires 'Moose::Autobox' => '0'; 

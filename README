@@ -4,6 +4,11 @@ This repository houses code common to Bioinformatics-related developement in the
 SBG (Structural Bioinformatics Group) at EMBL.
 
 
+DEPENDENCIES
+
+http://www.russell.embl.de/private/wiki/index.php/Sbglib#Installation
+
+
 INSTALLATION
 
 To install this module, run the following commands:
