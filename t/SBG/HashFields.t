@@ -4,7 +4,6 @@ package SBG::HashFieldsTest;
 
 use Test::More 'no_plan';
 use SBG::Test 'float_is';
-use feature 'say';
 use Carp;
 use Data::Dumper;
 use FindBin;

@@ -1,8 +1,6 @@
 #!/usr/bin/env perl
 
 use Test::More 'no_plan';
-use feature 'say';
-
 use SBG::Domain;
 use SBG::Types;
 $d = new_ok(SBG::Domain);

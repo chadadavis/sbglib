@@ -1,8 +1,6 @@
 #!/usr/bin/env perl
 
 use Test::More 'no_plan';
-use feature 'say';
-
 use File::Temp qw(tempfile);
 use SBG::IO;
 use FindBin qw/$Bin/;

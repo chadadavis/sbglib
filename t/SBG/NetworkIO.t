@@ -2,7 +2,6 @@
 
 use Test::More 'no_plan';
 use SBG::Test 'float_is';
-use feature 'say';
 use Carp;
 use Data::Dumper;
 use FindBin;
@@ -43,7 +42,7 @@ $net = $io->read;
 
 my @graphs = $net->partition();
 foreach my $g (@graphs) {
-    say "\tconnected component:$g";
+    print "\tconnected component:$g\n";
 }
 
 my (undef, $tfile) = tempfile();

@@ -92,7 +92,7 @@ foreach my $modelfile (@ARGV) {
 
     my $iaction_keys = $model->interactions->keys;
     foreach my $iaction_key (@$iaction_keys) {
-#         print $iaction_key;
+        print "$iaction_key\n";
         my $interaction = $model->interaction($iaction_key);
         $irmsds->push($interaction->score('irmsd'));
         $zscores->push($interaction->score('zscore'));

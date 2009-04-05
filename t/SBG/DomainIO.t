@@ -2,7 +2,6 @@
 
 use Test::More 'no_plan';
 use SBG::Test 'float_is';
-use feature 'say';
 use Carp;
 use Data::Dumper;
 $, = ' ';
@@ -53,7 +52,7 @@ my $iomixed = new SBG::DomainIO(file=>"$dir/model.dom", type=>'SBG::Domain::CofM
 my @transes;
 while (my $dom = $iomixed->read) {
     push @transes, $dom->transformation if $dom->transformation;
-    say "dom: ", $dom->id;
+    print "dom: ", $dom->id, "\n";
 }
 is(scalar(@transes), 4, "4/6 Domains have explicit transformation");
 

@@ -3,7 +3,6 @@
 
 use Test::More 'no_plan';
 use SBG::Test 'float_is';
-use feature 'say';
 use Carp;
 use Data::Dumper;
 use FindBin;
@@ -136,6 +135,6 @@ __END__
 # Copy construction
 sub type { 'SBG::Domain::CofM' }
 my $dom = new SBG::Domain(pdbid=>'2nn6', descriptor=>'A 50 _ to A 120 _');
-say 'dom:', Dumper $dom;
+print 'dom:', Dumper $dom, "\n";
 my $cdom = type()->new(%$dom);
-say 'cdom:', Dumper $cdom;
+print 'cdom:', Dumper $cdom, "\n";

@@ -5,7 +5,6 @@ use warnings;
 use Test::More 'no_plan';
 # use SBG::Test 'float_is';
 use SBG::Log;
-use feature 'say';
 use Carp;
 use Data::Dumper;
 use FindBin;
@@ -78,7 +77,7 @@ is ($gh->class($points), 'newmodel1',
 is ($gh->class($points, [qw/c b o/]), 'newmodel1', 
     "Non-axis points, rotated, w/ labels");
 
-# say "Full covers: ", $gh->exists([$c, $a, $b]);
+# print "Full covers: ", $gh->exists([$c, $a, $b]), "\n";
 
 
 ################################################################################

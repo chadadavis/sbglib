@@ -2,7 +2,6 @@
 
 use Test::More 'no_plan';
 use SBG::Test 'float_is';
-use feature 'say';
 use Carp;
 use Data::Dumper;
 $, = ' ';
@@ -40,7 +39,7 @@ $net->add_interaction(
 print "nodes:@nodes:\n";
 %iactions = $net->get_interactions($net->nodes);
 for (keys %iactions) {
-    say "$_ : ", $iactions{$_};
+    print "$_ : ", $iactions{$_}, "\n";
 }
 
 
@@ -52,11 +51,11 @@ my @nodes = map { new SBG::Node($_) } @seqs;
 $net->add($_) for @nodes;
 
 $net->build(new SBG::Search::SCOP);
-say "iactions: " . join("\n", sort $net->interactions);
+print "iactions: " . join("\n", sort $net->interactions), "\n";
 
 my $subnets = $net->partition;
 foreach my $subnet (@$subnets) {
-    say "Subnet:$subnet";
+    print "Subnet:$subnet\n"
 }
 
 my $subnet = $subnets->[0];

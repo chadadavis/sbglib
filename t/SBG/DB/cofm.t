@@ -2,7 +2,6 @@
 
 use Test::More 'no_plan';
 use SBG::Test;
-use feature 'say';
 $, = ' ';
 use Data::Dumper;
 use SBG::DB::cofm;
