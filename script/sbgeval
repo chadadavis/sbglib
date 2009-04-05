@@ -33,7 +33,6 @@ messages, but no info or debug messages to the log file (B<log.log>)
 
 use strict;
 use warnings;
-use feature 'say';
 use Pod::Usage;
 use Getopt::Long;
 use Moose::Autobox;
@@ -93,7 +92,7 @@ foreach my $modelfile (@ARGV) {
 
     my $iaction_keys = $model->interactions->keys;
     foreach my $iaction_key (@$iaction_keys) {
-#         say $iaction_key;
+#         print $iaction_key;
         my $interaction = $model->interaction($iaction_key);
         $irmsds->push($interaction->score('irmsd'));
         $zscores->push($interaction->score('zscore'));

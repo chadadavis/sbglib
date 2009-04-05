@@ -22,7 +22,6 @@ L<Test::More>
 package SBG::Test;
 use base qw(Exporter);
 
-use feature 'say';
 use Data::Dumper;
 use Test::More;
 
