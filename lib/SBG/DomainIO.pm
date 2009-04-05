@@ -135,6 +135,9 @@ override 'write' => sub {
 
 NB You can change L<type> in between invocations of L<read>
 
+Any transformation found in the domain block is applied to the domain object
+after it is created.
+
 =cut
 override 'read' => sub {
     my ($self) = @_;

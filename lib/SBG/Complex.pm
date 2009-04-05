@@ -33,26 +33,17 @@ with 'SBG::Storable';
 
 use Moose::Autobox;
 use autobox ARRAY => 'SBG::List';
-
 use File::Temp qw/tempfile/;
 
 use SBG::HashFields;
-
 use SBG::List qw/min union sum intersection/;
-
 use SBG::Config qw/config/;
-
 use SBG::Log;
-
 use SBG::STAMP qw/superpose stamp/;
-
-
 use SBG::Domain;
 use SBG::DomainIO;
 # Default Domain subtype
 use SBG::Domain::CofM;
-
-
 
 use overload (
     '""' => '_asstring',
@@ -191,7 +182,7 @@ sub attach {
 
 
 # Transform $destdom via the linking transformation that puts src onto srcref
-# TODO move this to STAMP.pm
+# TODO explain order of ops here
 sub linker { 
     my ($self, $srcrefdom, $srcdom, $destdom) = @_;
     $logger->trace("linking $srcdom onto $srcrefdom, ",
@@ -212,7 +203,7 @@ sub linker {
     # Product of relative with absolute transformation
     # Any previous transformation (reference domain) has to also be included
 
-# TODO explain order of ops here (do this in STAMP.pm, not here)
+# TODO explain order of ops here
     $destdom->transform($xform);
     $destdom->transform($srcrefdom->transformation);
     # Note the linker transformation used, for scoring later
@@ -222,12 +213,33 @@ sub linker {
 }
 
 
+################################################################################
+=head2 subnet
+
+ Function: Derive a new L<SBG::Network> from this complex
+ Example : 
+ Returns : L<SBG::Network>
+ Args    : NA
+
 # TODO
-# Derive a new L<SBG::Network> using $self->interactions and $self->templates
+
+=cut
 sub subnet {
     my ($self) = @_;
-    
-}
+
+    # NB subnet cannot simply call subgraph, as we only want specific
+    # interactions for given nodes, not all interaction between two nodes, as
+    # subgraph() would tend to do it.  No way to remove interactions, either,
+    # i.e. we'll have to build subnet manually
+
+    # Go through %{ $self->interactions }
+    # foreach my $i (@{$self->interactions->values}) {
+    #   @nodes = $i->nodes;
+    #   $net->add($_) for @nodes;
+    #   $net->add_interaction(
+    #              -nodes=>[@nodes],-interaction=>$i);
+
+} # subnet
 
 
 
@@ -464,6 +476,11 @@ the components in the dimer. They must have the same names.
 NB This only works when the corresponding complexes are very similar to each
 other.
 
+TODO BUG Since the names of the components may not be the same, this does not
+enforce a component mapping as it should. I.e. if the domains are output in a
+different order, a superposition may not seem possible, though it may be
+possible if output in the proper order.
+
 =cut
 sub complexrmsd {
     my ($model, $truth) = @_;
@@ -472,10 +489,11 @@ sub complexrmsd {
     # Subset $truth . Only consider common components
     my @cnames = intersection([$model->names], [$truth->names]);
     my $subcomplex = new SBG::Complex;
-    # Take the original doms from the native complex, if correspondance in model
-    $subcomplex->model($_, $truth->model($_)) for @cnames;
 
+    # Take the original doms from the native complex, if correspondance in model
+#     $subcomplex->model($_, $truth->model($_)) for @cnames;
     # Just use the whole true complex, in case component names are different
+    # NB this may ruin the order in which domains are output
     $subcomplex = $truth;
 
     $logger->debug($model->names->length, " and ", $truth->names->length,
@@ -506,15 +524,15 @@ sub complexrmsd {
         file=>$subcomplex_dom, type=>'SBG::Domain');
     my $subcomplexasdom = $subcomplexio->read;
 
-# TODO DES
     # Don't cache this transform, because these aren't real: 9abc and 9xyz
     my $trans = SBG::STAMP::superpose(
         $subcomplexasdom, $modelasdom, ('cache'=>0));
     $subcomplexasdom->transform($trans);
+
     return SBG::STAMP::gtransform(
         doms=>[$modelasdom, $subcomplexasdom], out=>'transformed.pdb');
 
-
+    # Alternatively, get the RMSD
     # Run stamp, model is the query, subcomplex is the database
     my $just1 = 1; # Get the whole set of values back from the first scan
     my $fields = SBG::STAMP::stamp($model_dom, $subcomplex_dom, $just1);
