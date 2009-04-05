@@ -8,18 +8,20 @@ all_from => 'lib/SBG.pm';
 
 requires 'Bio::Seq' => '1.006';
 # requires 'Bio::Network::ProteinNet' => '1.006'; 
+requires 'Config::IniFiles' => '0';
 requires 'ExtUtils::F77' => '0'; # Required by PDL::Slatec
 requires 'File::Basename' => '0'; 
 requires 'File::Temp' => '0'; 
 requires 'FindBin' => '0'; 
 requires 'Getopt::Long' => '0'; 
-requires 'Graph' => '0'; 
+requires 'Graph' => '0.86'; 
 requires 'Graph::UnionFind' => '0'; 
 requires 'Graph::Writer::GraphViz' => '0'; 
 requires 'IO::String' => '0'; 
 requires 'List::MoreUtils' => '0'; 
 requires 'List::Util' => '0'; 
 requires 'Log::Log4perl' => '0';
+requires 'Log::Dispatch::File' => '0';
 requires 'Math::Round' => '0'; 
 requires 'Math::Trig' => '0'; 
 requires 'Module::Build' => '0'; 
@@ -48,6 +50,7 @@ requires 'Text::ParseWords' => '0';
 # requires_external_bin 'stamp';
 # requires_external_bin 'cofm';
 # requires_external_bin 'pdbc';
+# requires_external_bin 'dot';
 
 # Automagically install above deps from CPAN
 auto_install(force=>1);

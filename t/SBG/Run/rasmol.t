@@ -28,7 +28,7 @@ my $optstr = "select (!*$chain and within(10.0, *$chain))\ncolor white";
 my (undef, $img) = tempfile(SUFFIX=>'.ppm');
 pdb2img(pdb=>$file, script=>$optstr, img=>$img);
 if (ok($img && -r $img, "pdb2img() $file => $img")) {
-    `display $img`;
+#    `display $img`;
 #         ok(ask("You saw the same hexamer"), "Confirmed image conversion");
 }
 
