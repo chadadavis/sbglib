@@ -10,16 +10,24 @@ sbg myfile.stor <object-method> <parameters> ...
 
 =head1 DESCRIPTION
 
+Uses bash autocomplete:
+ 
+ complete -o default -C 'sbg -options' sbg
+
 
 =head1 OPTIONS
 
-=head2 -k
+=head2 -k Keep temporary files
 
-Keep all temporary files, for debugging
+For debugging
 
-=head2 -h 
+=head2 -l Log level
 
-Print this help page
+One of:
+
+ TRACE DEBUG INFO WARN ERROR FATAL
+
+=head2 -h Help
 
 =head1 SEE ALSO
 
@@ -30,40 +38,45 @@ L<SBG::Storable>
 ################################################################################
 
 # CPAN
-use Getopt::Long;
+use Getopt::Long qw/:config/; # qw/:config auto_help/;
 use Pod::Usage;
-
 use File::Temp;
 use Scalar::Util qw/blessed/;
+use Moose::Autobox;
 
 use SBG::Storable qw/module_for retrieve can_do/;
 use SBG::Log;
 
-use Moose::Autobox;
+
 
 ################################################################################
 
-my %ops;
-my $result = GetOptions(\%ops, 
-                        'l|log=s',
-                        'h|help',
-                        'k|keep',
+my @avail_ops = (
+    'l|log=s',
+    'k|keep',
+    'h|help',
     );
-my ($file,$method,@args) = @ARGV;
-$file or pod2usage(-exitval=>2);
+# First check for shell command line completion
+_complete_options(@avail_ops);
+
+# Otherwise process outstanding standard options
+my %ops;
+my $result = GetOptions(\%ops, @avail_ops);
 
 SBG::Log::init($ops{'l'}) if $ops{'l'};
 $File::Temp::KEEP_ALL = 1 if $ops{'k'};
 
-
+# Get arguments
+my ($file,$method,@args) = @ARGV;
+$file or pod2usage(-exitval=>2,-verbose=>2);
 my $obj = retrieve($file);
-
+$obj or pod2usage(-exitval=>2,-verbose=>2);
 if ($ops{'h'}) { 
-    my $mstr = method_str($obj);
-    pod2usage(-msg=>$mstr,-exitval=>0);
+    my $mstr = "$file can do:\n\t" . join("\n\t", _methods($obj));
+    pod2usage(-msg=>$mstr,-exitval=>0,-verbose=>1);
 }
 
-@args = load_args(@args);
+@args = _load_args(@args);
 my @res = $method ? $obj->$method(@args) : "$obj";
 print "@res";
 print "\n" unless $res[$#res] =~ /\n$/;
@@ -72,24 +85,55 @@ print "\n" unless $res[$#res] =~ /\n$/;
 ################################################################################
 
 # If any param is readable file, convert to object
-sub load_args {
+sub _load_args {
     map { -r $_ ? retrieve($_) : $_ } @_;
 }
 
-sub method_str {
+sub _methods {
     my ($obj) = @_;
     $obj or return;
-    my $str;
-    $str .= "$file can do these functions:\n";
+    my @all_methods;
     my $methods = $obj->can_do;
     my $keys = $methods->keys->sort;
     foreach my $class (@$keys) {
         my $names = $methods->{$class}->sort;
-        $str .= $class . "::\n\t@$names\n";
+        push(@all_methods, "${class}::${_}") for @$names;
     }
-    return $str;
+    return @all_methods;
 }
 
+
+sub _complete_options {
+    my (@ops) = @_;
+    our @ARGV;
+    Getopt::Long::Configure('pass_through');
+    my $options;
+    GetOptions('options' => \$options);
+
+    unless ($options) {
+        # Reset
+        Getopt::Long::Configure('pass_through');
+        return;
+    }
+
+    my (undef, $current, $preceding) = @ARGV;
+    if ($current =~ /^-/) {
+        my @opnames = map { s/.\|//; s/=/ /; '-' . $_ } @ops;
+        my @matches = grep { /^$current/ } @opnames;
+        print join("\n",@matches);
+    } else {
+        my ($method, $file) = ($current, $preceding);
+        exit unless $file;
+        my $obj = retrieve($file);
+        exit unless $obj;
+        my @methods = _methods($obj);
+#         warn "method:$method:file:$file:methods:@methods:\n";
+        my @matches = grep { /$method/ } @methods;
+        print join("\n", @matches);
+    }
+    exit;
+
+} # _complete_options
 
 
 
