@@ -43,6 +43,7 @@ use SBG::DomainIO;
 use SBG::List qw(reorder);
 use SBG::Config qw/config/;
 use SBG::Log;
+use SBG::DB;
 
 
 ################################################################################
@@ -198,20 +199,6 @@ sub superpose_local {
 } # superpose_local
 
 
-
-sub _dbconnect {
-    my ($db) = @_;
-    our $dbh;
-    return $dbh if $dbh;
-    $db ||= config()->val('trans', 'db') || "trans_1_4";
-    my $host = config()->val(qw/trans host/);
-    my $dbistr = "dbi:mysql:dbname=$db";
-    $dbistr .= ";host=$host" if $host;
-    $dbh = DBI->connect($dbistr);
-    return $dbh;
-}
-
-
 # Takes two domain objects
 sub superpose_query {
     my ($fromdom, $ontodom) = @_;
@@ -220,7 +207,9 @@ sub superpose_query {
         $fromdom && $fromdom->wholechain &&
         $ontodom && $ontodom->wholechain;
 
-    my $dbh = _dbconnect();
+    my $db = config()->val('trans', 'db') || "trans_1_4";
+    my $host = config()->val(qw/trans host/);
+    my $dbh = SBG::DB::connect($db, $host);
 
     # Static handle, prepare it only once
     our $trans_sth;
@@ -480,6 +469,8 @@ sub stamp {
         # Hash @keys to @t
         %fields = List::MoreUtils::mesh @keys, @t;
         $logger->trace("fields:", join(' ', %fields));
+
+        # TODO DES poor design doing this here
         # If the incoming domain had a trans, but it doesn't afterward, the name
         # can be different, remove qualifier:
         $fields{'Domain1'} =~ s/-0x.*//;

@@ -33,6 +33,7 @@ use DBI;
 
 use SBG::Config qw/config/;
 use SBG::Log;
+use SBG::DB;
 
 ################################################################################
 =head2 query
@@ -64,12 +65,10 @@ sub query {
     my $pdbstr = "pdb|$pdbid|$chainid";
     my $db = config()->val(qw/cofm db/) || "trans_1_5";
     my $host = config()->val(qw/cofm host/);
-    my $dbistr = "dbi:mysql:dbname=$db";
-    $dbistr .= ";host=$host" if $host;
+
+    my $dbh = SBG::DB::connect($db, $host);
     # Static handle, prepare it only once
-    our $dbh;
     our $cofm_sth;
-    $dbh ||= DBI->connect($dbistr);
     $cofm_sth ||= $dbh->prepare("select " .
                                 "cofm.Cx, cofm.Cy, cofm.Cz," .
                                 "cofm.Rg,cofm.Rmax," .
