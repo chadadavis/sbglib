@@ -27,18 +27,12 @@ use Point
 package SBG::PA::Point;
 use Moose;
 
+use Math::Round qw/nearest/;
 use overload (
     '""' => '_asstring',
     'cmp' => '_compare',
     fallback => 1,
     );
-
-use Math::Round qw/nearest/;
-
-# Rounding resolution, can be a float
-# See Math::Round::nearest()
-our $resolution = 1;
-
 
 our $VERSION = "0.1";
 
@@ -84,6 +78,9 @@ has 'pval' => (
 
 
 
+# Rounding resolution, can be a float
+# See Math::Round::nearest()
+our $resolution = .1;
 
 
 
@@ -146,8 +143,9 @@ sub hash {
 
 sub _asstring {
     my ($self) = @_;
-    return sprintf("%s %s %.3f %.3f", 
-                   $self->label,$self->hash,$self->score, $self->pval);
+    #return $self->label . $self->hash;
+    return sprintf("%s-\(%.3f  %.3f  %.3f  %.3f  %.3f\)",$self->label,@{$self->pt},$self->score, $self->pval);
+    #return sprintf("%s-\(%.3f  %.3f  %.3f\)",$self->label,@{$self->pt},$self->score, $self->pval);
 }
 
 
