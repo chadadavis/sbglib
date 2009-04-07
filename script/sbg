@@ -10,6 +10,11 @@ sbg myfile.stor <object-method> <parameters> ...
 
 =head1 DESCRIPTION
 
+Calls the given method on the object stored in myfile.stor
+
+If no method is given, the object is printed.
+
+
 Uses bash autocomplete:
  
  complete -o default -C 'sbg -options' sbg
@@ -77,7 +82,7 @@ if ($ops{'h'}) {
 }
 
 @args = _load_args(@args);
-my @res = $method ? $obj->$method(@args) : "$obj";
+my @res = $method ? $obj->$method(@args) : ("$obj");
 print "@res";
 print "\n" unless $res[$#res] =~ /\n$/;
 

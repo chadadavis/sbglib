@@ -230,7 +230,9 @@ In addition to L<id>, a unique ID for the transformation, if defined, is
 appended.
 
 NB If the L<SBG::Domain> contains a L<SBG::Transform>, the unique ID will be
-different after read/write or after serializing and deserializing.
+different after read/write or after serializing and deserializing. This is
+because the ID is simply the memory address of the Transform. It will be
+different for two copies of the same transform.
 
 =cut
 sub uniqueid {

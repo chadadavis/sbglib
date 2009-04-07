@@ -156,6 +156,12 @@ TODO: {
 }
 
 
+TODO: {
+    local $TODO = "Test stamp() when one/both domains already have transform";
+    ok(1);
+}
+
+
 ################################################################################
 
 sub ask {
