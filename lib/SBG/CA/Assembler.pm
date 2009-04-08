@@ -85,7 +85,7 @@ sub sub_solution {
     my $class = $gh->exact(\@points, $labels);
     if (defined $class) {
         $dups++;
-#         $logger->debug('Total duplicates: ', $dups);
+        $logger->debug('Duplicate solution. Total duplicates: ', $dups);
         $success = 0;
     } else {
         $class = $gh->put(undef, \@points, $labels);
