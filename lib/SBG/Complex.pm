@@ -193,8 +193,12 @@ sub linker {
     unless (defined($xform)) {
         $logger->info("Cannot link via: superpose($srcdom,$srcrefdom)");
         return;
+    } else {
+        $logger->trace("Succeeded.",
+                       " Sc:", $xform->{'Sc'}, 
+                       " RMS:", $xform->{'RMS'},
+            );
     }
-
 
     # Concrete (w/ coordinates) instance of this domain, of class $self->type()
     $destdom = $self->type->new(%$destdom);
@@ -347,6 +351,18 @@ sub transform {
 } # transform
 
 
+# TODO DOC
+# TODO DES should only be available in specialized subclass
+sub crosshairs {
+    my ($self) = @_;
+    foreach my $domname ($self->names) {
+        my $dom = $self->model($domname);
+        $dom->crosshairs();
+    }
+    return $self;
+}
+
+
 ################################################################################
 =head2 min_rmsd
 
@@ -368,6 +384,12 @@ sub min_rmsd {
     my $minname = '';
     # Only consider common components
     my @cnames = intersection([$model->names], [$truth->names]);
+
+    # Define 7pt cross-hair centre of mass for model complex
+    # TODO DES this assumes an implementation, need to subclass Complex!
+    $model->crosshairs();
+
+    # For each joining domain
     foreach my $name (@cnames) {
         my $mdom = $model->model($name);
         my $tdom = $truth->model($name);
@@ -377,6 +399,9 @@ sub min_rmsd {
             $logger->debug("Cannot join via: $name");
             next;
         }
+        # Before transforming, setup the crosshairs on benchmark complex
+        $truth->crosshairs();
+
         # Product of these transformations: (applying $trans, then from $mdom)
         $trans = $mdom->transformation x $trans;
         $truth->transform($trans);
@@ -432,6 +457,7 @@ sub overlap {
     # First superpose:
     # The transformation required to put $other into fram-of-reference of $self
     my ($minrmsd, $mintrans, $minname) = $self->min_rmsd($other);
+    return unless defined $mintrans;
     $other->transform($mintrans);
 
     my @cnames = intersection([$self->names], [$other->names]);
@@ -602,10 +628,15 @@ sub rmsd {
    foreach my $name (@cnames) {
        my $d1 = $self->model($name);
        my $d2 = $other->model($name);
+
+# TODO Subclass Complex !
+
        # centre-based version
-       $sqdistances->push($d1->sqdist($d2));
+#        $sqdistances->push($d1->sqdist($d2));
+
        # crosshair-based version( list() converts PDL to Perl array)
-#        $sqdistances->push($d1->sqdev($d2)->list);
+       $sqdistances->push($d1->sqdev($d2)->list);
+
    }
    my $mean = $sqdistances->mean;
    return unless $mean;

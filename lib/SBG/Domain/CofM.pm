@@ -102,7 +102,7 @@ has 'centre' => (
 
 =head2 matrix
 
-For saving cross-hair atoms around centre-of-mass
+For saving cross-hair atoms: additionaly six atoms around centre-of-mass
 
 =cut
 has 'matrix' => (
@@ -166,10 +166,30 @@ sub BUILD {
     $self->radius($res->{ $self->radius_type });
     $self->centre( [ $res->{Cx}, $res->{Cy}, $res->{Cz} ] );
 
-# TODO DES don't actually need this yet
-#     $self->matrix(_crosshairs($self->centre));
+    # Cross-hairs are not generally necessary, as they can always be computed
+    # from the centre. I.e. don't be doing this here
+
+# $self->matrix(_crosshairs($self->centre));
 
 } # load
+
+
+################################################################################
+=head2 crosshairs
+
+ Function: Resets crosshair atoms around current centre of mass
+ Example : 
+ Returns : 
+ Args    : 
+
+
+=cut
+sub crosshairs {
+    my ($self,) = @_;
+    $self->matrix(_crosshairs($self->centre));
+    return $self->matrix;
+
+} # crosshairs
 
 
 ################################################################################
@@ -188,11 +208,22 @@ sub rmsd {
     # Single-point (cofm) version
     return sqrt($self->sqdist($other));
 
+# TODO DES
     # Vector of (squared) distances between the corresponding 7 points
 #     my $sqdistances = $self->sqdev($other);
 #     return sqrt(average($sqdistances));
 
 }
+
+
+# TODO DOC
+sub rmsd7 {
+    my ($self, $other) = @_;
+    # Vector of (squared) distances between the corresponding 7 points
+    my $sqdistances = $self->sqdev($other);
+    return sqrt(average($sqdistances));
+}
+
 
 ################################################################################
 =head2 sqdev
@@ -293,10 +324,10 @@ override 'transform' => sub {
 
     $self->centre($newtrans->transform($self->centre));
 
-# Don't need to maintain this, only relevant when relative to true structure
-#     $self->matrix($newtrans->transform($self->matrix));
+    # Transform cross-hairs, if any
+    $self->matrix($newtrans->transform($self->matrix)) if defined $self->matrix;
 
-    # Update cumulative transformation. Managed by parent
+    # Update cumulative transformation. Managed by parent 'transform()' function
     super();
 
     return $self;
@@ -348,8 +379,8 @@ sub overlap {
  Args    : L<SBG::Sphere> 
            thresh - default 0
 
-Threshold is a fraction of the maximum possible overlap, which is the diameter of
-the smaller sphere.
+Threshold is a fraction of the maximum possible overlap, which is the diameter
+of the smaller sphere.
 
 =cut
 sub overlaps {
@@ -503,10 +534,14 @@ sub _atom2pdl {
 }
 
 
+
 sub _crosshairs {
     my ($centre) = @_;
+    # TODO DES consider making this the radius
+    # Should partners of a homologous interface also be the same radius?
     my $size = 5;
-    # The fourth dimension is for homogenous coordinates
+
+    # The fourth dimension is because we use homogenous coordinates
     # Since $centre is already homogenous, the resulting matrix will be too
     my $x = mpdl($size,0,0,0)->transpose;
     my $y = mpdl(0,$size,0,0)->transpose;
