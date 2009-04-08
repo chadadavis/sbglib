@@ -1,0 +1,29 @@
+#!/usr/bin/env perl
+
+use Statistics::Regression;
+use Data::Dumper;
+
+# Create regression object
+my $reg = Statistics::Regression->new(
+    "sample regression", 
+    [ "const", "Sc", "RMS", "RMSD" ] 
+    );
+
+my $weight = 1.0;
+my $const = 1.0;
+
+while (<>) {
+    my @f = split;
+    # Make 1-based
+    unshift @f, undef;
+
+    my @line = ( $const, $f[15], $f[16], $f[8] );
+    warn "Adding @line\n";
+    # Preceeded by weight
+    $reg->include(rand, [ @line ]);
+
+}
+
+$reg->print;
+
+print Dumper $reg;
