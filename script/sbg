@@ -73,9 +73,9 @@ $File::Temp::KEEP_ALL = 1 if $ops{'k'};
 
 # Get arguments
 my ($file,$method,@args) = @ARGV;
-$file or pod2usage(-exitval=>2,-verbose=>2);
+pod2usage(-exitval=>2,-verbose=>2) unless defined $file;
 my $obj = retrieve($file);
-$obj or pod2usage(-exitval=>2,-verbose=>2);
+pod2usage(-exitval=>2,-verbose=>2) unless defined $obj;
 if ($ops{'h'}) { 
     my $mstr = "$file can do:\n\t" . join("\n\t", _methods($obj));
     pod2usage(-msg=>$mstr,-exitval=>0,-verbose=>1);
@@ -96,7 +96,7 @@ sub _load_args {
 
 sub _methods {
     my ($obj) = @_;
-    $obj or return;
+    return unless defined($obj);
     my @all_methods;
     my $methods = $obj->can_do;
     my $keys = $methods->keys->sort;
@@ -128,11 +128,12 @@ sub _complete_options {
         print join("\n",@matches);
     } else {
         my ($method, $file) = ($current, $preceding);
-        exit unless $file;
+        exit unless defined($file);
         my $obj = retrieve($file);
-        exit unless $obj;
+        exit unless defined($obj);
         my @methods = _methods($obj);
 #         warn "method:$method:file:$file:methods:@methods:\n";
+        warn "ref:", ref $obj;
         my @matches = grep { /$method/ } @methods;
         print join("\n", @matches);
     }

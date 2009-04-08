@@ -81,7 +81,8 @@ foreach my $modelfile (@ARGV) {
 #     my $crmsd = $model->complexrmsd($truth) || 'nan';
 
     # linear overlap of spheres (cofm+rg) (as % of maximum possible overlap)
-    my $overlap = 100 * $model->overlap($truth);
+    my $overlap = $model->overlap($truth);
+    $overlap *= 100 if defined $overlap;
 
     my $irmsds = [];
     my $zscores = [];
@@ -92,7 +93,6 @@ foreach my $modelfile (@ARGV) {
 
     my $iaction_keys = $model->interactions->keys;
     foreach my $iaction_key (@$iaction_keys) {
-        print "$iaction_key\n";
         my $interaction = $model->interaction($iaction_key);
         $irmsds->push($interaction->score('irmsd'));
         $zscores->push($interaction->score('zscore'));
@@ -122,9 +122,6 @@ foreach my $modelfile (@ARGV) {
     my $domain_keys = $model->models->keys;
     foreach my $domain (@$domain_keys) {
         my $l = $model->model($domain)->linker;
-#         print "$domain\n";
-        next unless $l->_tainted;
-#         print "linker:\n$l\n";
 
         $Scs->push($l->{'Sc'});
         $RMSs->push($l->{'RMS'});
@@ -141,24 +138,23 @@ foreach my $modelfile (@ARGV) {
     basename($ENV{PWD}), $truthfile, $truth->size, 
     $modelfile, $model->size, scalar(@$iaction_keys), 
     100 * $model->size/$truth->size, 
-    $min_rmsd,
+    ($min_rmsd || 'nan'),
 #     $crmsd,
-    $overlap,
-    $irmsds->mean, 
-    $zscores->mean, 
-    $pvals->mean, 
+    ($overlap || 'nan'),
+    ($irmsds->mean || 'nan'),
+    ($zscores->mean || 'nan'),
+    ($pvals->mean || 'nan'),
     ($evals->mean || 'nan'), 
     ($seqids->mean || 'nan'),
-    $Scs->mean,
-    $RMSs->mean,
-    $Aligns->mean,
-    $Fits->mean,
-    $Eqs->mean,
-    $Is->mean,
-    $Ss->mean,
-    $Ps->mean,
+    ($Scs->mean() || 'nan'),
+    ($RMSs->mean || 'nan'),
+    ($Aligns->mean || 'nan'),
+    ($Fits->mean || 'nan'),
+    ($Eqs->mean || 'nan'),
+    ($Is->mean || 'nan'),
+    ($Ss->mean || 'nan'),
+    ($Ps->mean || 'nan'),
     ;
-
 }
 
 __END__
