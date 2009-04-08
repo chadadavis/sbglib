@@ -75,7 +75,7 @@ print $header;
 
 foreach my $modelfile (@ARGV) { 
     my $model = retrieve $modelfile;
-
+    next unless defined($model);
     my $min_rmsd = $model->min_rmsd($truth) || 'nan';
     # This will only work on *very* similar complexes
 #     my $crmsd = $model->complexrmsd($truth) || 'nan';
