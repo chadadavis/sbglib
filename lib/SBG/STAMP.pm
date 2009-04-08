@@ -122,7 +122,8 @@ sub superpose {
 
     if ($fromdom eq $ontodom) {
         $logger->trace("Identity");
-        return new SBG::Transform();
+#         return new SBG::Transform();
+        return SBG::Transform::id();
     }
 
     # Check database cache

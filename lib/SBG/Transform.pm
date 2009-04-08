@@ -120,6 +120,33 @@ sub _build_matrix {
 
 
 ################################################################################
+=head2 id
+
+ Function: Represents the transformation of a domain onto itself
+ Example : my $id_trans = SBG::Transform::id();
+ Returns : L<SBG::Transform>
+ Args    : NA
+
+NB: The difference between this and just using C<new()>, which also uses and
+identity transformation, is that this method explicitly sets the STAMP scores
+for the transformation to their maximum values. I.e. this is to explicitly say
+that one is transforming a domain onto itself and that the identity transform is
+high-scoring. The C<new()> just uses the identity transform as a convenient
+default and sets no scores on the transform.
+
+=cut
+sub id {
+    my $self = new SBG::Transform();
+    $self->{'Sc'} = 10;
+    $self->{'RMS'} = 0;
+    $self->{'I'} = 100;
+    $self->{'S'} = 100;
+    $self->{'P'} = 0;
+    return $self;
+}
+
+
+################################################################################
 =head2 reset
 
  Function: Resets the 'transformation' to the identity;
