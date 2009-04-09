@@ -56,6 +56,9 @@ my $result = GetOptions(\%ops,
                         'l|log=s',
                         's|size=s',
                         'c|complete',
+                        'f|field=s',
+                        'b|best=s',
+                        'r|reverse',
     );                  
 if ($ops{'h'}) { pod2usage(-exitval=>1, -verbose=>2); }
 
@@ -68,100 +71,69 @@ my $truthfile = shift or pod2usage(-exitval=>1);
 my $truth = retrieve $truthfile;
 our $minsize = _minsize($truth, %ops);
 
-my $pattern = 
-    "%4s %20s %3d %40s %3d %4d %6.2f %5.2f %6.2f %5.2f %7.3f %12g %12g %6.2f %5.2f %5.2f %4d %4d %4d %6.2f %6.2f %12g\n";
-my $header  = sprintf 
-    "#%3s %20s %3s %40s %3s %4s %6s %5s %6s %5s %7s %12s %12s %6s %5s %5s %4s %4s %4s %6s %6s %12s\n",
-    qw/PDB Benchmark N Model N Iact Cover RMSD Olap iRMSD i2Z i2P i2E i2SID Sc RMS Al Fit Eq %I %S P(m)/;
+my @fields = qw/PDB Benchmark BN Model MN Iact Cover RMSD Olap iRMSD i2Z i2P i2E i2SID Sc RMS Al Fit Eq %I %S P(m)/;
 
+my $header  = sprintf 
+    "#%3s %20s %4s %40s %4s %4s %6s %5s %6s %5s %7s %12s %12s %6s %5s %5s %4s %4s %4s %6s %6s %12s\n",
+    @fields;
 print $header;
 
+# Data line pattern
+my $pattern = 
+    "%4s %20s %4d %40s %4d %4d %6.2f %5.2f %6.2f %5.2f %7.3f %12g %12g %6.2f %5.2f %5.2f %4d %4d %4d %6.2f %6.2f %12g\n";
+
+my @observations;
 
 foreach my $modelfile (@ARGV) { 
     my $model = retrieve $modelfile;
     next unless defined($model);
     next if $model->size < $minsize;
 
-    my $min_rmsd = $model->min_rmsd($truth) || 'nan';
-    # This will only work on *very* similar complexes
-#     my $crmsd = $model->complexrmsd($truth) || 'nan';
+    my %obs = (_iaction_scores($model), _linker_scores($model));
+
+    # RMSD between model and complex
+    $obs{RMSD} = $model->min_rmsd($truth) || 'nan';
 
     # linear overlap of spheres (cofm+rg) (as % of maximum possible overlap)
     my $overlap = $model->overlap($truth);
     $overlap *= 100 if defined $overlap;
+    $obs{Olap} = $overlap || 'nan';
 
-    my $irmsds = [];
-    my $zscores = [];
-    my $pvals = [];
-    my $evals = [];
-    my $seqids = [];
+    # Sizes and coverage
+    $obs{PDB} = basename($ENV{PWD});
+    $obs{Benchmark} = $truthfile;
+    $obs{BN} = $truth->size;
+    $obs{Model} = $modelfile;
+    $obs{MN} = $model->size;
+    $obs{Cover} = 100 * $model->size/$truth->size;
 
-
-    my $iaction_keys = $model->interactions->keys;
-    foreach my $iaction_key (@$iaction_keys) {
-        my $interaction = $model->interaction($iaction_key);
-        $irmsds->push($interaction->score('irmsd'));
-        $zscores->push($interaction->score('zscore'));
-        $pvals->push($interaction->score('pval'));
-
-        my $template_keys = $interaction->templates->keys;
-        foreach my $template_key (@$template_keys) {
-            my $template = $interaction->template($template_key);
-            # fam superf and fold relations marked by 'REL' in eval
-            if ($template->score('eval') !~ /REL/) {
-                $evals->push($template->score('eval'));
-                $seqids->push($template->score('seqid'));
-            }
-        }
-    }
-
-    # STAMP scores
-    my $Scs = [];
-    my $RMSs = [];
-    my $Aligns = [];
-    my $Fits = [];
-    my $Eqs = [];
-    my $Is = [];
-    my $Ss = [];
-    my $Ps = [];
-
-    my $domain_keys = $model->models->keys;
-    foreach my $domain (@$domain_keys) {
-        my $l = $model->model($domain)->linker;
-
-        $Scs->push($l->{'Sc'});
-        $RMSs->push($l->{'RMS'});
-        $Aligns->push($l->{'Align'});
-        $Fits->push($l->{'Fit'});
-        $Eqs->push($l->{'Eq'});
-        $Is->push($l->{'I'});
-        $Ss->push($l->{'S'});
-        $Ps->push($l->{'P'});
-    }
-
-    $, = "\t";
-    printf $pattern,
-    basename($ENV{PWD}), $truthfile, $truth->size, 
-    $modelfile, $model->size, scalar(@$iaction_keys), 
-    100 * $model->size/$truth->size, 
-    ($min_rmsd || 'nan'),
-#     $crmsd,
-    ($overlap || 'nan'),
-    ($irmsds->mean || 'nan'),
-    ($zscores->mean || 'nan'),
-    ($pvals->mean || 'nan'),
-    ($evals->mean || 'nan'), 
-    ($seqids->mean || 'nan'),
-    ($Scs->mean() || 'nan'),
-    ($RMSs->mean || 'nan'),
-    ($Aligns->mean || 'nan'),
-    ($Fits->mean || 'nan'),
-    ($Eqs->mean || 'nan'),
-    ($Is->mean || 'nan'),
-    ($Ss->mean || 'nan'),
-    ($Ps->mean || 'nan'),
-    ;
+    push @observations, \%obs;
 }
+
+
+# Sort
+if (my $f = $ops{'f'}) {
+    @observations = sort { $a->{$f} <=> $b->{$f} } @observations;
+    @observations = reverse(@observations) if $ops{'r'};
+}
+
+
+my $best = $ops{'b'} || '100%';
+if ($best =~ /(\d+)\%$/) {
+    $best = ceil(@observations * $1 / 100.0);
+}
+
+# Print
+for (my $i = 0; $i < @observations; $i++) {
+    last if $i >= $best;
+    my $obs = $observations[$i];
+    # Print %obs by order given in @fields
+    printf $pattern, map { $obs->{$_} } @fields;
+}
+
+exit;
+
+################################################################################
 
 
 sub _minsize {
@@ -175,6 +147,84 @@ sub _minsize {
     }
     return $minsize;
 }
+
+
+sub _iaction_scores {
+    my ($model) = @_;
+    my %obs;
+
+    my $iRMSD = [];
+    my $i2Z = [];
+    my $i2P = [];
+    my $i2E = [];
+    my $i2SID = [];
+
+    my $iaction_keys = $model->interactions->keys;
+    foreach my $iaction_key (@$iaction_keys) {
+        my $interaction = $model->interaction($iaction_key);
+        # Scores for interaction as a whole
+        $iRMSD->push($interaction->score('irmsd'));
+        $i2Z->push($interaction->score('zscore'));
+        $i2P->push($interaction->score('pval'));
+
+        # Score for each half of interaction
+        my $template_keys = $interaction->templates->keys;
+        foreach my $template_key (@$template_keys) {
+            my $template = $interaction->template($template_key);
+            # fam superf and fold relations marked by 'REL' in eval
+            if ($template->score('eval') !~ /REL/) {
+                $i2E->push($template->score('eval'));
+                $i2SID->push($template->score('seqid'));
+            }
+        }
+    }
+    $obs{Iact} = scalar(@$iaction_keys);
+    $obs{iRMSD} = ($iRMSD->mean || 'nan');
+    $obs{i2Z} = ($i2Z->mean || 'nan');
+    $obs{i2P} = ($i2P->mean || 'nan');
+    $obs{i2E} = ($i2E->mean || 'nan'); 
+    $obs{i2SID} = ($i2SID->mean || 'nan');
+    return %obs;
+} # _iaction_scores
+
+
+sub _linker_scores {
+    my ($model) = @_;
+    my %obs;
+
+    # STAMP scores
+    my $Sc = [];
+    my $RMS = [];
+    my $Al = [];
+    my $Fit = [];
+    my $Eq = [];
+    my $I = [];
+    my $S = [];
+    my $P = [];
+
+    my $domain_keys = $model->models->keys;
+    foreach my $domain (@$domain_keys) {
+        my $l = $model->model($domain)->linker;
+
+        $Sc->push($l->{'Sc'});
+        $RMS->push($l->{'RMS'});
+        $Al->push($l->{'Align'});
+        $Fit->push($l->{'Fit'});
+        $Eq->push($l->{'Eq'});
+        $I->push($l->{'I'});
+        $S->push($l->{'S'});
+        $P->push($l->{'P'});
+    }
+    $obs{'Sc'} = ($Sc->mean() || 'nan');
+    $obs{'RMS'} = ($RMS->mean || 'nan');
+    $obs{'Al'} = ($Al->mean || 'nan');
+    $obs{'Fit'} = ($Fit->mean || 'nan');
+    $obs{'Eq'} = ($Eq->mean || 'nan');
+    $obs{'%I'} = ($I->mean || 'nan');
+    $obs{'%S'} = ($S->mean || 'nan');
+    $obs{'P(m)'} = ($P->mean || 'nan');
+    return %obs;
+} # _linker_scores
 
 __END__
 
