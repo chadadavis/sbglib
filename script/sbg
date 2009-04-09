@@ -133,7 +133,7 @@ sub _complete_options {
         exit unless defined($obj);
         my @methods = _methods($obj);
 #         warn "method:$method:file:$file:methods:@methods:\n";
-        warn "ref:", ref $obj;
+#         warn "ref:", ref $obj;
         my @matches = grep { /$method/ } @methods;
         print join("\n", @matches);
     }
