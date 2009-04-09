@@ -38,6 +38,7 @@ use Getopt::Long;
 use Moose::Autobox;
 use autobox ARRAY => 'SBG::List';
 use File::Basename;
+use POSIX;
 
 # TODO
 # use SBG::Measure;
@@ -53,6 +54,8 @@ my %ops;
 my $result = GetOptions(\%ops,
                         'h|help',
                         'l|log=s',
+                        's|size=s',
+                        'c|complete',
     );                  
 if ($ops{'h'}) { pod2usage(-exitval=>1, -verbose=>2); }
 
@@ -63,6 +66,7 @@ SBG::Log::init($ops{'l'}) if $ops{'l'};
 
 my $truthfile = shift or pod2usage(-exitval=>1);
 my $truth = retrieve $truthfile;
+our $minsize = _minsize($truth, %ops);
 
 my $pattern = 
     "%4s %20s %3d %40s %3d %4d %6.2f %5.2f %6.2f %5.2f %7.3f %12g %12g %6.2f %5.2f %5.2f %4d %4d %4d %6.2f %6.2f %12g\n";
@@ -76,6 +80,8 @@ print $header;
 foreach my $modelfile (@ARGV) { 
     my $model = retrieve $modelfile;
     next unless defined($model);
+    next if $model->size < $minsize;
+
     my $min_rmsd = $model->min_rmsd($truth) || 'nan';
     # This will only work on *very* similar complexes
 #     my $crmsd = $model->complexrmsd($truth) || 'nan';
@@ -155,6 +161,19 @@ foreach my $modelfile (@ARGV) {
     ($Ss->mean || 'nan'),
     ($Ps->mean || 'nan'),
     ;
+}
+
+
+sub _minsize {
+    my ($truth, %ops) = @_;
+    # Min components in complex (e.g. 4 or '75%' )
+    my $minsize = $ops{'s'} || 3;
+    # Only full-size (complete coverage) models?
+    $minsize = '100%' if $ops{'c'};
+    if ($minsize =~ /(\d+)\%$/) {
+        $minsize = ceil($truth->size() * $1 / 100.0);
+    }
+    return $minsize;
 }
 
 __END__

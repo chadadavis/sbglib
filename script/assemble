@@ -39,6 +39,7 @@ use Getopt::Long;
 use Moose::Autobox;
 use File::Basename;
 use List::MoreUtils qw/each_arrayref/;
+use POSIX;
 
 # Interaction network
 use SBG::Network;
@@ -69,6 +70,7 @@ my %ops;
 my $result = GetOptions(\%ops,
                         'h|help',
                         'c|complete',
+                        's|size=s',
                         'network=s',
                         'pdbid=s',
                         'l|log=s',
@@ -77,6 +79,7 @@ if ($ops{'h'}) { pod2usage(-exitval=>1, -verbose=>2); }
 
 SBG::Log::init($ops{'l'}) if $ops{'l'};
 
+our $minsize;
 
 ################################################################################
 
@@ -87,6 +90,7 @@ if ($ops{'network'}) {
 
     print "Subnet: ", $ops{'network'}, "\n";
     my $net = retrieve $ops{'network'};
+    $minsize = _minsize($net, %ops);
     _print_net($net);
     _one_net($net, basename($ops{'network'},'.stor'));
 
@@ -117,6 +121,19 @@ print "\n";
 exit;
 
 ################################################################################
+
+sub _minsize {
+    my ($net, %ops) = @_;
+    # Min components in complex (e.g. 4 or '75%' )
+    my $minsize = $ops{'s'} || 3;
+    # Only full-size (complete coverage) models?
+    $minsize = '100%' if $ops{'c'};
+    if ($minsize =~ /(\d+)\%$/) {
+        $minsize = ceil($net->vertices() * $1 / 100.0);
+    }
+    return $minsize;
+}
+
 
 sub _print_net {
     my ($net, $i, $n) = @_;
@@ -194,9 +211,7 @@ sub _subcomplex {
 
 sub _one_net {
     my ($net,$name) = @_;
-
-    # Min components in complex
-    my $minsize = $ops{'c'} ? $net->vertices : 3;
+    our $minsize;
 
     # Traversal algorithm, on the network
     # -test is the function to call when trying to place an interaction
