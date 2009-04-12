@@ -42,6 +42,8 @@ use POSIX;
 
 # TODO
 # use SBG::Measure;
+# Better: 
+# use Statistics::Basic;
 use SBG::List qw/mean/;
 
 use SBG::Complex;
@@ -53,12 +55,13 @@ use SBG::Storable;
 my %ops;
 my $result = GetOptions(\%ops,
                         'h|help',
-                        'l|log=s',
-                        's|size=s',
-                        'c|complete',
-                        'f|field=s',
-                        'b|best=s',
-                        'r|reverse',
+                        'l|log=s',   # log level
+                        's|size=s',  # minimum N (or N%) components per model
+                        'c|complete',# Only full-coverage models
+                        'f|field=s', # field name to sort on
+                        'b|best=s',  # Best N (or N%) (per size, if -u)
+                        'r|reverse', # reverse sort
+                        'u|unique',  # unique by size (diff. sizes separately)
     );                  
 if ($ops{'h'}) { pod2usage(-exitval=>1, -verbose=>2); }
 
@@ -82,7 +85,9 @@ print $header;
 my $pattern = 
     "%4s %20s %4d %40s %4d %4d %6.2f %5.2f %6.2f %5.2f %7.3f %12g %12g %6.2f %5.2f %5.2f %4d %4d %4d %6.2f %6.2f %12g\n";
 
-my @observations;
+
+# Keyed by size of models, list of observations (i.e. models) of that size
+my %observations;
 
 foreach my $modelfile (@ARGV) { 
     my $model = retrieve $modelfile;
@@ -107,28 +112,40 @@ foreach my $modelfile (@ARGV) {
     $obs{MN} = $model->size;
     $obs{Cover} = 100 * $model->size/$truth->size;
 
-    push @observations, \%obs;
+    my $n = $ops{'u'} ? $model->size : 1;
+    $observations{$n} ||= [];
+    push @{ $observations{$n} }, \%obs;
 }
 
 
 # Sort
 if (my $f = $ops{'f'}) {
-    @observations = sort { $a->{$f} <=> $b->{$f} } @observations;
-    @observations = reverse(@observations) if $ops{'r'};
+    # Do this for each model size $n
+    foreach my $n (keys %observations) {
+        my @obs = @{ $observations{$n} };
+        # Sort by given hash key
+        @obs = sort { $a->{$f} <=> $b->{$f} } @obs;
+        @obs = reverse(@obs) if $ops{'r'};
+        $observations{$n} = [ @obs ];
+    }
 }
 
-
-my $best = $ops{'b'} || '100%';
-if ($best =~ /(\d+)\%$/) {
-    $best = ceil(@observations * $1 / 100.0);
-}
 
 # Print
-for (my $i = 0; $i < @observations; $i++) {
-    last if $i >= $best;
-    my $obs = $observations[$i];
-    # Print %obs by order given in @fields
-    printf $pattern, map { $obs->{$_} } @fields;
+# By size of model (in numerical order)
+foreach my $n (sort { $a <=> $b } keys(%observations)) {
+    # models of size $n
+    my @obs = @{ $observations{$n} };
+    my $best = $ops{'b'} || '100%';
+    if ($best =~ /(\d+)\%$/) {
+        $best = ceil(@obs * $1 / 100.0);
+    }
+    for (my $i = 0; $i < @obs; $i++) {
+        last if $i >= $best;
+        my $obs = $obs[$i];
+        # Print %obs by order given in @fields
+        printf $pattern, map { $obs->{$_} } @fields;
+    }
 }
 
 exit;
