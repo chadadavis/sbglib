@@ -34,6 +34,7 @@ with 'SBG::Storable';
 use Moose::Autobox;
 use autobox ARRAY => 'SBG::List';
 use File::Temp qw/tempfile/;
+use Module::Load;
 
 use SBG::HashFields;
 use SBG::List qw/min union sum intersection/;
@@ -79,14 +80,14 @@ has 'type' => (
     is => 'rw',
     isa => 'ClassName',
     required => 1,
-    default => 'SBG::Domain::CofM',
+    default => 'SBG::Domain',
     );
 
 # ClassName does not validate if the class isn't already loaded. Preload it here.
 before 'type' => sub {
     my ($self, $classname) = @_;
     return unless $classname;
-    load($classname);
+    Module::Load::load($classname);
 };
 
 
@@ -153,8 +154,8 @@ sub attach {
         # I.e. We're in a new frame of reference: implicitly sterically OK
         # Initialize new object, based on previous (copy construction)
 
-        $self->model($src, $self->type()->new(%$srcdom));
-        $self->model($dest, $self->type()->new(%$destdom));
+        $self->model($src, SBG::Domain::create($self->type(), %$srcdom));
+        $self->model($dest, SBG::Domain::create($self->type(), %$destdom));
         $self->interaction($ix, $ix);
         return $success = 1;
     }
@@ -201,7 +202,8 @@ sub linker {
     }
 
     # Concrete (w/ coordinates) instance of this domain, of class $self->type()
-    $destdom = $self->type->new(%$destdom);
+    # (copy construction, using a factory method)
+    $destdom = SBG::Domain::create($self->type(), %$destdom);
 
     # Then apply that transformation to the interaction partner $dest
     # Product of relative with absolute transformation

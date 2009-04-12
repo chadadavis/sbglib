@@ -21,7 +21,7 @@ A Domain is defined, according to STAMP, as one of:
 =head1 SEE ALSO
 
 L<SBG::Types> , L<SBG::DomainIO> , L<SBG::CofM> , L<SBG::Transform>,
-L<SBG::RepresentationI>
+L<SBG::DomainI>
 
 http://www.compbio.dundee.ac.uk/manuals/stamp.4.2/node29.html
 
@@ -34,9 +34,11 @@ use Moose;
 use MooseX::StrictConstructor;
 
 # Defines what must be implemented to represent a 3D structure
-with 'SBG::RepresentationI';
+with 'SBG::DomainI';
 with 'SBG::Storable';
 with 'SBG::Dumpable';
+
+use Module::Load;
 
 # Some regexs for parsing PDB IDs and descriptors
 use SBG::Types qw/$re_chain $re_chain_seg/;
@@ -107,7 +109,8 @@ has 'scopid' => (
 
 Path to PDB/MMol file.
 
-This can be blank and STAMP will look for thas file based on its ID, which must begin with the PDB ID for the domain.
+This can be blank and STAMP will look for thas file based on its ID, which must
+begin with the PDB ID for the domain.
 
 =cut
 has 'file' => (
@@ -157,16 +160,33 @@ has 'clash' => (
 
 
 ################################################################################
-# Methods required by SBG::RepresentationI
+# Methods required by SBG::DomainI
 
-sub dist { return };
-sub sqdist { return };
-sub rmsd { return };
-sub evaluate { return };
+sub dist { return }
+sub sqdist { return }
+sub rmsd { return }
+sub evaluate { return }
 
-sub volume { return };
-sub overlap { return };
-sub overlaps { return };
+sub volume { return }
+sub overlap { return }
+sub overlaps { return }
+
+
+################################################################################
+=head2 create
+
+ Function: Factory method
+ Example : my $subclass = SBG::Domain::create("SBG::Domain::SomeSubClass");
+ Returns : Subclass of L<SBG::Domain>
+ Args    : Class name
+
+
+=cut
+sub create {
+    my ($class,@args) = @_;
+    Module::Load::load($class);
+    return $class->new(@args);
+}
 
 
 ################################################################################

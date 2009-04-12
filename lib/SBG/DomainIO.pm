@@ -81,7 +81,7 @@ has 'type' => (
 before 'type' => sub {
     my ($self, $classname) = @_;
     return unless $classname;
-    load($classname);
+    Module::Load::load($classname);
 };
 
 
@@ -161,8 +161,7 @@ override 'read' => sub {
         # $3 is rest of STAMP label
         # $4 is STAMP descriptor, without { }
 
-        my $class = $self->type;
-        my $dom = $class->new(pdbid=>$2,descriptor=>$4);
+        my $dom = SBG::Domain::create($self->type, pdbid=>$2,descriptor=>$4);
         $dom->file($1) if $1;
 
         # Header ends, i.e. contains no transformation

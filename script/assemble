@@ -40,6 +40,7 @@ use Moose::Autobox;
 use File::Basename;
 use List::MoreUtils qw/each_arrayref/;
 use POSIX;
+use Module::Load;
 
 # Interaction network
 use SBG::Network;
@@ -55,12 +56,14 @@ use SBG::Seq;
 use SBG::Node;
 use SBG::Storable;
 use SBG::Domain;
-use SBG::Domain::CofM;
 
 use SBG::Log;
 use SBG::Config qw/config/;
 use SBG::GeometricHash;
 
+# Type of domain object representation to use
+our $type = 'SBG::Domain::Crosshairs';
+Module::Load::load($type);
 
 
 ################################################################################
@@ -196,11 +199,12 @@ sub _part_write {
 # Creates a complex, based on a subnet
 sub _subcomplex {
     my ($net) = @_;
+    our $type;
     my @accnos = map { "$_" } $net->nodes;
     my @fields = map { { SBG::Search::SCOP::parse_scopid($_) } } @accnos;
-    my @domains = map { new SBG::Domain::CofM(%$_) } @fields;
+    my @domains = map { SBG::Domain::create($type, %$_) } @fields;
 
-    my $complex = new SBG::Complex;
+    my $complex = new SBG::Complex(type=>$type);
     my $ea = each_arrayref \@accnos, \@domains;
     while (my ($accno, $dom) = $ea->()) {
         $complex->model($accno, $dom);
@@ -212,6 +216,7 @@ sub _subcomplex {
 sub _one_net {
     my ($net,$name) = @_;
     our $minsize;
+    our $type;
 
     # Traversal algorithm, on the network
     # -test is the function to call when trying to place an interaction
@@ -222,7 +227,8 @@ sub _one_net {
                                minsize=>$minsize,
         );
     # Each result is a complex, this is a placeholder for the aglorithm's state
-    my $state = new SBG::Complex(name=>$name);
+    my $state = new SBG::Complex(name=>$name, type=>$type);
+
     # Go!
     $t->traverse($state);
 

@@ -27,7 +27,7 @@ extends qw/SBG::Domain::CofM/;
 
 with qw(SBG::Storable);
 with qw(SBG::Dumpable);
-with qw(SBG::RepresentationI);
+with qw(SBG::DomainI);
 
 # NB "" and == inherited from SBG::Domain::CofM
 

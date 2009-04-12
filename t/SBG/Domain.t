@@ -3,6 +3,14 @@
 use Test::More 'no_plan';
 use SBG::Domain;
 use SBG::Types;
+
+$x = SBG::Domain::create("SBG::Domain");
+print "ref:", ref($x), "\n";
+$y = SBG::Domain::create("SBG::Domain::CofM");
+print "ref:", ref($y), "\n";
+
+__END__
+
 $d = new_ok(SBG::Domain);
 
 

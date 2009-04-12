@@ -25,7 +25,7 @@ $s = new SBG::Domain::CofM(centre=>"1 2 3",radius=>2);
 is($s->radius,2);
 $s->radius(3.1);
 is($s->radius,3.1);
-ok($s->does('SBG::RepresentationI'));
+ok($s->does('SBG::DomainI'));
 
 
 # dist()

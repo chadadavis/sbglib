@@ -2,13 +2,13 @@
 
 =head1 NAME
 
-SBG::RepresentationI - Simplified structure representation (a L<Moose::Role>)
+SBG::DomainI - Simplified structure representation (a L<Moose::Role>)
 
 =head1 SYNOPSIS
 
  package MyClass;
  use Moose;
- with 'SBG::RepresentationI'; 
+ with 'SBG::DomainI'; 
 
 
 =head1 DESCRIPTION
@@ -23,7 +23,7 @@ L<SBG::Sphere> , L<SBG::Domain>, L<Moose::Role>
 
 ################################################################################
 
-package SBG::RepresentationI;
+package SBG::DomainI;
 use Moose::Role;
 
 
@@ -34,7 +34,7 @@ use Moose::Role;
  Function: Positive distance between objects.
  Example : my $linear_distance = $dom1->dist($dom2);
  Returns : Positive scalar
- Args    : L<SBG::RepresentationI>
+ Args    : L<SBG::DomainI>
 
 positive (Euclidean) distance between this object and some other
 

@@ -10,19 +10,11 @@ SBG::Domain::CofM - Represents a structure as a sphere around a centre-of-mass
 
 =head1 DESCRIPTION
 
-7-point Centre-of-mass
-
-The C-alphas of Alanine residues,
-1: X+5 , X-5
-2: Y+5 , Y-5
-3: Z+5 , Z-5
-
-Using affine transforms, it's straight-forward to transform all 7 CA atoms from
-the seven Alanine residues in one matrix multiplication. 
+Centre-of-mass representation of a L<SBG::Domain>
 
 =head1 SEE ALSO
 
-L<SBG::RepresentationI> , L<SBG::Domain>
+L<SBG::DomainI> , L<SBG::Domain>
 
 =cut
 
@@ -37,10 +29,9 @@ extends qw/SBG::Domain/;
 
 with qw(SBG::Storable);
 with qw(SBG::Dumpable);
-with qw(SBG::RepresentationI);
+with qw(SBG::DomainI);
 
 use overload (
-    '""' => '_asstring',
     '==' => '_equal',
     fallback => 1,
     );
@@ -100,17 +91,6 @@ has 'centre' => (
     );
 
 
-=head2 matrix
-
-For saving cross-hair atoms: additionaly six atoms around centre-of-mass
-
-=cut
-has 'matrix' => (
-    is => 'rw',
-    isa => 'PDL::Matrix',
-    );
-
-
 =head2 radius
 
 Radius of sphere (e.g. radius of gyration (an avg) or maximum radius)
@@ -166,30 +146,7 @@ sub BUILD {
     $self->radius($res->{ $self->radius_type });
     $self->centre( [ $res->{Cx}, $res->{Cy}, $res->{Cz} ] );
 
-    # Cross-hairs are not generally necessary, as they can always be computed
-    # from the centre. I.e. don't be doing this here
-
-# $self->matrix(_crosshairs($self->centre));
-
 } # load
-
-
-################################################################################
-=head2 crosshairs
-
- Function: Resets crosshair atoms around current centre of mass
- Example : 
- Returns : 
- Args    : 
-
-
-=cut
-sub crosshairs {
-    my ($self,) = @_;
-    $self->matrix(_crosshairs($self->centre));
-    return $self->matrix;
-
-} # crosshairs
 
 
 ################################################################################
@@ -208,45 +165,7 @@ sub rmsd {
     # Single-point (cofm) version
     return sqrt($self->sqdist($other));
 
-# TODO DES
-    # Vector of (squared) distances between the corresponding 7 points
-#     my $sqdistances = $self->sqdev($other);
-#     return sqrt(average($sqdistances));
-
 }
-
-
-# TODO DOC
-sub rmsd7 {
-    my ($self, $other) = @_;
-    # Vector of (squared) distances between the corresponding 7 points
-    my $sqdistances = $self->sqdev($other);
-    return sqrt(average($sqdistances));
-}
-
-
-################################################################################
-=head2 sqdev
-
- Function: Squared deviation(s) between points of one object vs those of another
- Example : 
- Returns : L<PDL::Matrix> vector of length N, if each object has N points
- Args    : 
-
-NB if you want this as regular Perl array, do ->list() on the result:
-
- my $sq_deviations = $dom->sqdev($otherdom);
- my @array = $sq_deviations->list();
-
-=cut
-sub sqdev {
-    my ($self, $other) = @_;
-
-    # Vector of (squared) distances between the corresponding points
-    return sumover(($self->matrix - $other->matrix)**2);
-
-} # sqdev
-
 
 
 ################################################################################
@@ -323,9 +242,6 @@ override 'transform' => sub {
         defined($newtrans) && defined($self->centre);
 
     $self->centre($newtrans->transform($self->centre));
-
-    # Transform cross-hairs, if any
-    $self->matrix($newtrans->transform($self->matrix)) if defined $self->matrix;
 
     # Update cumulative transformation. Managed by parent 'transform()' function
     super();
@@ -451,24 +367,6 @@ sub asarray {
 
 
 ################################################################################
-=head2 _asstring
-
- Function:
- Example :
- Returns : 
- Args    :
-
-
-=cut
-# override '_asstring' => sub {
-#     my ($self) = @_;
-#     my @a = ($self->asarray, $self->radius);
-#     # Prepend stringification of parent first
-#     return sprintf("%s(%10.5f,%10.5f,%10.5f,%10.5f)", super(), @a);
-# };
-
-
-################################################################################
 =head2 _equal
 
  Function:
@@ -487,75 +385,6 @@ override '_equal' => sub {
     return 0 unless all($self->centre == $other->centre);
     return 1;
 };
-
-
-################################################################################
-=head2 _atom2pdl
-
- Function: 
- Example : 
- Returns : L<PDL::Matrix> of dim Nx4. Fourth is all '1' for homogenous coords
- Args    : 
-
-Parses ATOM lines and converts to nx3-dimensional L<PDL::Matrix>
-
-Any lines not beginning wth ATOM are skipped.
-
-E.g.:
-
- ATOM      0  CA  ALA Z   0   80.861  12.451 122.080  1.00 10.00
- ATOM      1  CA  ALA Z   1   85.861  12.451 122.080  1.00 10.00
- ATOM      1  CA  ALA Z   1   75.861  12.451 122.080  1.00 10.00
- ATOM      2  CA  ALA Z   2   80.861  17.451 122.080  1.00 10.00
- ATOM      2  CA  ALA Z   2   80.861   7.451 122.080  1.00 10.00
- ATOM      3  CA  ALA Z   3   80.861  12.451 127.080  1.00 10.00
- ATOM      3  CA  ALA Z   3   80.861  12.451 117.080  1.00 10.00
-
-31 - 38      Real(8.3)     x       Orthogonal coordinates for X in Angstroms.
-39 - 46      Real(8.3)     y       Orthogonal coordinates for Y in Angstroms.
-47 - 54      Real(8.3)     z       Orthogonal coordinates for Z in Angstroms.
-
-=cut
-sub _atom2pdl {
-    my ($atomstr) = @_;
-    my $io = new IO::String($atomstr);
-    my @mat;
-    for (my $i = 0; <$io>; $i++) {
-        next unless /^ATOM/;
-        my $str = $_;
-        # Columns 31,39,47 tsore the 8-char coords (not necessarily separated)
-        # substr() is 0-based
-        my @xyz = map { substr($str,$_,8) } (30,38,46);
-        # Append array with an arrayref of X,Y,Z fields (plus 1, homogenous)
-        push @mat, [ @xyz, 1 ];
-    }
-    # Put points in columns
-    return mpdl(@mat)->transpose;
-}
-
-
-
-sub _crosshairs {
-    my ($centre) = @_;
-    # TODO DES consider making this the radius
-    # Should partners of a homologous interface also be the same radius?
-    my $size = 5;
-
-    # The fourth dimension is because we use homogenous coordinates
-    # Since $centre is already homogenous, the resulting matrix will be too
-    my $x = mpdl($size,0,0,0)->transpose;
-    my $y = mpdl(0,$size,0,0)->transpose;
-    my $z = mpdl(0,0,$size,0)->transpose;
-    my $matrix = mpdl($centre, 
-                      $centre+$x, $centre-$x,
-                      $centre+$y, $centre-$y,
-                      $centre+$z, $centre-$z,
-        );
-    # Don't need to transpose here, as these are already column vectors.
-    # Just squeeze to remove extraneous dimensions
-    return $matrix->squeeze;
-}
-
 
 
 ################################################################################
