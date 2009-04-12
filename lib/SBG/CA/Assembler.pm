@@ -74,6 +74,7 @@ sub sub_solution {
     my @doms = map { $complex->model($_) } @$labels;
     # TODO DES BUG cannot assume centre exists here
     # if these are not SBG::Domain::CofM instances
+    # Complex needs to check itself
     my @points = map { $_->centre } @doms;
 
     $solution++;    

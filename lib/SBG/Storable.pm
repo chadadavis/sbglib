@@ -28,7 +28,7 @@ use Moose::Role;
 
 use Storable qw();
 use Scalar::Util qw/blessed/;
-use Module::Load qw/load/;
+use Module::Load;
 use Class::MOP::Class;
 
 use SBG::List qw/flatten/;
@@ -119,7 +119,7 @@ BUGS: Why does Perl not do this automatically when deserializing an object?
 sub module_for {
     my ($obj) = @_;
     my $class = blessed($obj) or return;
-    load($class);
+    Module::Load::load($class);
     UNIVERSAL::isa($obj, 'HASH') or return;
     foreach my $k (%$obj) {
         module_for($obj->{$k});
