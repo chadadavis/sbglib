@@ -63,33 +63,34 @@ sub query {
     my ($pdbid, $chainid) = @_;
     $pdbid = uc $pdbid;
     my $pdbstr = "pdb|$pdbid|$chainid";
-    my $db = config()->val(qw/cofm db/) || "trans_1_5";
+    my $db = config()->val(qw/cofm db/) || "trans_1_6";
     my $host = config()->val(qw/cofm host/);
-
     my $dbh = SBG::DB::connect($db, $host);
     # Static handle, prepare it only once
     our $cofm_sth;
-    $cofm_sth ||= $dbh->prepare("select " .
-                                "cofm.Cx, cofm.Cy, cofm.Cz," .
-                                "cofm.Rg,cofm.Rmax," .
-#                                 "cofm.description," . 
-                                "entity.file," . 
-                                "entity.description as descriptor " .
-                                "from cofm, entity " .
-                                "where " .
-                                "bad = 0 and " .
-                                "cofm.id_entity=entity.id and " .
-                                "(entity.acc=?)"
-        );
+
+    $cofm_sth ||= $dbh->prepare(join(' ',
+                                     'select',
+                                     'Cx, Cy, Cz, Rg, Rmax, file,',
+                                     'description as descriptor',
+                                     'from entity',
+                                     'where',
+                                     'bad=0 and',
+                                     'chain=? and',
+                                     'description=?',
+                                ));
+
     unless ($cofm_sth) {
         $logger->error($dbh->errstr);
         return;
     }
-    if (! $cofm_sth->execute($pdbstr)) {
+
+    if (! $cofm_sth->execute($pdbstr, "CHAIN $chainid")) {
+
         $logger->error($cofm_sth->errstr);
         return;
     }
-    # (Cx, Cy, Cz, Rg, Rmax, description, file, descriptor);
+    # (Cx, Cy, Cz, Rg, Rmax, file, descriptor);
     return $cofm_sth->fetchrow_hashref();
 } # query
 

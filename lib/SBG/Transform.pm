@@ -50,12 +50,19 @@ use overload (
     );
 
 
-# STAMP score fields
-our @keys = qw/Domain1 Domain2 Sc RMS Len1 Len2 Align Fit Eq Secs I S P/;
 
 
 ################################################################################
 # Accessors
+
+
+# STAMP score fields
+our @keys = qw/Domain1 Domain2 Sc RMS Len1 Len2 Align Fit Eq Secs I S P/;
+
+has \@keys => (
+    is => 'rw',
+    );
+
 
 =head2 matrix
 

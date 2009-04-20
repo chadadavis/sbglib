@@ -14,15 +14,16 @@ my $prec = 4;
 
 # query()
 my $res = SBG::DB::cofm::query('2nn6', 'A');
+
 ok($res, "query('2nn6', 'A')");
 my ($tx, $ty, $tz, $trg, $trmax) = (80.860, 12.450, 122.080, 26.738, 63.826);
 
-float_is($res->{'Cx'}, $tx, $prec);
-float_is($res->{'Cy'}, $ty, $prec);
-float_is($res->{'Cz'}, $tz, $prec);
-float_is($res->{'Rg'}, $trg, $prec);
-float_is($res->{'Rmax'}, $trmax, $prec);
-is($res->{'descriptor'}, 'CHAIN A', 'descriptor: "CHAIN A"');
+float_is($res->{'Cx'}, $tx, $prec, 'Cx');
+float_is($res->{'Cy'}, $ty, $prec, 'Cy');
+float_is($res->{'Cz'}, $tz, $prec, 'Cz');
+float_is($res->{'Rg'}, $trg, $prec, 'Rg');
+float_is($res->{'Rmax'}, $trmax, $prec, 'Rmax');
+is($res->{'descriptor'}, 'CHAIN A', 'descriptor');
 ok($res->{'file'}, "File: " . $res->{'file'});
 
 

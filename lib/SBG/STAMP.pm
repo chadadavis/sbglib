@@ -49,6 +49,7 @@ use SBG::DB;
 ################################################################################
 
 # TODO use Cache::FileCache
+
 # Lazy initialisation of directories later ...
 our $tmpdir;
 our $cachedir;
@@ -128,8 +129,8 @@ sub superpose {
 
     # Check database cache
     # Useless, if we need Sc and seqID and all those meta-data
-#     my $trydb = superpose_query($fromdom, $ontodom);
-#     return $trydb if $trydb;
+    my $trydb = superpose_query($fromdom, $ontodom);
+    return $trydb if $trydb;
 
     # Check local disk cache
     my $cached = cacheget($fromdom, $ontodom) if $ops{'cache'};
@@ -201,6 +202,9 @@ sub superpose_local {
 
 
 # Takes two domain objects
+# TODO DOC
+# TODO support segments
+# TODO should be a method of SBG::Transform (think ORM)
 sub superpose_query {
     my ($fromdom, $ontodom) = @_;
     $logger->trace("$fromdom onto $ontodom");
@@ -208,47 +212,72 @@ sub superpose_query {
         $fromdom && $fromdom->wholechain &&
         $ontodom && $ontodom->wholechain;
 
-    my $db = config()->val('trans', 'db') || "trans_1_4";
+    my $db = config()->val('trans', 'db') || "trans_1_6";
     my $host = config()->val(qw/trans host/);
     my $dbh = SBG::DB::connect($db, $host);
 
     # Static handle, prepare it only once
     our $trans_sth;
-    $trans_sth ||= $dbh->prepare(
-        "SELECT trans.id_domset, trans.trans " .
-        "FROM trans, entity where " .
-        "trans.id_entity=entity.id and " .
-        "entity.acc=?"
+    # Transformations are unidirectional, i.e. need to query A->B and B->A
+    # Fields: Domain1 Domain2 Sc RMS Len1 Len2 Align Fit Eq Secs I S P
+    my $query = 
+        join(' ',
+             'select',
+             't.id_entity1 as tid1,',
+             'e1.id as eid1,',
+
+             'concat_ws(" ", ',
+             '"\n", r11, r12, r13, v1, ',
+             '"\n", r21, r22, r23, v2, ',
+             '"\n", r31, r32, r33, v3) as string,', 
+
+             't.sc as Sc,',
+             'rmsd as RMS,',
+             'alen as Align,',
+             'nfit as Fit,',
+             'nequiv as Eq,',
+             '100*seqid/len as I,',
+             '100*secid/len as S,',
+             'p as P',
+
+             'from',
+             'entity e1, entity e2,',
+             'trans t',
+
+             'where',
+             '(e1.chain=? and e1.description=?) and',
+             '(e2.chain=? and e2.description=?) and',
+             '((t.id_entity1=e1.id and t.id_entity2=e2.id) or',
+             '(t.id_entity1=e2.id and t.id_entity2=e1.id))',
         );
+
+    $trans_sth ||= $dbh->prepare($query);
     unless ($trans_sth) {
         $logger->error($dbh->errstr);
         return;
     }
 
-    my $pdbstr1 = 'pdb|' . uc($fromdom->pdbid) . '|' . $fromdom->wholechain;
-    my $pdbstr2 = 'pdb|' . uc($ontodom->pdbid) . '|' . $ontodom->wholechain;
+    my $c1 = $fromdom->wholechain();
+    my $c2 = $ontodom->wholechain();
+    my $pdbstr1 = 'pdb|' . uc($fromdom->pdbid) . '|' . $c1;
+    my $pdbstr2 = 'pdb|' . uc($ontodom->pdbid) . '|' . $c2;
 
-    if (! $trans_sth->execute($pdbstr1)) {
+    my @params = ($pdbstr1, "CHAIN $c1", $pdbstr2, "CHAIN $c2");
+
+    if (! $trans_sth->execute(@params)) {
         $logger->error($trans_sth->errstr);
         return;
     }
-    my ($domset1, $transstr1) = $trans_sth->fetchrow_array();
-    if (! $trans_sth->execute($pdbstr2)) {
-        $logger->error($trans_sth->errstr);
-        return;
-    }
-    my ($domset2, $transstr2) = $trans_sth->fetchrow_array();
-    $logger->debug("domset $domset1 == domset $domset2 ?");
-    unless ($domset1 && $domset2 && $domset1 == $domset2) {
-        $logger->info("No transform between ",
-                      "$pdbstr1($domset1) and $pdbstr2($domset2)");
-        return;
-    }
 
-    my $trans1 = new SBG::Transform(string=>$transstr1);
-    my $trans2 = new SBG::Transform(string=>$transstr2);
-    # Returns a new Transform
-    return $trans1->relativeto($trans2);
+    my $metadata = $trans_sth->fetchrow_hashref();
+    my $trans = new SBG::Transform(%$metadata);
+
+    # Need to figure out if it was A->B (as requested) or B->A (reversed)
+    unless ($metadata->{'tid1'} eq $metadata->{'eid1'}) {
+        $logger->trace("Found inverse transform");
+        $trans->invert();
+    }
+    return $trans;
 
 } # superpose_query
 
