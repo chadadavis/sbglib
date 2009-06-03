@@ -1,0 +1,9 @@
+A       B       1tmp { CHAIN A } 1tmp { CHAIN B }
+A       B       2tmp { CHAIN A } 2tmp { CHAIN B }
+A       C       3tmp { CHAIN A } 3tmp { CHAIN B }
+B       C       5tmp { CHAIN A } 5tmp { CHAIN B }
+B       C       6tmp { CHAIN A } 6tmp { CHAIN B }
+B       D       4tmp { CHAIN A } 4tmp { CHAIN B }
+C       D       7tmp { CHAIN A } 7tmp { CHAIN B }
+C       D       8tmp { CHAIN A } 8tmp { CHAIN B }
+C       D       9tmp { CHAIN A } 9tmp { CHAIN B }

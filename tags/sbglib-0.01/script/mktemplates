@@ -1,0 +1,75 @@
+#!/usr/bin/env perl
+
+use strict;
+use SBG::Eval;
+use SBG::DomainIO;
+use SBG::Domain;
+
+
+# Command line:
+# ./mktemplates 2j57 ./search_bench_part8.out-robs
+
+my $testpdb = shift or die;
+# my $templfile = "${testpdb}_templates.csv";
+my $templfile = "${testpdb}.csv";
+open my $fh, ">$templfile";
+
+# Parse this!
+# 0  2iidAA.c.3.1.2-1:
+# 1  2iidA.d.16.1.5-1:
+# 2  on:
+# 3  1pj6AA.c.3.1.2-1:
+# 4  1pj6A.d.16.1.5-1:
+# 5  REL:
+# 6  fam:
+# 7  REL:
+# 8  fam:
+# 9  8/12:
+# 0  0.667:
+# 1  iRMSD:
+# 2  5.51614:
+# 3  OK:
+# 4  3:
+# 5  4:
+# 6  0.75:
+# 7  I2:
+# 8  Z:
+# 9  -7.614:
+# 0  p:
+# 1  1.000
+
+my $count = 0;
+while (<>) {
+    # NB this only gets the 1 best template for an interaction
+#     next unless /^Can model $testpdb (\S+) (\S+) on (\S+) (\S+)/i;
+    # This gets all templates
+#     next unless /Can model $testpdb\s+(.*)/i;
+
+    next unless /^Can model $testpdb (\S+) (\S+) on (\S+) (\S+)/i;
+    $count++;
+    my ($testscop1, $testscop2, $templscop1, $templscop2) = ($1, $2, $3, $4);
+
+#     my @a = split /\s+/, $1;
+#     my $iaction = new SBG::Template(...);
+
+    $testscop1 =~ s/-/./g;
+    $testscop2 =~ s/-/./g;
+
+    my ($testdom1, $testdom2, $templdom1, $templdom2) = 
+    map { mk_dom($_) } ($testscop1, $testscop2, $templscop1, $templscop2);
+
+    my $longid1=$testdom1->pdbid . $testdom1->chainid . '.' . $testdom1->scopid;
+    my $longid2=$testdom2->pdbid . $testdom2->chainid . '.' . $testdom2->scopid;
+    
+    print $fh 
+        "$longid1\t",
+        "$longid2\t",
+        join(' ',
+             $templdom1->pdbid, '{', $templdom1->descriptor, '}',
+             $templdom2->pdbid, '{', $templdom2->descriptor, '}',
+        ),
+        "\n";
+}
+
+printf "Templates ( %3d ): %s\n", $count, $templfile;
+

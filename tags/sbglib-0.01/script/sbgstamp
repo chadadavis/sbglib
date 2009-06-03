@@ -1,0 +1,49 @@
+#!/usr/bin/env perl
+
+use warnings;
+use Carp;
+
+use SBG::STAMP;
+
+################################################################################
+
+
+my $dom = shift;
+unless ($dom) {
+    carp "Please specify as file of stamp formatted domains.\n";
+    return;
+}
+# Read input domains into %DOM hash
+my $in = new SBG::DomainIO(-file=>$dom);
+my @doms;
+while (my $dom = $in->read) {
+    push @doms, $dom;
+}
+
+my $stamped = do_stamp(@doms);
+
+stampprint($stamped);
+
+exit;
+
+################################################################################
+
+sub stampprint {
+    my ($doms, $order, $fh) = @_;
+    $fh ||= \*STDOUT;
+
+    print $fh "%TRANS_BEGIN\n";
+
+    # Reorder domains (using given label field)
+    $doms = SBG::Root::reorder($doms, $order, 'stampid') if $order;
+
+    my $tmpout = new SBG::DomainIO(-fh=>$fh);
+    $tmpout->write($_) for @$doms;
+
+    print $fh "%TRANS_END\n";
+}
+
+################################################################################
+
+__END__
+

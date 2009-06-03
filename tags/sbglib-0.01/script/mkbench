@@ -1,0 +1,44 @@
+#!/usr/bin/env perl
+
+use strict;
+use SBG::Eval;
+use SBG::DomainIO;
+use SBG::Domain;
+use SBG::NetworkIO;
+
+# Command line:
+# ./mkbench ./1abc_templates-02.csv
+
+my $templates_file = shift or die;
+my $net = new SBG::NetworkIO(-file=>$templates_file)->read or die;
+
+my %truecomponents;
+foreach my $node (sort $net->nodes) {
+    my $name = "$node";
+    print "Node $name\n";
+    my $dom = mk_dom $name;
+    my $longid=$dom->pdbid . $dom->chainid . '.' . $dom->scopid;
+    $truecomponents{$longid} = $dom;
+}
+
+my $domfile = $templates_file;
+$domfile =~ s/templates/bench/;
+$domfile =~ s/csv/dom/;
+my $io = new SBG::DomainIO(-file=>">$domfile");
+
+# Do these sorted, so that order of chains will hopefully match
+# (Only will be true when all components present)
+foreach my $key (sort keys %truecomponents) {
+    my $d = $truecomponents{$key};
+    $d->label($key);
+    my $f = $d->file;
+    $f =~ s|/data/pdb/(.{4})\.brk|/g/data/pdb\1.ent|;
+    $d->file($f);
+    $io->write($d, -id=>'label');
+}
+
+
+print "Benchmark domains: $domfile\n";
+
+
+
