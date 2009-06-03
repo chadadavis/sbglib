@@ -27,9 +27,11 @@ use Moose::Util::TypeConstraints;
 
 extends qw/SBG::Domain/;
 
-with qw(SBG::Storable);
-with qw(SBG::Dumpable);
-with qw(SBG::DomainI);
+with qw/
+SBG::Role::Storable
+SBG::Role::Dumpable
+SBG::DomainI
+/;
 
 use overload (
     '==' => '_equal',
@@ -49,7 +51,7 @@ use Math::Trig qw(:pi);
 use List::Util; # qw(min); 
 
 use SBG::Transform;
-use SBG::Log; # imports $logger
+use SBG::U::Log; # imports $logger
 use SBG::Run::cofm qw/cofm/;
 
 
@@ -152,7 +154,7 @@ sub BUILD {
 ################################################################################
 =head2 rmsd
 
- Function: Alias to L<dist>
+ Function: 
  Example : 
  Returns : 
  Args    : 

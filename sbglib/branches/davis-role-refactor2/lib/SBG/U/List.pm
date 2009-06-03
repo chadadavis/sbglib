@@ -2,21 +2,30 @@
 
 =head1 NAME
 
-SBG::List - Utilities on Arrays
+SBG::U::List - Utilities on Arrays
 
 =head1 SYNOPSIS
 
- use SBG::List;
+ use SBG::U::List qw/min max .../;
 
 or
 
 use Moose::Autobox;
-use autobox ARRAY => 'SBG::List';
+use autobox ARRAY => 'SBG::U::List';
+
+my $list = [ 1 .. 3, [ rand(10) ]];
+print join "\n", $list->sum, $list->stddev, $list->mean, $list->avg, ...;
 
 
 =head1 DESCRIPTION
 
-TODO explain how this works/conflicts with Moose::Autobox
+Most functions are just wrappers around L<List::Util> or L<List::MoreUtils>
+. Nothing is exported by default. 
+
+All functions take both arrays and array refs, which may contain nested arrays.
+
+Methods returning lists will return an ArrayRef when called in scalar context.
+
 
 =head1 SEE ALSO
 
@@ -24,7 +33,7 @@ L<List::Utils> , L<List::MoreUtils>
 
 =cut
 
-package SBG::List;
+package SBG::U::List;
 use Carp;
 
 use List::Util qw/reduce/;
@@ -251,6 +260,13 @@ $ordering - an arrayref of keys (as strings) in the desired order
   If no ordering given, sorts lexically
 E.g.: 
 NB: duplicate $objects (having the same key) are removed
+
+E.g.:
+
+ my $orderedpts = reorder($points, [ qw/red blue green/ ], sub { $_->color() });
+
+where $points in an ArrayRef of objects, on which ->color() can be called,
+returning one of 'red', 'blue', or 'green' in this case.
 
 =cut
 sub reorder ($;$&) {

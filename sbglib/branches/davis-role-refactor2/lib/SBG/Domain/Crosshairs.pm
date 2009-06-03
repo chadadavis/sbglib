@@ -34,9 +34,11 @@ use MooseX::StrictConstructor;
 
 extends qw/SBG::Domain::CofM/;
 
-with qw(SBG::Storable);
-with qw(SBG::Dumpable);
-with qw(SBG::DomainI);
+with qw/
+SBG::Role::Storable
+SBG::Role::Dumpable
+SBG::DomainI
+/;
 
 use overload (
     fallback => 1,
@@ -55,7 +57,7 @@ use Math::Trig qw(:pi);
 use List::Util; # qw(min); 
 
 use SBG::Transform;
-use SBG::Log; # imports $logger
+use SBG::U::Log; # imports $logger
 use SBG::Run::cofm qw/cofm/;
 
 
@@ -100,7 +102,7 @@ sub crosshairs {
 ################################################################################
 =head2 rmsd
 
- Function: Alias to L<dist>
+ Function: 
  Example : 
  Returns : 
  Args    : 
@@ -111,13 +113,13 @@ override 'rmsd' => sub {
     my ($self, $other) = @_;
 
     # Vector of (squared) distances between the corresponding 7 points
-    my $sqdistances = $self->sqdev($other);
+    my $sqdistances = $self->sqdist($other);
     return sqrt(average($sqdistances));
 }; # rmsd
 
 
 ################################################################################
-=head2 sqdev
+=head2 sqdist
 
  Function: Squared deviation(s) between points of one object vs those of another
  Example : 
@@ -126,17 +128,17 @@ override 'rmsd' => sub {
 
 NB if you want this as regular Perl array, do ->list() on the result:
 
- my $sq_deviations = $dom->sqdev($otherdom);
+ my $sq_deviations = $dom->sqdist($otherdom);
  my @array = $sq_deviations->list();
 
 =cut
-sub sqdev {
+override 'sqdist' => sub {
     my ($self, $other) = @_;
 
     # Vector of (squared) distances between the corresponding points
     return sumover(($self->matrix - $other->matrix)**2);
 
-} # sqdev
+}; # sqdist
 
 
 ################################################################################

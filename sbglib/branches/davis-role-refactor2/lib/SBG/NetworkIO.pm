@@ -65,7 +65,7 @@ use SBG::Node;
 use SBG::Seq;
 use SBG::Domain;
 use SBG::Template;
-use SBG::List qw(pairs);
+use SBG::U::List qw(pairs);
 use SBG::HashFields;
 
 ################################################################################

@@ -24,8 +24,15 @@ L<Bio::Network::Interaction> , L<SBG::Node>
 
 package SBG::Interaction;
 use Moose;
-extends qw/Bio::Network::Interaction/;
-with 'SBG::Storable';
+
+# Explicitly extend Moose::Object when inheriting from non-Moose class
+# Order is relevant here, first class listed provides 'new()' method
+extends qw/Bio::Network::Interaction Moose::Object/;
+
+with qw/
+SBG::Role::Storable
+SBG::Role::Dumpable
+/;
 
 use SBG::HashFields;
 
@@ -82,12 +89,20 @@ hashfield 'score';
 Delegates to L<Bio::Network::Interaction>
 
 =cut
-sub new () {
-    my $class = shift;
-    my $self = $class->SUPER::new(@_);
-    bless $self, $class;
-    return $self;
-}
+override 'new' => sub {
+    my ($class, %ops) = @_;
+    
+    # This creates a Bio::Network::Interaction
+    my $obj = $class->SUPER::new(%ops);
+
+    # This appends the Bio::Network:: with goodies from Moose::Object
+    # __INSTANCE__ place-holder fulfilled by $obj (Bio::Network::Interaction)
+    $obj = $class->meta->new_object(__INSTANCE__ => $obj, %ops);
+
+    # bless'ing should be automatic!
+    bless $obj, $class;
+    return $obj;
+};
 
 
 ################################################################################
@@ -141,7 +156,7 @@ sub _asstring {
 
 
 ###############################################################################
-__PACKAGE__->meta->make_immutable;
+__PACKAGE__->meta->make_immutable(inline_constructor=>0);
 1;
 
 __END__

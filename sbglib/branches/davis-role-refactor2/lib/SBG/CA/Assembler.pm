@@ -35,8 +35,8 @@ use SBG::STAMP qw/superpose/;
 use SBG::Complex;
 use SBG::ComplexIO;
 
-use SBG::Log;
-use SBG::Config qw/config/;
+use SBG::U::Log;
+use SBG::U::Config qw/config/;
 
 use SBG::GeometricHash;
 
@@ -56,19 +56,37 @@ our %sizes;
 
 my $file_pattern = '%sclass-%04d-model-%05d';
 
-# Callback for output/saving/printing
-# Bugs: assume L<SBG::Domain::CofM> implementation in L<SBG::Complex>
+
+################################################################################
+=head2 sub_solution
+
+ Function: Callback for output/saving/printing
+ Example : 
+ Returns : 
+ Args    : 
+
+Bugs: assumes L<SBG::Domain::CofM> implementation in L<SBG::Complex>
+
+=cut
 sub sub_solution {
     my ($complex, $graph, $nodecover, $templates, $rejects) = @_;
+
     our $binsize;
     $binsize = config()->val(qw/assembly binsize/) || 1.5;
     # 3D geometric hash
     our $gh;
     $gh ||= new SBG::GeometricHash(binsize=>$binsize);
 
-    my $success = 1;
     # Uninteresting unless at least two interfaces in solution
     return unless $templates->length > 1;     
+
+    # Reset the current step in the traversal:
+    $step = 1;
+    $solution++;    
+
+################################################################################
+
+    my $success = 1;
 
     my $labels = $complex->models->keys;
     my @doms = map { $complex->model($_) } @$labels;
@@ -77,11 +95,7 @@ sub sub_solution {
     # Complex needs to check itself
     my @points = map { $_->centre } @doms;
 
-    $solution++;    
-    $step = 1;
-
-    # Check dup;
-#     my $class = $gh->class(\@points, $labels);
+    # Check if duplicate, based on geometric hash
     # exact() requires that the sizes match on both sides (i.e. no subsets)
     my $class = $gh->exact(\@points, $labels);
     if (defined $class) {
@@ -109,22 +123,19 @@ sub sub_solution {
         map { $sizes{$_} } sort keys %sizes,
         ;
 
-
-
     $logger->debug("\n\n====== Class: $class Solution $solution\n",
                    "@$nodecover\n",
                    "@$templates\n",
         );
 
-    # Append an optional name an a model solution counter
+    # Write solution to file, append an optional name and model solution counter
     my $file = sprintf($file_pattern, 
                        $complex->name ? $complex->name . '-' : '',
                        $class, $solution);
     $complex->store($file . '.stor');
-    # Write the DOM version as well
+    # Write the STAMP DOM version
 #     my $io = new SBG::ComplexIO(file=>">$file" . '.dom');
 #     $io->write($complex);
-
 
     return $success;
 

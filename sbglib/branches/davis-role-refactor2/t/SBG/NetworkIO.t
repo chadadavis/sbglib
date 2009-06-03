@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 use Test::More 'no_plan';
-use SBG::Test 'float_is';
+use SBG::U::Test 'float_is';
 use Carp;
 use Data::Dumper;
 use FindBin;
@@ -10,7 +10,7 @@ my $dir = $FindBin::RealBin;
 $, = ' ';
 
 use SBG::NetworkIO qw(graphviz graphvizmulti);
-use SBG::Storable qw/retrieve_files/;
+use SBG::Role::Storable qw/retrieve_files/;
 
 # my $file = shift || "$dir/ex_descriptors.csv";
 my $file = shift || "$dir/ex_small.csv";

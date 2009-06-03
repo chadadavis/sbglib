@@ -34,8 +34,8 @@ sbgmap SBG::Domain::descriptor files.stor [more-files.stor]
 use Getopt::Long;
 use Pod::Usage;
 
-use SBG::Storable qw/retrieve_files/;
-use SBG::List qw/flatten/;
+use SBG::Role::Storable qw/retrieve_files/;
+use SBG::U::List qw/flatten/;
 
 my %ops;
 my $result = GetOptions(\%ops, 

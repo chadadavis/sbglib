@@ -2,7 +2,7 @@
 
 =head1 NAME
 
-SBG::Config - Ini file parsing
+SBG::U::Config - Ini file parsing
 
 =head1 SYNOPSIS
 
@@ -25,7 +25,7 @@ L<Config::IniFiles>
 
 ################################################################################
 
-package SBG::Config;
+package SBG::U::Config;
 
 use base qw(Exporter);
 our @EXPORT_OK = qw(config val);

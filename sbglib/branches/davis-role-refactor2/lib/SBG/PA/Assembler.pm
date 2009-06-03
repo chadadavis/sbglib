@@ -31,7 +31,7 @@ use File::Temp qw/tempfile/;
 
 use SBG::GeometricHash;
 use PDL::Matrix;
-use SBG::Log;
+use SBG::U::Log;
 
 our $gh = new SBG::GeometricHash(binsize=>1);
 

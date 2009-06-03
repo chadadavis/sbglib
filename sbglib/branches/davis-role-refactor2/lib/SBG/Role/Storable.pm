@@ -2,13 +2,13 @@
 
 =head1 NAME
 
-SBG::Storable - Moose role for Storable objects
+SBG::Role::Storable - Moose role for Storable objects
 
 =head1 SYNOPSIS
 
 package MyClass;
 use Moose;
-with 'SBG::Storable'; 
+with 'SBG::Role::Storable'; 
 
 
 =head1 DESCRIPTION
@@ -23,23 +23,17 @@ L<Moose::Role>
 
 ################################################################################
 
-package SBG::Storable;
+package SBG::Role::Storable;
 use Moose::Role;
-
-use Storable qw();
-use Scalar::Util qw/blessed/;
-use Module::Load;
-use Class::MOP::Class;
-
-use SBG::List qw/flatten/;
-
-# Any contained PDL objects need this to de-serialize
-use PDL::IO::Storable;
 
 # Also a functional interface
 use base qw(Exporter);
 our @EXPORT = qw(store retrieve);
 our @EXPORT_OK = qw(module_for can_do retrieve_files);
+
+# Any contained PDL objects need this to de-serialize
+use PDL::IO::Storable;
+
 
 
 ################################################################################
@@ -53,6 +47,7 @@ our @EXPORT_OK = qw(module_for can_do retrieve_files);
 Just a wrapper for OO-style store()
 
 =cut
+use Storable qw//;
 sub store {
    my ($self,$file,@args) = @_;
    return Storable::store($self, $file);
@@ -74,6 +69,8 @@ unintended side effects.
 See also L<bless> , L<overload>
 
 =cut
+use Storable qw//;
+use Scalar::Util qw/blessed/;
 sub retrieve {
    my ($file) = @_;
    return unless -r $file;
@@ -95,6 +92,7 @@ sub retrieve {
  Args    : Paths to files containing L<Storable> objects
 
 =cut
+use SBG::U::List qw/flatten/;
 sub retrieve_files {
     @_ = flatten @_;
     my @a = map { flatten retrieve($_) } @_;
@@ -116,6 +114,8 @@ way.
 BUGS: Why does Perl not do this automatically when deserializing an object?
 
 =cut
+use Module::Load qw/load/;
+use Scalar::Util qw/blessed/;
 sub module_for {
     my ($obj) = @_;
     my $class = blessed($obj) or return;
@@ -131,7 +131,7 @@ sub module_for {
 =head2 can_do
 
  Function: Figures out what methods an object supports
- Example : my $methods = Storable::can_do($obj);
+ Example : my $methods = SBG::Role::Storable::can_do($obj);
  Returns : HashRef of method names, keyed by module name
  Args    : An Object
 
@@ -152,6 +152,8 @@ $VAR1 = {
 
 
 =cut
+use Class::MOP::Class;
+use Scalar::Util qw/blessed/;
 sub can_do {
     my ($obj) = @_;
     my $class = blessed $obj;
@@ -170,5 +172,6 @@ sub can_do {
 
 
 ################################################################################
+no Moose::Role;
 1;
 

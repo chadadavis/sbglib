@@ -40,10 +40,10 @@ use List::MoreUtils qw/mesh/;
 use SBG::Transform;
 use SBG::Domain;
 use SBG::DomainIO;
-use SBG::List qw(reorder);
-use SBG::Config qw/config/;
-use SBG::Log;
-use SBG::DB;
+use SBG::U::List qw(reorder);
+use SBG::U::Config qw/config/;
+use SBG::U::Log;
+use SBG::U::DB;
 
 
 ################################################################################
@@ -214,7 +214,7 @@ sub superpose_query {
 
     my $db = config()->val('trans', 'db') || "trans_1_6";
     my $host = config()->val(qw/trans host/);
-    my $dbh = SBG::DB::connect($db, $host);
+    my $dbh = SBG::U::DB::connect($db, $host);
 
     # Static handle, prepare it only once
     our $trans_sth;
@@ -275,7 +275,7 @@ sub superpose_query {
     # Need to figure out if it was A->B (as requested) or B->A (reversed)
     unless ($metadata->{'tid1'} eq $metadata->{'eid1'}) {
         $logger->trace("Found inverse transform");
-        $trans->invert();
+        $trans = $trans->inverse();
     }
     return $trans;
 
@@ -307,6 +307,7 @@ sub cachepos {
     my $file = _cache_file($fromdom, $ontodom);
     my $io = new SBG::IO(file=>">$file");
     # STAMP scores, etc.
+
     $io->write($fromdom->transformation->headers);
     # Write onto domain (has no transform, it's the reference);
     $io->write($ontodom->asstamp);

@@ -7,7 +7,7 @@ use SBG::Domain;
 use SBG::DomainIO;
 use SBG::Complex;
 use SBG::ComplexIO;
-use SBG::List qw(intersection);
+use SBG::U::List qw(intersection);
 
 my ($modelfile, $truthfile) = @ARGV;
 die unless -s $modelfile && -s $truthfile;

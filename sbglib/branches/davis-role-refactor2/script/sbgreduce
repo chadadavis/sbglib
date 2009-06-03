@@ -39,10 +39,10 @@ Put the BLOCK in quotes to prevent your shell from interpreting it.
 # CPAN
 use Getopt::Long;
 use Pod::Usage;
-use SBG::Storable;
+use SBG::Role::Storable;
 
 use List::Util qw/reduce/;
-use SBG::Storable qw(retrieve_files);
+use SBG::Role::Storable qw(retrieve_files);
 
 my %ops;
 my $result = GetOptions(\%ops, 

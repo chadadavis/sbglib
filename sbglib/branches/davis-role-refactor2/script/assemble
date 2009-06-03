@@ -54,15 +54,18 @@ use SBG::CA::Assembler;
 use SBG::Complex;
 use SBG::Seq;
 use SBG::Node;
-use SBG::Storable;
+use SBG::Role::Storable;
 use SBG::Domain;
 
-use SBG::Log;
-use SBG::Config qw/config/;
+use SBG::U::Log;
+use SBG::U::Config qw/config/;
 use SBG::GeometricHash;
 
 # Type of domain object representation to use
-our $type = 'SBG::Domain::Crosshairs';
+# our $type = 'SBG::Domain';
+# our $type = 'SBG::Domain::Crosshairs';
+our $type = 'SBG::Domain::CofM';
+
 Module::Load::load($type);
 
 
@@ -80,7 +83,7 @@ my $result = GetOptions(\%ops,
     );                  
 if ($ops{'h'}) { pod2usage(-exitval=>1, -verbose=>2); }
 
-SBG::Log::init($ops{'l'}) if $ops{'l'};
+SBG::U::Log::init($ops{'l'}) if $ops{'l'};
 
 our $minsize;
 

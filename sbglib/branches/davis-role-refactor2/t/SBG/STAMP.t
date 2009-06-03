@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 
 use Test::More 'no_plan';
-use SBG::Test 'float_is';
+use SBG::U::Test qw/float_is pdl_approx/;
 use Carp;
 use Data::Dumper;
 use File::Temp;
@@ -60,14 +60,10 @@ my $dtoa_ans = new SBG::Transform(string=>$dtoa_transstr)->matrix;
 my $atod_ans = new SBG::Transform(string=>$atod_transstr)->matrix;
 
 
-
-ok(all(approx($aontod, $atod_ans, $toler)),
-   "superpose 2br2A onto 2br2D: agrees w/ STAMP to w/in $toler A") or 
-    print STDERR "Expected:\n$atod_ans\nGot:\n$aontod\n";
-
-ok(all(approx($dontoa, $dtoa_ans, $toler)),
-   "superpose 2br2D onto 2br2A: agrees w/ STAMP to w/in $toler A") or
-    print STDERR "Expected:\n$dtoa_ans\nGot:\n$dontoa\n";    
+pdl_approx($aontod, $atod_ans, $toler, 
+           "superpose 2br2A onto 2br2D: agrees w/ STAMP to w/in $toler A");
+pdl_approx($dontoa, $dtoa_ans, $toler, 
+           "superpose 2br2D onto 2br2A: agrees w/ STAMP to w/in $toler A");
 
 
 # Test transform()
@@ -147,14 +143,10 @@ STOP
 my $btod_ans = new SBG::Transform(string=>$btod_transstr)->matrix;
 my $dtob_ans = new SBG::Transform(string=>$dtob_transstr)->matrix;
 
-ok(all(approx($trans5bd, $btod_ans, $toler)), 
-   "Database transformation verified B=>D, to within $toler A") or 
-    print STDERR "Expected:\n$btod_ans\nGot:\n$trans5bd\n";
-
-ok(all(approx($trans5db, $dtob_ans, $toler)), 
-   "Database transformation verified D=>B, to within $toler A") or 
-    print STDERR "Expected:\n$dtob_ans\nGot:\n$trans5db\n";
-
+pdl_approx($trans5bd, $btod_ans, $toler, 
+           "Database transformation verified B=>D, to within $toler A");
+pdl_approx($trans5db, $dtob_ans, $toler, 
+           "Database transformation verified D=>B, to within $toler A");
 
 
 # Test sub-segments of chains

@@ -2,11 +2,11 @@
 
 =head1 NAME
 
-SBG::DomainI - Simplified structure representation (a L<Moose::Role>)
+SBG::DomainI - Simplified domain representation (a L<Moose::Role>)
 
 =head1 SYNOPSIS
 
- package MyClass;
+ package SBG::DomaiN::MyDomainImplementation;
  use Moose;
  with 'SBG::DomainI'; 
 
@@ -17,7 +17,7 @@ If your class uses this role, it will need to define all the methods below.
 
 =head1 SEE ALSO
 
-L<SBG::Sphere> , L<SBG::Domain>, L<Moose::Role>
+L<SBG::Domain>, L<Moose::Role>
 
 =cut
 
@@ -26,6 +26,11 @@ L<SBG::Sphere> , L<SBG::Domain>, L<Moose::Role>
 package SBG::DomainI;
 use Moose::Role;
 
+with 
+    'SBG::Role::Storable',
+    'SBG::Role::Dumpable',
+    'SBG::Role::Clonable',
+    ;
 
 
 ################################################################################
@@ -43,22 +48,9 @@ requires 'dist';
 
 
 ################################################################################
-=head2 hash
-
- Function: 
- Example : 
- Returns : 
- Args    : 
-
-
-=cut
-requires 'hash';
-
-
-################################################################################
 =head2 sqdist
 
- Function: Squared linar distance between objects
+ Function: Squared linear distance between objects
  Example : 
  Returns : 
  Args    : 
@@ -147,5 +139,6 @@ requires 'overlaps';
 
 
 ################################################################################
+no Moose::Role;
 1;
 

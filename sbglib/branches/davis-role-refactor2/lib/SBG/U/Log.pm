@@ -2,26 +2,28 @@
 
 =head1 NAME
 
-SBG::Log - Logging setup
+SBG::U::Log - Logging setup
 
 =head1 SYNOPSIS
 
- use SBG::Log;
+ use SBG::U::Log;
  # Without any initialisation, WARN and ERROR go to STDERR, others ignored
- $logger->debug("x is: $x"); # not printed anywhere
- $logger->error("cannot open: $file)"; # printed to STDERR
+ log()->debug("x is: $x"); # not printed anywhere
+ log()->error("cannot open: $file)"; # printed to STDERR
 
  # initialize logging. Default level is 'WARN', default file is './log.log'
- SBG::Log::init('DEBUG', '/tmp/somewhere.log');
- $logger->debug("x is: $x"); # Appended to /tmp/somewhere.log
- $logger->trace("very detailed info"); # Not saved, since TRACE is higher 
- $logger->error("bad things"); # Saved to logfile, but no longer to STDERR
+ log()->init('DEBUG', '/tmp/somewhere.log');
+ log()->debug("x is: $x"); # Appended to /tmp/somewhere.log
+ log()->trace("very detailed info"); # Not saved, since TRACE is higher 
+ log()->error("bad things"); # Saved to logfile, but no longer to STDERR
 
 =head1 DESCRIPTION
 
 By default there is no logging. WARN and ERROR messages will just go to
-STDERR. When logging, WARN and ERROR and any other applicable messages all go to
-the log file.
+STDERR. 
+
+When logging, WARN and ERROR and any other applicable messages all go to the log
+file.
 
 For a given level, all messages of higher severity are also logged. The list:
 
@@ -33,7 +35,7 @@ everything but TRACE gets logged.
 NB There is negligible penalty for using the logging system when logging
 messages are not printed. I.e. logging slows down an application. But logging
 does not have to be completely avoided or turned off to increase speed. Simply
-set the log level to e.g. B<$ERROR> to only log errors.
+set the log level to e.g. B<ERROR> to only log errors.
 
 
 =head1 SEE ALSO
@@ -44,19 +46,32 @@ L<Log::Log4perl>
 
 ################################################################################
 
-package SBG::Log;
+package SBG::U::Log;
 
 use base qw/Exporter/;
-our @EXPORT = qw($logger);
+our @EXPORT = qw(log);
 
-use Log::Log4perl qw(:levels :resurrect);
-
-# No logging by default
-# WARN and ERRROR messages to STDERR, others ignored
-our $logger = bless {}, "SBG::_Dummy";
+use Log::Log4perl qw(:levels);
 
 
 ################################################################################
+=head2 logger
+
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
+
+No logging by default
+
+WARN and ERRROR messages to STDERR, others ignored
+
+=cut
+sub log {
+    our $logger;
+    $logger ||= bless {}, "SBG::U::LogNull";
+    return $logger;
+}
 
 
 ################################################################################
@@ -67,6 +82,8 @@ our $logger = bless {}, "SBG::_Dummy";
  Returns : 
  Args    : 
 
+This will initialize the actual file logging
+
 In order of increasing severity: $TRACE $DEBUG $INFO $WARN $ERROR $FATAL
 
 =cut
@@ -76,6 +93,7 @@ sub init {
     $logfile ||= 'log.log';
 
     # Initialize system logger
+    our $logger;
     $logger = Log::Log4perl->get_logger("sbg");
 
     # Default logging level 
@@ -92,9 +110,6 @@ sub init {
     # Register the appender with the logger
     $logger->add_appender($appender);
 
-    # First log message is the banner
-    $logger->debug("\n\n", "=" x 80);
-
     return $logger;
 }
 
@@ -103,26 +118,35 @@ sub init {
 1;
 
 
-package SBG::_Dummy;
+package SBG::U::LogNull;
 
-# warn/error messages diverted to STDERR
-# Any other level messages (e.g. $DEBUG, etc) just get ignored
+use Carp qw/carp cluck/;
+
+sub init {
+    my $self = shift;
+    return SBG::U::Log::init(@_);
+}
+
+# warn/error/fatal messages diverted to STDERR (with stack trace)
+
+sub warn {
+    my $self = shift;
+    carp "@_\n";
+}
+*logwarn = \&warn;
+
 sub error {
     my $self = shift;
-    return warn "@_\n";
+    cluck "@_\n";
 }
-sub warn { error(@_) }
-sub fatal { error(@_) }
+*error_warn = \&error;
+*fatal = \&error;
 
-# These versions also call 'warn' in Log4Perl, need to catch them too
-sub logwarn { error(@_) }
-sub error_warn { error(@_) }
+# Other messages (e.g. $DEBUG, etc) just get ignored
 
-# Others get ignored
-sub trace {1;}
 sub debug {1;}
-sub info {1;}
-
+*trace = \&debug;
+*info = \&debug;
 
 
 ################################################################################

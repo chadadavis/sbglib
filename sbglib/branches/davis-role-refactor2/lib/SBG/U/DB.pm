@@ -2,13 +2,13 @@
 
 =head1 NAME
 
-SBG::DB - DB tools
+SBG::U::DB - DB tools
 
 =head1 SYNOPSIS
 
- use SBG::DB;
- my $db_handle = SBG::DB::connect("mydb");
- my $db_handle = SBG::DB::connect("mydb", "myhost");
+ use SBG::U::DB;
+ my $db_handle = SBG::U::DB::connect("mydb");
+ my $db_handle = SBG::U::DB::connect("mydb", "myhost");
 
 
 =head1 DESCRIPTION
@@ -22,7 +22,7 @@ L<DBI>
 
 ################################################################################
 
-package SBG::DB;
+package SBG::U::DB;
 use base qw/Exporter/;
 our @EXPORT_OK = qw(connect);
 
@@ -40,7 +40,7 @@ our $sleep = 10;
 =head2 connect
 
  Function: Returns DB handle, using connection caching, sleeps if overloaded
- Example : my $db_handle = SBG::DB::connect("my_db_name", "my_host_name");
+ Example : my $db_handle = SBG::U::DB::connect("my_db_name", "my_host_name");
  Returns : Database handle (L<DBI::db>) or undef 
  Args    : Str database name
            Str host name (default "localhost")

@@ -2,7 +2,7 @@
 
 =head1 NAME
 
-SBG::Transform - Represents an affine transformation matrix (4x4)
+SBG::Transform - Represents a transformation matrix 
 
 =head1 SYNOPSIS
 
@@ -13,7 +13,7 @@ SBG::Transform - Represents an affine transformation matrix (4x4)
 This simply translates between STAMP (I/O) and PDL (internal) matrix
 crepresentations.
 
-An L<SBG::Transform> can transform L<SBG::Domain>s or L<SBG::Assembly>s. It
+An L<SBG::Transform> can transform L<SBG::DomainI>s or L<SBG::Complex>s. It
 is compatible with STAMP transformation matrices (3x4) and reads and writes
 them.
 
@@ -27,110 +27,129 @@ L<SBG::Domain>
 
 package SBG::Transform;
 use Moose;
-with 'SBG::Storable';
-with 'SBG::Dumpable';
+# Explicitly identify Moose as parent, since also extending Transform
+extends qw/Moose::Object PDL::Transform/;
 
-use PDL::Lite;
-use PDL::Core;
-use PDL::Matrix;
-use PDL::MatrixOps;
-use PDL::IO::Storable;
-use PDL::IO::Misc;
-use PDL::Ufunc;
+with qw/
+SBG::Role::Storable
+SBG::Role::Dumpable
+/;
 
-use List::MoreUtils qw/mesh/;
 
-use SBG::Types;
-use SBG::Log;
+# hack required to subclass PDL::Transform
+our @EXPORT_OK = @PDL::Transform::EXPORT_OK;
+our %EXPORT_TAGS = (Func=>[@PDL::Transform::EXPORT_OK]);
 
 use overload (
-    'x' => '_mult',
-    '""' => 'ascsv',
+#     'x'  => 'compose',  # overrides PDL::Transform
+#     '""' => 'stringify',  # overrides PDL::Transform
     '==' => '_equal',
     );
 
+use PDL::Core qw/zeroes pdl/;
+use PDL::Transform;
+use PDL::IO::Storable;
+use PDL::Ufunc qw/all/;
 
+use List::MoreUtils qw/mesh/;
+
+use SBG::U::Log;
+use SBG::Types;
 
 
 ################################################################################
 # Accessors
 
 
-# STAMP score fields
+=head2 keys
+
+STAMP score fields
+
+ Domain1 Domain2 Sc RMS Len1 Len2 Align Fit Eq Secs I S P
+
+=cut
 our @keys = qw/Domain1 Domain2 Sc RMS Len1 Len2 Align Fit Eq Secs I S P/;
-
 has \@keys => (
+    # Each attribute is read-write
     is => 'rw',
     );
 
 
-=head2 matrix
+=head2 isid
 
-The 4x4 affine transformation matrix
-Using homogenous coordinates (ie 4D)
-Default is the identity matrix
-=cut
-has 'matrix' => (
+Is identity transformation
+
+=cut 
+has 'isid' => (
     is => 'rw',
-    isa => 'PDL::Matrix',
-    required => 1,
-    default => sub { mpdl identity 4 },
-    trigger => sub { my $self = shift; $self->_tainted(1) if @_ },
     );
-
-
-=head2 string
-
-Create a matrix from a CSV string
-=cut
-has 'string' => (
-    is => 'ro',
-    isa => 'Str',
-    trigger => sub { (shift)->_load },
-    );
-
-
-=head2 file
-
-Create a matrix from a CSV file
-=cut
-has 'file' => (
-    is => 'ro',
-    isa => 'SBG.File',
-    trigger => sub { (shift)->_load },
-    );
-
-
-# Note if not-yet-modified
-has '_tainted' => (
-    is => 'rw',
-    isa => 'Bool',
-    default => 0,
-    );
-
 
 
 ################################################################################
-=head2 _build_matrix
+=head2 matrix
 
- Function:
- Example :
+ Function: 
+ Example : 
  Returns : 
- Args    :
+ Args    : 
 
-Identity transformation matrix, 4x4
 
 =cut
-sub _build_matrix {
-    return mpdl [ [1,0,0,0], [0,1,0,0], [0,0,1,0], [0,0,0,1] ];
+sub matrix {
+    my ($self,) = @_;
+    return $self->{params}{matrix};
+} # matrix
+
+
+################################################################################
+=head2 offset
+
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
+
+
+=cut
+sub offset {
+    my ($self,) = @_;
+    return $self->{params}{post};
+} # offset
+
+
+################################################################################
+=head2 new
+
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
+
+
+=cut
+sub new {
+    my ($class, %ops) = @_;
+    return _load_string($ops{string}) if $ops{string};
+    return _load_file($ops{file}) if $ops{file};
+
+    # Moose::Object parent class
+    my $self = $class->SUPER::new(%ops);
+    # PDL::Transform parent class
+    # Explicitly set dimensions to 3, in case no parameters given
+    my $trans = defined($ops{transform}) || t_linear(%ops, dim=>3);
+    # Merge objects
+    $self = { %$self, %$trans };
+    # Bless into this class as well
+    bless $self, $class;
+    return $self;
 }
 
 
 ################################################################################
-=head2 id
+=head2 t_identity
 
  Function: Represents the transformation of a domain onto itself
- Example : my $id_trans = SBG::Transform::id();
+ Example : my $id_trans = SBG::Transform::t_identity();
  Returns : L<SBG::Transform>
  Args    : NA
 
@@ -142,58 +161,19 @@ high-scoring. The C<new()> just uses the identity transform as a convenient
 default and sets no scores on the transform.
 
 =cut
-sub id {
-    my $self = new SBG::Transform();
-    $self->{'Sc'} = 10;
-    $self->{'RMS'} = 0;
-    $self->{'I'} = 100;
-    $self->{'S'} = 100;
-    $self->{'P'} = 0;
+override 't_identity' => sub {
+    my $self = new SBG::Transform(
+        isid=> 1,
+        Sc  => 10,
+        RMS => 0,
+        I => 100,
+        S => 100,
+        P => 0,
+        );
     return $self;
-}
-
-
-################################################################################
-=head2 reset
-
- Function: Resets the 'transformation' to the identity;
- Example : $transf->reset;
- Returns : The new value of matrix, i.e. an identity.
- Args    : NA
-
-Resets the internal matrix
-
-=cut
-sub reset {
-    my $self = shift;
-    $self->_tainted(0);
-    return $self->matrix(_build_matrix());
-}
-
-
-################################################################################
-=head2 invert
-
- Function: Inverts the current matrix
- Example : $trans->invert
- Returns : $self
- Args    : NA
-
-See L<inverse>
-
-=cut
-sub invert {
-   my ($self) = @_;
-   return unless $self->_tainted;
-   my $m = $self->matrix;
-   my $i = $m->inv;
-   # TODO test this syntax, need functional syntax
-   # $m .= $i; # Assign underlying object
-   # $self->matrix($m);
-   $self->{matrix} .= $i;
-   return $self;
-
-} # invert
+};
+*identity = \&t_identity;
+*id = \&t_identity;
 
 
 ################################################################################
@@ -206,14 +186,17 @@ sub invert {
 
 Does not modify the current transform. 
 
-See L<invert>
-
 =cut
-sub inverse {
+override 'inverse' => sub {
     my ($self) = @_;
-    return new SBG::Transform unless $self->_tainted;
-    return new SBG::Transform(matrix=>$self->matrix->inv);
-}
+    return $self if $self->isid();
+    my $class = ref $self;
+    # The inverse PDL::Transform object
+    my $transform = $self->PDL::Transform::inverse();
+    # Pack in in a SBG::Transform
+    $self = new $class(transform=>$transform, %$self);
+    return $self;
+};
 
 
 ################################################################################
@@ -246,31 +229,19 @@ sub relativeto ($$) {
 
 
 ################################################################################
-=head2 transform
+=head2 stringify
 
- Function: Applies this transformation matrix to some L<PDL::Matrix>
- Example : my $point123 = mpdl(1,2,3,1)->transpose; 
-           my $transformed = $trans->transform($p)->transpose;
- Returns : A 4xn L<PDL::Matrix>
- Args    : thing - a 4xn L<PDL::Matrix>
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
 
-Apply this transform to some point, or even a matrix (affine multiplication)
-
-If the thing needs to be B<transpose()>'d, that is up to you to do that (before and
-after).
 
 =cut
-# sub apply 
-sub transform {
-    my ($self, $thing) = @_;
-    return $thing unless $self->_tainted;
-    if (ref($self) eq ref($thing)) {
-        return $self->_mult($thing);
-    } else {
-        # Matrix multiplication using PDL
-        return $self->matrix x $thing;
-    }
-} # transform
+override 'stringify' => sub {
+    my ($self)= @_;
+    return $self->ascsv;
+};
 
 
 ################################################################################
@@ -287,29 +258,24 @@ Appends newline B<\n>
 =cut
 sub ascsv {
     my ($self) = @_;
-    return "" unless $self->_tainted && defined($self->matrix);
+
+    return "" if $self->isid() || !defined($self->matrix);
 
     my $mat = $self->matrix;
-    my ($n,$m) = $mat->dims;
-
-    print STDERR "mat:$mat:\n" unless ($n && $m);
-
-    my $str;
-    # Don't do the final row (affine). Stop at $n - 1
-    for (my $i = 0; $i < $n - 1; $i++) {
-        for (my $j = 0; $j < $m; $j++) {
-            $str .= sprintf("%10.5f ", $mat->at($i,$j));
-        }
-        $str .= "\n";
-    }
+    my $z = zeroes 4,3;
+    $z->slice('0:2,') .= $self->{params}{matrix}->transpose;
+    $z->slice('3,') .= $self->{params}{post}->transpose;
+    my $str= "$z";
+    $str=~s/[\[\]]//g;
+    $str=~s/\n\n//g;
     return $str;
 } # ascsv
 
 
 ################################################################################
-=head2 asstamp
+=head2 headers
 
- Function: 
+ Function: Print header fields in STAMP format
  Example : 
  Returns : 
  Args    : 
@@ -321,7 +287,7 @@ sub ascsv {
 =cut
 sub headers {
     my ($self) = @_;
-    return "\n" unless $self->_tainted;
+    return "\n" if $self->isid;
     our @keys;
     my $str = '';
     $str .= join("\t", qw/% No/, @keys) . "\n";
@@ -329,36 +295,6 @@ sub headers {
     $str .= join("\t", qw/%Pair 1/, @vals) . "\n";
     return $str;
 }
-
-################################################################################
-=head2 _load
-
- Function: Sets matrix based on previously assigned L<string> or L<file>
- Example : 
- Returns : $self
- Args    : NA
-
-=cut
-sub _load {
-    my ($self,@args) = @_;
-    my $rasc = identity(4);
-
-    if ($self->file) {
-        $rasc = $self->_load_file();
-    } elsif ($self->string) {
-        $rasc = $self->_load_string();
-    } else {
-        $logger->error("Need either a 'string' or 'file' to load");
-    }
-    return $self unless defined($rasc);
-    # Put a 1 in the cell 3,3 (bottom right) for affine matrix multiplication
-    $rasc->slice('3,3') .= 1;
-    # Finally, make it a PDL::Matrix
-    $self->matrix(mpdl $rasc);
-
-    return $self;
-
-} # _load
 
 
 ################################################################################
@@ -372,8 +308,6 @@ sub _load {
 The file is expected to contain a STAMP score line beginning with 'Pair' etc.
 
 # TODO DES duplicated with STAMP::stamp
-
-# TODO DES metadata is stored directly in this object w/o accessors
 
 # TODO DES Need separate functions to parse:
 1 Header lines with meta data
@@ -423,7 +357,7 @@ sub _load_file {
     $self->{$_} = $fields{$_} for keys %fields;
 
     return $self->_load_string($matstr);
-}
+} # _load_file
 
 
 ################################################################################
@@ -434,26 +368,28 @@ sub _load_file {
  Returns : 
  Args    :
 
-Sets the internal transformation matrix, given a string like:
+Sets the internal transformation matrix, given new-line separated string like:
 
-"
+ r11 r12 r13 v1
+ r21 r22 r23 v2
+ r31 r32 r33 v3
+
+E.g.: 
+
   -0.64850   -0.34315    0.67949  -26.63386 
    0.71843    0.01913    0.69534  -24.89855 
   -0.25160    0.93909    0.23412    6.94888 
-"
 
-White-space is collapsed.
 
 =cut
 sub _load_string {
-    my ($self, $str) = @_;
-    $str ||= $self->string;
+    my ($str) = @_;
     unless ($str) {
         $logger->error("No string to parse");
         return;
     }
-    my $rasc = identity(4);
-    $logger->trace("In:\n", $str);
+    $logger->trace("str:\n", $str);
+
     my @lines = split /\n/, $str;
     # Skip empty lines
     @lines = grep { ! /^\s*$/ } @lines;
@@ -463,7 +399,7 @@ sub _load_string {
         my @fields = split /\s+/, $lines[$i];
         # Skip emtpy fields (i.e. when the first field is just whitespace)
         @fields = grep { ! /^\s*$/ } @fields;
-        # Only only take 4 fields
+        # Only  take 4 fields
         for (my $j = 0; $j < 4 ; $j++) {
             # Column major order, i.e. (j,i) not (i,j)
             $rasc->slice("$j,$i") .= $fields[$j];
@@ -475,32 +411,53 @@ sub _load_string {
 } # _load_string
 
 
+
+# TODO DOC
+# NB use post=>$offset to apply translation after rotation
+sub _parse_matrix {
+    my ($self, $str) = @_;
+    $str =~ s/[\[\]]//g;
+    my @elems= split(' ',$str);
+    return unless @elems;
+
+    # Get the last column (the translation components)
+    my $offset = [ delete @elems[3, 7, 11] ];
+    # Remaining row-order 3x3 rotation matrix
+    @elems = grep { defined } @elems;
+    # Create 3x3 matrix from 9-elem array, then transpose to column-major order
+    my $mat = pdl([@elems[0..2]], [@elems[3..5]], [@elems[6..8]])->transpose;
+
+    return ($mat, $offset);
+} # _parse_matrix
+
+
 ################################################################################
-=head2 _mult
+=head2 compose
 
  Function:
  Example :
  Returns : 
  Args    :
 
-Matrix multiplication. Order of operations mattters.
+Matrix composition.
 
 =cut
-# sub compose {
-sub _mult {
+override 'compose' => sub {
     my ($self, $other) = @_;
-    unless (ref($self) eq ref($other)) {
-        $logger->error("Types differ: " . ref($self) . ' vs. ' . ref($other));
-        return;
-    }
     # Don't waste time multiplying identities
-    return $self unless $other->_tainted;
-    return $other unless $self->_tainted;
-    my $m = $self->matrix x $other->matrix;
+    return $self if $other->isid;
+    return $other if $self->isid;
 
-    return new SBG::Transform(matrix=>$m);
-} # _mult
+    # Rotations
+    my $prod = $self->matrix x $other->matrix;
 
+    # TODO translations ...
+
+    # But this is just a composition, maybe doesn't have a matrix
+    return new SBG::Transform(matrix=>$prod);
+
+    # TODO BUG missing translations
+};
 
 
 ################################################################################
@@ -517,8 +474,9 @@ sub _equal ($$) {
     my ($self, $other) = @_;
     return 0 unless defined($other) && blessed($self) eq blessed($other);
     # Equal if neither has yet been set
-    return 1 unless $self->_tainted || $other->_tainted;
+    return 1 if $self->isid && $other->isid;
     return all($self->matrix == $other->matrix);
+    return all($self->offset == $other->offset);
 }
 
 
@@ -526,5 +484,4 @@ sub _equal ($$) {
 __PACKAGE__->meta->make_immutable;
 1;
 
-__END__
 

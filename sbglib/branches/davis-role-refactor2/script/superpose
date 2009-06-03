@@ -5,7 +5,7 @@ use strict;
 use File::Basename;
 use SBG::Complex;
 use SBG::STAMP;
-use SBG::Storable;
+use SBG::Role::Storable;
 
 my ($fa, $fb) = @ARGV;
 

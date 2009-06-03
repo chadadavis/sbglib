@@ -29,17 +29,20 @@ package SBG::Complex;
 use Moose;
 
 extends qw/Moose::Object Clone/;
-with 'SBG::Storable';
+with 
+    'SBG::Role::Storable',
+    'SBG::Role::Clonable',
+    ;
 
 use Moose::Autobox;
-use autobox ARRAY => 'SBG::List';
+use autobox ARRAY => 'SBG::U::List';
 use File::Temp qw/tempfile/;
 use Module::Load;
 
 use SBG::HashFields;
-use SBG::List qw/min union sum intersection/;
-use SBG::Config qw/config/;
-use SBG::Log;
+use SBG::U::List qw/min union sum intersection/;
+use SBG::U::Config qw/config/;
+use SBG::U::Log;
 use SBG::STAMP qw/superpose stamp/;
 use SBG::Domain;
 use SBG::DomainIO;
@@ -154,8 +157,8 @@ sub attach {
         # I.e. We're in a new frame of reference: implicitly sterically OK
         # Initialize new object, based on previous (copy construction)
 
-        $self->model($src, SBG::Domain::create($self->type(), %$srcdom));
-        $self->model($dest, SBG::Domain::create($self->type(), %$destdom));
+        $self->model($src, $srcdom->clone());
+        $self->model($dest, $destdom->clone());
         $self->interaction($ix, $ix);
         return $success = 1;
     }
@@ -202,8 +205,8 @@ sub linker {
     }
 
     # Concrete (w/ coordinates) instance of this domain, of class $self->type()
-    # (copy construction, using a factory method)
-    $destdom = SBG::Domain::create($self->type(), %$destdom);
+    my $type = $self->type;
+    $destdom = $type->new(%$destdom);
 
     # Then apply that transformation to the interaction partner $dest
     # Product of relative with absolute transformation
@@ -246,32 +249,6 @@ sub subnet {
     #              -nodes=>[@nodes],-interaction=>$i);
 
 } # subnet
-
-
-
-################################################################################
-=head2 clone
-
- Function: A shallow copy, copies hashes and their pointers.  
- Example : $clone = $complex->clone();
- Returns : Another independent instance of L<SBG::Complex>
- Args    : NA
-
-Doesn't copy referenced Domain/Transform objects.  This is necessary, as
-backtracking graph traversal creates many Assemblys.
-
-I.e. Assembly can efficiently contain references to other objects without
-incurring a cloning copy penalty.
-
-=cut
-sub clone {
-    my ($self, $depth) = @_;
-    $depth = 2 unless defined $depth;
-    # Depth 2 means: copy object HashRef (1) and the hashes/objects in it (2).
-    # Does not copy what is referenced in/from those hashes/objects (3).
-#     return $self->Clone::clone(shift || 2);
-    return Clone::clone($self, $depth);
-} # clone
 
 
 ################################################################################
@@ -658,6 +635,8 @@ Transform domains saved in this complex to a PDB file
 
 See L<SBG::STAMP::gtransform>
 
+TODO This needs to be in SBG::ComplexIO::pdb.pm
+
 =cut
 sub gtransform {
     my ($self, %ops) = @_;
@@ -694,6 +673,7 @@ sub rasmol {
  Returns : 
  Args    : 
 
+TODO This needs to be in SBG::ComplexIO::stamp.pm
 
 =cut
 sub asstamp {

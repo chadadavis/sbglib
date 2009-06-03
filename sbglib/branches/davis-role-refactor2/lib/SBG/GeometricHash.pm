@@ -64,7 +64,7 @@ use PDL::NiceSlice;
 use Math::Trig qw/rad2deg/;
 use Math::Round qw/nearest/;
 
-use SBG::Log;
+use SBG::U::Log;
 
 ################################################################################
 
@@ -127,8 +127,16 @@ sub exists {
 }
 
  
-# TODO DOC
-# The name of the model/class without the indices used for the basis
+################################################################################
+=head2 class
+
+ Function: The name of the model/class, without any appended basis indices 
+ Example : 
+ Returns : 
+ Args    : 
+
+
+=cut
 sub class {
     my ($self,$points, $labels) = @_;
     my $class = $self->exists($points, $labels);
@@ -138,8 +146,17 @@ sub class {
 }
 
 
-# Matches exactly, i.e a model is only matched when it is the same size as the
-# query
+################################################################################
+=head2 exact
+
+ Function: Matches exactly
+ Example : 
+ Returns : 
+ Args    : 
+
+i.e a model is only matched when it is the same size as the query
+
+=cut
 sub exact {
     my ($self,$points, $labels) = @_;
     # Models that cover the query
@@ -182,9 +199,6 @@ sub at {
 
     # Binning
     $model = $self->_quantize($model);
-
-# TODO DEL
-#     print STDERR 'at', $model;
 
     return $self->_votes($model, $labels);
 
@@ -287,13 +301,7 @@ sub _one_basis {
     # Binning
     $model = $self->_quantize($model);
 
-
-# TODO DEL
-#     if ($i == 0 && $j == 1) {
-#         print STDERR "one_basis $size $i $j $k", $model;
-#     }
-
-
+    # Specific to PDL::Matrix ?
     for (my $p = 0; $p < $model->dim(1); $p++) {
         # Each row is a 3D point
         my $point = join(' ',$model(,$p)->list);
@@ -370,8 +378,6 @@ sub _quantize {
         $qmat(,$i) .= pdl(@row);
     }
     return $qmat
-    # Convert to integer in the middle step, throws away less significant digits
-#     return $binsize * long ($matrix / $binsize);
 
 }
 

@@ -25,9 +25,11 @@ use MooseX::StrictConstructor;
 
 extends qw/SBG::Domain::CofM/;
 
-with qw(SBG::Storable);
-with qw(SBG::Dumpable);
-with qw(SBG::DomainI);
+with qw/
+SBG::Role::Storable
+SBG::Role::Dumpable
+SBG::DomainI
+/;
 
 # NB "" and == inherited from SBG::Domain::CofM
 
@@ -35,7 +37,7 @@ use Math::Trig qw(:pi);
 # List::Util::min conflicts with PDL::min Must be fully qualified to use
 use List::Util; # qw(min); 
 
-use SBG::Log; # imports $logger
+use SBG::U::Log; # imports $logger
 
 
 ################################################################################

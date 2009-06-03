@@ -17,9 +17,9 @@ use SBG::PA::Assembler;
 use SBG::PA::Point;
 use Graph::Undirected;
 use SBG::Traversal;
-use SBG::Log;
+use SBG::U::Log;
 
-SBG::Log::init('TRACE');
+SBG::U::Log::init('TRACE');
 
 $SBG::PA::Point::resolution = 1;
 

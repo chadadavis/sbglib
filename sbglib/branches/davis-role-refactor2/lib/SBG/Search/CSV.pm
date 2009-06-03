@@ -30,7 +30,7 @@ use SBG::Template;
 use SBG::Domain;
 
 use SBG::Types;
-use SBG::Log;
+use SBG::U::Log;
 
 
 has 'file' => (

@@ -21,7 +21,7 @@ Also fetches radius of gyration and maximum radius of the centre of mass.
 
 =head1 SEE ALSO
 
-L<SBG::DB::cofm> , L<SBG::Domain::CofM>
+L<SBG::U::DB::cofm> , L<SBG::Domain::CofM>
 
 =cut
 
@@ -34,11 +34,11 @@ our @EXPORT_OK = qw/cofm/;
 use Text::ParseWords;
 
 use SBG::Types qw/$re_chain $re_chain_id $re_ic $re_pos/;
-use SBG::DB::cofm;
-use SBG::Config qw/config/;
+use SBG::U::DB::cofm;
+use SBG::U::Config qw/config/;
 use SBG::Domain;
 use SBG::DomainIO;
-use SBG::Log;
+use SBG::U::Log;
 
 ################################################################################
 =head2 cofm
@@ -64,7 +64,7 @@ sub cofm {
     my $res;
     # If descriptor contains just one full chain, try the cache first;
     my $chainid = $dom->wholechain();
-    $res = SBG::DB::cofm::query($pdbid, $chainid) if $chainid;
+    $res = SBG::U::DB::cofm::query($pdbid, $chainid) if $chainid;
 
     # Couldn't get from DB, try running computation locally, on descriptor
     $res = _run($pdbid, $descriptor) unless defined($res);

@@ -36,7 +36,7 @@ use warnings;
 use Pod::Usage;
 use Getopt::Long;
 use Moose::Autobox;
-use autobox ARRAY => 'SBG::List';
+use autobox ARRAY => 'SBG::U::List';
 use File::Basename;
 use POSIX;
 
@@ -44,10 +44,10 @@ use POSIX;
 # use SBG::Measure;
 # Better: 
 # use Statistics::Basic;
-use SBG::List qw/mean/;
+use SBG::U::List qw/mean/;
 
 use SBG::Complex;
-use SBG::Storable;
+use SBG::Role::Storable;
 
 ################################################################################
 
@@ -65,7 +65,7 @@ my $result = GetOptions(\%ops,
     );                  
 if ($ops{'h'}) { pod2usage(-exitval=>1, -verbose=>2); }
 
-SBG::Log::init($ops{'l'}) if $ops{'l'};
+SBG::U::Log::init($ops{'l'}) if $ops{'l'};
 
 
 ################################################################################

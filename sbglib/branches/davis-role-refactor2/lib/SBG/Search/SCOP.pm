@@ -34,8 +34,8 @@ use SBG::Types qw/$re_pdb/;
 use SBG::Domain;
 use SBG::Template;
 use SBG::Interaction;
-use SBG::List qw/uniq/;
-use SBG::Log;
+use SBG::U::List qw/uniq/;
+use SBG::U::Log;
 use SBG::Complex;
 
 # TODO Needs to be in a DB

@@ -52,7 +52,7 @@ use Graph::UnionFind;
 
 # Debug printing (to trace recursion and it's unwinding)
 # TODO del
-use SBG::Log;
+use SBG::U::Log;
 sub _d {
     my $d = shift;
 #     print STDERR ("\t" x $d), @_, "\n";
@@ -299,7 +299,7 @@ sub traverse {
         $self->_altcover({});
         $self->_nodecover({});
         # Start with a fresh state object, not defiled from previous rounds
-        my $clone = Clone::clone($state);
+        my $clone = $state->clone();
         # Go!
         $self->_do_nodes($uf, $clone, 0);
     }

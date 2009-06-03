@@ -2,7 +2,7 @@
 
 use Test::More 'no_plan';
 use SBG::Run::cofm qw/cofm/;
-use SBG::Test qw/float_is/;
+use SBG::U::Test qw/float_is/;
 use Data::Dumper;
 $, = ' ';
 

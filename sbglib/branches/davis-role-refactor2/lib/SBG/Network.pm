@@ -25,13 +25,16 @@ L<Bio::Network::ProteinNet> , L<Bio::Network::Interaction> , L<SBG::Interaction>
 
 package SBG::Network;
 use Moose;
-extends qw/Bio::Network::ProteinNet/;
-with 'SBG::Storable';
-with 'SBG::Dumpable';
+extends qw/Bio::Network::ProteinNet Moose::Object/;
+
+with qw/
+SBG::Role::Storable
+SBG::Role::Dumpable
+/;
 
 use File::Temp qw/tempfile/;
-use SBG::List qw/pairs/;
-use SBG::Log;
+use SBG::U::List qw/pairs/;
+use SBG::U::Log;
 
 use overload (
     '""' => '_asstring',
@@ -61,12 +64,20 @@ The bug is that stringification of SGB::Node is ignored, which causes Storable
 to not be able to store/retrieve a SBG::Network correctly.
 
 =cut
-sub new () {
-    my $class = shift;
-    my $self = $class->SUPER::new(refvertexed=>0, @_);
-    bless $self, $class;
-    return $self;
-}
+override 'new' => sub {
+    my ($class, %ops) = @_;
+    
+    # This creates a Bio::Network::ProteinNet
+    my $obj = $class->SUPER::new(refvertexed=>0, %ops);
+
+    # This appends the object with goodies from Moose::Object
+    # __INSTANCE__ place-holder fulfilled by $obj 
+    $obj = $class->meta->new_object(__INSTANCE__ => $obj, %ops);
+
+    # bless'ing should be automatic!
+    bless $obj, $class;
+    return $obj;
+};
 
 
 ################################################################################
@@ -212,7 +223,7 @@ sub _asstring {
 
 
 ###############################################################################
-__PACKAGE__->meta->make_immutable;
+__PACKAGE__->meta->make_immutable(inline_constructor=>0);
 1;
 
 

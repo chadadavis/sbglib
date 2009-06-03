@@ -28,8 +28,8 @@ use warnings;
 
 use File::Temp qw(tempfile tempdir);
 
-use SBG::Log;
-use SBG::Config qw/config/;
+use SBG::U::Log;
+use SBG::U::Config qw/config/;
 
 ################################################################################
 

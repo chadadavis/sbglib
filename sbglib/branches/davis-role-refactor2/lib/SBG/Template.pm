@@ -23,7 +23,7 @@ L<SBG::SearchI> , L<SBG::Domain>
 
 package SBG::Template;
 use Moose;
-with 'SBG::Storable';
+with 'SBG::Role::Storable';
 
 use SBG::HashFields;
 

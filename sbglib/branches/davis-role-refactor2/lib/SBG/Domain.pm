@@ -34,16 +34,16 @@ use Moose;
 use MooseX::StrictConstructor;
 
 # Defines what must be implemented to represent a 3D structure
-with 'SBG::DomainI';
-with 'SBG::Storable';
-with 'SBG::Dumpable';
+with qw/
+SBG::DomainI 
+/;
 
 use Module::Load;
 
 # Some regexs for parsing PDB IDs and descriptors
 use SBG::Types qw/$re_chain $re_chain_seg/;
 
-use SBG::Transform;
+use SBG::TransformI;
 use Scalar::Util qw(refaddr);
 
 use overload (
@@ -162,6 +162,8 @@ has 'clash' => (
 ################################################################################
 # Methods required by SBG::DomainI
 
+# TODO should create warnings here
+
 sub dist { return }
 sub sqdist { return }
 sub rmsd { return }
@@ -170,23 +172,6 @@ sub evaluate { return }
 sub volume { return }
 sub overlap { return }
 sub overlaps { return }
-
-
-################################################################################
-=head2 create
-
- Function: Factory method
- Example : my $subclass = SBG::Domain::create("SBG::Domain::SomeSubClass");
- Returns : Subclass of L<SBG::Domain>
- Args    : Class name
-
-
-=cut
-sub create {
-    my ($class,@args) = @_;
-    Module::Load::load($class);
-    return $class->new(@args);
-}
 
 
 ################################################################################

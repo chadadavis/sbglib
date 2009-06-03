@@ -2,14 +2,14 @@
 
 =head1 NAME
 
-SBG::DomainIO - Reads/writes L<SBG::Domain> objects, primarily in STAMP format
+SBG::DomainIO::stamp - IO for L<SBG::Domain> objects, in STAMP format
 
 =head1 SYNOPSIS
 
- use SBG::DomainIO;
+ use SBG::DomainIO::stamp;
 
  my $file = "domains.dom";
- my $io = new SBG::DomainIO(file=>"<$file");
+ my $io = new SBG::DomainIO::stamp(file=>"<$file");
  
  # Read all domains from a dom file
  my @doms;
@@ -20,46 +20,45 @@ SBG::DomainIO - Reads/writes L<SBG::Domain> objects, primarily in STAMP format
 
  # Write domains
  my $outfile = ">results.dom";
- my $ioout = new SBG::DomainIO(file=>">$outfile");
+ my $ioout = new SBG::DomainIO::stamp(file=>">$outfile");
  foreach my $d (@doms) {
      $ioout->write($d);
  }
 
 Using a specific representation for the L<SBG::Domain> :
 
- my $io = new SBG::DomainIO(file=>"<$file", representation=>'SBG::CofM');
+ my $io = new SBG::DomainIO(file=>"<$file", type=>'SBG::Domain::CofM');
  my $dom = $io->read;
  # Automatically populated. This is true;
- ok($dom->representation->isa('SBG::CofM'));
+ ok($dom->representation->isa('SBG::Domain::CofM'));
 
 
 =head1 DESCRIPTION
 
 Reads/writes SBG::Domain objects in STAMP format to/from files.
 
-Any existing labels (i.e. STAMP IDs) are not retained. They are overwritten, as to make them unique. STAMP requires them to be unique.
+Any existing labels (i.e. STAMP IDs) are not retained. They are overwritten, as
+STAMP requires them to be unique.
 
 http://www.compbio.dundee.ac.uk/manuals/stamp.4.2/node29.html
 
 =head1 SEE ALSO
 
-L<SBG::Domain> , L<SBG::IO>
+L<SBG::Domain> , L<SBG::IOI>
 
 =cut
 
 ################################################################################
 
-package SBG::DomainIO;
+package SBG::DomainIO::stamp;
 use Moose;
 
-extends qw/Moose::Object SBG::IO/;
-
-use Module::Load;
+with 'SBG::IOI';
 
 use SBG::Types qw/$re_pdb $re_descriptor/;
 use SBG::Domain;
 use SBG::Transform;
-use SBG::Log;
+use SBG::U::Log;
 
 ################################################################################
 # Accessors
@@ -70,19 +69,9 @@ The sub-type to use for any dynamically created objects. Should be
 L<SBG::Domain> or a sub-class of that. Default "L<SBG::Domain>" .
 
 =cut
-has 'type' => (
-    is => 'rw',
-    isa => 'ClassName',
-    required => 1,
+has '+type' => (
     default => 'SBG::Domain',
     );
-
-# ClassName does not validate if the class isn't already loaded. Preload it here.
-before 'type' => sub {
-    my ($self, $classname) = @_;
-    return unless $classname;
-    Module::Load::load($classname);
-};
 
 
 ################################################################################
@@ -161,7 +150,8 @@ override 'read' => sub {
         # $3 is rest of STAMP label
         # $4 is STAMP descriptor, without { }
 
-        my $dom = SBG::Domain::create($self->type, pdbid=>$2,descriptor=>$4);
+        my $type = $self->type();
+        my $dom = $type->new(pdbid=>$2,descriptor=>$4);
         $dom->file($1) if $1;
 
         # Header ends, i.e. contains no transformation

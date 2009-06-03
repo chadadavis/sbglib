@@ -36,7 +36,7 @@ One of:
 
 =head1 SEE ALSO
 
-L<SBG::Storable>
+L<SBG::Role::Storable>
 
 =cut
 
@@ -49,8 +49,8 @@ use File::Temp;
 use Scalar::Util qw/blessed/;
 use Moose::Autobox;
 
-use SBG::Storable qw/module_for retrieve can_do/;
-use SBG::Log;
+use SBG::Role::Storable qw/module_for retrieve can_do/;
+use SBG::U::Log;
 
 
 
@@ -68,7 +68,7 @@ _complete_options(@avail_ops);
 my %ops;
 my $result = GetOptions(\%ops, @avail_ops);
 
-SBG::Log::init($ops{'l'}) if $ops{'l'};
+SBG::U::Log::init($ops{'l'}) if $ops{'l'};
 $File::Temp::KEEP_ALL = 1 if $ops{'k'};
 
 # Get arguments
