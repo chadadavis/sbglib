@@ -1,23 +1,27 @@
 
 # Compiling
 CC = gcc
-# Compiling objects
+# Includes and options, for objects and binaries
 SFLAGS = -fpic
-# Compiling libraries
-LIBFLAGS = -shared
-# Compiling executables or libraries
+# Other libs and -L lib paths
 LDFLAGS = -lm
 
+# Compiling shared libs
+LIBFLAGS = -shared
+
 # Optimization
-CCFLAGS = -O3 -DAVE_INLINE $(SFLAGS)
+OFLAGS = -O3 -DAVE_INLINE
 # Debugging
-#CCFLAGS = -O0 -g3 -pg $(SFLAGS)
+#OFLAGS = -O0 -g3 -pg
 # Valgrind (doesn't like -pg)
-#CCFLAGS = -O0 -g3 $(SFLAGS) 
+#OFLAGS = -O0 -g3
+
+CPPFLAGS = $(SFLAGS) $(OFLAGS)
 
 # Objects
 OBJS = \
-	clashes.o
+	clashes.o \
+	pdb.o
 
 BINS = \
 	clashes
@@ -27,7 +31,7 @@ LIBS = \
 
 # Force object files to depend on their headers
 %.o: %.c %.h
-	$(CC) $(CCFLAGS) -c `basename $@ .o`.c
+	$(CC) $(CPPFLAGS) -c `basename $@ .o`.c
 
 
 all: TAGS $(BINS) $(LIBS)
@@ -36,12 +40,12 @@ all: TAGS $(BINS) $(LIBS)
 lib: libclashes.so
 
 
-clashes: clashes.o
-	$(CC) $(CCFLAGS) $(LDFLAGS) $@.o -o $@
+clashes: $(OBJS)
+	$(CC) $(CPPFLAGS) $(OBJS) $(LDFLAGS) -o $@
 
 
 libclashes.so: $(OBJS)
-	ld $(LIBFLAGS) $(LDFLAGS) $(OBJS) -o $@
+	ld $(LIBFLAGS) $(OBJS) $(LDFLAGS) -o $@
 
 
 TAGS: *.h *.c
@@ -60,5 +64,5 @@ clean:
 
 # For flymake-mode in Emacs
 check-syntax:
-	$(CC) -o /dev/null -Wall -S ${CHK_SOURCES} $(SFLAGS) $(LDFAGS)
+	$(CC) -o /dev/null -Wall -S ${CHK_SOURCES} $(LDFAGS)
 
