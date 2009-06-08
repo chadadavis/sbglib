@@ -43,7 +43,7 @@ use Moose::Role;
 
  Function: Apply the given transformation matrix to this object
  Example : my $transformed = $my_object->transform($transformation_matrix)
- Returns : transformed object
+ Returns : Transformed object of same class as original, possibly a new instance
  Args    : Affine transformation matrix (PDL) with homogenous coordinates
 
 The matrix is 4x4, whereby the last row is : 0,0,0,1

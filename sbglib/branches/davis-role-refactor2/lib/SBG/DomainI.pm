@@ -13,11 +13,22 @@ SBG::DomainI - Simplified domain representation (a L<Moose::Role>)
 
 =head1 DESCRIPTION
 
+
+A Domain is defined, according to STAMP, as one of:
+1) ALL : All chains in a structure entry
+2) CHAIN X : A complete chain, for some X in [A-Za-z0-9_]
+3) B 12 _ to B 233 _ : An arbitrary segment of a chain
+4) Any number of combinations of 2) and 3), e.g. 
+  CHAIN B A 3 _ to A 89 _ C 232 _ to C 321 _
+ 
+
 If your class uses this role, it will need to define all the methods below.
 
 =head1 SEE ALSO
 
 L<SBG::Domain>, L<Moose::Role>
+
+http://www.compbio.dundee.ac.uk/manuals/stamp.4.2/node29.html
 
 =cut
 
@@ -26,38 +37,93 @@ L<SBG::Domain>, L<Moose::Role>
 package SBG::DomainI;
 use Moose::Role;
 
-with 
-    'SBG::Role::Storable',
-    'SBG::Role::Dumpable',
-    'SBG::Role::Clonable',
-    ;
+with qw/
+SBG::Role::Storable
+SBG::Role::Dumpable
+SBG::Role::Clonable
+SBG::Role::Transformable
+/; 
 
 
-################################################################################
-=head2 dist
+use SBG::TransformI;
+# Default transform type
+use SBG::Transform::Homog;
 
- Function: Positive distance between objects.
- Example : my $linear_distance = $dom1->dist($dom2);
- Returns : Positive scalar
- Args    : L<SBG::DomainI>
+# Some regexs for parsing PDB IDs and descriptors
+use SBG::Types qw/$re_chain $re_chain_seg/;
 
-positive (Euclidean) distance between this object and some other
+# Get address of a reference
+use Scalar::Util qw(refaddr);
+
+
+=head2 pdbid
+
+PDB identifier, from which this domain comes. 
+Will be coerced to lowercase. 
 
 =cut
-requires 'dist';
+has 'pdbid' => (
+    is => 'rw',
+    isa => 'SBG.PDBID',
+    # Coerce to lowercase
+    coerce => 1,
+    );
+
+
+=head2 descriptor
+
+STAMP descriptor, Examples:
+
+ALL
+A 125 _ to A 555 _
+CHAIN A
+CHAIN A B 12 _ to B 211 _
+B 33 _ to B 99 _ CHAIN A
+
+See L<SBG::Types>
+=cut
+has 'descriptor' => (
+    is => 'rw',
+    isa => 'SBG.Descriptor',
+    default => 'ALL',
+    # Coerce from 'Str', defined in SBG::Types
+    coerce => 1,
+    );
+
+
+=head2 file
+
+Path to PDB/MMol file.
+
+This can be blank and STAMP will look for thas file based on its ID, which must
+begin with the PDB ID for the domain.
+
+=cut
+has 'file' => (
+    is => 'rw',
+    isa => 'SBG.File',
+    );
 
 
 ################################################################################
-=head2 sqdist
+=head2 transformation
 
- Function: Squared linear distance between objects
- Example : 
+ Function: The L<SBG::Transform> describing any applied transformations
+ Example :
  Returns : 
- Args    : 
+ Args    :
 
+This attribute is imported automatically in consuming classes. But you may
+override it.
 
+This defines where the domain is in space at any point in time.
 =cut
-requires 'sqdist';
+has 'transformation' => (
+    is => 'rw',
+    does => 'SBG::TransformI',
+    required => 1,
+    default => sub { new SBG::Transform::Homog },
+    );
 
 
 ################################################################################
@@ -74,68 +140,119 @@ requires 'rmsd';
 
 
 ################################################################################
-=head2 evaluate
-
- Function: To what extent is $self a good approximation for $obj
- Example :
- Returns : 
- Args    :
-
-
-=cut
-requires 'evaluate';
-
-
-
-################################################################################
-=head2 volume
-
- Function:
- Example :
- Returns : 
- Args    :
-
-
-=cut
-requires 'volume';
-
-
-################################################################################
-=head2 transform
-
- Function: Transform this object by the given transformation
- Example :
- Returns : 
- Args    : L<SBG::Transform>
-
-=cut
-requires 'transform';
-
-
-################################################################################
 =head2 overlap
 
- Function: Similar to L<rmsd>, but considers the radius of gyration 'rg'
- Example : my $linear_overlap = $dom1->overlap($dom2);
- Returns : Positive: linear overlap along line connecting centres of spheres
-           Negative: linear distance between surfaces of spheres
- Args    : Another L<SBG::Domain>
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
 
 =cut
 requires 'overlap';
 
 
 ################################################################################
-=head2 overlaps
+=head2 wholechain
 
- Function: Whether two spheres overlap, beyond an allowed threshold (Angstrom)
- Example : if($dom1->overlaps($dom2,20.5)) { print "Clash!\n"; }
- Returns : true if L<overlap> exceeds given thresh
- Args    : L<SBG::Domain> 
-           thresh - default 0
+ Function:
+ Example :
+ Returns : Whether descriptor corresponds to one-and-only-one full chain
+ Args    :
+
+True when this domain consists of only one chain, and that entire chain
+
+See als L<fromchain>
+=cut
+sub wholechain {
+    my ($self) = @_;
+    my ($chain) = $self->descriptor =~ /^\s*CHAIN\s+(.)\s*$/i;
+    return $chain;
+}
+
+
+################################################################################
+=head2 id
+
+Combines the PDBID and the descriptor into a short ID.
+
+E.g. 2nn6 { A 13 _ to A 122 _ } => 2nn6A13_A122_
+
+First four characters are the PDB ID.
+A domain descriptor is then appended.
+
+See also L<uniqueid>
 
 =cut
-requires 'overlaps';
+sub id {
+    my ($self) = @_;
+    my $str = $self->pdbid;
+    $str .= ($self->_descriptor_short || '');
+    return $str;
+} 
+
+
+################################################################################
+=head2 uniqueid
+
+A unique ID, for use with STAMP.
+
+In addition to L<id>, a unique ID for the transformation, if defined, is
+appended.
+
+NB If the L<SBG::Domain> contains a L<SBG::Transform>, the unique ID will be
+different after read/write or after serializing and deserializing. This is
+because the ID is simply the memory address of the Transform. It will be
+different for two copies of the same transform.
+
+=cut
+sub uniqueid {
+    my ($self) = @_;
+    my $str = $self->id();
+    # Get the memory address of some relevant attribute object, 
+    my $rep = $self->transformation;
+    $str .= $rep ? sprintf("-0x%x", refaddr($rep)) : '';
+    return $str;
+} 
+
+
+################################################################################
+=head2 stringify
+
+ Function: Resturns a string representation of this domain.
+ Example : print "Domain is $dom"; # automatic stringification
+ Returns : string
+ Args    : NA
+
+=cut
+sub stringify {
+    my ($self) = @_;
+    my $s = ($self->pdbid || '') . ($self->_descriptor_short || '');
+    return $s;
+}
+
+
+################################################################################
+=head2 _descriptor_short
+
+ Function:
+ Example :
+ Returns : 
+ Args    :
+
+Converts: first line to second:
+
+ 'B 234 _ to B 333 _ CHAIN D E 5 _ to E 123 _'
+ 'B234_B333_DE5_E123_'
+
+=cut
+sub _descriptor_short {
+    my ($self) = @_;
+    my $descriptor = $self->descriptor;
+    $descriptor =~ s/CHAIN//g;
+    $descriptor =~ s/to//gi;
+    $descriptor =~ s/\s+//g;
+    return $descriptor;
+}
 
 
 ################################################################################

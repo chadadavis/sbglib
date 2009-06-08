@@ -58,6 +58,10 @@ our $re_pdb = '\d\w{3}';
 subtype 'SBG.PDBID'
     => as 'Str',
     => where { /^$re_pdb$/ };
+# Force lc (lowercase)
+coerce 'SBG.PDBID'
+    => from 'Str'
+    => via { lc $_ };
 
 
 # Splits e.g. 2nn6A into (2nn6,A)

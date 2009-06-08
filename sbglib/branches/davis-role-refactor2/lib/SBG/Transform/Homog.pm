@@ -117,7 +117,7 @@ sub apply {
 
     # If it implements an interface, check which one
     if ($other->can('does') && $other->does('SBG::Role::Transformable')) {
-        # Apply this tranformation to the transpose of the object's points
+        # Ask the object to transform itself, given our transformation matrix
         return $other->transform($self->matrix);
     } else {
         # Just try native PDL multiplication
@@ -134,7 +134,9 @@ sub apply {
  Returns : 
  Args    : 
 
-NB the given matrix is on the left, self is on the right here
+Required by L<Role::Transformable>
+
+NB In the matrix multiplication, self is on the right here
 
 =cut
 sub transform {

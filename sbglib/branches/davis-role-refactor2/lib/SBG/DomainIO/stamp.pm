@@ -56,17 +56,18 @@ use Moose;
 with 'SBG::IOI';
 
 use SBG::Types qw/$re_pdb $re_descriptor/;
-use SBG::Domain;
-use SBG::Transform;
+use SBG::DomainI;
+use SBG::TransformI;
 use SBG::U::Log;
+
 
 ################################################################################
 # Accessors
 
 =head2 type
 
-The sub-type to use for any dynamically created objects. Should be
-L<SBG::Domain> or a sub-class of that. Default "L<SBG::Domain>" .
+The sub-type to use for any dynamically created objects. Should implement
+L<SBG::DomainI> role. Default "L<SBG::Domain>" .
 
 =cut
 has '+type' => (
@@ -96,11 +97,30 @@ Or, to just convert to a string, without any file I/O:
 
 =cut
 override 'write' => sub {
-    my ($self, $dom, %ops) = @_;
-    defined($dom) or return;
+    my ($self, @doms) = @_;
+    return unless @doms;
     my $fh = $self->fh or return;
-    my $str = $dom->asstamp(%ops);
-    print $fh $str;
+
+    foreach my $dom (@doms) {
+        my $str = 
+            join(" ",
+                 $dom->file  || '',
+                 $dom->uniqueid || '',
+                 '{',
+                 $dom->descriptor || '',
+            );
+        print $fh $str;
+        
+        # Append transformation, if any
+        my $trans = $dom->transformation;
+        if ($trans->has_matrix) {
+            print $fh "\n";
+            my $io = new SBG::TransformIO::stamp(fh=>$fh);
+            $io->write($trans);
+        }
+        print $fh "\}\n";
+    } 
+
     return $self;
 }; # write
 

@@ -21,8 +21,8 @@ operations, such as inversion and composition, return new transformation
 objects.
 
 Whether a matrix has been set (i.e. when it is not the identity) can be
-determined via $transform->has_matrix(). This allows for shortcuts when doing
-multiplication, inverse, stringification, etc.
+determined via $transform->has_matrix(). This allows for noop shortcuts when
+doing multiplication, inverse, stringification, etc.
 
 =head1 SEE ALSO
 
@@ -96,7 +96,7 @@ requires '_build_matrix';
 =head2 apply
 
  Function: Applies this transformation to a given vector/matrix
- Example : my $new_vector = $this_transform->transform($vector)
+ Example : my $new_vector = $this_transform->apply($vector)
  Returns : L<PDL> transformed object
  Args    : L<PDL> to be transformed by this transformation
 
