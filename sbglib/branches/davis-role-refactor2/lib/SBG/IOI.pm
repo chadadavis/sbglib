@@ -80,6 +80,7 @@ around 'file' => sub {
     my ($orig, $self, @args) = @_;
     # Call original method, opening the file, if requested
     my $val = $self->$orig(@args);
+    return unless $val;
     # Remove mode modifiers, to get just the path back
     $val =~ s/^[+<>]*//g;
     return $val;
@@ -155,6 +156,24 @@ requires 'write';
 
 
 ################################################################################
+=head2 rewind
+
+ Function: Rewinds a read-file handle to the beginnnig of its stream
+ Example : 
+ Returns : 
+ Args    : 
+
+
+=cut
+sub rewind {
+    my ($self,) = @_;
+    my $fh = $self->fh or return;
+    return seek($fh, 0, 0);
+
+} # rewind
+
+
+################################################################################
 =head2 _file
 
  Function: 
@@ -167,6 +186,7 @@ requires 'write';
 sub _file {
     my ($self, $file) = @_;
     # $file contains mode characters here still
+    
     $self->fh(new IO::File($file));
     unless ($self->fh) {
         log()->error("Cannot open: $file");
@@ -208,7 +228,7 @@ sub _tempfile {
     my ($self,) = @_;
 
     my $tmpdir = config->val(qw/tmp tmpdir/) || $ENV{TMPDIR} || '/tmp';
-    my ($tfh, $tpath) = tempfile(DIR=>$tmpdir);
+    my ($tfh, $tpath) = tempfile('sbg_XXXXX', DIR=>$tmpdir);
     # Silly to re-open this, but $self->file() opens it anyway
     $tfh->close();
     $self->file('>' . $tpath);

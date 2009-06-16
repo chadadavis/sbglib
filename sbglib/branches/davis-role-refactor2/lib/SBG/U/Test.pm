@@ -24,6 +24,7 @@ use base qw(Exporter);
 use Test::More;
 use PDL::Ufunc qw/all/;
 use PDL::Core qw/approx/;
+use Carp qw/carp cluck/;
 
 our @EXPORT_OK = qw(float_is pdl_approx);
 
@@ -60,14 +61,14 @@ sub float_is ($$;$$) {
 
 =cut
 sub pdl_approx ($$;$$) {
-   my ($mat1, $mat2, $tol, $msg) = @_;
+   my ($mat1, $mat2, $msg, $tol) = @_;
    $tol ||= 1.0;
-   $msg ||= "+/- $tol";
+   $msg = "approx (+/- $tol) $msg";
 
-   if (ok(all(approx($mat1, $mat2, $tol)),"pdl_approx $msg")) {
+   if (ok(all(approx($mat1, $mat2, $tol)),$msg)) {
        return 1;
    } else {
-       warn "Expected:${mat2}Got:${mat1}";
+       carp "Expected:${mat2}Got:${mat1}";
        return 0;
    }
 }

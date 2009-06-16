@@ -55,10 +55,13 @@ use Moose;
 
 with 'SBG::IOI';
 
+use Carp qw/carp cluck/;
+
+use SBG::Domain;
+use SBG::TransformIO::stamp;
 use SBG::Types qw/$re_pdb $re_descriptor/;
-use SBG::DomainI;
-use SBG::TransformI;
-use SBG::U::Log;
+
+
 
 
 ################################################################################
@@ -95,8 +98,12 @@ Or, to just convert to a string, without any file I/O:
 
  my $str = new SBG::DomainIO->write($dom);
 
+NB, if there is no file name, the STAMP header line will begin just with a
+space, STAMP handles this to mean that it should look for the file in it's own
+list of PDB directories.
+
 =cut
-override 'write' => sub {
+sub write {
     my ($self, @doms) = @_;
     return unless @doms;
     my $fh = $self->fh or return;
@@ -117,12 +124,16 @@ override 'write' => sub {
             print $fh "\n";
             my $io = new SBG::TransformIO::stamp(fh=>$fh);
             $io->write($trans);
+            # With a line break before the closing brace here
+            print $fh "\}\n";
+        } else {
+            # With a space before the closing brace here
+            print $fh " \}\n";
         }
-        print $fh "\}\n";
     } 
 
     return $self;
-}; # write
+} # write
 
 
 ################################################################################
@@ -130,7 +141,7 @@ override 'write' => sub {
 
  Title   : read
  Usage   : my $dom = $io->read();
- Function: Reads the next domain from the stream and make an L<SBG::Domain>
+ Function: Reads the next domain from the stream and makes an L<SBG::Domain>
  Example : (see below)
  Returns : An L<SBG::Domain>
  Args    : NA
@@ -147,22 +158,28 @@ NB You can change L<type> in between invocations of L<read>
 Any transformation found in the domain block is applied to the domain object
 after it is created.
 
+Called in an array context, returns an array of all domains in the file
+
 =cut
-override 'read' => sub {
+sub read {
     my ($self) = @_;
     my $fh = $self->fh or return;
+    my @doms;
     while (my $line = <$fh>) {
         chomp $line;
         # Comments and blank lines
         next if $line =~ /^\s*\%/;
         next if $line =~ /^\s*\#/;
         next if $line =~ /^\s*$/;
+        next if $line =~ /^\s*\}/;
 
         # Create/parse new domain header, May not always have a file name
         unless ($line =~ 
                 /^(\S*)\s+($re_pdb)(\S*)\s*\{\s*($re_descriptor)(\s*\})?\s*$/) {
-            $logger->error("Cannot parse:$line:");
-            return;
+            carp("Cannot parse STAMP domain: $line");
+            
+            # Want an array of domains, then skip to next one, otherwise abort
+            wantarray ? next : last;
         }
 
         # $1 is (possible) file
@@ -174,53 +191,23 @@ override 'read' => sub {
         my $dom = $type->new(pdbid=>$2,descriptor=>$4);
         $dom->file($1) if $1;
 
-        # Header ends, i.e. contains no transformation
-        if ($line =~ /\}\s*$/) { 
-            return $dom;
+        # Parse transformtion, if any
+        # Header ends?, i.e. contains no transformation
+        if ($line !~ /\}\s*$/) { 
+            my $transio = new SBG::TransformIO::stamp(fh=>$self->fh);
+            my $transformation = $transio->read;
+            # Since a transformation was found, apply it
+            $dom->transform($transformation->matrix);
         }
-        # Parse transformtion
-        my $transstr = $self->_read_trans;
-        my $trans = new SBG::Transform(string=>$transstr);
-        # Since a transformation was found, apply it
-        $dom->transform($trans);
-        return $dom;
+
+        push @doms, $dom;
+
+        # Stop the loop unless looking for all domains in the file
+        last unless wantarray;
     }
-    # End of file
-    return;
-}; # read
+    return wantarray ? @doms : shift @doms;
 
-
-
-################################################################################
-=head2 _read_trans
-
- Function: Reads a transformation matrix from the internal stream
- Example : my $trans_string = $self->_read_trans();
- Returns : Transformation matrix (3x4) as a 3-lined CSV string
- Args    : 
-
-Returned string is in CSV format, whitespace-separated, including newlines.
-Matrix is 3x4 (3 rows, 4 cols).
-
-=cut
-sub _read_trans {
-    my ($self) = @_;
-    my $fh = $self->fh or return;
-    my $transstr;
-    while (<$fh>) {
-        # No homp, keep this as CSV formatted text
-#         chomp;
-        # Comments and blank lines
-        next if /^\s*\%/;
-        next if /^\s*$/;
-        $transstr .= $_;
-        # Stop after a } has been encountered, and remove it
-        last if $transstr =~ s/}//g;
-    }
-    return $transstr;
-} # _read_trans
-
-
+} # read
 
 
 ################################################################################

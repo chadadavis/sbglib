@@ -2,12 +2,12 @@
 
 =head1 NAME
 
-SBG::Transform::Homog - An affine transformation matrix (4x4), using homogenous
+SBG::Transform::Affine - An affine transformation matrix (4x4), using homogenous
 coordinates.
 
 =head1 SYNOPSIS
 
- use SBG::Transform::Homog
+ use SBG::Transform::Affine
 
 =head1 DESCRIPTION
 
@@ -21,7 +21,7 @@ L<SBG::TransformI>
 
 ################################################################################
 
-package SBG::Transform::Homog;
+package SBG::Transform::Affine;
 use Moose;
 
 with qw/
@@ -39,6 +39,7 @@ use overload (
 use PDL::MatrixOps qw/identity/;
 use PDL::Ufunc qw/all/;
 use PDL::Core qw/approx/;
+use PDL::Basic qw/transpose/;
 
 # To be Storable
 use PDL::IO::Storable;
@@ -85,9 +86,9 @@ sub _build_matrix {
 ################################################################################
 =head2 inverse
 
- Function: Returns the inverse of the given L<SBG::Transform::Homog>
+ Function: Returns the inverse of the given L<SBG::Transform::Affine>
  Example : my $newtransf = $origtrans->inverse;
- Returns : Returns the inverse L<SBG::Transform::Homog> as a new instance
+ Returns : Returns the inverse L<SBG::Transform::Affine> as a new instance
  Args    : NA
 
 =cut
@@ -105,10 +106,13 @@ sub inverse {
  Function: Applies this transformation matrix to some L<PDL::Matrix>
  Example : my $transformed = $trans x $some_matrix;
            my $transformed = $trans x $some_vector;
- Returns : A 4xn L<PDL>
+ Returns : A 4xn L<PDL> (e.g. a row vector, when given a row vector as input)
  Args    : 4xn L<PDL>
 
 Apply this transform to some point, or even a matrix (affine multiplication)
+
+NB You do not need to transpose() row vectors. This method does that already,
+and transposes them back to row vectors before returning them.
 
 =cut
 sub apply {
@@ -120,8 +124,8 @@ sub apply {
         # Ask the object to transform itself, given our transformation matrix
         return $other->transform($self->matrix);
     } else {
-        # Just try native PDL multiplication
-        return ($self->matrix x $other);
+        # Just try native PDL multiplication, assuing it's a homogenous piddle 
+        return transpose($self->matrix x transpose $other);
     }
 }
 
@@ -136,7 +140,8 @@ sub apply {
 
 Required by L<Role::Transformable>
 
-NB In the matrix multiplication, self is on the right here
+NB In the matrix multiplication, self is on the right here, since self is being
+transformed by the given transformation matrix
 
 =cut
 sub transform {

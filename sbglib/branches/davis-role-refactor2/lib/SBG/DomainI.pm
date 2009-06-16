@@ -45,9 +45,13 @@ SBG::Role::Transformable
 /; 
 
 
+use PDL::Lite;
+use PDL::Core qw/pdl/;
+use PDL::Basic qw/transpose/;
+
 use SBG::TransformI;
 # Default transform type
-use SBG::Transform::Homog;
+use SBG::Transform::Affine;
 
 # Some regexs for parsing PDB IDs and descriptors
 use SBG::Types qw/$re_chain $re_chain_seg/;
@@ -55,7 +59,19 @@ use SBG::Types qw/$re_chain $re_chain_seg/;
 # Get address of a reference
 use Scalar::Util qw(refaddr);
 
+use Carp qw/carp cluck/;
 
+# You will need to redefine this (i.e. copy) it to implementing classes
+# The methods themselves will be consumed via this role, however.
+# I.e. just the overload needs to be explicitly redfined in implementing classes.
+use overload (
+    '""' => 'stringify',
+    '==' => 'equal',
+    fallback => 1,
+    );
+
+
+################################################################################
 =head2 pdbid
 
 PDB identifier, from which this domain comes. 
@@ -70,6 +86,7 @@ has 'pdbid' => (
     );
 
 
+################################################################################
 =head2 descriptor
 
 STAMP descriptor, Examples:
@@ -91,6 +108,7 @@ has 'descriptor' => (
     );
 
 
+################################################################################
 =head2 file
 
 Path to PDB/MMol file.
@@ -102,16 +120,14 @@ begin with the PDB ID for the domain.
 has 'file' => (
     is => 'rw',
     isa => 'SBG.File',
+    clearer => 'clear_file',
     );
 
 
 ################################################################################
 =head2 transformation
 
- Function: The L<SBG::Transform> describing any applied transformations
- Example :
- Returns : 
- Args    :
+The L<SBG::Transform> describing any applied transformations
 
 This attribute is imported automatically in consuming classes. But you may
 override it.
@@ -122,8 +138,40 @@ has 'transformation' => (
     is => 'rw',
     does => 'SBG::TransformI',
     required => 1,
-    default => sub { new SBG::Transform::Homog },
+    default => sub { new SBG::Transform::Affine },
     );
+
+
+################################################################################
+=head2 coords
+
+Set of homogenous 4D coordinates. The 4th dimension of each point must be 1.
+
+TODO: considering coercing coordinates from 3D to 4D here, for convenience
+
+=cut
+has 'coords' => (
+    is => 'rw',
+    isa => 'PDL',
+    lazy_build => 1,
+    );
+# Default: a single point at 0,0,0
+# Final 1 is to create homogenous coordinate in 4D for affine transformation
+sub _build_coords {
+    return pdl [ [ 0,0,0,1 ] ];
+}
+
+
+################################################################################
+=head2 overlap
+
+ Function: Extent to which two domains clash in space
+ Example : 
+ Returns : 
+ Args    : 
+
+=cut
+requires 'overlap';
 
 
 ################################################################################
@@ -135,20 +183,42 @@ has 'transformation' => (
  Args    :
 
 RMSD between the points of B<$self>'s representation and B<$other>
+
 =cut
-requires 'rmsd';
+sub rmsd {
+    carp "rmsd not implemented";
+    return;
+}
 
 
 ################################################################################
-=head2 overlap
+=head2 transform
 
  Function: 
- Example : 
- Returns : 
- Args    : 
+ Example : $self->transform($some_4x4_PDL_matrix);
+ Returns : $self (not a new instance)
+ Args    : L<PDL> Affine transformation matrix (See L<SBG::Transform::Affine>)
+
+This also updates the cumulative L<transformation> (since the original
+coordinates).
 
 =cut
-requires 'overlap';
+sub transform {
+    my ($self,$matrix) = @_;
+#     return $self unless defined($matrix) && $self->has_coords;
+    return $self unless defined($matrix);
+
+    # Transform coords
+    my $newcoords = transpose($matrix x transpose $self->coords);
+    $self->coords($newcoords);
+
+    # Update the cumulative transformation
+    # I.e. transform the current transformation by the given matrix
+    my $prod = $self->transformation->transform($matrix);
+    $self->transformation($prod);
+    return $self;
+
+} # transform
 
 
 ################################################################################
@@ -229,6 +299,41 @@ sub stringify {
     my $s = ($self->pdbid || '') . ($self->_descriptor_short || '');
     return $s;
 }
+
+
+################################################################################
+=head2 equal
+
+ Function:
+ Example :
+ Returns : 
+ Args    :
+
+Are two domains effectively equal.
+
+
+=cut
+sub equal {
+    my ($self, $other) = @_;
+
+    return 0 unless defined $other;
+    # Equal if pointing to same underlying object
+    return 1 if refaddr($self) == refaddr($other);
+
+    # Fields, from most general to more specific
+#     my @fields = qw/pdbid descriptor file/;
+    my @fields = qw/pdbid descriptor/;
+    foreach (@fields) {
+        # If any field is different, the containing objects are different
+        return 0 if 
+            defined $self->$_ && defined $other->$_ && 
+            $self->$_ ne $other->$_;
+    }
+    # Assume equal if metadata is same and transformations are same
+    my $transeq = $self->transformation == $other->transformation;
+    return $transeq;
+
+} # equal
 
 
 ################################################################################

@@ -37,7 +37,7 @@ L<SBG::TransformI>
 =cut
 has '+type' => (
     required => 1,
-    default => 'SBG::Transform::Homog',
+    default => 'SBG::Transform::Affine',
     );
 
 
@@ -53,6 +53,8 @@ has '+type' => (
 
 Reads in row-major order
 
+Does not tolerate any comment lines. Transform must be exactly three lines, four columns. Leading and trailing whitespace is tolerated.
+
 =cut
 sub read {
     my ($self) = @_;
@@ -61,8 +63,8 @@ sub read {
     # Homogenous transformation matrix 4x4
     my @rows;
 
-    while (<$fh>) { 
-        chomp;
+    for (1..3) {
+        $_ = <$fh>;
         # Called like this, split discards any leading whitespace, leaving:
         # (X,Y,Z,T)
         push @rows, [ split ' ' ];
