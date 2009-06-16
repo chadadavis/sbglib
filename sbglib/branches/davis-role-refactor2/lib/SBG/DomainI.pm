@@ -45,17 +45,6 @@ SBG::Role::Transformable
 /; 
 
 
-use PDL::Lite;
-use PDL::Core qw/pdl/;
-use PDL::Basic qw/transpose/;
-
-use SBG::TransformI;
-# Default transform type
-use SBG::Transform::Affine;
-
-# Some regexs for parsing PDB IDs and descriptors
-use SBG::Types qw/$re_chain $re_chain_seg/;
-
 # Get address of a reference
 use Scalar::Util qw(refaddr);
 
@@ -69,6 +58,19 @@ use overload (
     '==' => 'equal',
     fallback => 1,
     );
+
+use PDL::Lite;
+use PDL::Core qw/pdl/;
+use PDL::Basic qw/transpose/;
+
+use SBG::TransformI;
+# Default transform type
+use SBG::Transform::Affine;
+use SBG::U::RMSD;
+
+# Some regexs for parsing PDB IDs and descriptors
+use SBG::Types qw/$re_chain $re_chain_seg/;
+
 
 
 ################################################################################
@@ -186,8 +188,8 @@ RMSD between the points of B<$self>'s representation and B<$other>
 
 =cut
 sub rmsd {
-    carp "rmsd not implemented";
-    return;
+    my ($self, $other) = @_;
+    return SBG::U::RMSD::rmsd($self->coors, $other->coords);
 }
 
 

@@ -48,6 +48,7 @@ our @EXPORT_OK = qw(rmsd centroid superposition translation);
 use PDL::Lite;
 use PDL::Core qw/pdl ones inplace/;
 use PDL::Reduce qw/reduce/;
+use PDL::Ufunc qw/sumover average/;
 use PDL::MatrixOps qw/svd det identity/;
 
 
@@ -65,9 +66,9 @@ NB if $pointsa is homogenous, then $pointsb must be homogenous as well
 sub rmsd {
     my ($pointsa, $pointsb) = @_;
     # Creates a new matrix copy to do the calculations
-    my $diff = $pointsa;
+    my $diff = $pointsa->copy;
     # Inplace subtraction
-    $diff = inplace($diff) - $pointsb if defined($pointsb);
+    $diff = inplace($diff) - $pointsb if defined $pointsb;
     # Inplace exponentiation
     $diff = inplace($diff)**2;
     # Reduce each row (each point) via sumover, producing a vector of sums.
@@ -97,7 +98,7 @@ coordinates everywhere or nowhere, as things remain consistent.
 sub centroid {
     my ($points, $weights) = @_;
     # Don't modify original
-    my $mat = $points;
+    my $mat = $points->copy;
 
     if (defined $weights) {
         # Inline multiplication of weights, if given. If not given, $mat is
@@ -157,7 +158,7 @@ sub radius_max {
  Returns : 4x4 Affine matrix defining rotation+translation 
  Args    : Two sets of points, of the same length
 
-Accepts 3D points or 4D homogenous coordinates.
+Assumes that points are 4D homogenous coordinates
 
 Simple explanation:
 
@@ -172,35 +173,55 @@ Original reference:
 =cut
 sub superposition {
     my ($pointsa, $pointsb) = @_;
+    my $copya = $pointsa->copy;
 
-    # Identify centroid, to get points at common centre-of-mass before rotation
+    # Identify centroid, to move points to common centre-of-mass before rotation
     my $centroida = centroid($pointsa);
     my $centroidb = centroid($pointsb);
-
-    $pointsa += $centroidb - $centroida;
+    # Translate $pointsa to the origin
+    $copya -= $centroida;
 
     # Covariance matrix. Does crossprod on the matrix after being placed at
-    # commone centre
-    my $covariance = ($pointsa - $centroida)->crossprod($pointsb - $centroidb);
-
+    # commone centre.
+    my $covariance = $copya->crossprod($pointsb - $centroidb);
     # Derive rotation matrix
     my $rot = _rot_svd($covariance);
+    # Create an affine transformation matrix 4x4 from the 3x3
+    my $affine = _affine($rot);
 
-    # Build 4x4 affine transformation matrix from 3x3 rotation+translation
-    my $affine = _affine($rot, $centroidb - $centroida);
+    # The following steps have to be done in this order, to get the translation
+
+    # 1. Rotate $copya, this superposes both at the origin
+    $copya = _apply($affine, $copya);
+    # 2. Translate $copya back
+    $copya += $centroida;
+    # 3. Rotate $copya back
+    $copya = _apply($affine->inv, $copya);
+
+    # Finally, get translation required to move $copya to $pointsb
+    my $transl = $centroidb - centroid($copya);
+    $affine = _affine($affine, $transl);
 
     return $affine;
 
 } # superposition
 
 
+sub _apply {
+    my ($mat, $vect) = @_;
+    return ($mat x $vect->transpose)->transpose;
+}
+
+
 sub _affine {
-    my ($rotation, $translation) = @_;
+    my ($rot, $transl) = @_;
     my $affine = identity 4;
     # Rotation matrix 3x3
-    $affine->slice('0:2,0:2') .= $rotation;
+    $affine->slice('0:2,0:2') .= $rot->slice('0:2,0:2')
+        if defined $rot;
     # Translation vector (between centroids)
-    $affine->slice('3,0:2') .= $translation->slice('0:2')->transpose;
+    $affine->slice('3,0:2') .= $transl->slice('0:2')->transpose 
+        if defined $transl;
     return $affine;
 }
 
