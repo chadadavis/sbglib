@@ -40,13 +40,18 @@ our @EXPORT_OK = qw(float_is pdl_approx);
 
 =cut
 sub float_is ($$;$$) {
-   my ($val1, $val2, $precision, $msg) = @_;
+   my ($val1, $val2, $msg, $tol) = @_;
    return unless defined($val1) && defined($val2);
-   $precision ||= '';
-   my $sval1 = sprintf("%.${precision}g",$val1);
-   my $sval2 = sprintf("%.${precision}g",$val2);
-   $msg ||= "$sval1 ~ $sval2";
-   is(sprintf("%.${precision}g",$val1), sprintf("%.${precision}g",$val2), "float_is $msg");
+   $tol = 1.0 unless defined $tol;
+   my $diff = abs($val1-$val2);
+   $msg ||= "float_is: $diff < $tol";
+   if(ok($diff < $tol, $msg)) {
+       return 1;
+   } else {
+       printf STDERR 
+           "\t|%g - %g| == %g exceeds tolerance: %g\n", 
+           $val1, $val2, $diff, $tol;
+   }
 }
 
 
@@ -62,13 +67,13 @@ sub float_is ($$;$$) {
 =cut
 sub pdl_approx ($$;$$) {
    my ($mat1, $mat2, $msg, $tol) = @_;
-   $tol ||= 1.0;
-   $msg = "approx (+/- $tol) $msg";
+   $tol = 1.0 unless defined $tol;
+   $msg ||= "pdlapprox (+/- $tol)";
 
    if (ok(all(approx($mat1, $mat2, $tol)),$msg)) {
        return 1;
    } else {
-       carp "Expected:${mat2}Got:${mat1}";
+       print STDERR "\tExpected:\n${mat2}\n\tGot:\n${mat1}\n";
        return 0;
    }
 }

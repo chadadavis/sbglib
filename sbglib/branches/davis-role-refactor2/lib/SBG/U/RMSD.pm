@@ -43,12 +43,15 @@ our @ISA = qw(Exporter);
 # Automatically exported symbols
 our @EXPORT    = qw();
 # Manually exported symbols
-our @EXPORT_OK = qw(rmsd centroid superposition translation);
+our @EXPORT_OK = qw/
+rmsd centroid radius_gyr radius_max superposition translation
+/;
+
 
 use PDL::Lite;
 use PDL::Core qw/pdl ones inplace/;
 use PDL::Reduce qw/reduce/;
-use PDL::Ufunc qw/sumover average/;
+use PDL::Ufunc qw/sumover average max/;
 use PDL::MatrixOps qw/svd det identity/;
 
 
