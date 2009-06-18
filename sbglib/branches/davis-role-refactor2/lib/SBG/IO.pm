@@ -22,6 +22,7 @@ Interface L<SBG::IOI>
 
 package SBG::IO;
 use Moose;
+with qw/SBG::IOI/;
 
 
 ################################################################################

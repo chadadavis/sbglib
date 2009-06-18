@@ -4,16 +4,15 @@ use Test::More 'no_plan';
 use File::Temp qw(tempfile);
 use SBG::IO;
 use FindBin qw/$Bin/;
+use Data::Dump qw/dump/;
 
-my $io = new_ok "SBG::IO";
 
 # Open a not-yet-opened file
-my $file = "$Bin/2nn6.dom";
-
+my $file = "$Bin/data/2nn6.dom";
 my $iofile = new SBG::IO(file=>"<$file");
-
 ok($iofile && $iofile->fh, "new(file=>\"<$file\")");
 ok($iofile->close, "close()");
+
 
 # Open an already-opened filehandle
 open my $fh, "<$file";
