@@ -140,6 +140,7 @@ has 'transformation' => (
     is => 'rw',
     does => 'SBG::TransformI',
     required => 1,
+    clearer => 'clear_transformation',
     default => sub { new SBG::Transform::Affine },
     );
 
@@ -189,7 +190,7 @@ RMSD between the points of B<$self>'s representation and B<$other>
 =cut
 sub rmsd {
     my ($self, $other) = @_;
-    return SBG::U::RMSD::rmsd($self->coors, $other->coords);
+    return SBG::U::RMSD::rmsd($self->coords, $other->coords);
 }
 
 
@@ -313,6 +314,8 @@ sub stringify {
 
 Are two domains effectively equal.
 
+Does not check B<coords> for equality as that is a function of the
+implementation, and not what is being represented.
 
 =cut
 sub equal {
@@ -328,11 +331,12 @@ sub equal {
     foreach (@fields) {
         # If any field is different, the containing objects are different
         return 0 if 
-            defined $self->$_ && defined $other->$_ && 
+            (defined($self->$_) || defined($other->$_)) && 
             $self->$_ ne $other->$_;
     }
     # Assume equal if metadata is same and transformations are same
     my $transeq = $self->transformation == $other->transformation;
+
     return $transeq;
 
 } # equal
