@@ -43,7 +43,7 @@ use Module::Load;
 use SBG::HashFields;
 use SBG::U::List qw/min union sum intersection/;
 use SBG::U::Config qw/config/;
-use SBG::U::Log;
+use SBG::U::Log qw/log/;
 use SBG::STAMP qw/superpose stamp/;
 # TODO stamp() only used by complexrmsd() . Remove it.
 

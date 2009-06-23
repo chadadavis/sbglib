@@ -32,7 +32,7 @@ use PDL::Matrix;
 use DBI;
 
 use SBG::U::Config qw/config/;
-use SBG::U::Log;
+use SBG::U::Log qw/log/;
 use SBG::U::DB;
 
 ################################################################################

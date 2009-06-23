@@ -34,7 +34,7 @@ SBG::Role::Dumpable
 
 use File::Temp qw/tempfile/;
 use SBG::U::List qw/pairs/;
-use SBG::U::Log;
+use SBG::U::Log qw/log/;
 
 use overload (
     '""' => '_asstring',

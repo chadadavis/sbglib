@@ -26,7 +26,7 @@ use base qw/Exporter/;
 our @EXPORT_OK = qw/pdbc/;
 
 use SBG::DomainIO;
-use SBG::U::Log;
+use SBG::U::Log qw/log/;
 
 ################################################################################
 =head2 pdbc

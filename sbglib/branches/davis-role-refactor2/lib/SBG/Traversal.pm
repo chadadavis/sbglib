@@ -52,7 +52,7 @@ use Graph::UnionFind;
 
 # Debug printing (to trace recursion and it's unwinding)
 # TODO del
-use SBG::U::Log;
+use SBG::U::Log qw/log/;
 sub _d {
     my $d = shift;
 #     print STDERR ("\t" x $d), @_, "\n";

@@ -35,7 +35,7 @@ use SBG::STAMP qw/superpose/;
 use SBG::Complex;
 use SBG::ComplexIO;
 
-use SBG::U::Log;
+use SBG::U::Log qw/log/;
 use SBG::U::Config qw/config/;
 
 use SBG::GeometricHash;

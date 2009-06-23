@@ -28,7 +28,7 @@ use warnings;
 
 use File::Temp qw(tempfile tempdir);
 
-use SBG::U::Log;
+use SBG::U::Log qw/log/;
 use SBG::U::Config qw/config/;
 use SBG::DomainIO::pdb;
 

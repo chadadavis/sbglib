@@ -64,7 +64,7 @@ use PDL::NiceSlice;
 use Math::Trig qw/rad2deg/;
 use Math::Round qw/nearest/;
 
-use SBG::U::Log;
+use SBG::U::Log qw/log/;
 
 ################################################################################
 

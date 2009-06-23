@@ -38,7 +38,7 @@ use List::MoreUtils qw/mesh/;
 
 use SBG::U::List qw(reorder);
 use SBG::U::Config qw/config/;
-use SBG::U::Log;
+use SBG::U::Log qw/log/;
 use SBG::U::DB;
 
 use SBG::TransformI;

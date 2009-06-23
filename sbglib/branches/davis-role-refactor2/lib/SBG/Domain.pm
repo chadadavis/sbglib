@@ -24,7 +24,7 @@ L<SBG::DomainI>
 package SBG::Domain;
 use Moose;
 
-use SBG::U::Log;
+use SBG::U::Log qw/log/;
 
 
 # Defines what must be implemented to represent a 3D structure

@@ -35,7 +35,7 @@ use SBG::Domain;
 use SBG::Template;
 use SBG::Interaction;
 use SBG::U::List qw/uniq/;
-use SBG::U::Log;
+use SBG::U::Log qw/log/;
 use SBG::Complex;
 
 # TODO Needs to be in a DB

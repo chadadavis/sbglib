@@ -30,7 +30,7 @@ use IO::String;
 use IO::File;
 use Module::Load;
 
-use SBG::U::Log;
+use SBG::U::Log qw/log/;
 use SBG::U::Config qw/config/;
 
 

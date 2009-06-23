@@ -53,7 +53,7 @@ use PDL::Ufunc qw/all/;
 
 use List::MoreUtils qw/mesh/;
 
-use SBG::U::Log;
+use SBG::U::Log qw/log/;
 use SBG::Types;
 
 

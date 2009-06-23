@@ -6,7 +6,7 @@ SBG::U::Log - Logging setup
 
 =head1 SYNOPSIS
 
- use SBG::U::Log;
+ use SBG::U::Log qw/log/;
  # Without any initialisation, WARN and ERROR go to STDERR, others ignored
  log()->debug("x is: $x"); # not printed anywhere
  log()->error("cannot open: $file)"; # printed to STDERR
@@ -49,7 +49,7 @@ L<Log::Log4perl>
 package SBG::U::Log;
 
 use base qw/Exporter/;
-our @EXPORT = qw(log);
+our @EXPORT_OK = qw(log);
 
 use Log::Log4perl qw(:levels);
 
