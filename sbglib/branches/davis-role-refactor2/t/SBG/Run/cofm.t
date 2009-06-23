@@ -30,11 +30,11 @@ TODO: {
 sub _test1 {
     my ($pdb, $descriptor, $tx, $ty, $tz, $trg, $trmax) = @_;
     my $res = cofm($pdb, $descriptor);
-    float_is($res->{Cx}, $tx, $prec);
-    float_is($res->{Cy}, $ty, $prec);
-    float_is($res->{Cz}, $tz, $prec);
-    float_is($res->{Rg}, $trg, $prec);
-    float_is($res->{Rmax}, $trmax, $prec);
+    float_is($res->{Cx},  $tx,   'Cx'  ,$prec);
+    float_is($res->{Cy},  $ty,   'Cy'  ,$prec);
+    float_is($res->{Cz},  $tz,   'Cz'  ,$prec);
+    float_is($res->{Rg},  $trg,  'Rg'  ,$prec);
+    float_is($res->{Rmax},$trmax,'Rmax',$prec);
     return $res;
 }
 

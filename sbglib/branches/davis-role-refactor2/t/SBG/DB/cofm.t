@@ -18,11 +18,11 @@ my $res = SBG::U::DB::cofm::query('2nn6', 'A');
 ok($res, "query('2nn6', 'A')");
 my ($tx, $ty, $tz, $trg, $trmax) = (80.860, 12.450, 122.080, 26.738, 63.826);
 
-float_is($res->{'Cx'}, $tx, $prec, 'Cx');
-float_is($res->{'Cy'}, $ty, $prec, 'Cy');
-float_is($res->{'Cz'}, $tz, $prec, 'Cz');
-float_is($res->{'Rg'}, $trg, $prec, 'Rg');
-float_is($res->{'Rmax'}, $trmax, $prec, 'Rmax');
+float_is($res->{'Cx'}, $tx, 'Cx', $prec);
+float_is($res->{'Cy'}, $ty, 'Cy', $prec);
+float_is($res->{'Cz'}, $tz, 'Cz', $prec);
+float_is($res->{'Rg'}, $trg,'Rg', $prec);
+float_is($res->{'Rmax'}, $trmax, 'Rmax',$prec);
 is($res->{'descriptor'}, 'CHAIN A', 'descriptor');
 ok($res->{'file'}, "File: " . $res->{'file'});
 

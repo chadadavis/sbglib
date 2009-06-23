@@ -13,7 +13,7 @@ use SBG::Traversal;
 use SBG::NetworkIO;
 
 # Load up a network
-my $file = "$dir/simple_network.csv";
+my $file = "$dir/data/simple_network.csv";
 my $io = new SBG::NetworkIO(file=>$file);
 my $net = $io->read;
 
