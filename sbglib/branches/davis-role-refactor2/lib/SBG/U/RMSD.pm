@@ -61,9 +61,22 @@ use PDL::MatrixOps qw/svd det identity/;
  Function: 
  Example : 
  Returns : 
- Args    : 
+ Args    : Two L<PDL>s of same dimensions
 
 NB if $pointsa is homogenous, then $pointsb must be homogenous as well
+
+$pointsa and $pointsb can both be single points, e.g.
+$pointsa = pdl 1,2,3;
+$pointsb = pdl 4,5,6;
+
+Or they may be matrices of points, e.g.
+$pointsa = pdl [ [ 1,2,3 ], [ 4,5,6 ]];
+$pointsb = pdl [ [ 0,4,6 ], [ 2,5,6 ]];
+
+They may also be homogenous coordinates (append a 1 in 4th dimension)
+$pointsa = pdl [ [ 1,2,3,1 ], [ 4,5,6,1 ]];
+$pointsb = pdl [ [ 0,4,6,1 ], [ 2,5,6,1 ]];
+
 
 =cut
 sub rmsd {
@@ -86,16 +99,18 @@ sub rmsd {
 
  Function: 
  Example : 
- Returns : 
+ Returns : A L<PDL> of dimension 3 or 4 (if homogenous)
  Args    : 
 
-$weights, optional, will be used weight each point
+$weights, optional, will be used to weight each point
 
 NB if your coordinates in $points are homogenous, i.e. each point is of
 dimension 4, where the 4th value is always a 1, then the resulting
 centre-of-mass will also be homogenous. I.e. it will be a vector of dimension 4,
 with the 4th value being 1. This makes it easy to either use homogenous
 coordinates everywhere or nowhere, as things remain consistent.
+
+See L<Bio::Tools::SeqStats> for getting amino acid weights.
 
 =cut
 sub centroid {
@@ -208,6 +223,28 @@ sub superposition {
     return $affine;
 
 } # superposition
+
+
+################################################################################
+=head2 superpose
+
+ Function: Determines the transformation matrix to superpose A onto B
+ Example : my ($transform, $rmsd) = superpose($points_a, $points_b);
+ Returns : Transformation matrix, and RMSD resulting from transformation
+ Args    : 
+
+Unlike L<superposition> which just returns the transformation matrix, this also actually performs the transformation on A.
+
+
+=cut
+sub superpose {
+    my ($pointsa,$pointsb) = @_;
+    my $t = superposition($pointsa, $pointsb);
+    $pointsa .= _apply($t, $pointsa);
+    my $rmsd = rmsd($pointsa, $pointsb);
+    return wantarray ? ($t, $rmsd) : $t;
+
+} # superpose
 
 
 sub _apply {

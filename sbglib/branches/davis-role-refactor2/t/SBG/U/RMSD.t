@@ -10,6 +10,7 @@ use File::Temp qw/tempfile/;
 $File::Temp::KEEP_ALL = 1;
 
 
+# NB could find better test cases in the trans database(s), e.g.:
 
 # select h.e_value, e1.idcode, e1.description, e1.start_pdbseq, e1.end_pdbseq, e2.description, e2.start_pdbseq, e2.end_pdbseq from hit h, entity e1, entity e2 where e1.idcode=e2.idcode and h.id_entity1=e1.id and h.id_entity2=e2.id limit 50
 
@@ -26,7 +27,6 @@ my $descr1 = 'CHAIN A';
 my $descr2 = 'CHAIN B';
 
 
-# NB could find better test cases in the trans database(s), e.g.:
 use SBG::Domain::Atoms;
 # Homogenous coords.
 my $da = new SBG::Domain::Atoms(pdbid=>$pdbid,descriptor=>$descr1);
