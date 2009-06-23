@@ -29,10 +29,11 @@ package SBG::Complex;
 use Moose;
 
 extends qw/Moose::Object Clone/;
-with 
-    'SBG::Role::Storable',
-    'SBG::Role::Clonable',
-    ;
+with qw/
+SBG::Role::Storable
+SBG::Role::Clonable
+/;
+
 
 use Moose::Autobox;
 use autobox ARRAY => 'SBG::U::List';
@@ -44,17 +45,18 @@ use SBG::U::List qw/min union sum intersection/;
 use SBG::U::Config qw/config/;
 use SBG::U::Log;
 use SBG::STAMP qw/superpose stamp/;
+# TODO stamp() only used by complexrmsd() . Remove it.
+
+use SBG::DomainI;
 use SBG::Domain;
 use SBG::DomainIO;
 # Default Domain subtype
 use SBG::Domain::CofM;
 
 use overload (
-    '""' => '_asstring',
+    '""' => 'stringify',
     fallback => 1,
     );
-
-our $tmpdir;
 
 
 ################################################################################
@@ -95,7 +97,7 @@ before 'type' => sub {
 
 
 ################################################################################
-=head2 interaction
+n=head2 interaction
 
 L<SBG::Interaction> objects used to create this complex. Indexed by the
 B<primary_id> of the interaction.
@@ -131,6 +133,54 @@ Indexed by accession_number of protein modelled by this L<SBG::Domain>
 
 =cut
 hashfield 'model', 'models';
+
+
+
+################################################################################
+=head2 stringify
+
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
+
+
+=cut
+sub stringify {
+    (shift)->interactions->keys->sort->join(',');
+}
+
+
+################################################################################
+=head2 size
+
+ Function: Number of modelled components in the current complex assembly
+ Example : $assembly->size;
+ Returns : Number of components in the current complex assembly
+ Args    : NA
+
+=cut
+sub size {
+    my ($self) = @_;
+    return $self->models->keys->length;
+}
+
+
+################################################################################
+=head2 names
+
+ Function:
+ Example :
+ Returns : Names of the component proteins being modelled in this complex
+ Args    :
+
+List is sorted
+
+=cut
+sub names {
+    my $a = (shift)->models->keys->sort;
+    return wantarray ? @$a : $a;
+}
 
 
 ################################################################################
@@ -215,11 +265,13 @@ sub linker {
 # TODO explain order of ops here
     $destdom->transform($xform);
     $destdom->transform($srcrefdom->transformation);
+
     # Note the linker transformation used, for scoring later
-    $destdom->linker($xform);
+    # Track these as superposition objects
+#     $destdom->linker($xform);
 
     return $destdom;
-}
+} # linker
 
 
 ################################################################################
@@ -249,21 +301,6 @@ sub subnet {
     #              -nodes=>[@nodes],-interaction=>$i);
 
 } # subnet
-
-
-################################################################################
-=head2 size
-
- Function: Number of modelled components in the current complex assembly
- Example : $assembly->size;
- Returns : Number of components in the current complex assembly
- Args    : NA
-
-=cut
-sub size {
-    my ($self) = @_;
-    return $self->models->keys->length;
-}
 
 
 ################################################################################
@@ -505,19 +542,19 @@ sub complexrmsd {
                    " components. ", scalar(@cnames), " in common");
 
     # transform -g both into single PDB files
-    my $modelpdbio = new File::Temp(DIR=>$tmpdir);
+    my $modelpdbio = new File::Temp;
     my $modelpdb = $model->gtransform(out=>$modelpdbio->filename);
-    my $subcomplexpdbio = new File::Temp(DIR=>$tmpdir);
+    my $subcomplexpdbio = new File::Temp;
     my $subcomplexpdb = $subcomplex->gtransform(out=>$subcomplexpdbio->filename);
 
     # Create two domain files, with descriptor { ALL }
     my $model_fh = new File::Temp(
-        "complexrmsdXXXX", DIR=>$tmpdir, SUFFIX=>'.dom');
+        "complexrmsdXXXX", SUFFIX=>'.dom');
     my $model_dom = $model_fh->filename;
     print $model_fh "$modelpdb 9abc-model { ALL }\n";
     $model_fh->flush;
     my $subcomplex_fh = new File::Temp(
-        "complexrmsdXXXX", DIR=>$tmpdir, SUFFIX=>'.dom');
+        "complexrmsdXXXX", SUFFIX=>'.dom');
     my $subcomplex_dom = $subcomplex_fh->filename;
     print $subcomplex_fh "$subcomplexpdb 9xyz-subcomplex { ALL }\n";
     $subcomplex_fh->flush;
@@ -545,40 +582,6 @@ sub complexrmsd {
 
     $logger->trace("RMSD:", $fields->{'RMS'});
     return $fields->{'RMS'};
-}
-
-
-################################################################################
-=head2 asarray
-
- Function:
- Example :
- Returns : 
- Args    :
-
-Return all the L<SBG::Domain>s contained in this complex
-
-=cut
-sub asarray {
-    my $a = (shift)->interactions->values->sort;
-    return wantarray ? @$a : $a;
-} # asarray
-
-
-################################################################################
-=head2 names
-
- Function:
- Example :
- Returns : Names of the component proteins being modelled in this complex
- Args    :
-
-List is sorted
-
-=cut
-sub names {
-    my $a = (shift)->models->keys->sort;
-    return wantarray ? @$a : $a;
 }
 
 
@@ -624,86 +627,7 @@ sub rmsd {
 
 
 ################################################################################
-=head2 gtransform
-
- Function: 
- Example : 
- Returns : 
- Args    : 
-
-Transform domains saved in this complex to a PDB file
-
-See L<SBG::STAMP::gtransform>
-
-TODO This needs to be in SBG::ComplexIO::pdb.pm
-
-=cut
-sub gtransform {
-    my ($self, %ops) = @_;
-    SBG::STAMP::gtransform(doms=>$self->models->values, %ops);
-}
-
-
-################################################################################
-=head2 rasmol
-
- Function: 
- Example : 
- Returns : 
- Args    : 
-
-If no file is provided, a temporary file is created and returned
-
-=cut
-sub rasmol {
-    my ($self, $file) = @_;
-    my $rasmol = config()->val(qw/rasmol executable/) || 'rasmol';
-    my $cmd = "$rasmol " . $self->gtransform(out=>$file);
-    system($cmd) == 0 or
-        $logger->error("Failed: $cmd\n");
-}
-
-
-
-################################################################################
-=head2 asstamp
-
- Function: Returns the STAMP representation of all domains as a string
- Example : 
- Returns : 
- Args    : 
-
-TODO This needs to be in SBG::ComplexIO::stamp.pm
-
-=cut
-sub asstamp {
-    my ($self) = @_;
-    my $str;
-    $str .= $_->asstamp for @{ $self->models->values };
-    return $str;
-}
-
-
-################################################################################
-# Private
-
-
-sub _asstring {
-    (shift)->interactions->keys->sort->join(',');
-}
-
-
-sub _init_tmp {
-    our $tmpdir;
-    $tmpdir ||= config()->val(qw/tmp tmpdir/) || $ENV{TMPDIR} || '/tmp';
-    mkdir $tmpdir unless -d $tmpdir;
-}
-
-
-################################################################################
 __PACKAGE__->meta->make_immutable;
 1;
 
-
-__END__
 

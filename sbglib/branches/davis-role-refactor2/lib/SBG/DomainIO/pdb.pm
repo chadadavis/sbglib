@@ -137,6 +137,11 @@ sub read {
  Returns : PDL matrix of 3 columns (or 4, if L<homogenous> set)
  Args    : NA
 
+When called in array context, also returns the array of amino acid 3-letter
+codes.
+
+See also L<Bio::SeqUtils> for converting amino acid residue codes between
+3-letter and 1-letter versions.
 
 =cut
 sub coords {

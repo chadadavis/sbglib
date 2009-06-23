@@ -10,7 +10,8 @@ SBG::Domain - Represents a domain of a protein structure.
 
 =head1 DESCRIPTION
 
-A generic class that implements only the L<SBG::DomainI> interface
+A generic class that implements only the L<SBG::DomainI> interface with no
+particular implementation.
 
 =head1 SEE ALSO
 
@@ -23,7 +24,8 @@ L<SBG::DomainI>
 package SBG::Domain;
 use Moose;
 
-use Carp qw/cluck/;
+use SBG::U::Log;
+
 
 # Defines what must be implemented to represent a 3D structure
 with qw/
@@ -38,13 +40,24 @@ use overload (
     );
 
 
+################################################################################
+=head2 overlap
+
+ Function: Not defined
+ Example : 
+ Returns : N/A
+ Args    : N/A
+
+
+=cut
 sub overlap {
-    cluck "overlap() not implemented in " . __PACKAGE__;
+    log()->warn("overlap() not defined by " . __PACKAGE__);
     return;
 }
 
 
 ################################################################################
 __PACKAGE__->meta->make_immutable;
+no Moose;
 1;
 

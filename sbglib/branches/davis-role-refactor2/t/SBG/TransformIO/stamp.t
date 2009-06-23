@@ -18,7 +18,7 @@ my $dir = $FindBin::RealBin;
 
 use PDL;
 use SBG::TransformIO::stamp;
-use SBG::Transform::Homog;
+use SBG::Transform::Affine;
 
 # Tolerate rounding differences between clib (STAMP) and PDL
 use PDL::Ufunc;
@@ -30,7 +30,7 @@ my $mat = pdl
     [4.4, 5.5, 6.6, 2.2], 
     [7.7, 8.8, 9.9, 3.3], 
     [0  ,   0,   0,   1];
-my $t = new SBG::Transform::Homog(matrix=>$mat);
+my $t = new SBG::Transform::Affine(matrix=>$mat);
 my $out=new SBG::TransformIO::stamp(tempfile=>1);
 $out->write($t);
 $out->close;
