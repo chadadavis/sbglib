@@ -26,7 +26,7 @@ L<SBG::Domain> , L<SBG::DomainIO>
 package SBG::STAMP;
 use base qw/Exporter/;
 
-our @EXPORT_OK = qw(do_stamp sorttrans stamp pickframe gtransform superpose pdbc);
+our @EXPORT_OK = qw(do_stamp sorttrans stamp pickframe superpose pdbc);
 
 use strict;
 use warnings;
@@ -36,14 +36,14 @@ use IO::String;
 use Data::Dumper;
 use List::MoreUtils qw/mesh/;
 
-
-use SBG::Transform;
-use SBG::Domain;
-use SBG::DomainIO;
 use SBG::U::List qw(reorder);
 use SBG::U::Config qw/config/;
 use SBG::U::Log;
 use SBG::U::DB;
+
+use SBG::TransformI;
+use SBG::DomainI;
+use SBG::DomainIO;
 
 
 ################################################################################
