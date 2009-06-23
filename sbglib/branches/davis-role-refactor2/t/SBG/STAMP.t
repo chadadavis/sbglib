@@ -20,12 +20,6 @@ use PDL::Core;
 my $toler = 1.0;
 
 
-
-TODO: {
-    local $TODO = 'test do_stamp alone (i.e. on a family of domains)';
-    ok(1);
-}
-
 # get domains for two chains of interest
 my $doma = SBG::Domain::CofM->new(pdbid=>'2br2', descriptor=>'CHAIN A');
 my $domb = SBG::Domain::CofM->new(pdbid=>'2br2', descriptor=>'CHAIN B');
@@ -154,24 +148,24 @@ pdl_approx($trans5db, $dtob_ans, $toler,
 my $dombseg = new SBG::Domain::CofM(pdbid=>'2br2', descriptor=>'B 8 _ to B 248 _');
 my $domdseg = new SBG::Domain::CofM(pdbid=>'2br2', descriptor=>'D 8 _ to D 248 _');
 
-TODO: {
-    local $TODO = "verify the transformation values";
-    ok(1);
-}
+
+$TODO = 'test do_stamp alone (i.e. on a family of domains)';
+ok 0;
+
+
+$TODO = "verify the transformation values";
+ok 0;
 
 my $trans = superpose($dombseg, $domdseg);
 ok($trans, "superpose($dombseg onto $domdseg)");
 
-TODO: {
-    local $TODO = "Test pickframe";
-    ok(1);
-}
+
+$TODO = "Test pickframe";
+ok 0;
 
 
-TODO: {
-    local $TODO = "Test stamp() when one/both domains already have transform";
-    ok(1);
-}
+$TODO = "Test stamp() when one/both domains already have transform";
+ok 0;
 
 
 ################################################################################
@@ -184,4 +178,3 @@ sub ask {
     return $answer !~ /^\s*n/i;
 }
 
-__END__

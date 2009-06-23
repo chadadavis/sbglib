@@ -9,12 +9,9 @@ use SBG::Domain::CofM;
 use SBG::Domain;
 use SBG::CA::Assembler qw(linker);
 
-TODO: {
-    local $TODO = "Update test";
-    ok(1);
-}
 
-__END__
+$TODO = "Update test";
+ok 0;
 
 
 # Similar to example in STAMP.t but use at least two chained superpositions
@@ -59,5 +56,4 @@ my $pdbfile = transform(-doms=>\@doms);
 ok($pdbfile, "transform() created a PDB file");
 `rasmol $pdbfile` if $pdbfile;
 
-__END__
 

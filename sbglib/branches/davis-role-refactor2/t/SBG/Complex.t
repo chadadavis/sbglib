@@ -39,14 +39,15 @@ for (my $i = 0; $i < @doms; $i++) {
     ok($doms[$i] == $cdoms[$i], "Clone also contains $doms[$i]");
 }
 
-TODO: {
-    local $TODO = 'test: if ($comp->clashes($dom)) { ... }';
-    ok(1);
 
-    local $TODO = 'Test Complex::rmsd()';
-    ok(1);
+$TODO = 'test: if ($comp->clashes($dom)) { ... }';
+ok 0;
 
-    local $TODO = 'test ($rmsd, $trans) = $model_complex->min_rmsd($truth)';
-    ok(1);
 
-}
+$TODO = 'Test Complex::rmsd()';
+ok 0;
+
+
+$TODO = 'test ($rmsd, $trans) = $model_complex->min_rmsd($truth)';
+ok 0;
+

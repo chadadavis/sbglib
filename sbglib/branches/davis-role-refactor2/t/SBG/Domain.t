@@ -26,15 +26,15 @@ is($d->descriptor, 'CHAIN A', 'Constructor cleans up descriptor');
 # Basic checks
 $dom = new SBG::Domain(pdbid=>'2nn6', descriptor=>'CHAIN A');
 is($dom->pdbid, '2nn6', 'pdbid');
-is($dom->descriptor, 'CHAIN A', 'descriptor');
-is($dom->wholechain, 'A', 'wholechain');
+is($dom->descriptor, 'CHAIN A', 'descriptor()');
+is($dom->wholechain, 'A', 'wholechain()');
 $dom->descriptor('A 10 _ to A 233 _');
-ok(! $dom->wholechain);
+ok(! $dom->wholechain, '! wholechain()');
 
 
 # Equality
 $equiv = new SBG::Domain(pdbid=>'2nn6', descriptor=>'A 10 _ to A 233 _');
-ok($equiv == $dom);
+ok($equiv == $dom, 'equals');
 
 
 # Multi-segment descriptor
@@ -42,5 +42,12 @@ $dom = new SBG::Domain(pdbid=>'1xyz',
                        descriptor=>'A 3 _ to A 189 _ A 353 _ to A 432 _');
 
 
+$TODO = "test cumulative transform";
+# Validate that the raw cofm times the cumulative transform is the cum. cofm
+# But still, should maintain current cofm, for sake of overlap detection
+ok 0;
 
+
+$TODO = "test with residue insertion codes in descriptor";
+ok 0;
 

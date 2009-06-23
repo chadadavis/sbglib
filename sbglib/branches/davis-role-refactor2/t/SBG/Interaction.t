@@ -25,15 +25,14 @@ ok($i2 ge $i1, "String comparison: ge");
 my $i3 = new SBG::Interaction(-id=>$label2, -weight => 99.9);
 is($i2, $i3, "String equality, between unique objects");
 
-TODO: {
-    local $TODO = 'Test Interaction->template("key") = $domain';
-    ok(1);
-}
 
-TODO: {
-    local $TODO = 'test creating an interation using SBG::Node and SBG::Domain';
-    ok(1);
-}
+$TODO = 'Test Interaction->template("key") = $domain';
+ok 0;
+
+
+$TODO = 'test creating an interation using SBG::Node and SBG::Domain';
+ok 0;
+
 
 
 
