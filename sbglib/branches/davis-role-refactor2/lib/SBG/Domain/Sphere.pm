@@ -44,10 +44,11 @@ use overload (
     );
 
 
-use PDL::Lite;
-use Math::Trig qw(:pi);
-# NB PDL::min() clashes with List::Util::min(), so use the qualified name
-use List::Util; # qw/min/;
+
+use PDL::Core qw/pdl zeroes/;
+use Math::Trig qw/:pi acos_real/;
+use List::Util; # qw/min/; # min() clashes with PDL::min
+use SBG::U::Log; # qw/log/ # log() clashes with Math::Trig::log
 
 
 ################################################################################
@@ -89,9 +90,13 @@ sub _build_coords {
     my ($self) = @_;
     my $r = $self->radius;
     my $c = $self->center->squeeze;
-    my $x = pdl [ $r, 0, 0, 0 ];
-    my $y = pdl [ 0, $r, 0, 0 ];
-    my $z = pdl [ 0, 0, $r, 0 ];
+    my $dims = $c->dim(0);
+    my $x = zeroes $dims;
+    my $y = zeroes $dims;
+    my $z = zeroes $dims;
+    $x->slice('0') .= $r;
+    $y->slice('1') .= $r;
+    $z->slice('2') .= $r;
 
     my $coords = pdl [ $c, $c+$x, $c-$x, $c+$y, $c-$y, $c+$z, $c-$z ];
 
@@ -109,11 +114,11 @@ sub _build_coords {
 
 B<'required'> by L<SBG::DomainI>
 
-TODO
+Just aliases L<overlap_lin> for now
 
 =cut
 sub overlap {
-    warn "Not implemented";
+    overlap_lin(@_);
 }
 
 
@@ -147,7 +152,7 @@ sub overlap_lin {
     # Max possible overlap: twice the smaller radius
     my $max = 2 * List::Util::min($self->radius, $other->radius);
     $diff = $max if $diff > $max;
-    log()->debug("$diff overlap between ($self) and ($other)");
+    SBG::U::Log::log()->debug("$diff overlap between ($self) and ($other)");
     return $diff;
 } # overlap_lin
 
@@ -230,8 +235,8 @@ sub overlap_vol {
     my ($a, $b) = ($self->radius, $obj->radius);
     # Need to find the plane (a circle) of intersection between spheres
     # Law of cosines to get one angle of triangle created by intersection
-    my $alpha = acos( ($b**2 + $lin**2 - $a**2) / (2 * $b * $lin) );
-    my $beta  = acos( ($a**2 + $lin**2 - $b**2) / (2 * $a * $lin) );
+    my $alpha = acos_real( ($b**2 + $lin**2 - $a**2) / (2 * $b * $lin) );
+    my $beta  = acos_real( ($a**2 + $lin**2 - $b**2) / (2 * $a * $lin) );
 
     # The *length* of $obj that is inside $self
     my $overb;
@@ -252,12 +257,12 @@ sub overlap_vol {
     # These volumes only count what is beyond the intersection plane
     # (i.e. this is *not* double counting) 
     # Volume of sb inside of sa:
-    my $overbvol = $obj->cap($overb);
+    my $overbvol = $obj->capvolume($overb);
     # Volume of sa inside of sb;
-    my $overavol = $self->cap($overa);
+    my $overavol = $self->capvolume($overa);
     # Total overlap volume
     my $sum = $overbvol + $overavol;
-    log()->debug("$sum overlap between ($self) and ($obj)");
+    SBG::U::Log::log()->debug("$sum overlap between ($self) and ($obj)");
     return $sum;
 
 } # overlap_vol
