@@ -7,9 +7,15 @@ SBG::Run::cofm - Wrapper for running B<cofm> (centre-of-mass), with DB caching.
 
 =head1 SYNOPSIS
 
- use SBG::Run::cofm;
- $hashref = SBG::Run::cofm::run('2nn6','A 13 _ to A 331 _');
- $hashref = SBG::Run::cofm::run('2nn6','CHAIN A CHAIN B');
+ use SBG::Run::cofm qw/cofm/;
+
+ my $dom = new SBG::DomainI(pdbid=>'2nn6', descriptor=>'A 13 _ to A 331 _');
+ my $centroid = cofm($dom);
+
+ my $dom = new SBG::DomainI(pdbid=>'2nn6', descriptor=>'A 13 _ to A 331 _');
+
+ $hashref = cofm('2nn6','A 13 _ to A 331 _');
+ $hashref = cofm('2nn6','CHAIN A CHAIN B');
 
 
 =head1 DESCRIPTION
@@ -38,7 +44,7 @@ use SBG::U::DB::cofm;
 use SBG::U::Config qw/config/;
 use SBG::Domain;
 use SBG::DomainIO;
-use SBG::U::Log;
+use SBG::U::Log qw/log/;
 
 ################################################################################
 =head2 cofm
