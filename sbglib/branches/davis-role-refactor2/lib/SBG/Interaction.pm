@@ -44,10 +44,6 @@ use overload (
 
 
 ################################################################################
-# Accessors
-
-
-################################################################################
 =head2 template
 
  Function: Sets the L<SBG::Domain> used to model one of the L<SBG::Nodes>

@@ -33,7 +33,6 @@ use warnings;
 
 use File::Temp qw(tempfile tempdir);
 use IO::String;
-use Data::Dumper;
 use List::MoreUtils qw/mesh/;
 
 use SBG::U::List qw(reorder);
