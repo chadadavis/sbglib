@@ -2,62 +2,67 @@
 
 use Test::More 'no_plan';
 use SBG::U::Test qw/float_is pdl_approx/;
-use Carp;
 use Data::Dumper;
+use Data::Dump qw/dump/;
 use File::Temp;
+
+use SBG::U::Log qw/log/;
+log()->init('TRACE');
 $File::Temp::KEEP_ALL = 1;
-$, = ' ';
 
-use SBG::STAMP qw/pdbc superpose gtransform/;
+use SBG::STAMP qw/superpose/;
 use SBG::Domain;
-use SBG::DomainIO;
-use SBG::Domain::CofM;
-use List::MoreUtils qw(first_index);
+use SBG::DomainIO::pdb;
+use PDL;
 
-# Tolerate rounding differences between clib (STAMP) and PDL
-use PDL::Ufunc;
-use PDL::Core;
-my $toler = 1.0;
+# Tolerate rounding differences between stamp (using clib) and PDL
+my $toler = 0.25;
 
+# get domains for chains of interest
+my $doma = SBG::Domain->new(pdbid=>'2br2', descriptor=>'CHAIN A');
+my $domb = SBG::Domain->new(pdbid=>'2br2', descriptor=>'CHAIN B');
+my $domd = SBG::Domain->new(pdbid=>'2br2', descriptor=>'CHAIN D');
 
-# get domains for two chains of interest
-my $doma = SBG::Domain::CofM->new(pdbid=>'2br2', descriptor=>'CHAIN A');
-my $domb = SBG::Domain::CofM->new(pdbid=>'2br2', descriptor=>'CHAIN B');
-my $domd = SBG::Domain::CofM->new(pdbid=>'2br2', descriptor=>'CHAIN D');
-
-# Get superposition, in both directions
-my $tt;
-$tt = superpose($doma, $domd);
-ok($tt, "superpose'd A onto D");
-
-my $aontod = $tt && $tt->matrix;
-ok($tt, "superpose'd D onto A");
-$tt = superpose($domd, $doma);
-my $dontoa = $tt && $tt->matrix;
-
-
-
+# A simple superposition, homologous whole chains
+$atod_sup = superpose($doma, $domd);
 # The value computed externally by STAMP, the reference values
-my $atod_transstr = <<STOP;
-   -0.54889    0.24755   -0.79839       -52.19956  
-    0.42532   -0.73955   -0.52171       -56.01334  
-   -0.71960   -0.62594    0.30063       -55.90146
-STOP
-my $dtoa_transstr = <<STOP;
-   -0.54889    0.42532   -0.71960       -45.05492  
-    0.24756   -0.73954   -0.62593       -63.49199  
-   -0.79840   -0.52171    0.30064       -54.09263
-STOP
-
-# Convert this into PDL matrixes
-my $dtoa_ans = new SBG::Transform(string=>$dtoa_transstr)->matrix;
-my $atod_ans = new SBG::Transform(string=>$atod_transstr)->matrix;
+my $atod_expect = pdl
+ [ -0.55482 ,  0.24558 , -0.79490 ,     -52.48704 ],
+ [  0.42054 , -0.74162 , -0.52264 ,     -56.30138 ],
+ [ -0.71786 , -0.62425 ,  0.30819 ,     -55.71054 ], 
+ [        0 ,        0 ,        0 ,             1 ];
+# Verify approximate equality
+pdl_approx($atod_sup->transformation->matrix,
+           $atod_expect,
+           "superpose($doma, $domd)",
+           $toler);
 
 
-pdl_approx($aontod, $atod_ans, $toler, 
-           "superpose 2br2A onto 2br2D: agrees w/ STAMP to w/in $toler A");
-pdl_approx($dontoa, $dtoa_ans, $toler, 
-           "superpose 2br2D onto 2br2A: agrees w/ STAMP to w/in $toler A");
+# The opposite superposition should have the inverse transformation matrix
+$dtoa_sup = superpose($domd, $doma);
+my $dtoa_expect = $atod_expect->inv;
+pdl_approx($dtoa_sup->transformation->matrix,
+           $dtoa_expect,
+           "superpose($domd, $doma)",
+           $toler);
+
+
+# Test sub-segments of chains
+# Get domains for two chains of interest
+my $dombseg = new SBG::Domain(pdbid=>'2br2', descriptor=>'B 8 _ to B 248 _');
+my $domdseg = new SBG::Domain(pdbid=>'2br2', descriptor=>'D 8 _ to D 248 _');
+my $seg_sup = superpose($dombseg, $domdseg);
+# The value computed externally by STAMP, the reference values
+my $seg_expect = pdl
+ [ 0.11083 ,  0.04249 ,  0.99293 ,       9.30896 ],
+ [ 0.99239 , -0.05858 , -0.10826 ,     -10.08272 ],
+ [ 0.05356 ,  0.99738 , -0.04866 ,      -0.08329 ], 
+ [       0 ,        0 ,        0 ,             1 ];
+# Verify approximate equality
+pdl_approx($seg_sup->transformation->matrix,
+           $seg_expect,
+           "superpose($dombseg, $domdseg)",
+           $toler);
 
 
 # Test transform()
@@ -70,111 +75,43 @@ pdl_approx($dontoa, $dtoa_ans, $toler,
 # 2xApply:     DA
 # Finally: DADADA = Homohexamer homologous to DABEFC
 
-my $d2br2d = new SBG::Domain::CofM(pdbid=>'2br2', descriptor=>'CHAIN D');
-my $d2br2b = new SBG::Domain::CofM(pdbid=>'2br2', descriptor=>'CHAIN B');
+my $d2br2d = new SBG::Domain(pdbid=>'2br2', descriptor=>'CHAIN D');
+my $d2br2b = new SBG::Domain(pdbid=>'2br2', descriptor=>'CHAIN B');
 # The basic transformation
-my $transf = superpose($d2br2d, $d2br2b);
+my $superp = superpose($d2br2d, $d2br2b);
+my $transf = $superp->transformation;
 
-# Now get the dimer:
-my $d2br2d0 = new SBG::Domain::CofM(pdbid=>'2br2', descriptor=>'CHAIN D');
-my $d2br2a0 = new SBG::Domain::CofM(pdbid=>'2br2', descriptor=>'CHAIN A');
-# Dont' do transforms there, those are already in the frame of reference
+# Now get the native dimer: (round 0)
+my $d2br2d0 = new SBG::Domain(pdbid=>'2br2', descriptor=>'CHAIN D');
+my $d2br2a0 = new SBG::Domain(pdbid=>'2br2', descriptor=>'CHAIN A');
+# Dont' do transforms in 1st round, those are already in the frame of reference
 
-my $d2br2d1 = new SBG::Domain::CofM(pdbid=>'2br2', descriptor=>'CHAIN D');
-my $d2br2a1 = new SBG::Domain::CofM(pdbid=>'2br2', descriptor=>'CHAIN A');
-
+# 2nd round (round 1)
+my $d2br2d1 = new SBG::Domain(pdbid=>'2br2', descriptor=>'CHAIN D');
+my $d2br2a1 = new SBG::Domain(pdbid=>'2br2', descriptor=>'CHAIN A');
 # Apply
-$d2br2d1->transform($transf);
-$d2br2a1->transform($transf);
+$transf->apply($d2br2d1);
+$transf->apply($d2br2a1);
 
-# Apply product
+# Apply product (round 2)
 my $double = $transf x $transf;
-my $d2br2d2 = new SBG::Domain::CofM(pdbid=>'2br2', descriptor=>'CHAIN D');
-my $d2br2a2 = new SBG::Domain::CofM(pdbid=>'2br2', descriptor=>'CHAIN A');
+my $d2br2d2 = new SBG::Domain(pdbid=>'2br2', descriptor=>'CHAIN D');
+my $d2br2a2 = new SBG::Domain(pdbid=>'2br2', descriptor=>'CHAIN A');
+$double->apply($d2br2d2);
+$double->apply($d2br2a2);
 
-$d2br2d2->transform($double);
-$d2br2a2->transform($double);
-
-
+# Collect all 6 domains, 2 native, 2 transformed once, 2 transformed twice
 my @doms = ($d2br2d0,$d2br2a0,$d2br2d1,$d2br2a1,$d2br2d2,$d2br2a2);
 
-# Finally, transform() the whole thing into a coordinate file, a la STAMP
-my $file = gtransform(doms=>\@doms);
-if (ok(-r $file, "transform() created PDB file: $file")) {
-    `rasmol $file 2>/dev/null`;
-#     ok(ask("You saw a hexameric ring"), "Confirmed hexamer");
-    
+# Finally, transform the whole thing into a coordinate file, a la STAMP
+my $io = new SBG::DomainIO::pdb(tempfile=>1);
+$io->write(@doms);
+my $file = $io->file;
+if (ok(-r $file, "Should find a hexamer in: $file")) {
+#     `rasmol $file 2>/dev/null`;
 }
 
 
 
-# Test querying transformations from database
-# Get domains for two chains of interest
-my $domb5 = new SBG::Domain::CofM(pdbid=>'2br2', descriptor=>'CHAIN B');
-my $domd5 = new SBG::Domain::CofM(pdbid=>'2br2', descriptor=>'CHAIN D');
-my $trans5bd = SBG::STAMP::superpose_query($domb5, $domd5);
-my $trans5db = SBG::STAMP::superpose_query($domd5, $domb5);
-ok($trans5bd, "Got transform from database cache") or die;
-ok($trans5db, "Got transform from database cache") or die;
-# Get the underlying PDL of the computed transform to be tested
-$trans5bd = $trans5bd->matrix;
-$trans5db = $trans5db->matrix;
 
-my $btod_transstr = <<STOP;
-   0.11085    0.04257    0.99292         9.31432  
-   0.99240   -0.05858   -0.10828       -10.07972  
-   0.05357    0.99738   -0.04873        -0.08447
-STOP
-
-my $dtob_transstr = <<STOP;
-   0.10738532   0.99286529  0.051780912    8.8568476
-   0.04345857  -0.05672928   0.99744707  -0.78669765
-   0.99327385  -0.10486514 -0.049241691   -10.168513
-            0            0            0            1
-STOP
-
-# Convert this into PDL matrixes
-my $btod_ans = new SBG::Transform(string=>$btod_transstr)->matrix;
-my $dtob_ans = new SBG::Transform(string=>$dtob_transstr)->matrix;
-
-pdl_approx($trans5bd, $btod_ans, $toler, 
-           "Database transformation verified B=>D, to within $toler A");
-pdl_approx($trans5db, $dtob_ans, $toler, 
-           "Database transformation verified D=>B, to within $toler A");
-
-
-# Test sub-segments of chains
-# Get domains for two chains of interest
-my $dombseg = new SBG::Domain::CofM(pdbid=>'2br2', descriptor=>'B 8 _ to B 248 _');
-my $domdseg = new SBG::Domain::CofM(pdbid=>'2br2', descriptor=>'D 8 _ to D 248 _');
-
-
-$TODO = 'test do_stamp alone (i.e. on a family of domains)';
-ok 0;
-
-
-$TODO = "verify the transformation values";
-ok 0;
-
-my $trans = superpose($dombseg, $domdseg);
-ok($trans, "superpose($dombseg onto $domdseg)");
-
-
-$TODO = "Test pickframe";
-ok 0;
-
-
-$TODO = "Test stamp() when one/both domains already have transform";
-ok 0;
-
-
-################################################################################
-
-sub ask {
-    my $question = shift;
-    my $answer;
-    print STDERR "$question ? [Y/n] ";
-    read \*STDIN, $answer, 1;
-    return $answer !~ /^\s*n/i;
-}
 
