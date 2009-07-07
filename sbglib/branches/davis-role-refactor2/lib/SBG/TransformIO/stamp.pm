@@ -65,6 +65,8 @@ sub read {
 
     for (1..3) {
         $_ = <$fh>;
+        # Eliminate any braces
+        s/[{}]//g;
         # Called like this, split discards any leading whitespace, leaving:
         # (X,Y,Z,T)
         push @rows, [ split ' ' ];
