@@ -84,6 +84,9 @@ has 'homogenous' => (
  Returns : 
  Args    : 
 
+Depends on the B<transform> program from the STAMP suite
+
+http://www.compbio.dundee.ac.uk/Software/Stamp/stamp.html
 
 =cut
 sub write {
