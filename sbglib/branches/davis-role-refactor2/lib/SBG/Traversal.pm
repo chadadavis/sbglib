@@ -56,7 +56,7 @@ use SBG::U::Log qw/log/;
 sub _d {
     my $d = shift;
 #     print STDERR ("\t" x $d), @_, "\n";
-    $logger->debug("  " x $d, @_);
+    log()->debug("  " x $d, @_);
 }
 sub _d0 { _d(0,@_); }
 
@@ -514,13 +514,13 @@ sub _do_solution {
 #     } else {
 #         $self->_solved->put($solution_label, 1);
     my $callback = $self->sub_solution;
-    $logger->debug("Solution: ", join(' ', @{$self->_nodecover->keys}));
+    log()->debug("Solution: ", join(' ', @{$self->_nodecover->keys}));
     if ($callback->($state, $self->graph, $nodes, $alts, $self->rejects)) {
         $self->asolutions($self->asolutions+1);
-        $logger->trace("Accepted solution");
+        log()->trace("Accepted solution");
     } else {
         $self->rsolutions($self->rsolutions+1);
-        $logger->trace("Rejected solution");
+        log()->trace("Rejected solution");
     }
 #     }
 
@@ -542,6 +542,7 @@ sub _array2D {
 }
 
 
+# TODO del
 sub DESTROY {
     my ($self) = @_;
     _d0 "Traversal done: rejected paths: " . $self->rejects;
@@ -549,8 +550,10 @@ sub DESTROY {
     _d0 "Traversal done: accepted solutions: " . $self->asolutions;
 }
 
-###############################################################################
 
+###############################################################################
+__PACKAGE__->meta->make_immutable;
+no Moose;
 1;
 
 __END__
