@@ -32,46 +32,45 @@ extends qw/Bio::Network::Interaction Moose::Object/;
 with qw/
 SBG::Role::Storable
 SBG::Role::Dumpable
+SBG::Role::Clonable
+SBG::Role::Scorable
 /;
 
-use SBG::HashFields;
-
 use overload (
-    '""' => '_asstring',
+    '""' => 'stringify',
     fallback => 1,
     );
 
+use Moose::Autobox;
+
+use SBG::Model;
 
 
 ################################################################################
-=head2 template
+=head2 models
 
- Function: Sets the L<SBG::Domain> used to model one of the L<SBG::Nodes>
- Example : $interaction->template($node1, $dom1);
- Returns : The L<SBG::Domain> used to model $node for this L<SBG::Interaction>
+ Function: Sets the L<SBG::Model> used to model one of the L<SBG::Node>s
+ Example : my $model = new SBG::Model(query=>$myseq, subject=>$mydomain);
+           $interaction->put($mynode, $model);
+           my $model = $interaction->at($node1);
+           my ($seq, $domain) = ($model->query, $model->subject);
+ Returns : The L<SBG::Model> used to model a given L<SBG::Node>
  Args    : L<SBG::Node>
-           optional L<SBG::Domain> 
+           L<SBG::Model> 
 
 my ($node1, $node2) = $interaction->nodes;
-$interaction->template($node1,$dom1);
-$interaction->template($node2,$dom2);
+my $model1 = new SBG::Model(query=>$node1->proteins, $template_domain1);
+$interaction->put($node1,$model1);
+my $model1 = $interaction->at($node1);
 
 =cut
-hashfield 'template', 'templates';
-
-
-################################################################################
-=head2 score
-
- Function:
- Example : $ix->score('e-value', 3e-3);
- Returns :
- Args    :
-
-keys: zscore pval irmsd
-=cut
-hashfield 'score';
-
+has 'models' => (
+    is => 'rw',
+    isa => 'HashRef[SBG::Model]',
+    lazy => 1,
+    default => sub { {} },
+    handles => [ qw/put at delete keys values/ ],
+    );
 
 
 ################################################################################
@@ -101,51 +100,7 @@ override 'new' => sub {
 };
 
 
-################################################################################
-=head2 names
-
- Title   : names
- Usage   :
- Function:
- Example :
- Returns : 
- Args    :
-
-
-=cut
-sub names {
-   my ($self,@args) = @_;
-   return sort keys %{$self->{template}};
-}
-
-
-################################################################################
-=head2 ascsv
-
- Function: Return tab-separated line of components and their templates 
- Example : 
- Returns : 
- Args    : 
-
-E.g.:
-
-RRP41 RRP42  2br2 { A 108 _ to A 148 _ } 2br2 { D 108 _ to D 148 _ } 
-
-See L<SBG::NetworkIO>
-
-=cut
-sub ascsv {
-    my ($self,) = @_;
-    my ($node1, $node2) = sort $self->nodes;
-    my ($templ1, $templ2) = map { $self->template($_) } ($node1, $node2);
-    my ($dom1, $dom2) = map { $_->domain } ($templ1, $templ2);
-    my ($pdb1, $pdb2) = map { $_->pdbid } ($dom1, $dom2);
-    my ($descr1, $descr2) = map { $_->descriptor } ($dom1, $dom2);
-    return "$node1\t$node2\t$pdb1\t{ $descr1 }\t$pdb2\t{ $descr2 }";
-}
-
-
-sub _asstring {
+sub stringify {
     my ($self) = @_;
     return $self->primary_id;
 }
@@ -153,8 +108,7 @@ sub _asstring {
 
 ###############################################################################
 __PACKAGE__->meta->make_immutable(inline_constructor=>0);
+no Moose;
 1;
-
-__END__
 
 
