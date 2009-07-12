@@ -25,16 +25,28 @@ L<Bio::Seq>
 package SBG::Seq;
 use Moose;
 extends qw/Bio::Seq Moose::Object/;
-with 'SBG::Role::Storable';
+
+with qw/
+SBG::Role::Storable
+/;
 
 use overload (
-    '""' => '_asstring',
+    '""' => 'stringify',
     'cmp' => '_compare',
     fallback => 1,
     );
 
-################################################################################
 
+################################################################################
+=head2 new
+
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
+
+
+=cut
 override 'new' => sub {
     my ($class, %ops) = @_;
     
@@ -49,18 +61,22 @@ override 'new' => sub {
     return $obj;
 };
 
-sub _asstring {
+
+sub stringify {
     my ($self) = @_;
     return $self->accession_number;
 }
+
 
 sub _compare {
     my ($a, $b) = @_;
     return $a->accession_number cmp $b->accession_number;
 }
 
+
 ###############################################################################
 __PACKAGE__->meta->make_immutable(inline_constructor => 0);
+no Moose;
 1;
 
 

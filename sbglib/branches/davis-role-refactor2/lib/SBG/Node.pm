@@ -30,15 +30,23 @@ extends qw/Bio::Network::Node Moose::Object/;
 with 'SBG::Role::Storable';
 
 use overload (
-    '""' => '_asstring',
+    '""' => 'stringify',
     'cmp' => '_compare',
     fallback => 1,
     );
 
 
+
 ################################################################################
+=head2 new
+
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
 
 
+=cut
 override 'new' => sub {
     my ($class, %ops) = @_;
     
@@ -54,7 +62,7 @@ override 'new' => sub {
 };
 
 
-sub _asstring {
+sub stringify {
     my ($self) = @_;
     return join(",", $self->proteins);
 } # _asstring
@@ -71,5 +79,6 @@ sub _compare {
 
 ###############################################################################
 __PACKAGE__->meta->make_immutable(inline_constructor => 0);
+no Moose;
 1;
 
