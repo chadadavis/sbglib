@@ -143,7 +143,7 @@ TODO doc
 sub build {
     my ($self, $searcher) = @_;
     unless ($searcher && $searcher->does('SBG::SearchI')) {
-        $logger->erorr("Need a SBG::SearchI to do the template search");
+        log()->erorr("Need a SBG::SearchI to do the template search");
         return;
     }
     # For all pairs
@@ -171,7 +171,7 @@ sub graphviz {
     $file ||= 'graph.dot';
     my $fh;
     unless (open $fh, ">$file") {
-        $logger->error("Cannot write to: ", $file, " ($!)");
+        log()->error("Cannot write to: ", $file, " ($!)");
         return;
     }
     return unless $graph && $fh;
