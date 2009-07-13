@@ -48,13 +48,13 @@ use overload (
 
 =cut
 override 'new' => sub {
-    my ($class, %ops) = @_;
+    my ($class, @ops) = @_;
     
-    my $obj = $class->SUPER::new(%ops);
+    my $obj = $class->SUPER::new(@ops);
 
     # This appends the object with goodies from Moose::Object
     # __INSTANCE__ place-holder fulfilled by $obj 
-    $obj = $class->meta->new_object(__INSTANCE__ => $obj, %ops);
+    $obj = $class->meta->new_object(__INSTANCE__ => $obj);
 
     # bless'ing should be automatic!
     bless $obj, $class;
