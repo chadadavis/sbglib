@@ -10,7 +10,7 @@ use SBG::U::Log qw/log/;
 log()->init('TRACE');
 $File::Temp::KEEP_ALL = 1;
 
-use SBG::STAMP qw/superpose/;
+use SBG::STAMP qw/superposition/;
 use SBG::Domain;
 use SBG::DomainIO::pdb;
 use PDL;
@@ -24,7 +24,7 @@ my $domb = SBG::Domain->new(pdbid=>'2br2', descriptor=>'CHAIN B');
 my $domd = SBG::Domain->new(pdbid=>'2br2', descriptor=>'CHAIN D');
 
 # A simple superposition, homologous whole chains
-$atod_sup = superpose($doma, $domd);
+$atod_sup = superposition($doma, $domd);
 # The value computed externally by STAMP, the reference values
 my $atod_expect = pdl
  [ -0.55482 ,  0.24558 , -0.79490 ,     -52.48704 ],
@@ -34,16 +34,16 @@ my $atod_expect = pdl
 # Verify approximate equality
 pdl_approx($atod_sup->transformation->matrix,
            $atod_expect,
-           "superpose($doma, $domd)",
+           "superposition($doma, $domd)",
            $toler);
 
 
 # The opposite superposition should have the inverse transformation matrix
-$dtoa_sup = superpose($domd, $doma);
+$dtoa_sup = superposition($domd, $doma);
 my $dtoa_expect = $atod_expect->inv;
 pdl_approx($dtoa_sup->transformation->matrix,
            $dtoa_expect,
-           "superpose($domd, $doma)",
+           "superposition($domd, $doma)",
            $toler);
 
 
@@ -51,7 +51,7 @@ pdl_approx($dtoa_sup->transformation->matrix,
 # Get domains for two chains of interest
 my $dombseg = new SBG::Domain(pdbid=>'2br2', descriptor=>'B 8 _ to B 248 _');
 my $domdseg = new SBG::Domain(pdbid=>'2br2', descriptor=>'D 8 _ to D 248 _');
-my $seg_sup = superpose($dombseg, $domdseg);
+my $seg_sup = superposition($dombseg, $domdseg);
 # The value computed externally by STAMP, the reference values
 my $seg_expect = pdl
  [ 0.11083 ,  0.04249 ,  0.99293 ,       9.30896 ],
@@ -61,7 +61,7 @@ my $seg_expect = pdl
 # Verify approximate equality
 pdl_approx($seg_sup->transformation->matrix,
            $seg_expect,
-           "superpose($dombseg, $domdseg)",
+           "superposition($dombseg, $domdseg)",
            $toler);
 
 
@@ -78,7 +78,7 @@ pdl_approx($seg_sup->transformation->matrix,
 my $d2br2d = new SBG::Domain(pdbid=>'2br2', descriptor=>'CHAIN D');
 my $d2br2b = new SBG::Domain(pdbid=>'2br2', descriptor=>'CHAIN B');
 # The basic transformation
-my $superp = superpose($d2br2d, $d2br2b);
+my $superp = superposition($d2br2d, $d2br2b);
 my $transf = $superp->transformation;
 
 # Now get the native dimer: (round 0)
@@ -107,7 +107,7 @@ my @doms = ($d2br2d0,$d2br2a0,$d2br2d1,$d2br2a1,$d2br2d2,$d2br2a2);
 my $io = new SBG::DomainIO::pdb(tempfile=>1);
 $io->write(@doms);
 my $file = $io->file;
-if (ok(-r $file, "Should find a hexamer in: $file")) {
+if (ok(-r $file, "Should find a hexamer in PDB file: $file")) {
 #     `rasmol $file 2>/dev/null`;
 }
 
