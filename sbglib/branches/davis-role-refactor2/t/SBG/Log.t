@@ -2,7 +2,7 @@
 
 use Test::More 'no_plan';
 
-use SBG::U::Log;
+use SBG::U::Log qw/log/;
 
 ok(log()->warn("Testing warn()"));
 ok(log()->error("Testing error()"));
