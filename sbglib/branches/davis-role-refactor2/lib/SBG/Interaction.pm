@@ -41,8 +41,8 @@ use overload (
     fallback => 1,
     );
 
-use Moose::Autobox;
 
+use MooseX::AttributeHelpers;
 use SBG::Model;
 
 
@@ -51,8 +51,8 @@ use SBG::Model;
 
  Function: Sets the L<SBG::Model> used to model one of the L<SBG::Node>s
  Example : my $model = new SBG::Model(query=>$myseq, subject=>$mydomain);
-           $interaction->put($mynode, $model);
-           my $model = $interaction->at($node1);
+           $interaction->set($mynode, $model);
+           my $model = $interaction->get($node1);
            my ($seq, $domain) = ($model->query, $model->subject);
  Returns : The L<SBG::Model> used to model a given L<SBG::Node>
  Args    : L<SBG::Node>
@@ -60,16 +60,24 @@ use SBG::Model;
 
 my ($node1, $node2) = $interaction->nodes;
 my $model1 = new SBG::Model(query=>$node1->proteins, $template_domain1);
-$interaction->put($node1,$model1);
-my $model1 = $interaction->at($node1);
+$interaction->set($node1,$model1);
+my $model1 = $interaction->get($node1);
 
 =cut
 has 'models' => (
-    is => 'rw',
+    metaclass => 'Collection::Hash',
     isa => 'HashRef[SBG::Model]',
+    is => 'ro',
     lazy => 1,
-    default => sub { {} },
-    handles => [ qw/put at delete keys values/ ],
+    default => sub { { } },
+    provides => {
+        'count' => 'count',
+        'get' => 'get',
+        'set' => 'set',
+        'delete' => 'delete',
+        'keys' => 'keys',
+        'values' => 'values',
+    },
     );
 
 
@@ -85,14 +93,14 @@ Delegates to L<Bio::Network::Interaction>
 
 =cut
 override 'new' => sub {
-    my ($class, %ops) = @_;
+    my ($class, @ops) = @_;
     
     # This creates a Bio::Network::Interaction
-    my $obj = $class->SUPER::new(%ops);
+    my $obj = $class->SUPER::new(@ops);
 
     # This appends the Bio::Network:: with goodies from Moose::Object
     # __INSTANCE__ place-holder fulfilled by $obj (Bio::Network::Interaction)
-    $obj = $class->meta->new_object(__INSTANCE__ => $obj, %ops);
+    $obj = $class->meta->new_object(__INSTANCE__ => $obj);
 
     # bless'ing should be automatic!
     bless $obj, $class;

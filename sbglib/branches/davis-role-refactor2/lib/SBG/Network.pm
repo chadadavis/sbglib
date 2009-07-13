@@ -41,8 +41,6 @@ use overload (
     );
 
 
-################################################################################
-
 
 ################################################################################
 =head2 new
@@ -65,14 +63,14 @@ to not be able to store/retrieve a SBG::Network correctly.
 
 =cut
 override 'new' => sub {
-    my ($class, %ops) = @_;
+    my ($class, @ops) = @_;
     
     # This creates a Bio::Network::ProteinNet
-    my $obj = $class->SUPER::new(refvertexed=>0, %ops);
+    my $obj = $class->SUPER::new(refvertexed=>0, @ops);
 
     # This appends the object with goodies from Moose::Object
     # __INSTANCE__ place-holder fulfilled by $obj 
-    $obj = $class->meta->new_object(__INSTANCE__ => $obj, %ops);
+    $obj = $class->meta->new_object(__INSTANCE__ => $obj);
 
     # bless'ing should be automatic!
     bless $obj, $class;
@@ -224,6 +222,7 @@ sub _asstring {
 
 ###############################################################################
 __PACKAGE__->meta->make_immutable(inline_constructor=>0);
+no Moose;
 1;
 
 
