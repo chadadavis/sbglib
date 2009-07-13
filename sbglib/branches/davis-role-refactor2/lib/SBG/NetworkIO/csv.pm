@@ -2,7 +2,7 @@
 
 =head1 NAME
 
-SBG::NetworkIO::csv - Reads interactions and their templates from file
+SBG::NetworkIO::csv - Reads interactions and their templates from CSV file
 
 =head1 SYNOPSIS
 
@@ -15,8 +15,7 @@ SBG::NetworkIO::csv - Reads interactions and their templates from file
 =head1 DESCRIPTION
 
 Input routines for building up L<SBG::Interaction> objects from CSV file
-input. Produces a L<Bio::Network::ProteinNet> from them, which is also a
-L<Graph>.
+input. Produces a L<SBG::Network> from them.
 
 The input format contains one interaction per line, with this format:
 
@@ -27,10 +26,8 @@ Where:
 component1/component2 are labels for the interacting proteins. These can be any
 label, but accession numbers, e.g. UniProt would be sensible.
 
-template1/template2 are any labels for the structures upon which
-component1/component2 are modelled. These can be any labels, but L<SBG::STAMP>
-prefers it when the first four characters of the label are the PDB ID (case
-insensitive) of the model structure.
+pdbid1/pdbid2 are PDB identifiers for the structures upon which
+component1/component2 are modelled.
 
 The descriptors are regular STAMP descriptors, in { braces }.  See:
 
@@ -58,16 +55,14 @@ with qw/
 SBG::IOI
 /;
 
-use Text::ParseWords;
-use Bio::Network::ProteinNet;
+use MooseX::AttributeHelpers;
+use Text::ParseWords qw/parse_line/;
 
 use SBG::Network;
 use SBG::Interaction;
 use SBG::Node;
 use SBG::Seq;
 use SBG::Domain;
-use SBG::Template;
-use SBG::U::List qw(pairs);
 
 
 ################################################################################
@@ -85,10 +80,43 @@ NB you cannot do this with Domain's, even if they are effectively equal.
 Because a Domain can be later transformed, but those are all independent.
 
 =cut
-has 'node' => (
-    is => 'rw',
-    isa => 'HashRef',
+has 'nodes' => (
+    is => 'ro',
+    isa => 'HashRef[SBG::Node]',
+    metaclass => 'Collection::Hash',
+    lazy => 1,
+    default => sub { { } },
+    provides => {
+        'get' => 'get',
+        'set' => 'set',
+    }
     );
+
+
+################################################################################
+=head2 write
+
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
+
+
+=cut
+sub write {
+    my ($self, $net) = @_;
+    my $fh = $self->fh or return;
+    foreach my $iaction ($net->interactions) {
+        my @nodes = $iaction->nodes;
+        my @doms = map { $iaction->get($_)->subject } @nodes;
+        my @ids = map { $doms[$_]->id } (0..$#doms);
+        my @descrs = map { $doms[$_]->descriptor } (0..$#doms);
+        printf $fh 
+            "%s\t%s\t%s\t{ %s }\t%s\t{ %s }\n",
+            @nodes, $ids[0], $descrs[0], $ids[1], $descrs[1];
+    }
+    return $self;
+} # write
 
 
 ################################################################################
@@ -105,60 +133,31 @@ RRP41 RRP42  2br2 { CHAIN A } 2br2 { CHAIN B }
 # or
 RRP41 RRP42  2br2 { A 5 _ to A 220 _ } 2br2 { B 1 _ to B 55 _ }
 
-Set 'extract' to true to try to get interactions out of comment lines too
 =cut
 sub read {
-    my ($self, $extract) = @_;
+    my ($self) = @_;
     my $fh = $self->fh;
 
     my $net = new SBG::Network;
 
     while (<$fh>) {
-        next if !$extract && (/^\s*\#/ || /^\s*\%/ || /^\s*$/);
+        next if (/^\s*\#/ || /^\s*\%/ || /^\s*$/);
         chomp;
 
-        my ($comp1, $comp2, $pdbid1, $descr1, $pdbid2, $descr2) = 
-            _parse_line($_) or next;
-
-        my $interaction = $self->_make_interaction(
-            $comp1, $comp2, $pdbid1, $descr1, $pdbid2, $descr2);
+        my ($iaction, @nodes) = 
+            $self->_parse_line($_) or next;
 
         # Now put it all into the ProteinNet. 
         # Now there is a formal association beteen Interaction and it's Node's
-        $net->add_interaction(
-            -nodes => [$self->node->{$comp1}, $self->node->{$comp2}], 
-            -interaction => $interaction,
-            );
+        $net->add_interaction(-nodes => [ @nodes ], -interaction => $iaction);
+
     }
-    # End of file
     return $net;
 } # read
 
 
-sub _make_node {
-    my ($self, $comp, $pdbid, $descr) = @_;
-    my $seq = new SBG::Seq(-accession_number=>$comp);
-    $self->node->{$comp} ||= new SBG::Node($seq);
-    my $node = $self->node->{$comp};
-    my $dom = new SBG::Domain(pdbid=>$pdbid,descriptor=>$descr);
-    my $templ = new SBG::Template(seq=>$seq,domain=>$dom);
-    return ($node, $templ);
-}
-
-sub _make_interaction {
-    my ($self, $comp1, $comp2, $pdbid1, $descr1, $pdbid2, $descr2) = @_;
-    my ($node1, $templ1) = $self->_make_node($comp1, $pdbid1, $descr1);
-    my ($node2, $templ2) = $self->_make_node($comp2, $pdbid2, $descr2);
-    my $iactionid = "$templ1--$templ2";
-    my $iaction = new SBG::Interaction(-id=>$iactionid);
-    $iaction->template($node1,$templ1);
-    $iaction->template($node2,$templ2);
-    return $iaction;
-}
-
-
 sub _parse_line {
-   my ($line) = @_;
+   my ($self, $line) = @_;
 
    # Get the stuff in { brackets } first: the STAMP domain descriptors
    my ($head, $descr1, $pdbid2, $descr2, $score) = 
@@ -173,10 +172,35 @@ sub _parse_line {
        warn("Cannot parse interaction line:\n", $line);
        return;
    }
-   return ($comp1, $comp2, $pdbid1, $descr1, $pdbid2, $descr2, $score);
+
+   my ($node1, $model1) = $self->_make_node($comp1, $pdbid1, $descr1);
+   my ($node2, $model2) = $self->_make_node($comp2, $pdbid2, $descr2);
+
+   my $iaction = new SBG::Interaction(
+       models=>{ $node1=>$model1, $node2=>$model2, }
+       );
+
+   return ($iaction, $node1, $node2);
 
 } # _parse_line
 
+
+sub _make_node {
+    my ($self, $accno, $pdbid, $descr) = @_;
+    # Check cached nodes before creating new ones
+    my $node = $self->get($accno);
+    my $seq;
+    unless (defined $node) {
+        $seq = new SBG::Seq(-accession_number=>$accno);
+        $node = new SBG::Node($seq);
+        $self->set($accno, $node)
+    }
+    ($seq) = $node->proteins unless defined $seq;
+    my $dom = new SBG::Domain(pdbid=>$pdbid,descriptor=>$descr);
+    my $model = new SBG::Model(query=>$seq, subject=>$dom);
+
+    return ($node, $model);
+}
 
 
 ################################################################################
