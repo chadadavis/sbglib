@@ -74,11 +74,18 @@ has 'models' => (
         'count' => 'count',
         'get' => 'get',
         'set' => 'set',
-        'delete' => 'delete',
         'keys' => 'keys',
         'values' => 'values',
     },
+    # If models is changed, including in new()
+    trigger => sub { (shift)->_update_id },
     );
+
+# If 'set' is ever called, update primary_id
+after 'set' => sub {
+    my ($self) = @_;
+    $self->_update_id;
+};
 
 
 ################################################################################
@@ -100,12 +107,20 @@ override 'new' => sub {
 
     # This appends the Bio::Network:: with goodies from Moose::Object
     # __INSTANCE__ place-holder fulfilled by $obj (Bio::Network::Interaction)
-    $obj = $class->meta->new_object(__INSTANCE__ => $obj);
+    # NB @ops is passed here, as this object has Moose attributes
+    $obj = $class->meta->new_object(__INSTANCE__ => $obj, @ops);
 
     # bless'ing should be automatic!
     bless $obj, $class;
+
     return $obj;
 };
+
+
+sub _update_id {
+    my ($self) = @_;
+    $self->primary_id(join('--', $self->values));
+}
 
 
 sub stringify {
