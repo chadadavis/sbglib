@@ -45,11 +45,6 @@ SBG::Role::Transformable
 /; 
 
 
-# Get address of a reference
-use Scalar::Util qw(refaddr);
-
-use Carp qw/carp cluck/;
-
 # You will need to redefine this (i.e. copy) it to implementing classes
 # The methods themselves will be consumed via this role, however.
 # I.e. just the overload needs to be explicitly redfined in implementing classes.
@@ -58,6 +53,11 @@ use overload (
     '==' => 'equal',
     fallback => 1,
     );
+
+
+# Get address of a reference
+use Scalar::Util qw(refaddr);
+
 
 use PDL::Lite;
 use PDL::Core qw/pdl/;
