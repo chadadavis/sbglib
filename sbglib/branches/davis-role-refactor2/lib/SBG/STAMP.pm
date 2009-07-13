@@ -28,7 +28,7 @@ use warnings;
 use base qw/Exporter/;
 
 our @EXPORT_OK = qw/
-superpose
+superposition
 /;
 
 use File::Temp;
@@ -41,7 +41,7 @@ use SBG::U::Log qw/log/;
 
 
 ################################################################################
-=head2 superpose
+=head2 superposition
 
  Function: Calculates superposition required to put $fromdom onto $ontodom
  Example :
@@ -57,7 +57,7 @@ considered here. I.e. the transformation will be the one that places the native
 orientation of B<$fromdom> onto the native orientation of B<$ontodom> .
 
 =cut
-sub superpose {
+sub superposition {
     my ($fromdom, $ontodom) = @_;
     if ($fromdom == $ontodom) {
         log()->trace("Identity: $fromdom");
@@ -110,7 +110,7 @@ sub superpose {
     unlink $scanfile unless $File::Temp::KEEP_ALL;
     return $superpos;
 
-} # superpose
+} # superposition
 
 
 # Write domains to temporary files and create output tempfile for STAMP
