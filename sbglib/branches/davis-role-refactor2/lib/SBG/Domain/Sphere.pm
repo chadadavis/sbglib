@@ -118,7 +118,7 @@ Just aliases L<overlap_lin> for now
 
 =cut
 sub overlap {
-    overlap_lin(@_);
+    overlap_lin_frac(@_);
 }
 
 
@@ -155,6 +155,45 @@ sub overlap_lin {
     SBG::U::Log::log()->debug("$diff overlap between ($self) and ($other)");
     return $diff;
 } # overlap_lin
+
+
+################################################################################
+=head2 overlap_lin_max
+
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
+
+
+=cut
+sub overlap_lin_max {
+    my ($self, $other) = @_;
+    # Max possible overlap: twice the smaller radius
+    my $max = 2 * List::Util::min($self->radius, $other->radius);
+    return $max;
+
+} # overlap_lin_max
+
+
+################################################################################
+=head2 overlap_lin_frac
+
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
+
+
+=cut
+sub overlap_lin_frac {
+    my ($self, $other) = @_;
+    my $max = 2 * List::Util::min($self->radius, $other->radius);
+    my $overlap = $self->overlap_lin($other);
+    return 1.0 * $overlap / $max;
+
+} # overlap_lin_frac
+
 
 
 ################################################################################
