@@ -14,19 +14,18 @@ SBG::GeometricHash - A 3-dimensional geometric hash, with optional point labels
 
 =head1 DESCRIPTION
 
-3D geometric hash, for indexing things described by points in 3D, e.g. molecular
- structures.
+3D geometric hash, for indexing things described by points in 3D, e.g. atomic
+structures.
 
 Each point can have a label.  When querying with a label, the labels must much.
 If a model is saved with labels, but the query provides no labels, any model
-will match, labelled or not.  I.e. using a label requires matching, if you don't
-care about labels, they don't get in the way, though.
+will match, labelled or not.  I.e. using a label requires matching, but if you
+don't care about labels, they will not get in the way.
 
-Now provides a	method exact() that allows one to only retrieve	models that were\
- the same size	(same #	of points) as the current query.
-For simply finding models that	are a superset of the current query, the	method \
-class() is appropriate.
 
+Provides a method exact() that allows one to only retrieve models that were the
+same size (same # of points) as the current query.  For simply finding models
+that are a superset of the current query, the method class() is appropriate.
 
 
 =head1 SEE ALSO
@@ -47,7 +46,6 @@ The (incomplete) interface is based on L<Moose::Autobox::Hash>
 
 =cut
 
-################################################################################
 
 package SBG::GeometricHash;
 
@@ -66,7 +64,6 @@ use Math::Round qw/nearest/;
 
 use SBG::U::Log qw/log/;
 
-################################################################################
 
 ################################################################################
 =head2 new
@@ -76,7 +73,7 @@ use SBG::U::Log qw/log/;
  Returns : 
  Args    : 
 
-_gh is a hash of ArrayRef
+_gh is a HashRef of ArrayRef
 
 =cut
 sub new {
@@ -87,11 +84,6 @@ sub new {
     $self->{binsize} ||= 1;
     return $self;
 }
-
-
-
-################################################################################
-# Public
 
 
 ################################################################################
@@ -164,7 +156,7 @@ sub exact {
     # Models the same size as the query:
     my @a;
     my ($bijection) = grep { @a=split; $a[1] == @$points } @covers;
-    $logger->debug($bijection || '<none>');
+    log()->debug($bijection || '<none>');
     return unless $bijection;
     my @f = split / /, $bijection;
     return $f[0];
@@ -189,7 +181,7 @@ sub at {
 
     # Get an array of points into a matrix;
     my $model = _model($points);
-    $logger->trace($model);
+    log()->trace($model);
 
     # Determine a basis transformation, to put model in a common frame of ref
     # Arbitrarily use first three points here, but any three would work
@@ -266,7 +258,7 @@ sub put {
     # Get an array of points into a matrix;
     my $model = _model($points);
 
-    $logger->trace($model);
+    log()->trace($model);
 
     # For each triple of points, define a basis,
     # Then hash all of the points after transforming into that basis
@@ -292,7 +284,7 @@ sub put {
 
 sub _one_basis {
     my ($self,$modelid, $model, $i, $j, $k, $labels) = @_;
-    $logger->trace(join(' ', $modelid, $i, $j, $k));
+    log()->trace(join(' ', $modelid, $i, $j, $k));
     # Determine a basis transformation, to put model in a common frame of ref
     my $t = _basis($model, $i, $j, $k);
     # Transform all points using this basis
@@ -408,7 +400,7 @@ http://en.wikipedia.org/wiki/Atan2
 =cut
 sub _basis {
     my ($model, $i, $j, $k) = @_;
-    $logger->trace("$i $j $k");
+    log()->trace("$i $j $k");
 
     # $model_$i is the new origin
     my $translation = zeroes(3) - $model(,$i);
@@ -422,11 +414,11 @@ sub _basis {
     # First rotation, from Y-axis toward X-axis, about Z-axis
     # This gets b1 into the XZ plane
     my ($x,$y,$z) = $b1->list;
-    $logger->warn("Y and X both 0, basis undefined") if 0==$y && 0==$x;    
+    log()->warn("Y and X both 0, basis undefined") if 0==$y && 0==$x;    
     # Angle between line (0,0)->(x,y) and the x-axis, which is the angle to
     # rotate by, from the y-axis, toward the x-axis, about the z-axis
     my $ry2x = rad2deg atan2 $y, $x;
-    $logger->trace("y=>x $ry2x deg ($x,$y,$z)");
+    log()->trace("y=>x $ry2x deg ($x,$y,$z)");
     my $t_ry2x = t_rot([0,0,$ry2x],dims=>3);
     $b1 = $t_ry2x->apply($b1);
     $b2 = $t_ry2x->apply($b2);
@@ -435,13 +427,13 @@ sub _basis {
     # here, to get b1 onto the XY plane. Now b1 will be in the X-axis, since XZ
     # plane and XY plane intersect at the X-axis.
     ($x, $y, $z) = $b1->list;
-    $logger->warn("X and Z both 0, basis undefined") if 0==$x && 0==$z;
+    log()->warn("X and Z both 0, basis undefined") if 0==$x && 0==$z;
     # $z = rise and $x = run here, since we're rotating backward. Sign still
     # needs to be negative as well, however.  This is the angle between the line
     # (0,0)->(x,z) and the X-axis (not Z-axis). Since PDL::Transform rotates
     # from X-axis, toward Z-axis, sign is negative
     my $rx2z = - rad2deg atan2 $z, $x;
-    $logger->trace("x=>z $rx2z deg ($x,$y,$z)");
+    log()->trace("x=>z $rx2z deg ($x,$y,$z)");
     my $t_rx2z = t_rot([0,$rx2z,0],dims=>3);
     $b1 = $t_rx2z->apply($b1);
     $b2 = $t_rx2z->apply($b2);
@@ -449,16 +441,16 @@ sub _basis {
     # Third rotation, from Z-axis to Y-axis, about X-axis
     # This will leave $b1 on the X-axis, $b0 is rotated into the XY plane
     ($x, $y, $z) = $b2->list;
-    $logger->warn("Z and Y both 0, basis undefined") if 0==$z && 0==$y;
+    log()->warn("Z and Y both 0, basis undefined") if 0==$z && 0==$y;
     # Angle between line (0,0)->(y,z) and the y-axis, which is the angle to
     # rotate by, from the z-axis, toward the y-axis, about the x-axis
     my $rz2y = rad2deg atan2 $z, $y;
-    $logger->trace("z=>y $rz2y deg ($x,$y,$z)");
+    log()->trace("z=>y $rz2y deg ($x,$y,$z)");
     my $t_rz2y = t_rot([$rz2y,0,0],dims=>3);
 
     # Composite transform:
     my $rot = [ $rz2y, $rx2z, $ry2x ];
-    $logger->trace("Rot @$rot");
+    log()->trace("Rot @$rot");
     # Right-to-left composition of transformation matrices
     my $t = $t_rz2y x $t_rx2z x $t_ry2x x $t_o;
     return $t;
