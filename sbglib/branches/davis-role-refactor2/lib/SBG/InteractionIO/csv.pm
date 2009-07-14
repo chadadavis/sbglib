@@ -25,7 +25,6 @@ with qw/
 SBG::IOI
 /;
 
-use MooseX::AttributeHelpers;
 use Moose::Autobox;
 use Carp;
 
@@ -58,15 +57,26 @@ Because a Domain can be later transformed, but those are all independent.
 has '_nodes' => (
     is => 'ro',
     isa => 'HashRef[SBG::Node]',
-    metaclass => 'Collection::Hash',
     lazy => 1,
     default => sub { { } },
-    provides => {
-        'get' => 'get',
-        'set' => 'set',
-        'count' => 'count',
-    }
     );
+
+
+################################################################################
+=head2 count
+
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
+
+
+=cut
+sub count {
+    my ($self,) = @_;
+    return $self->_nodes->keys->length;
+
+} # count
 
 
 ################################################################################
@@ -86,8 +96,9 @@ sub write {
     my $fh = $self->fh or return;
 
     foreach my $iaction (@interactions) {
+        next unless $iaction->nodes;
         my $nodes = [ $iaction->nodes ];
-        my $models = $nodes->map({ $iaction->at($_) });
+        my $models = $nodes->map({ $iaction->models->at($_) });
         my $doms = $models->map({ $_->subject });
         my $pdbs = $doms->map({ $_->pdbid });
         my $descrs = $pdbs->map({ $_->descriptor });
@@ -161,12 +172,12 @@ sub read {
 sub _make_node {
     my ($self, $accno, $pdbid, $descr) = @_;
     # Check cached nodes before creating new ones
-    my $node = $self->get($accno);
+    my $node = $self->_nodes->at($accno);
     my $seq;
     unless (defined $node) {
         $seq = new SBG::Seq(-accession_number=>$accno);
         $node = new SBG::Node($seq);
-        $self->set($accno, $node)
+        $self->_nodes->put($accno, $node)
     }
     ($seq) = $node->proteins unless defined $seq;
     my $dom = new SBG::Domain(pdbid=>$pdbid,descriptor=>$descr);

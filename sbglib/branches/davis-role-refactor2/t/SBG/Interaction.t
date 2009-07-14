@@ -10,7 +10,7 @@ use SBG::Model;
 use SBG::Node;
 use SBG::Seq;
 use SBG::Domain;
-
+use Moose::Autobox;
 
 # Setup a Network Interaction object
 # RRP45 and RRP41
@@ -27,14 +27,14 @@ my @templates = map {
 my @models = map { 
     new SBG::Model(query=>$nodes[$_], subject=>$templates[$_]) 
 } (0..$#seqs);
+
 # An interaction (model) connects two nodes, each has a model
-# my $interaction = new SBG::Interaction(-nodes=>[@nodes]);
-my $interaction = new SBG::Interaction(-nodes=>[@nodes]);
+my $interaction = new SBG::Interaction;
 # Note which nodes have which models, for this interaction
-$interaction->set($nodes[$_],$models[$_]) for (0..$#seqs);
+$interaction->models->put($nodes[$_],$models[$_]) for (0..$#seqs);
 
 # Sanity test
-my @gotmodels = map { $interaction->get($_) } @nodes;
+my @gotmodels = map { $interaction->models->at($_) } @nodes;
 
 is($gotmodels[$_], $models[$_], "Storing models in Interaction by Node") 
     for (0..$#nodes);

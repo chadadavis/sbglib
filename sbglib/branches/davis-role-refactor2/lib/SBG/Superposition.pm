@@ -22,12 +22,11 @@ L<SBG::TransformI> , L<SBG::ContainerI> , L<SBG::DomainI>
 package SBG::Superposition;
 use Moose;
 
-with qw/
-SBG::Role::Storable
-SBG::Role::Dumpable
-SBG::Role::Clonable
-SBG::Role::Transformable
-/;
+
+with 'SBG::Role::Dumpable';
+with 'SBG::Role::Scorable';
+with 'SBG::Role::Storable';
+with 'SBG::Role::Transformable';
 
 
 use Scalar::Util qw/refaddr/;

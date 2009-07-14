@@ -38,12 +38,10 @@ package SBG::TransformI;
 use Moose::Role;
 use Moose::Util::TypeConstraints;
 
-with qw/
-SBG::Role::Storable
-SBG::Role::Dumpable
-SBG::Role::Clonable
-SBG::Role::Transformable
-/;
+
+with 'SBG::Role::Dumpable';
+with 'SBG::Role::Storable';
+with 'SBG::Role::Transformable';
 
 
 # NB this is not carried into implementing classes.

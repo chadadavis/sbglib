@@ -37,12 +37,12 @@ http://www.compbio.dundee.ac.uk/manuals/stamp.4.2/node29.html
 package SBG::DomainI;
 use Moose::Role;
 
-with qw/
-SBG::Role::Storable
-SBG::Role::Dumpable
-SBG::Role::Clonable
-SBG::Role::Transformable
-/; 
+
+with 'SBG::Role::Clonable';
+with 'SBG::Role::Dumpable';
+with 'SBG::Role::Scorable';
+with 'SBG::Role::Storable';
+with 'SBG::Role::Transformable';
 
 
 # You will need to redefine this (i.e. copy) it to implementing classes

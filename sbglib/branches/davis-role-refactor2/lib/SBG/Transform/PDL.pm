@@ -26,12 +26,8 @@ http://www.compbio.dundee.ac.uk/manuals/stamp.4.2/node29.html
 package SBG::Transform::PDL;
 use Moose;
 
-with qw/
-SBG::TransformI
-SBG::Role::Storable
-SBG::Role::Dumpable
-SBG::Role::Clonable
-/;
+with 'SBG::TransformI';
+
 
 # NB overload does not provide dynamic dispatch
 # Not sufficient to simply override, e.g. 'compose()', in subclass

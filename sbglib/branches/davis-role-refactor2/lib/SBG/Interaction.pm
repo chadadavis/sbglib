@@ -29,12 +29,11 @@ use Moose;
 # Order is relevant here, first class listed provides 'new()' method
 extends qw/Bio::Network::Interaction Moose::Object/;
 
-with qw/
-SBG::Role::Storable
-SBG::Role::Dumpable
-SBG::Role::Clonable
-SBG::Role::Scorable
-/;
+
+with 'SBG::Role::Dumpable';
+with 'SBG::Role::Scorable';
+with 'SBG::Role::Storable';
+
 
 use overload (
     '""' => 'stringify',
@@ -42,7 +41,7 @@ use overload (
     );
 
 
-use MooseX::AttributeHelpers;
+use Moose::Autobox;
 use SBG::Model;
 
 
@@ -51,8 +50,8 @@ use SBG::Model;
 
  Function: Sets the L<SBG::Model> used to model one of the L<SBG::Node>s
  Example : my $model = new SBG::Model(query=>$myseq, subject=>$mydomain);
-           $interaction->set($mynode, $model);
-           my $model = $interaction->get($node1);
+           $interaction->put($mynode, $model);
+           my $model = $interaction->at($node1);
            my ($seq, $domain) = ($model->query, $model->subject);
  Returns : The L<SBG::Model> used to model a given L<SBG::Node>
  Args    : L<SBG::Node>
@@ -60,32 +59,44 @@ use SBG::Model;
 
 my ($node1, $node2) = $interaction->nodes;
 my $model1 = new SBG::Model(query=>$node1->proteins, $template_domain1);
-$interaction->set($node1,$model1);
-my $model1 = $interaction->get($node1);
+$interaction->put($node1,$model1);
+my $model1 = $interaction->at($node1);
 
 =cut
 has 'models' => (
-    metaclass => 'Collection::Hash',
     isa => 'HashRef[SBG::Model]',
     is => 'ro',
     lazy => 1,
-    default => sub { { } },
-    provides => {
-        'count' => 'count',
-        'get' => 'get',
-        'set' => 'set',
-        'keys' => 'keys',
-        'values' => 'values',
-    },
-    # If models is changed, including in new()
-    trigger => sub { (shift)->_update_id },
+    default => sub { {} },
     );
 
-# If 'set' is ever called, update primary_id
-after 'set' => sub {
-    my ($self) = @_;
-    $self->_update_id;
-};
+
+
+################################################################################
+=head2 set/get/keys
+
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
+
+Shouldn't be necessary, but neither L<Moose::Autobox> nor
+L<MooseX::AttributeHelpers> create attributes that are instances of their own
+class. I.e. neither 'handles' nor 'provides' are useful.
+
+=cut
+sub set {
+    my $self = shift;
+    return $self->models->put(@_);
+} # set
+sub get {
+    my $self = shift;
+    return $self->models->at(@_);
+}
+sub keys {
+    my $self = shift;
+    return $self->models->keys;
+}
 
 
 ################################################################################
@@ -117,15 +128,9 @@ override 'new' => sub {
 };
 
 
-sub _update_id {
-    my ($self) = @_;
-    $self->primary_id(join('--', $self->values));
-}
-
-
 sub stringify {
     my ($self) = @_;
-    return $self->primary_id;
+    $self->primary_id($self->models->values->join('--'));
 }
 
 
