@@ -12,14 +12,14 @@ SBG::Complex - Represents one solution to the problem of assembling a complex
 =head1 DESCRIPTION
 
 A state-holder for L<SBG::Traversal>.  L<SBG::Assembler> uses L<SBG::Complex> to
-hold state-information while L<SBG::Traversal> traverses an L<SBG::Network>.
+hold state-information while L<SBG::Traversal> is traversing an L<SBG::Network>.
 
 In short, an L<SBG::Complex> is one of many
 solutions to the protein complex assembly problem for a give set of proteins.
 
 =head1 SEE ALSO
 
-L<SBG::ComplexIO> , L<SBG::Assembler> , L<SBG::Traversal>
+L<SBG::Traversal>
 
 =cut
 
@@ -28,30 +28,10 @@ L<SBG::ComplexIO> , L<SBG::Assembler> , L<SBG::Traversal>
 package SBG::Complex;
 use Moose;
 
-extends qw/Moose::Object Clone/;
-with qw/
-SBG::Role::Storable
-SBG::Role::Clonable
-/;
-
-
-use Moose::Autobox;
-use autobox ARRAY => 'SBG::U::List';
-use File::Temp qw/tempfile/;
-use Module::Load;
-
-use SBG::HashFields;
-use SBG::U::List qw/min union sum intersection/;
-use SBG::U::Config qw/config/;
-use SBG::U::Log qw/log/;
-use SBG::STAMP qw/superpose stamp/;
-# TODO stamp() only used by complexrmsd() . Remove it.
-
-use SBG::DomainI;
-use SBG::Domain;
-use SBG::DomainIO;
-# Default Domain subtype
-use SBG::Domain::CofM;
+with 'SBG::Role::Storable';
+with 'SBG::Role::Transformable';
+with 'SBG::Role::Scorable';
+with 'SBG::Role::Clonable';
 
 use overload (
     '""' => 'stringify',
@@ -59,81 +39,240 @@ use overload (
     );
 
 
-################################################################################
-# Fields and accessors
+use Moose::Autobox;
+
+use PDL::Lite;
+use PDL::Core qw/pdl squeeze/;
+
+use SBG::U::List qw/intersection mean/;
+use SBG::U::Log qw/log/;
+use SBG::U::RMSD;
+use SBG::STAMP;
 
 
-=head2 name
+# Complex stores these data structures
+use SBG::Superposition;
+use SBG::Model;
+use SBG::Interaction;
 
-Just for keeping track of which complex models correspond to which networks
-
-=cut
-has 'name' => (
-    is => 'ro',
-    isa => 'Str',
-    default => '',
-    );
-
-
-=head2 type
-
-The sub-type to use for any dynamically created objects. Should be
-L<SBG::Domain> or a sub-class of that. Default "L<SBG::Domain>" .
-
-=cut
-has 'type' => (
-    is => 'rw',
-    isa => 'ClassName',
-    required => 1,
-    default => 'SBG::Domain',
-    );
-
-# ClassName does not validate if the class isn't already loaded. Preload it here.
-before 'type' => sub {
-    my ($self, $classname) = @_;
-    return unless $classname;
-    Module::Load::load($classname);
-};
+# For deriving a network from the Complex
+use SBG::Seq;
+use SBG::Node;
+use SBG::Network;
 
 
 ################################################################################
-n=head2 interaction
+=head2 interactions
 
 L<SBG::Interaction> objects used to create this complex. Indexed by the
 B<primary_id> of the interaction.
 
 =cut
-hashfield 'interaction', 'interactions';
+has 'interactions' => (
+    isa => 'HashRef[SBG::Interaction]',
+    is => 'ro',
+    lazy => 1,
+    default => sub { { } },
+    );
 
 
 ################################################################################
-=head2 template
+=head2 superpositions
 
- Function: 
- Example : $cmplx->template('RRP43',new SBG::Template(seq=>$seq,domain=>$dom);
- Returns : A ref to the L<SBG::Domain> for the component name given
- Args    :
+L<SBG::Superposition> objects used to link structural homologs. Indexed by the
+L<SBG::Node> that was newly added to the complex, as there may be many partners
+to a given domain. Even though it is actually the partner domain that actually
+gets superimposed onto the existing reference domain.
 
-Indexed by accession_number of protein modelled by this template.
+TODO DOC diagram
 
 =cut
-# hashfield 'template', 'templates';
+has 'superpositions' => (
+    isa => 'HashRef[SBG::Superposition]',
+    is => 'ro',
+    lazy => 1,
+    default => sub { { } },
+    );
 
 
 ################################################################################
-=head2 model
+=head2 clashes
 
- Function: Maps accession number of protein components to L<SBG::Domain> model.
- Example : $cmplx->domain('RRP43',
-               new SBG::Domain::CofM(pdbid=>'2xyz',descriptor='CHAIN A'));
+Fractional overlap/clash of each domain when it was added to the complex. This
+is not updated when subsequent domains are added. This has the nice side-effect
+that overlaps are not double-counted. Each domain stores the clashes it
+encounted at the time it was added.
+
+E.g attach(A), attach(B), attach(C). If A and C clash, A won't know about it,
+but C will have saved it, having been added subsequently.
+
+Indexed by the L<SBG::Node> creating the clashes when it was added.
+
+=cut
+has 'clashes' => (
+    isa => 'HashRef[Num]',
+    is => 'ro',
+    lazy => 1,
+    default => sub { { } },
+    );
+
+
+################################################################################
+=head2 models
+
+ Function: Maps accession number of protein components to L<SBG::Model> model.
+ Example : $cmplx->set('RRP43',
+               new SBG::Model(query=>$myseq, subject=>$template_domain))
  Returns : The one L<SBG::Domain> modelling the protein, if any
  Args    : accession_number
 
-Indexed by accession_number of protein modelled by this L<SBG::Domain>
+Indexed by accession_number of L<SBG::Node> modelled by this L<SBG::Model>
 
 =cut
-hashfield 'model', 'models';
+has 'models' => (
+    isa => 'HashRef[SBG::Model]',
+    is => 'ro',
+    lazy => 1,
+    default => sub { {} },
+    );
 
+
+################################################################################
+=head2 overlap_thresh
+
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
+
+Allowable fractional overlap threshold for a newly added domain. If the domain
+overlaps by more than this threshold with any domain already in the complex,
+then it is rejected.
+
+=cut
+has 'overlap_thresh' => (
+    is => 'rw',
+    isa => 'Num',
+    default => 0.5,
+    );
+
+
+################################################################################
+=head2 domains
+
+ Function: Extracts just the Domain objects from the Models in the Complex
+ Example : 
+ Returns : 
+ Args    : 
+
+
+=cut
+sub domains {
+    my ($self,) = @_;
+    return $self->models->values->map(sub { $_->subject });
+
+} # domains
+
+
+################################################################################
+=head2 count
+
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
+
+
+=cut
+sub count {
+    my ($self,) = @_;
+    return $self->models->keys->length;
+
+} # count
+
+
+################################################################################
+=head2 set/get/keys
+
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
+
+Shouldn't be necessary, but neither L<Moose::Autobox> nor
+L<MooseX::AttributeHelpers> create attributes that are instances of their own
+class. I.e. neither 'handles' nor 'provides' are useful.
+
+=cut
+sub set {
+    my $self = shift;
+    return $self->models->put(@_);
+} # set
+sub get {
+    my $self = shift;
+    return $self->models->at(@_);
+}
+sub keys {
+    my $self = shift;
+    return $self->models->keys;
+}
+
+
+################################################################################
+=head2 add_model
+
+ Function: 
+ Example : 
+ Returns : 
+ Args    : L<SBG::Model>
+
+
+=cut
+sub add_model {
+    my ($self, @models) = @_;
+    $self->models->put($_->query, $_) for @models;
+} # add_model
+
+
+################################################################################
+=head2 network
+
+ Function: Derive a new L<SBG::Network> from this complex
+ Example : 
+ Returns : L<SBG::Network>
+ Args    : NA
+
+NB cannot simply call L<Network::subgraph>, as we only want specific
+interactions for given nodes, not all interaction between two nodes, as
+B<subgraph> would tend to do it.  Nor is there a way to remove interactions from
+a graph, so we built it here, as needed.
+
+=cut
+sub network {
+    my ($self) = @_;
+
+    my $net = new SBG::Network;
+
+    # Go through %{ $self->interactions }
+    foreach my $i (@{$self->interactions->values}) {
+        # Get the Nodes defining the partners of the Interaction
+        my @nodes;
+        # TODO DES Necessary hack: 
+        # crashes when _nodes not yet defined in Bio::Network
+        if (exists $i->{_nodes}) {
+            @nodes = $i->nodes;
+        } else {
+            foreach my $key (@{$i->keys}) {
+                push(@nodes,new SBG::Node(new SBG::Seq(-accession_number=>$_)));
+            }
+        }
+        $net->add($_) for @nodes;
+        $net->add_interaction(
+            -nodes=>[@nodes],-interaction=>$i);
+    }
+
+    return $net;
+} 
 
 
 ################################################################################
@@ -147,203 +286,8 @@ hashfield 'model', 'models';
 
 =cut
 sub stringify {
-    (shift)->interactions->keys->sort->join(',');
-}
-
-
-################################################################################
-=head2 size
-
- Function: Number of modelled components in the current complex assembly
- Example : $assembly->size;
- Returns : Number of components in the current complex assembly
- Args    : NA
-
-=cut
-sub size {
     my ($self) = @_;
-    return $self->models->keys->length;
-}
-
-
-################################################################################
-=head2 names
-
- Function:
- Example :
- Returns : Names of the component proteins being modelled in this complex
- Args    :
-
-List is sorted
-
-=cut
-sub names {
-    my $a = (shift)->models->keys->sort;
-    return wantarray ? @$a : $a;
-}
-
-
-################################################################################
-=head2 attach
-
- Function: 
- Example : 
- Returns : 
- Args    : 
-
-
-=cut
-sub attach {
-    my ($self, $src, $dest, $ix) = @_;
-    my $success;
-    # These two domains may be abstract (i.e. no spacial representation)
-    my $srcdom = $ix->template($src)->domain;
-    my $destdom = $ix->template($dest)->domain;
-    # Get reference domain of $src component (a concrete domain, w/ coordinates)
-    my $refdom = $self->model($src);
-
-    unless (defined $refdom) {
-        # Base case: no previous structural constraint.
-        # I.e. We're in a new frame of reference: implicitly sterically OK
-        # Initialize new object, based on previous (copy construction)
-
-        $self->model($src, $srcdom->clone());
-        $self->model($dest, $destdom->clone());
-        $self->interaction($ix, $ix);
-        return $success = 1;
-    }
-
-    $destdom = $self->linker($refdom, $srcdom, $destdom);
-    return $success = 0 unless $destdom;
-
-    # Check new coords of destdom for clashes, across doms in currently assembly
-    my $meanoverlapfrac = $self->trydomain($destdom);
-
-    # TODO DES this is poor logic, side effect 1 means bogus, but less than 1
-    $success = $meanoverlapfrac < 1;
-    return unless $success;
-
-    # Domain does not clash after being oriented, can be saved in complex now
-    # Update frame-of-reference of interaction partner ($dest)
-    # NB Any previous $self->domain($dest) gets overwritten
-    # This is compatible with the backtracking of SBG::Traversal
-    $destdom->clash($meanoverlapfrac);
-    $self->model($dest, $destdom);
-    $self->interaction($ix, $ix);
-    return $success;
-
-} # attach
-
-
-# Transform $destdom via the linking transformation that puts src onto srcref
-# TODO explain order of ops here
-sub linker { 
-    my ($self, $srcrefdom, $srcdom, $destdom) = @_;
-    $logger->trace("linking $srcdom onto $srcrefdom, ",
-                   "in order to orient $destdom");
-    # Superpose $srcdom into prev frame of reference from $src component
-    # This defines the (additional) transform we need to apply to $destdom
-    my $xform = superpose($srcdom, $srcrefdom);
-    unless (defined($xform)) {
-        $logger->info("Cannot link via: superpose($srcdom,$srcrefdom)");
-        return;
-    } else {
-        $logger->trace("Succeeded.",
-                       " Sc:", $xform->{'Sc'}, 
-                       " RMS:", $xform->{'RMS'},
-            );
-    }
-
-    # Concrete (w/ coordinates) instance of this domain, of class $self->type()
-    my $type = $self->type;
-    $destdom = $type->new(%$destdom);
-
-    # Then apply that transformation to the interaction partner $dest
-    # Product of relative with absolute transformation
-    # Any previous transformation (reference domain) has to also be included
-
-# TODO explain order of ops here
-    $destdom->transform($xform);
-    $destdom->transform($srcrefdom->transformation);
-
-    # Note the linker transformation used, for scoring later
-    # Track these as superposition objects
-#     $destdom->linker($xform);
-
-    return $destdom;
-} # linker
-
-
-################################################################################
-=head2 subnet
-
- Function: Derive a new L<SBG::Network> from this complex
- Example : 
- Returns : L<SBG::Network>
- Args    : NA
-
-# TODO
-
-=cut
-sub subnet {
-    my ($self) = @_;
-
-    # NB subnet cannot simply call subgraph, as we only want specific
-    # interactions for given nodes, not all interaction between two nodes, as
-    # subgraph() would tend to do it.  No way to remove interactions, either,
-    # i.e. we'll have to build subnet manually
-
-    # Go through %{ $self->interactions }
-    # foreach my $i (@{$self->interactions->values}) {
-    #   @nodes = $i->nodes;
-    #   $net->add($_) for @nodes;
-    #   $net->add_interaction(
-    #              -nodes=>[@nodes],-interaction=>$i);
-
-} # subnet
-
-
-################################################################################
-=head2 trydomain
-
- Function:
- Example :
- Returns : 
- Args    :
-
-Determine whether a given L<SBG::Domain> would create a clash/overlap in space
-with any of the L<SBG::Domain>s in this complex.
-
-=cut
-sub trydomain {
-    my ($self, $newdom) = @_;
-    # Get all of the objects in this assembly. 
-    # If any of them clashes with the to-be-added objects, then disallow
-    # TODO config this config.ini
-    my $thresh = .5;
-    my $overlaps = [];
-    foreach my $key ($self->names) {
-        # Measure the overlap between $newdom and each component
-        my $existingdom = $self->model($key);
-        $logger->trace("$newdom vs $existingdom");
-        my $overlapfrac = $newdom->evaluate($existingdom);
-        # Nonetheless, if one clashes severely, bail out
-        return 1 if $overlapfrac > $thresh;
-        # Don't worry about domains that aren't overlapping at all (ie < 0)
-        $overlaps->push($overlapfrac) if $overlapfrac > 0;
-    }
-    my $mean = $overlaps->mean || 0;
-    $logger->info("$newdom fits w/ mean overlap fraction: ", $mean);
-    return $mean;
-} 
-
-
-# Mean clash score within a complex (between components)
-sub clashes {
-    my ($self) = @_;
-    my $doms = $self->models->values;
-    my $clashes = [ map { $_->clash } @$doms ];
-    return $clashes->mean;
+    $self->interactions->keys->sort->join(',');
 }
 
 
@@ -352,237 +296,44 @@ sub clashes {
 
  Title   : transform
  Usage   :
- Function: Transforms each component L<SBG::Domain> by a given L<SBG::Transform>
+ Function: Transforms each component L<SBG::Model> by a given L<PDL> matrix
  Example :
  Returns : 
- Args    :
+ Args    : L<PDL> 4x4 homogenous transformation matrix
 
 
 =cut
 sub transform {
-   my ($self,$trans) = @_;
-   foreach my $name ($self->names) {
-       $self->model($name)->transform($trans);
+   my ($self,$matrix) = @_;
+   foreach my $model (@{$self->models->values}) {
+       # The Model contains a 'query' (component) and a 'subject' (domain model)
+       my $domain = $model->subject;
+       $domain->transform($matrix);
    }
 } # transform
 
 
-# TODO DOC
-# TODO DES should only be available in specialized subclass
-sub crosshairs {
-    my ($self) = @_;
-    foreach my $domname ($self->names) {
-        my $dom = $self->model($domname);
-        $dom->crosshairs();
-    }
-    return $self;
-}
-
-
 ################################################################################
-=head2 min_rmsd
+=head2 coverage
 
- Function:
- Example :
- Returns : minrmsd, mintrans, minname
- Args    :
-
-NB; this will only work if the $truth hasn't yet been transformed.
-
-Because it relies on being able to put the complex $truth into the frame of
-reference of the template domains used to build the $model complex. 
-
-=cut
-sub min_rmsd {
-    my ($model, $truth) = @_;
-    my $minrmsd;
-    my $mintrans;
-    my $minname = '';
-    # Only consider common components
-    my @cnames = intersection([$model->names], [$truth->names]);
-
-    # Define 7pt cross-hair centre of mass for model complex
-    # TODO DES this assumes an implementation, need to subclass Complex!
-    $model->crosshairs();
-
-    # For each joining domain
-    foreach my $name (@cnames) {
-        my $mdom = $model->model($name);
-        my $tdom = $truth->model($name);
-        $logger->trace("Attempting join via: $name");
-        my $trans = superpose($tdom, $mdom);
-        unless ($trans) {
-            $logger->debug("Cannot join via: $name");
-            next;
-        }
-        # Before transforming, setup the crosshairs on benchmark complex
-        $truth->crosshairs();
-
-        # Product of these transformations: (applying $trans, then from $mdom)
-        $trans = $mdom->transformation x $trans;
-        $truth->transform($trans);
-        $logger->debug("Resulting RMSD on $name: ", $mdom->rmsd($tdom));
-        my $rmsd = $model->rmsd($truth);
-        $logger->debug("Resulting RMSD on complex: $rmsd");
-        # Don't forget to reset back to original frame of reference
-        $truth->transform($trans->inverse);
-
-        if (!defined($minrmsd) || $rmsd < $minrmsd) {
-            $minrmsd = $rmsd;
-            $mintrans = $trans;
-            $minname = $name;
-        }
-    }
-    $minrmsd ||= 'nan';
-    $logger->debug("Min RMSD: $minrmsd ($minname)");
-    return ! wantarray ? $minrmsd : ($minrmsd, $mintrans, $minname);
-
-} # min_rmsd
-
-
-# Superpose a complex onto another, using min_rmsd
-
-# Uses min_rmsd to find a suitable superposition into a common frame of ref.
-# Chains A,C,E, etc are the model ($self)
-# Chains B,D,F, etc are the comparison/benchmark ($other)
-sub csuperpose {
-    my ($self, $other, $andwrite, $showall) = @_;
-    # The transformation required to put $other into fram-of-reference of $self
-    my ($minrmsd, $mintrans, $minname) = $self->min_rmsd($other);
-    $other->transform($mintrans);
-
-    if ($andwrite) {
-        my @doms;
-        if ($showall) {
-            @doms = ( @{ $self->models->values }, @{ $other->models->values });
-        } else {
-            my @cnames = intersection([$self->names], [$other->names]);
-            @doms = map { $self->model($_), $other->model($_) } @cnames;
-        }
-        my $file = SBG::STAMP::gtransform(doms=>\@doms);
-        return $file;
-    }
-}
-
-
-# How well do the domains of one complex overlap those of another
-# NB This superposes $other into frame of reference of $self
-# TODO DES this is, but shouldn't be, specific to Domain::CofM here
-sub overlap {
-    my ($self, $other) = @_;
-    # First superpose:
-    # The transformation required to put $other into fram-of-reference of $self
-    my ($minrmsd, $mintrans, $minname) = $self->min_rmsd($other);
-    return unless defined $mintrans;
-    $other->transform($mintrans);
-
-    my @cnames = intersection([$self->names], [$other->names]);
-    # Weight by min radius of the corresponding domains
-    my %weights = map { $_ => min($self->model($_)->radius(), 
-                                  $other->model($_)->radius()) } @cnames;
-    my $maxweight = sum(values %weights);
-    my $overlaps = [];
-    foreach my $name (@cnames) {
-        my $selfdom = $self->model($name);
-        my $otherdom = $other->model($name);
-        # The fraction of the maximum possibe overlap between the two
-        # Weighted by (min) radius of corresponding domains
-
-# TODO BUG the weighting is somehow broken
-#         my $fracoverlap = 
-#             $selfdom->evaluate($otherdom) * $weights{$name} / $maxweight;
-        my $fracoverlap = $selfdom->evaluate($otherdom);
-        $overlaps->push($fracoverlap);
-        $logger->debug($name, " (weighted?) fractional overlap: ", $fracoverlap);
-    }
-    # undo transformation here
-    $other->transform($mintrans->inverse);
-    return $overlaps->mean;
-    
-}
-
-
-################################################################################
-=head2 complexrmsd
-
- Function: RMSD of entire model vs. the corresponding subset of the native
+ Function: How well do our domains cover those of B<$other>
  Example : 
- Returns : RMSD between the complexes
+ Returns : 
  Args    : 
 
-The second complex will be considered the reference. Only the components having
-the same name as those in the first complex will be used. E.g. comparing a dimer
-to a tetramer, the second complex will be reduced to the dimer corresponding to
-the components in the dimer. They must have the same names.
 
-NB This only works when the corresponding complexes are very similar to each
-other.
-
-TODO BUG Since the names of the components may not be the same, this does not
-enforce a component mapping as it should. I.e. if the domains are output in a
-different order, a superposition may not seem possible, though it may be
-possible if output in the proper order.
+TODO should be based on more than just fractional number of common components
 
 =cut
-sub complexrmsd {
-    my ($model, $truth) = @_;
-    _init_tmp();
+sub coverage {
+    my ($self, $other) = @_;
 
-    # Subset $truth . Only consider common components
-    my @cnames = intersection([$model->names], [$truth->names]);
-    my $subcomplex = new SBG::Complex;
+    warn "Not implemented";
+    return 1.0 * $self->count / $other->count;
 
-    # Take the original doms from the native complex, if correspondance in model
-#     $subcomplex->model($_, $truth->model($_)) for @cnames;
-    # Just use the whole true complex, in case component names are different
-    # NB this may ruin the order in which domains are output
-    $subcomplex = $truth;
+#     my @cnames = intersection($self->models->keys, $other->models->keys);
 
-    $logger->debug($model->names->length, " and ", $truth->names->length,
-                   " components. ", scalar(@cnames), " in common");
-
-    # transform -g both into single PDB files
-    my $modelpdbio = new File::Temp;
-    my $modelpdb = $model->gtransform(out=>$modelpdbio->filename);
-    my $subcomplexpdbio = new File::Temp;
-    my $subcomplexpdb = $subcomplex->gtransform(out=>$subcomplexpdbio->filename);
-
-    # Create two domain files, with descriptor { ALL }
-    my $model_fh = new File::Temp(
-        "complexrmsdXXXX", SUFFIX=>'.dom');
-    my $model_dom = $model_fh->filename;
-    print $model_fh "$modelpdb 9abc-model { ALL }\n";
-    $model_fh->flush;
-    my $subcomplex_fh = new File::Temp(
-        "complexrmsdXXXX", SUFFIX=>'.dom');
-    my $subcomplex_dom = $subcomplex_fh->filename;
-    print $subcomplex_fh "$subcomplexpdb 9xyz-subcomplex { ALL }\n";
-    $subcomplex_fh->flush;
-
-    my $modelio = SBG::DomainIO->new(
-        file=>$model_dom, type=>'SBG::Domain');
-    my $modelasdom = $modelio->read;
-    my $subcomplexio = SBG::DomainIO->new(
-        file=>$subcomplex_dom, type=>'SBG::Domain');
-    my $subcomplexasdom = $subcomplexio->read;
-
-    # Don't cache this transform, because these aren't real: 9abc and 9xyz
-    my $trans = SBG::STAMP::superpose(
-        $subcomplexasdom, $modelasdom, ('cache'=>0));
-    $subcomplexasdom->transform($trans);
-
-    return SBG::STAMP::gtransform(
-        doms=>[$modelasdom, $subcomplexasdom], out=>'transformed.pdb');
-
-    # Alternatively, get the RMSD
-    # Run stamp, model is the query, subcomplex is the database
-    my $just1 = 1; # Get the whole set of values back from the first scan
-    my $fields = SBG::STAMP::stamp($model_dom, $subcomplex_dom, $just1);
-    return unless $fields;
-
-    $logger->trace("RMSD:", $fields->{'RMS'});
-    return $fields->{'RMS'};
-}
+} # coverage
 
 
 ################################################################################
@@ -593,41 +344,132 @@ sub complexrmsd {
  Returns : 
  Args    :
 
-RMSD between centres-of-mass from this complex and those of another complex.
+RMSD between common domains between this and another complex.
 
-Domains are associated by name. Domains present in one complex but not the other
-are not considered.
+Models are associated by name. Models present in one complex but not the other
+are not considered. Undefined when no common models.
 
-Undefined when no common template domains.
+TODO belongs in a ModelSet role
 
+TODO test
 =cut
 sub rmsd {
    my ($self,$other) = @_;
    # Only consider common components
-   my @cnames = intersection([$self->names], [$other->names]);
-   # squared distances between corresponding components
-   my $sqdistances = [];
-   foreach my $name (@cnames) {
-       my $d1 = $self->model($name);
-       my $d2 = $other->model($name);
+   my @cnames = intersection($self->models->keys, $other->models->keys);
 
-# TODO Subclass Complex !
+   my @selflist = map { $self->get($_)->coords } @cnames;
+   my @otherlist = map { $other->get($_)->coords } @cnames;
 
-       # centre-based version
-#        $sqdistances->push($d1->sqdist($d2));
+   my $selfcoords = pdl(@selflist)->squeeze;
+   my $othercoords = pdl(@otherlist)->squeeze;
 
-       # crosshair-based version( list() converts PDL to Perl array)
-       $sqdistances->push($d1->sqdev($d2)->list);
-
-   }
-   my $mean = $sqdistances->mean;
-   return unless $mean;
-   return sqrt($mean);
+   return SGB::U::RMSD::rmsd($selfcoords, $othercoords);
 }
 
 
 ################################################################################
+=head2 attach
+
+ Function: 
+ Example : 
+ Returns : Success, whether interaction can be added
+ Args    : L<SBG::Interaction>
+
+
+=cut
+sub add_interaction {
+    my ($self, $iaction, $srckey, $destkey) = @_;
+
+    # Where the last reference domain for this component was placed in space
+    my $refmodel = $self->get($srckey);
+    my $refdom = $refmodel->subject if defined $refmodel;
+    # Initial interaction, no spacial constraints yet, always accepted
+    unless (defined $refdom) {
+        $self->interactions->put($iaction, $iaction);
+        # Extract Model objects from the Interaction
+        $self->add_model(@{$iaction->models->values});
+        return 1;
+    }
+
+    # Get domain models for components of interaction
+    my $srcdom = $iaction->get($srckey)->subject;
+    # Get a clone of this, because we will temporary manipulate it
+    my $destdom = $iaction->get($destkey)->subject->clone;
+
+    my $linker_superposition = SBG::STAMP::superposition($srcdom, $refdom);
+    return 0 unless defined $linker_superposition;
+
+
+    # Then apply that transformation to the interaction partner $destdom.
+    # Product of relative with absolute transformation.
+    # Order of application of transformations matters
+    $linker_superposition->transformation->apply($destdom);
+    # Any previous transformation (reference domain) has to also be included.
+    $refdom->transformation->apply($destdom);
+
+
+    # Now test steric clashes of potential domain against existing domains
+    my $clashfrac = $self->check_clash($destdom);
+    return 0 unless $clashfrac < 1.0;
+
+
+    # Domain does not clash after being oriented, can be saved in complex now.
+    # Save all meta data that went into this placement.
+    # NB Any previous $self->get($destnode) gets overwritten. 
+    # This is compatible with the backtracking of SBG::Traversal. 
+
+    my $destmodel = new SBG::Model(
+        query=>$iaction->get($srckey)->query,
+        subject=>$destdom);
+    $self->set($destkey, $destmodel);
+    $self->clashes->put($destkey, $clashfrac);
+    # Cache by destnode, as there may be many for any given refdom
+    $self->superpositions->put($destkey, $linker_superposition);
+    $self->interactions->put($iaction, $iaction);
+    return 1;
+
+} # add_interaction
+
+
+################################################################################
+=head2 check_clash
+
+ Function:
+ Example :
+ Returns : 
+ Args    :
+
+Determine whether a given L<SBG::Domain> would create a clash/overlap in space
+with any of the L<SBG::Domain>s in this complex.
+
+=cut
+sub check_clash {
+    my ($self, $newdom) = @_;
+    my $thresh = $self->overlap_thresh;
+    my $overlaps = [];
+
+    # Get all of the objects in this assembly. 
+    # If any of them clashes with the to-be-added objects, then disallow
+    foreach my $key (@{$self->models->keys}) {
+        # Measure the overlap between $newdom and each component
+        my $existingdom = $self->get($key)->subject;
+        log()->trace("$newdom vs $existingdom");
+        my $overlapfrac = $newdom->overlap($existingdom);
+        # Nonetheless, if one clashes severely, bail out
+        return 1 if $overlapfrac > $thresh;
+        # Don't worry about domains that aren't overlapping at all (ie < 0)
+        $overlaps->push($overlapfrac) if $overlapfrac > 0;
+    }
+    my $mean = mean($overlaps) || 0;
+    log()->info("$newdom fits w/ mean overlap fraction: ", $mean);
+    return $mean;
+} 
+
+
+################################################################################
 __PACKAGE__->meta->make_immutable;
+no Moose;
 1;
 
 

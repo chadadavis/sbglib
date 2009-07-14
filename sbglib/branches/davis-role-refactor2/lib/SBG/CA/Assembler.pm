@@ -161,7 +161,7 @@ sub sub_test {
     # Interaction object from ID
     my $ix = $graph->get_interaction_by_id($templ_id);
 
-    $success = $complex->attach($src, $dest, $ix);
+    $success = $complex->add_interaction($src, $dest, $ix);
 
     return unless $success;
 
@@ -177,10 +177,9 @@ sub sub_test {
 
 ################################################################################
 __PACKAGE__->meta->make_immutable;
+no Moose;
 1;
 
-
-__END__
 
 
 
