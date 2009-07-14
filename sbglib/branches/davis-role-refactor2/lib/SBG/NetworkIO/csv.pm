@@ -55,42 +55,14 @@ with qw/
 SBG::IOI
 /;
 
-use MooseX::AttributeHelpers;
-use Text::ParseWords qw/parse_line/;
 
+# In CSV format, a Network is just a set of Interaction
+use SBG::InteractionIO::csv;
+
+# All these needed to create a Network
 use SBG::Network;
 use SBG::Interaction;
 use SBG::Node;
-use SBG::Seq;
-use SBG::Domain;
-
-
-################################################################################
-=head2 node
-
- Function: 
- Example : 
- Returns : 
- Args    : 
-
-Components can participate in multiple interactions.  But the nodes themselves
-are unique.
-
-NB you cannot do this with Domain's, even if they are effectively equal.
-Because a Domain can be later transformed, but those are all independent.
-
-=cut
-has 'nodes' => (
-    is => 'ro',
-    isa => 'HashRef[SBG::Node]',
-    metaclass => 'Collection::Hash',
-    lazy => 1,
-    default => sub { { } },
-    provides => {
-        'get' => 'get',
-        'set' => 'set',
-    }
-    );
 
 
 ################################################################################
@@ -105,16 +77,11 @@ has 'nodes' => (
 =cut
 sub write {
     my ($self, $net) = @_;
-    my $fh = $self->fh or return;
-    foreach my $iaction ($net->interactions) {
-        my @nodes = $iaction->nodes;
-        my @doms = map { $iaction->get($_)->subject } @nodes;
-        my @ids = map { $doms[$_]->id } (0..$#doms);
-        my @descrs = map { $doms[$_]->descriptor } (0..$#doms);
-        printf $fh 
-            "%s\t%s\t%s\t{ %s }\t%s\t{ %s }\n",
-            @nodes, $ids[0], $descrs[0], $ids[1], $descrs[1];
-    }
+    # Delegate to InteractionIO
+    my $iactionio = new SBG::InteractionIO::csv(%$self);
+
+    $iactionio->write($_) for $net->interactions;
+
     return $self;
 } # write
 
@@ -136,16 +103,11 @@ RRP41 RRP42  2br2 { A 5 _ to A 220 _ } 2br2 { B 1 _ to B 55 _ }
 =cut
 sub read {
     my ($self) = @_;
-    my $fh = $self->fh;
+    # Delegate to InteractionIO
+    my $iactionio = new SBG::InteractionIO::csv(%$self);
 
     my $net = new SBG::Network;
-
-    while (<$fh>) {
-        next if (/^\s*\#/ || /^\s*\%/ || /^\s*$/);
-        chomp;
-
-        my ($iaction, @nodes) = 
-            $self->_parse_line($_) or next;
+    while (my ($iaction, @nodes) = $iactionio->read) {
 
         # Now put it all into the ProteinNet. 
         # Now there is a formal association beteen Interaction and it's Node's
@@ -154,53 +116,6 @@ sub read {
     }
     return $net;
 } # read
-
-
-sub _parse_line {
-   my ($self, $line) = @_;
-
-   # Get the stuff in { brackets } first: the STAMP domain descriptors
-   my ($head, $descr1, $pdbid2, $descr2, $score) = 
-       parse_line('\s*[{}]\s*', 0, $line);
-   # Then parse out everything else from the beginning, just on whitespace
-   my @fields = parse_line('\s+', 0, $head);
-   # Take the last three "words", ignoring any preceeding comments or junk
-   my ($comp1, $comp2, $pdbid1) = @fields[-3,-2,-1];
-
-   $score ||= 0;
-   unless ($comp1 && $comp2 && $pdbid1 && $pdbid2) {
-       warn("Cannot parse interaction line:\n", $line);
-       return;
-   }
-
-   my ($node1, $model1) = $self->_make_node($comp1, $pdbid1, $descr1);
-   my ($node2, $model2) = $self->_make_node($comp2, $pdbid2, $descr2);
-
-   my $iaction = new SBG::Interaction(
-       models=>{ $node1=>$model1, $node2=>$model2, }
-       );
-
-   return ($iaction, $node1, $node2);
-
-} # _parse_line
-
-
-sub _make_node {
-    my ($self, $accno, $pdbid, $descr) = @_;
-    # Check cached nodes before creating new ones
-    my $node = $self->get($accno);
-    my $seq;
-    unless (defined $node) {
-        $seq = new SBG::Seq(-accession_number=>$accno);
-        $node = new SBG::Node($seq);
-        $self->set($accno, $node)
-    }
-    ($seq) = $node->proteins unless defined $seq;
-    my $dom = new SBG::Domain(pdbid=>$pdbid,descriptor=>$descr);
-    my $model = new SBG::Model(query=>$seq, subject=>$dom);
-
-    return ($node, $model);
-}
 
 
 ################################################################################

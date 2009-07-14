@@ -127,7 +127,7 @@ override 'add_interaction' => sub {
     my ($self, %ops) = @_;
     my $iaction = $ops{'-interaction'};
     my $nodes = $ops{'-nodes'};
-    unless ($iaction->primary_id) {
+    unless (defined $iaction->primary_id) {
         $iaction->primary_id(join('--', @$nodes));
     }
     my $res = $self->SUPER::add_interaction(%ops);

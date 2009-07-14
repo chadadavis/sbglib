@@ -10,7 +10,7 @@ use SBG::Network;
 use SBG::NetworkIO::csv;
 use SBG::NetworkIO::graphviz;
 
-my $file = shift || "$Bin/data/ex_small.csv";
+my $file = shift || "$Bin/../data/ex_small.csv";
 my $in = new SBG::NetworkIO::csv(file=>$file);
 my $net = $in->read;
 my $out = new SBG::NetworkIO::graphviz(tempfile=>1);

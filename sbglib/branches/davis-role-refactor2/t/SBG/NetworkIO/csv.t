@@ -11,7 +11,7 @@ use SBG::NetworkIO::csv;
 
 
 # Connected network
-$file = shift || "$Bin/data/ex_small.csv";
+$file = shift || "$Bin/../data/ex_small.csv";
 $io = new SBG::NetworkIO::csv(file=>$file);
 $net = $io->read;
 is(scalar($net->nodes), 6, "nodes()");
@@ -19,7 +19,7 @@ is(scalar($net->interactions), 17, "interactions()");
 
 
 # Disconnected network
-$file = shift || "$Bin/data/ex_disconnected.csv";
+$file = shift || "$Bin/../data/ex_disconnected.csv";
 $io = new SBG::NetworkIO::csv(file=>$file);
 $net = $io->read;
 is(scalar($net->nodes), 6, "nodes() (disconnected)");

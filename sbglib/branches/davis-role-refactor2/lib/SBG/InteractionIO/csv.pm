@@ -18,13 +18,55 @@ L<SBG::IOI>
 
 ################################################################################
 
-package SBG::InteractionIO::csv
+package SBG::InteractionIO::csv;
 use Moose;
 
-with 'SBG::IOI';
+with qw/
+SBG::IOI
+/;
 
+use MooseX::AttributeHelpers;
+use Moose::Autobox;
+use Carp;
 
+use SBG::Types qw/$re_pdb $re_descriptor/;
 use SBG::Interaction;
+
+# All these needed to create an Interaction
+use SBG::Interaction;
+use SBG::Model;
+use SBG::Domain;
+use SBG::Node;
+use SBG::Seq;
+
+
+################################################################################
+=head2 _nodes
+
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
+
+Components can participate in multiple interactions.  But the nodes themselves
+are unique.
+
+NB you cannot do this with Domain's, even if they are effectively equal.
+Because a Domain can be later transformed, but those are all independent.
+
+=cut
+has '_nodes' => (
+    is => 'ro',
+    isa => 'HashRef[SBG::Node]',
+    metaclass => 'Collection::Hash',
+    lazy => 1,
+    default => sub { { } },
+    provides => {
+        'get' => 'get',
+        'set' => 'set',
+        'count' => 'count',
+    }
+    );
 
 
 ################################################################################
@@ -41,14 +83,18 @@ RRP41 RRP42  2br2 { A 108 _ to A 148 _ } 2br2 { D 108 _ to D 148 _ }
 =cut
 sub write {
     my ($self, @interactions) = @_;
-
     my $fh = $self->fh or return;
+
     foreach my $iaction (@interactions) {
-        my ($node1, $node2) = sort $iaction->nodes;
-        my ($model1, $model2) = map { $iaction->at($_) } ($node1, $node2);
-        my ($pdb1, $pdb2) = map { $_->pdbid } ($model1, $model2);
-        my ($descr1, $descr2) = map { $_->descriptor } ($model1, $model2);
-        print $fh "$node1\t$node2\t$pdb1\t{ $descr1 }\t$pdb2\t{ $descr2 }";
+        my $nodes = [ $iaction->nodes ];
+        my $models = $nodes->map({ $iaction->at($_) });
+        my $doms = $models->map({ $_->subject });
+        my $pdbs = $doms->map({ $_->pdbid });
+        my $descrs = $pdbs->map({ $_->descriptor });
+
+        printf $fh
+            "%s\t%s\t%s\t{ %s }\t%s\t{ %s }",
+            @$nodes, $pdbs->[0], $descrs->[0], $pdbs->[1], $descrs->[1];
 
     }
     return $self;
@@ -58,63 +104,76 @@ sub write {
 ################################################################################
 =head2 read
 
- Title   : read
- Usage   : my $interaction = $io->read();
- Function: Reads the next interaction from the stream
- Example : 
- Returns : An L<SBG::Interaction>
+ Function: Reads the interaction lines from the stream and produces a network
+ Example : my $net = $io->read();
+ Returns : L<SBG::Interaction>
  Args    : NA
+
+E.g.:
+
+RRP41 RRP42  2br2first { CHAIN A } 2br2second { CHAIN B }
+# or
+RRP41 RRP42  2br2 { A 5 _ to A 220 _ } 2br2 { B 1 _ to B 55 _ }
 
 =cut
 sub read {
     my ($self) = @_;
     my $fh = $self->fh or return;
-    my @iactions;
-
 
     while (my $line = <$fh>) {
         chomp $line;
         # Comments and blank lines
+        next if $line =~ /^\s*$/;
         next if $line =~ /^\s*\%/;
         next if $line =~ /^\s*\#/;
-        next if $line =~ /^\s*$/;
-        next if $line =~ /^\s*\}/;
 
-        # Create/parse new domain header, May not always have a file name
         unless ($line =~ 
-                /^(\S*)\s+($re_pdb)(\S*)\s*\{\s*($re_descriptor)(\s*\})?\s*$/) {
-            carp("Cannot parse STAMP domain: $line");
-            
-            # Want an array of domains, then skip to next one, otherwise abort
-            wantarray ? next : last;
+                /^\s*
+                 (\S+) # Component 1
+                 \s+
+                 (\S+) # Component 2
+                 \s+
+                 (${re_pdb})\S*\s+\{\s*($re_descriptor)\s*\}
+                 \s+
+                 (${re_pdb})\S*\s+\{\s*($re_descriptor)\s*\}
+                 /x) {
+            carp("Cannot parse interaction:\n$line\n");
+            return;
         }
 
-        # $1 is (possible) file
-        # $2 is pdbid
-        # $3 is rest of STAMP label
-        # $4 is STAMP descriptor, without { }
+        my ($accno1, $accno2) = ($1, $2);
+        my ($pdbid1, $pdbid2) = ($3, $13);
+        my ($descr1, $descr2) = ($4, $14);
 
-        my $type = $self->type();
-        my $dom = $type->new(pdbid=>$2,descriptor=>$4);
-        $dom->file($1) if $1;
+        my ($node1, $model1) = $self->_make_node($accno1, $pdbid1, $descr1);
+        my ($node2, $model2) = $self->_make_node($accno2, $pdbid2, $descr2);
 
-        # Parse transformtion, if any
-        # Header ends?, i.e. contains no transformation
-        if ($line !~ /\}\s*$/) { 
-            my $transio = new SBG::TransformIO::stamp(fh=>$self->fh);
-            my $transformation = $transio->read;
-            # Since a transformation was found, apply it
-            $dom->transform($transformation->matrix);
-        }
+        my $interaction = new SBG::Interaction(models=>{
+            $node1 => $model1, $node2 => $model2});
 
-        push @doms, $dom;
-
-        # Stop the loop unless looking for all domains in the file
-        last unless wantarray;
+        # Return just the interaction, unless nodes also wanted
+        return wantarray ? ($interaction, $node1, $node2) : $interaction;
     }
-    return wantarray ? @doms : shift @doms;
-
+    return;
 } # read
+
+
+sub _make_node {
+    my ($self, $accno, $pdbid, $descr) = @_;
+    # Check cached nodes before creating new ones
+    my $node = $self->get($accno);
+    my $seq;
+    unless (defined $node) {
+        $seq = new SBG::Seq(-accession_number=>$accno);
+        $node = new SBG::Node($seq);
+        $self->set($accno, $node)
+    }
+    ($seq) = $node->proteins unless defined $seq;
+    my $dom = new SBG::Domain(pdbid=>$pdbid,descriptor=>$descr);
+    my $model = new SBG::Model(query=>$seq, subject=>$dom);
+
+    return ($node, $model);
+}
 
 
 ################################################################################
