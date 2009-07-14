@@ -190,7 +190,9 @@ sub overlap_lin_frac {
     my ($self, $other) = @_;
     my $max = 2 * List::Util::min($self->radius, $other->radius);
     my $overlap = $self->overlap_lin($other);
-    return 1.0 * $overlap / $max;
+    my $frac = 1.0 * $overlap / $max;
+    SBG::U::Log::log()->debug("$frac frac overlap: ($self) and ($other)");
+    return $frac;
 
 } # overlap_lin_frac
 
