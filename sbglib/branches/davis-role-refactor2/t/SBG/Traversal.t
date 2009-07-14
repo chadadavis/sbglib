@@ -4,27 +4,16 @@ use Test::More 'no_plan';
 use SBG::U::Test 'float_is';
 use Carp;
 use Data::Dumper;
-use FindBin;
-use File::Temp qw/tempfile/;
-my $dir = $FindBin::RealBin;
-$, = ' ';
+use FindBin qw/$Bin/;
 
 use SBG::Traversal;
-use SBG::NetworkIO;
+use SBG::NetworkIO::csv;
 
 # Load up a network
-my $file = "$dir/data/simple_network.csv";
-my $io = new SBG::NetworkIO(file=>$file);
+my $file = "$Bin/data/simple_network.csv";
+my $io = new SBG::NetworkIO::csv(file=>$file);
 my $net = $io->read;
 
-# GraphViz
-SKIP: {
-    skip "GraphViz needs update";
-    my $graphout = "graph.dot";
-    SBG::NetworkIO::graphviz($net, $graphout,-edge_color=>'grey');
-    ok(-r $graphout, "GraphViz creation: $graphout");
-    unlink $graphout;
-}
 
 # For the sake of testing, define some incompatible sets of templates.  Anything
 # in the same set is all not compatible.  NB alternative templates for a single
