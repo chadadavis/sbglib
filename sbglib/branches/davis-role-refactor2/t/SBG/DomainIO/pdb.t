@@ -5,12 +5,11 @@ use SBG::U::Test qw/float_is pdl_approx/;
 use Carp;
 use Data::Dumper;
 use Data::Dump qw/dump/;
-use FindBin;
-my $dir = $FindBin::RealBin;
+use FindBin qw/$Bin/;
 
 
 use SBG::DomainIO::pdb;
-my $file = "$dir/data/1timA.pdb";
+my $file = "$Bin/../data/1timA.pdb";
 
 
 # Read all atoms:

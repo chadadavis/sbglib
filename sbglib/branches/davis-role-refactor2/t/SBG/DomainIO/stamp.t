@@ -5,12 +5,11 @@ use SBG::U::Test 'float_is';
 use Carp;
 use Data::Dumper;
 use Data::Dump qw/dump/;
-use FindBin;
-my $dir = $FindBin::RealBin;
+use FindBin qw/$Bin/;
 
 
 use SBG::DomainIO::stamp;
-my $file = "$dir/data/2nn6.dom";
+my $file = "$Bin/../data/2nn6.dom";
 my $io;
 
 
@@ -39,7 +38,7 @@ is_deeply(\@doms3, \@doms, "Re-reading written domains");
 
 
 # When only some domains have transformations:
-my $io4 = new SBG::DomainIO::stamp(file=>"$dir/data/model.dom");
+my $io4 = new SBG::DomainIO::stamp(file=>"$Bin/../data/model.dom");
 my @doms4= $io4->read;
 my $transes = grep { $_->transformation->has_matrix } @doms4;
 is($transes, 4, "Parsing domains with explicit transformations");
