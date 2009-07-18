@@ -11,8 +11,8 @@ SBG::Assembler - Complex assembly algorithm (callback functions)
 
 =head1 DESCRIPTION
 
-The graph traversal is in L<SBG::Traversal>. This module holds call back
-functions specific to L<SBG::Complex>.
+The graph traversal algorithm is in L<SBG::Traversal>. This module holds call
+back functions specific to building a L<SBG::Complex>.
 
 An L<SBG::Complex> is one of many solutions to the protein complex assembly
 problem for a give set of proteins.
@@ -28,33 +28,32 @@ L<SBG::Traversal> , L<SBG::Complex>
 package SBG::CA::Assembler;
 use Moose;
 
-
 use Moose::Autobox;
-
-use SBG::STAMP qw/superpose/;
-use SBG::Complex;
-use SBG::ComplexIO;
 
 use SBG::U::Log qw/log/;
 use SBG::U::Config qw/config/;
-
+use SBG::STAMP qw/superposition/;
 use SBG::GeometricHash;
 
-################################################################################
-# Private
 
 # Number of solved partial solutions
 our $solution = 0;
-# For debugging: Individual steps within one solution
-our $step = 1;
-# Number of solutions matching an existing class
+# Number of duplicate solutions (matching an existing class)
 our $dups = 0;
 # Number of unique solutions, only first solution in a class is saved
 our $classes = 0;
 # Size distribution of unique solutions (i.e. of classes)
 our %sizes;
 
-my $file_pattern = '%sclass-%04d-model-%05d';
+# 3D geometric hash
+our $gh = new SBG::GeometricHash(binsize=>1.5);
+
+# TODO DES needs to be OO
+my $file_pattern = '%scluster-%04d-model-%05d';
+
+# For debugging: Individual steps within one solution
+our $step = 1;
+
 
 
 ################################################################################
@@ -62,114 +61,100 @@ my $file_pattern = '%sclass-%04d-model-%05d';
 
  Function: Callback for output/saving/printing
  Example : 
- Returns : 
+ Returns : Success: whether solution is unique and valid
  Args    : 
 
-Bugs: assumes L<SBG::Domain::CofM> implementation in L<SBG::Complex>
+Bugs: assumes L<SBG::Domain::Sphere> implementation in L<SBG::Complex>
 
 =cut
 sub sub_solution {
     my ($complex, $graph, $nodecover, $templates, $rejects) = @_;
 
-    our $binsize;
-    $binsize = config()->val(qw/assembly binsize/) || 1.5;
-    # 3D geometric hash
-    our $gh;
-    $gh ||= new SBG::GeometricHash(binsize=>$binsize);
-
     # Uninteresting unless at least two interfaces in solution
     return unless $templates->length > 1;     
 
-    # Reset the current step in the traversal:
-    $step = 1;
+    # A solution is now complete. Restart at step 1 for subsequent solution
     $solution++;    
+    $step = 1;
 
-################################################################################
-
-    my $success = 1;
-
-    my $labels = $complex->models->keys;
-    my @doms = map { $complex->model($_) } @$labels;
-    # TODO DES BUG cannot assume centre exists here
-    # if these are not SBG::Domain::CofM instances
-    # Complex needs to check itself
-    my @points = map { $_->centre } @doms;
+    # Get domains and their coords out of the complex model
+    my $componentlabels = $complex->keys;
+    my $doms = $complex->domains;
+    # Use only the centroid point, less accurate, but sufficient
+    my $coords = $doms->map(sub{$_->centroid});
 
     # Check if duplicate, based on geometric hash
     # exact() requires that the sizes match on both sides (i.e. no subsets)
-    my $class = $gh->exact(\@points, $labels);
+    my $class = $gh->exact($coords, $componentlabels);
     if (defined $class) {
         $dups++;
-        $logger->debug('Duplicate solution. Total duplicates: ', $dups);
-        $success = 0;
+        log()->debug('Duplicate solution. Total duplicates: ', $dups);
+        return;
     } else {
-        $class = $gh->put(undef, \@points, $labels);
+        # undef => Don't name the model
+        $class = $gh->put(undef, $coords, $componentlabels);
+        # Counter for classes created so far
         $classes = $class unless $class < $classes;
-        # Count number of occurences of unique complex solution of this size
+        # Count number of occurences of unique complex solution *of this size*
         $sizes{scalar(@$nodecover)}++;
-        $success = 1;
     }
 
-    return unless $success;
-
-    # Flush console for fancy in-place printing
-    local $| = 1;
     my $sizeheader = join(' ', map { "\#${_}-mer %3d"} sort keys %sizes);
-    printf 
-        "\033[1K\r" . 
-        "#Aborted %5d #Solutions %5d #Dups %5d #Unique %5d Size dist.: " .
-        "$sizeheader ", 
-        $rejects, $solution, $dups, $classes,
-        map { $sizes{$_} } sort keys %sizes,
-        ;
-
-    $logger->debug("\n\n====== Class: $class Solution $solution\n",
-                   "@$nodecover\n",
-                   "@$templates\n",
-        );
+    # Flush console and setup in-line printing, unless redirected
+    if (-t STDOUT) {
+        local $| = 1;
+        printf 
+            "\033[1K\r" . # Carriage return, i.e. w/o linefeed
+            "#Aborted %5d #Solutions %5d #Dups %5d #Unique %5d Size dist.: " .
+            "$sizeheader ", 
+            $rejects, $solution, $dups, $classes,
+            map { $sizes{$_} } sort keys %sizes,
+            ;
+    }
+    log()->debug("\n\n====== Class: $class Solution $solution\n",
+                 "@$nodecover\n", "@$templates\n", );
 
     # Write solution to file, append an optional name and model solution counter
     my $file = sprintf($file_pattern, 
-                       $complex->name ? $complex->name . '-' : '',
+                       $complex->id ? $complex->id . '-' : '',
                        $class, $solution);
     $complex->store($file . '.stor');
-    # Write the STAMP DOM version
-#     my $io = new SBG::ComplexIO(file=>">$file" . '.dom');
-#     $io->write($complex);
 
-    return $success;
+    return 1;
 
 } # sub_solution
 
 
 
-# TODO DOC:
-# Callback for attempting to add a new interaction template
+################################################################################
+=head2 sub_test
 
-# Uses the hash saved in the interation object (set when templates loaded) to find out what templates used by which components on an edge in the interaction graph
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
 
-# Returns true/false == success/failure to use/add interaction template
+Callback for attempting to add a new interaction template
 
-# Where in Assembly do we save the templates/doms that we accept?
-# $complex->comp() = $dom; and $complex->iaction($key) = $ix;
+Uses the hash saved in the interation object (set when templates loaded) to find
+out what templates used by which components on an edge in the interaction graph
+
+Returns true/false == success/failure to use/add interaction template
+
+=cut
+
 sub sub_test {
-    my ($complex, $graph, $src, $dest, $templ_id) = @_;
-    $logger->trace(join('|',$src,$dest,$templ_id));
-    my $success = 0;
-    our $step;
+    my ($complex, $graph, $src, $dest, $iaction_id) = @_;
+    log()->trace(join('|',$src,$dest,$iaction_id));
 
-    # Interaction object from ID
-    my $ix = $graph->get_interaction_by_id($templ_id);
+    # Interaction object, from ID, Network hashes these
+    my $ix = $graph->get_interaction_by_id($iaction_id);
 
-    $success = $complex->add_interaction($src, $dest, $ix);
-
-    return unless $success;
-
-#     step2img($destdom, $complex);
-#     step2dom($destdom, $complex);
+    # Try to add the interaction
+    $complex->add_interaction($ix, $src, $dest) or return;
+    # Success
     $step++;
-
-    return $success;
+    return 1;
 
 } # sub_test
 
@@ -180,33 +165,4 @@ __PACKAGE__->meta->make_immutable;
 no Moose;
 1;
 
-
-
-
-# TODO update
-sub step2dom {
-    my ($destdom, $complex) = @_;
-    our $solution;
-    our $step;
-    $logger->trace(sprintf("step-%04d-%05d", $solution, $step));
-    my @doms = ($destdom, $complex->asarray);
-    my $file = sprintf("step-%04d-%05d.dom", $solution, $step);
-    my $io = new SBG::DomainIO(-file=>">$file");
-    $io->write($_) for @doms;
-}
-
-
-# TODO update
-sub step2img {
-    my ($destdom, $complex) = @_;
-    our ($solution, $step);
-    my $img = sprintf("step-%04d-%05d.ppm", $solution, $step);
-    my $saved = $destdom->label;
-    $destdom->label("testing");
-    my $pdbfile = transform(-doms=>[$destdom, $complex->asarray]);
-    $destdom->label($saved);
-    # $destdom, being first in the list, will be chain A, highlight its clashes
-    my $optstr = "select *A\ncolor grey\nselect (!*A and within(10.0, *A))\ncolor HotPink";
-    pdb2img(-pdb=>$pdbfile, -script=>$optstr, -img=>$img);
-}
 

@@ -28,12 +28,9 @@ L<SBG::DomainI> , L<SBG::U::RMSD>
 package SBG::Domain::Sphere;
 use Moose;
 
-with qw/
-SBG::Role::Storable
-SBG::Role::Dumpable
-SBG::Role::Transformable
-SBG::DomainI
-/;
+with (
+    'SBG::DomainI',
+    );
 
 
 # NB methods provided by DomainI
@@ -42,7 +39,6 @@ use overload (
     '==' => 'equal',
     fallback => 1,
     );
-
 
 
 use PDL::Core qw/pdl zeroes/;
@@ -59,10 +55,18 @@ use SBG::U::Log; # qw/log/ # log() clashes with Math::Trig::log
  Returns : 
  Args    : A L<PDL> of dimension 4 (row vector) or 4x1 (matrix of one row)
 
+Initial center point
+
+Can subsequently be accessed via L<centroid>
+
+Read-only (can be set from constructor)
+
+NB not possible to set a trigger on 'coords' because it's an attribute from a
+Role and therefore composed, not inherited.
 
 =cut
 has 'center' => (
-    is => 'ro',
+    is => 'rw',
     isa => 'PDL',
     required => 1,
     default => sub { pdl [[0,0,0,1]] },
@@ -86,10 +90,30 @@ has 'radius' => (
     );
 
 
+################################################################################
+=head2 _hair_len
+
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
+
+
+=cut
+has '_hair_len' => (
+    is => 'ro',
+    isa => 'Num',
+    default => 5,
+    );
+
+
 sub _build_coords {
     my ($self) = @_;
-    my $r = $self->radius;
+ 
+    my $r = $self->_hair_len;
+    # Get initial center
     my $c = $self->center->squeeze;
+
     my $dims = $c->dim(0);
     my $x = zeroes $dims;
     my $y = zeroes $dims;
@@ -102,6 +126,26 @@ sub _build_coords {
 
     return $coords;
 }
+
+
+################################################################################
+=head2 centroid
+
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
+
+requied by L<DomainI>
+
+=cut
+sub centroid {
+    my ($self,) = @_;
+    # NB 'center' is only the starting center, not kept up to date
+    # NB this is column major indexing, i.e. 0th row of coords
+    return $self->coords->slice(',0')->squeeze;
+
+} # centroid
 
 
 ################################################################################
@@ -144,7 +188,7 @@ The maximum possible overlap is twice the radius of the smaller sphere.
 sub overlap_lin { 
     my ($self, $other) = @_;
     # Distance between centres
-    my $dist = SBG::U::RMSD::rmsd($self->center, $other->center);
+    my $dist = SBG::U::RMSD::rmsd($self->centroid, $other->centroid);
     # Radii of two spheres
     my $sum_radii = ($self->radius + $other->radius);
     # Overlaps when distance between centres < sum of two radi
@@ -191,7 +235,7 @@ sub overlap_lin_frac {
     my $max = 2 * List::Util::min($self->radius, $other->radius);
     my $overlap = $self->overlap_lin($other);
     my $frac = 1.0 * $overlap / $max;
-    SBG::U::Log::log()->debug("$frac frac overlap: ($self) and ($other)");
+    SBG::U::Log::log()->debug(sprintf "%0.3f ($self) and ($other)", $frac);
     return $frac;
 
 } # overlap_lin_frac

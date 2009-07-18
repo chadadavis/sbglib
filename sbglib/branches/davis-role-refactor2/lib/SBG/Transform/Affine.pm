@@ -24,17 +24,19 @@ L<SBG::TransformI>
 package SBG::Transform::Affine;
 use Moose;
 
-with qw/
-SBG::TransformI
-/;
+with (
+    'SBG::TransformI',
+    );
 
 
 use overload (
-    'x'  => 'apply', 
+    'x'  => 'mult', 
     '!'  => 'inverse', 
     '==' => 'equals',
     '""' => 'stringify',
     );
+
+use Module::Load;
 
 use PDL::MatrixOps qw/identity/;
 use PDL::Ufunc qw/all/;
@@ -83,6 +85,23 @@ sub _build_matrix {
 }
 
 
+
+################################################################################
+=head2 reset
+
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
+
+
+=cut
+sub reset {
+    my ($self,) = @_;
+    $self->{PDL} = $self->{matrix} = identity(4);
+} # reset
+
+
 ################################################################################
 =head2 inverse
 
@@ -96,7 +115,7 @@ sub inverse {
     my ($self) = @_;
     return $self unless $self->has_matrix;
     my $class = ref $self;
-    return $class->new(matrix=>$self->matrix->inv);
+    return $class->new(matrix=>$self->matrix->copy->inv);
 }
 
 
@@ -131,6 +150,28 @@ sub apply {
 
 
 ################################################################################
+=head2 mult
+
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
+
+
+=cut
+sub mult {
+    my ($self, $other) = @_;
+    return $other unless $self->has_matrix;
+
+    my $prod = $self->matrix x $other->matrix;
+    my $type = ref $self;
+    load($type);
+    return $type->new(matrix=>$prod);
+
+} # mult
+
+
+################################################################################
 =head2 transform
 
  Function: Transform self by the given transformation matrix
@@ -146,10 +187,11 @@ transformed by the given transformation matrix
 =cut
 sub transform {
     my ($self,$mat) = @_;
-    my $prod = $self->has_matrix ? $mat x $self->matrix : $mat;
-    my $type = ref $self;
-    return $type->new(matrix=>$prod);
 
+    my $mymat = $self->matrix;
+    my $prod = $mat x $mymat;
+    $mymat .= $prod;
+    return $self;
 } # transform
 
 
@@ -192,6 +234,7 @@ sub stringify {
 
 ###############################################################################
 __PACKAGE__->meta->make_immutable;
+no Moose;
 1;
 
 

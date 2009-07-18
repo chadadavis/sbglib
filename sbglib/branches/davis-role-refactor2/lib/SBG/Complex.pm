@@ -28,10 +28,12 @@ L<SBG::Traversal>
 package SBG::Complex;
 use Moose;
 
+with 'SBG::DomainSetI';
+with 'SBG::Role::Clonable';
+with 'SBG::Role::Scorable';
 with 'SBG::Role::Storable';
 with 'SBG::Role::Transformable';
-with 'SBG::Role::Scorable';
-with 'SBG::Role::Clonable';
+
 
 use overload (
     '""' => 'stringify',
@@ -59,6 +61,49 @@ use SBG::Interaction;
 use SBG::Seq;
 use SBG::Node;
 use SBG::Network;
+# Default domain representation
+use SBG::Domain::Sphere;
+
+use Module::Load;
+
+
+################################################################################
+=head2 id
+
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
+
+Convenience label
+
+=cut
+has 'id' => (
+    is => 'rw',
+    isa => 'Str',
+    );
+
+
+################################################################################
+=head2 objtype
+
+ Function: Type of L<SBG::DomainI> object to use for clash detection
+ Example : 
+ Returns : 
+ Args    : 
+ Default : 'SBG::Domain::Sphere'
+
+=cut
+has 'objtype' => (
+    is => 'ro',
+    isa => 'ClassName',
+    default => 'SBG::Domain::Sphere',
+    );
+# ClassName does not validate if the class isn't already loaded. Preload it here
+before 'objtype' => sub {
+    my ($self, $classname) = @_;
+    Module::Load::load($classname);
+};
 
 
 ################################################################################
@@ -162,14 +207,15 @@ has 'overlap_thresh' => (
 
  Function: Extracts just the Domain objects from the Models in the Complex
  Example : 
- Returns : 
+ Returns : ArrayRef[SBG::DomainI]
  Args    : 
 
 
 =cut
 sub domains {
     my ($self,) = @_;
-    return $self->models->values->map(sub { $_->subject });
+    my $vals = $self->models->values or return;
+    return $vals->map(sub { $_->subject });
 
 } # domains
 
@@ -322,16 +368,11 @@ sub transform {
  Args    : 
 
 
-TODO should be based on more than just fractional number of common components
-
 =cut
 sub coverage {
     my ($self, $other) = @_;
 
-    warn "Not implemented";
-    return 1.0 * $self->count / $other->count;
-
-#     my @cnames = intersection($self->models->keys, $other->models->keys);
+    return intersection($self->models->keys, $other->models->keys);
 
 } # coverage
 
@@ -351,7 +392,6 @@ are not considered. Undefined when no common models.
 
 TODO belongs in a ModelSet role
 
-TODO test
 =cut
 sub rmsd {
    my ($self,$other) = @_;
@@ -359,17 +399,98 @@ sub rmsd {
    my @cnames = intersection($self->models->keys, $other->models->keys);
 
    my @selflist = map { $self->get($_)->coords } @cnames;
+   my $selfcoords = pdl(@selflist)->copy;
+
    my @otherlist = map { $other->get($_)->coords } @cnames;
+   # copy should not be necessary here
+   my $othercoords = pdl(@otherlist);
 
-   my $selfcoords = pdl(@selflist)->squeeze;
-   my $othercoords = pdl(@otherlist)->squeeze;
 
-   return SGB::U::RMSD::rmsd($selfcoords, $othercoords);
-}
+   # Clump into a 2D matrix, if there is a 3rd dimension
+   # I.e. normally have an outer dimension representing individual domains.
+   # Then each domain is a 2D matrix of coordinates
+   # This clumps the whole set of domains into a single matrix of coords
+   $selfcoords = $selfcoords->clump(1,2) if $selfcoords->dims == 3;
+   $othercoords = $othercoords->clump(1,2) if $othercoords->dims == 3; 
+
+   my $transmatrix = SBG::U::RMSD::superpose($selfcoords, $othercoords);
+   my $rmsd = SBG::U::RMSD::rmsd($selfcoords, $othercoords);
+   return $rmsd;
+} # rmsd
 
 
 ################################################################################
-=head2 attach
+=head2 superposition
+
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
+
+# TODO needs to be in some DomainSetI
+# use $self->keys and $self->domains
+
+=cut
+sub superposition {
+   my ($self,$other) = @_;
+   # Only consider common components
+   my @cnames = intersection($self->models->keys, $other->models->keys);
+
+   # Pairwise Superpositions
+   my $sups = [];
+   my $rmsds = [];
+   foreach my $key (@cnames) {
+       my $selfdom = $self->get($key)->subject;
+       my $otherdom = $other->get($key)->subject;
+
+       my $sup = SBG::STAMP::superposition($selfdom, $otherdom);
+       next unless $sup;
+
+       $sups->push($sup->transformation);
+       $rmsds->push($sup->scores->at('RMS'));
+   }
+
+   my $mats = $sups->map(sub{$_->matrix});
+   my $summat = List::Util::reduce { our($a,$b); $a + $b } @$mats;
+   my $avgmat = $summat / @$mats;
+
+   my $rmsd = mean($rmsds);
+
+   return wantarray ? ($avgmat, $rmsd, $sups) : $avgmat;
+
+} # superposition
+
+
+################################################################################
+=head2 merge
+
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
+
+
+=cut
+
+# TODO put in a DomainSetI
+use SBG::DomainIO::pdb;
+use Module::Load;
+sub merge {
+    my ($self,$file) = @_;
+    my $doms = $self->domains or return;
+    my $io = $file ?
+        new SBG::DomainIO::pdb(file=>">$file") :
+        new SBG::DomainIO::pdb(tempfile=>1);
+    $io->write(@$doms);
+    my $type = ref $doms->[0];
+    load($type);
+    my $dom = $type->new(file=>$io->file, descriptor=>'ALL');
+    return $dom;
+} # merge
+
+
+################################################################################
+=head2 add_interaction
 
  Function: 
  Example : 
@@ -381,21 +502,25 @@ sub rmsd {
 sub add_interaction {
     my ($self, $iaction, $srckey, $destkey) = @_;
 
+    my $type = $self->objtype;
+
     # Where the last reference domain for this component was placed in space
     my $refmodel = $self->get($srckey);
     my $refdom = $refmodel->subject if defined $refmodel;
     # Initial interaction, no spacial constraints yet, always accepted
     unless (defined $refdom) {
+        my $keys = $iaction->keys;
+        my $models = $keys->map(sub{$self->_mkmodel($iaction, $_)});
+        $self->add_model(@$models);
         $self->interactions->put($iaction, $iaction);
-        # Extract Model objects from the Interaction
-        $self->add_model(@{$iaction->models->values});
         return 1;
     }
 
     # Get domain models for components of interaction
     my $srcdom = $iaction->get($srckey)->subject;
-    # Get a clone of this, because we will temporary manipulate it
-    my $destdom = $iaction->get($destkey)->subject->clone;
+    # For domain being placed, make a copy that has a concrete representation
+    my $destmodel = $self->_mkmodel($iaction, $destkey);
+    my $destdom = $destmodel->subject;
 
     my $linker_superposition = SBG::STAMP::superposition($srcdom, $refdom);
     return 0 unless defined $linker_superposition;
@@ -405,9 +530,7 @@ sub add_interaction {
     # Product of relative with absolute transformation.
     # Order of application of transformations matters
     $linker_superposition->transformation->apply($destdom);
-    # Any previous transformation (reference domain) has to also be included.
-    $refdom->transformation->apply($destdom);
-
+    log()->trace("Linking:", $linker_superposition->transformation);
 
     # Now test steric clashes of potential domain against existing domains
     my $clashfrac = $self->check_clash($destdom);
@@ -418,10 +541,6 @@ sub add_interaction {
     # Save all meta data that went into this placement.
     # NB Any previous $self->get($destnode) gets overwritten. 
     # This is compatible with the backtracking of SBG::Traversal. 
-
-    my $destmodel = new SBG::Model(
-        query=>$iaction->get($srckey)->query,
-        subject=>$destdom);
     $self->set($destkey, $destmodel);
     $self->clashes->put($destkey, $clashfrac);
     # Cache by destnode, as there may be many for any given refdom
@@ -430,6 +549,23 @@ sub add_interaction {
     return 1;
 
 } # add_interaction
+
+
+# Create a concrete model for a given abstract model in an interaction
+sub _mkmodel {
+    my ($self, $iaction, $key) = @_;
+    my $vmodel = $iaction->get($key);
+    my $vdom = $vmodel->subject;
+
+    # Clone first, to sever reference to original object
+    my $clone = $vdom->clone;
+    # Now copy construct into the desired type
+    my $type = $self->objtype;        
+    my $cdom = $type->new(%$clone);
+
+    my $model = new SBG::Model(query=>$vmodel->query, subject=>$cdom);
+    return $model;
+}
 
 
 ################################################################################
@@ -449,22 +585,61 @@ sub check_clash {
     my $thresh = $self->overlap_thresh;
     my $overlaps = [];
 
+    log()->trace("$newdom vs " . $self->models->values->join(','));
     # Get all of the objects in this assembly. 
     # If any of them clashes with the to-be-added objects, then disallow
-    foreach my $key (@{$self->models->keys}) {
+    foreach my $key (@{$self->keys}) {
         # Measure the overlap between $newdom and each component
         my $existingdom = $self->get($key)->subject;
         log()->trace("$newdom vs $existingdom");
         my $overlapfrac = $newdom->overlap($existingdom);
         # Nonetheless, if one clashes severely, bail out
         return 1 if $overlapfrac > $thresh;
-        # Don't worry about domains that aren't overlapping at all (ie < 0)
+        # Ignore domains that aren't overlapping at all (ie < 0)
         $overlaps->push($overlapfrac) if $overlapfrac > 0;
     }
     my $mean = mean($overlaps) || 0;
     log()->info("$newdom fits w/ mean overlap fraction: ", $mean);
     return $mean;
-} 
+} # check_clash
+
+
+################################################################################
+=head2 globularity
+
+ Function: 
+ Example : 
+ Returns : [0,1]
+ Args    : 
+
+Estimates the extent of globularity of a complex as a whole as the ratio of the
+rradius of gyration to the maximum radius, over all of the coordinates in the
+complex.
+
+This provides some measure of how compact, non-linear, the components in a
+complex are arranged. E.g. high for an exosome, low for actin fibers
+
+=cut
+sub globularity {
+    my ($self,) = @_;
+
+    my $doms = $self->domains;
+    my $coords = $doms->map(sub{$_->coords});
+    my $pdl = pdl($coords);
+
+    # Clump into a 2D matrix, if there is a 3rd dimension
+    # I.e. normally have an outer dimension representing individual domains.
+    # Then each domain is a 2D matrix of coordinates
+    # This clumps the whole set of domains into a single matrix of coords
+
+    $pdl = $pdl->clump(1,2) if $pdl->dims == 3;
+
+    my $radgy = SBG::U::RMSD::radius_gyr($pdl);
+    my $radmax = SBG::U::RMSD::radius_max($pdl);
+
+    return $radgy / $radmax;
+
+} # globularity
 
 
 ################################################################################

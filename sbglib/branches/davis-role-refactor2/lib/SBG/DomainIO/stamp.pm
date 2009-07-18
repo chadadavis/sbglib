@@ -57,6 +57,8 @@ with 'SBG::IOI';
 
 use Carp qw/carp cluck/;
 
+use Moose::Autobox;
+
 use SBG::Domain;
 use SBG::TransformIO::stamp;
 use SBG::Types qw/$re_pdb $re_descriptor/;
@@ -67,16 +69,21 @@ use SBG::Types qw/$re_pdb $re_descriptor/;
 ################################################################################
 # Accessors
 
-=head2 type
+=head2 objtype
 
-The sub-type to use for any dynamically created objects. Should implement
+The sub-objtype to use for any dynamically created objects. Should implement
 L<SBG::DomainI> role. Default "L<SBG::Domain>" .
 
 =cut
-has '+type' => (
-    default => 'SBG::Domain',
-    );
+# has '+objtype' => (
+#     default => 'SBG::Domain',
+#     );
 
+sub BUILD {
+    my ($self) = @_;
+    $self->objtype('SBG::Domain') unless $self->objtype;
+}
+    
 
 ################################################################################
 =head2 write
@@ -153,7 +160,7 @@ sub write {
  }
  print "Read in " . scalar(@doms) . " domains\n";
 
-NB You can change L<type> in between invocations of L<read>
+NB You can change L<objtype> in between invocations of L<read>
 
 Any transformation found in the domain block is applied to the domain object
 after it is created.
@@ -175,21 +182,22 @@ sub read {
 
         # Create/parse new domain header, May not always have a file name
         unless ($line =~ 
-                /^(\S*)\s+($re_pdb)(\S*)\s*\{\s*($re_descriptor)(\s*\})?\s*$/) {
+                /^(\S*)\s+(\S+)\s*\{\s*($re_descriptor)(\s*\})?\s*$/) {
             carp("Cannot parse STAMP domain: $line");
             
             # Want an array of domains, then skip to next one, otherwise abort
             wantarray ? next : last;
         }
 
-        # $1 is (possible) file
-        # $2 is pdbid
-        # $3 is rest of STAMP label
-        # $4 is STAMP descriptor, without { }
+        my ($file, $pdbid, $descr) = ($1, $2, $3);
+        ($pdbid) = $pdbid =~ /^($re_pdb)/;
+        # Get only the params that are defined
+        my $params = {pdbid=>$pdbid, descriptor=>$descr, file=>$file};
+        my $exists = $params->keys->grep(sub{defined $params->{$_}});
+        $params = $params->hslice($exists);
 
-        my $type = $self->type();
-        my $dom = $type->new(pdbid=>$2,descriptor=>$4);
-        $dom->file($1) if $1;
+        my $objtype = $self->objtype();
+        my $dom = $objtype->new(%$params);
 
         # Parse transformtion, if any
         # Header ends?, i.e. contains no transformation
@@ -212,4 +220,5 @@ sub read {
 
 ################################################################################
 __PACKAGE__->meta->make_immutable;
+no Moose;
 1;

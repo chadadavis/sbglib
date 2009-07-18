@@ -5,8 +5,9 @@ use warnings;
 use Test::More 'no_plan';
 use SBG::U::Test qw/float_is pdl_approx/;
 use Carp;
+$SIG{__DIE__} = \&confess;
+
 use Data::Dumper;
-$, = ' ';
 
 use SBG::Transform::Affine;
 use PDL;
@@ -40,7 +41,7 @@ pdl_approx($inv_prod->matrix, $id->matrix, 'inverse() produces identity');
 # Test transforming a vector
 my $v = pdl [ 1.1,2.2,3.3,1];
 # NB don't need to transpose $v here (does it for us)
-my $prod = $t x $v;
+my $prod = $t->apply($v);
 my $prod_ans = pdl [ -54.2423,-59.4336,-56.9354,1.];
 pdl_approx($prod, $prod_ans, 'Vector transformation');
 

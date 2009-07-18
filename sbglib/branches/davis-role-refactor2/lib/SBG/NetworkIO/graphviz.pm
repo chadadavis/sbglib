@@ -48,7 +48,7 @@ sub read {
 
     warn "Not implemented";
 
-    while (<$fh>) {
+    while (my $_ = <$fh>) {
         next unless //;
         chomp;
     }

@@ -34,7 +34,7 @@ use Moose::Role;
 =cut
 has 'scores' => (
     is => 'rw',
-    isa => 'HashRef[Num]',
+    isa => 'HashRef',
     lazy => 1,
     default => sub { {} },
     );

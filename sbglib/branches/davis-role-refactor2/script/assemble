@@ -22,15 +22,26 @@ In increasing order: TRACE DEBUG INFO WARN ERROR FATAL
 I.e. setting B<-l WARN> (the default) will log warnings errors and fatal
 messages, but no info or debug messages to the log file (B<log.log>)
 
+=head2 -c|omplete
+
+Only produce complex models that contain every component of the network
+
+=head2 -s|ize
+
+Minimum size of a complex model, in number of components, e.g.
+
+ -s 4 (4 or more component proteins in complex models
+
+ -s 75%$ (at least 75% of the components in the network are modelled)
+
 
 =head1 SEE ALSO
 
-L<SBG::Assembler> , L<SBG::Network> , L<SBG::SearchI>
+L<SBG::CA::Assembler> , L<SBG::Network> , L<SBG::SearchI>
 
 =cut
 
 ################################################################################
-
 
 use strict;
 use warnings;
@@ -40,33 +51,14 @@ use Moose::Autobox;
 use File::Basename;
 use List::MoreUtils qw/each_arrayref/;
 use POSIX;
-use Module::Load;
 
-# Interaction network
-use SBG::Network;
-# Template search
-use SBG::Search::SCOP;
-# Network traversal Algorithm
-use SBG::Traversal;
-# Callback functions
-use SBG::CA::Assembler;
-# Solution holder
-use SBG::Complex;
-use SBG::Seq;
-use SBG::Node;
 use SBG::Role::Storable;
-use SBG::Domain;
+use SBG::Network;
+use SBG::Traversal;
+use SBG::CA::Assembler;
+use SBG::Complex;
 
 use SBG::U::Log;
-use SBG::U::Config qw/config/;
-use SBG::GeometricHash;
-
-# Type of domain object representation to use
-# our $type = 'SBG::Domain';
-# our $type = 'SBG::Domain::Crosshairs';
-our $type = 'SBG::Domain::CofM';
-
-Module::Load::load($type);
 
 
 ################################################################################
@@ -77,57 +69,29 @@ my $result = GetOptions(\%ops,
                         'h|help',
                         'c|complete',
                         's|size=s',
-                        'network=s',
-                        'pdbid=s',
                         'l|log=s',
     );                  
 if ($ops{'h'}) { pod2usage(-exitval=>1, -verbose=>2); }
-
 SBG::U::Log::init($ops{'l'}) if $ops{'l'};
 
-our $minsize;
 
-################################################################################
+my $file = shift;
+my $net = retrieve($file) or
+    pod2usage(-exitval=>1, -verbose=>1, -message=>"$file is not an object");
+my $basename = basename($file,'.stor');
+print "Network: $basename\n";
+_print_net($net);
+my $minsize = _minsize($net, %ops);
 
-# Autoflush
-$| = 1;
-
-if ($ops{'network'}) {
-
-    print "Subnet: ", $ops{'network'}, "\n";
-    my $net = retrieve $ops{'network'};
-    $minsize = _minsize($net, %ops);
-    _print_net($net);
-    _one_net($net, basename($ops{'network'},'.stor'));
-
-} elsif ($ops{'pdbid'}) {
-
-    print "PDB: ", $ops{'pdbid'}, "\n";
-    my @accnos = SBG::Search::SCOP::domains($ops{'pdbid'}) or 
-        pod2usage(-exitval=>1);
-    
-    print "\taccession_numbers:\n\t@accnos\n";
-    my @seqs = map { new SBG::Seq(-accession_number=>$_) } @accnos;
-    my @nodes = map { new SBG::Node($_) } @seqs;
-    
-    my $net = new SBG::Network;
-    $net->add($_) for @nodes;
-    print "\tSearching for interaction templates ... ";
-    $net->build(new SBG::Search::SCOP);
-    print scalar($net->interactions), " interactions\n";
-    
-    my @nets = _part_write($net);
-
-} else {
-    pod2usage(-exitval=>1);
-}
+# Assemble the network finally
+_one_net($net, $basename, $minsize);
 
 print "\n";
-
 exit;
 
-################################################################################
 
+################################################################################
+# Parse the -s command line option (minsize of complex predictions)
 sub _minsize {
     my ($net, %ops) = @_;
     # Min components in complex (e.g. 4 or '75%' )
@@ -135,91 +99,29 @@ sub _minsize {
     # Only full-size (complete coverage) models?
     $minsize = '100%' if $ops{'c'};
     if ($minsize =~ /(\d+)\%$/) {
-        $minsize = ceil($net->vertices() * $1 / 100.0);
+        $minsize = ceil($net->nodes() * $1 / 100.0);
     }
     return $minsize;
 }
 
 
+################################################################################
+# 
 sub _print_net {
     my ($net, $i, $n) = @_;
     $i ||= 1;
     $n ||= 1;
     printf 
-#         "\tsubnetwork ( %d / %d ) \n" .
         "\t%4d nodes, %4d edges, %4d interactions ...\n",
-#         $i, $n, 
         scalar($net->vertices), scalar($net->edges), 
         scalar($net->interactions);
 }
 
 
-sub _part_write {
-    my ($net, $name) = @_;
-
-    # Save whole network first
-    $name = $name ? ($name . '-') : '';
-    $net->store($name . 'network.stor');
-    $net->graphviz($name . 'network.dot');
-    my $complex = _subcomplex($net);
-    $complex->store($name . 'complex.stor');
-
-    # 3D geometric hash
-    my $binsize = config()->val(qw/assembly binsize/) || 1.5;
-    my $gh = new SBG::GeometricHash(binsize=>$binsize);
-
-    print "\tPartitioning ... ";
-    my @networks = $net->partition();
-    my $n = scalar(@networks);
-    print "$n connected sub-networks\n";
-    warn "\tNo connected sub-networks\n" unless $n > 0;
-
-    for (my $i = 0; $i < @networks; $i++) {
-        my $subnet = $networks[$i];
-        my $subcomplex = _subcomplex($subnet);
-        my $lname = $name;
-        my $labels = $subcomplex->models->keys;
-        my @doms = map { $subcomplex->model($_) } @$labels;
-        # TODO DES BUG cannot assume SBG::Domain::CofM::centre here
-        my @points = map { $_->centre } @doms;
-        my $class = $gh->exact(\@points); # , $labels); # No labels
-        if (defined $class) {
-            print "\tSubnet ",$i+1," seems to duplicate subnet $class\n";
-            # Use hidden filename
-            $lname = sprintf ".dup-%04d-", $class;
-        } else {
-            $class = $gh->put($i+1, \@points, $labels);
-        }
-        my $netfile = sprintf("%ssubnet-%04d.stor", $lname, $i+1);
-        $subnet->store($netfile);
-        my $cfile = sprintf("%ssubcomplex-%04d.stor", $lname, $i+1);
-        $subcomplex->store($cfile);
-    }
-    return @networks;
-}
-
-
-# Creates a complex, based on a subnet
-sub _subcomplex {
-    my ($net) = @_;
-    our $type;
-    my @accnos = map { "$_" } $net->nodes;
-    my @fields = map { { SBG::Search::SCOP::parse_scopid($_) } } @accnos;
-    my @domains = map { SBG::Domain::create($type, %$_) } @fields;
-
-    my $complex = new SBG::Complex(type=>$type);
-    my $ea = each_arrayref \@accnos, \@domains;
-    while (my ($accno, $dom) = $ea->()) {
-        $complex->model($accno, $dom);
-    }
-    return $complex;
-}
-
-
+################################################################################
+# Assemble network
 sub _one_net {
-    my ($net,$name) = @_;
-    our $minsize;
-    our $type;
+    my ($net,$name, $minsize) = @_;
 
     # Traversal algorithm, on the network
     # -test is the function to call when trying to place an interaction
@@ -230,9 +132,12 @@ sub _one_net {
                                minsize=>$minsize,
         );
     # Each result is a complex, this is a placeholder for the aglorithm's state
-    my $state = new SBG::Complex(name=>$name, type=>$type);
+    my $state = new SBG::Complex(id=>$name);
 
     # Go!
     $t->traverse($state);
 
 }
+
+
+

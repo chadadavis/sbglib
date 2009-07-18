@@ -508,6 +508,7 @@ sub _do_solution {
     return unless $alts->length;
     return if $self->minsize > $nodes->length;
 
+# TODO DES resolve uniqueness of edge alternatives
 #     my $solution_label = $alts->join(',');
 #     if ($self->_solved->at($solution_label)) {
 #         _d $d, "Duplicate";
@@ -543,7 +544,7 @@ sub _array2D {
 
 
 # TODO del
-sub DESTROY {
+sub DEMOLISH {
     my ($self) = @_;
     _d0 "Traversal done: rejected paths: " . $self->rejects;
     _d0 "Traversal done: rejected solutions: " . $self->rsolutions;

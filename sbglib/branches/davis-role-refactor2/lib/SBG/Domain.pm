@@ -57,6 +57,21 @@ sub overlap {
 
 
 ################################################################################
+=head2 centroid
+
+ Function: 
+ Example : 
+ Returns : NA
+ Args    : 
+
+=cut
+sub centroid {
+    my ($self,) = @_;
+
+} # centroid
+
+
+################################################################################
 __PACKAGE__->meta->make_immutable;
 no Moose;
 1;

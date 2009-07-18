@@ -44,7 +44,7 @@ our @ISA = qw(Exporter);
 our @EXPORT    = qw();
 # Manually exported symbols
 our @EXPORT_OK = qw/
-rmsd centroid radius_gyr radius_max superposition translation
+rmsd centroid radius_gyr radius_max superposition superpose translation
 /;
 
 
@@ -229,8 +229,8 @@ sub superposition {
 =head2 superpose
 
  Function: Determines the transformation matrix to superpose A onto B
- Example : my ($transform, $rmsd) = superpose($points_a, $points_b);
- Returns : Transformation matrix, and RMSD resulting from transformation
+ Example : my $transform = superpose($points_a, $points_b);
+ Returns : Transformation matrix
  Args    : 
 
 Unlike L<superposition> which just returns the transformation matrix, this also actually performs the transformation on A.
@@ -241,8 +241,7 @@ sub superpose {
     my ($pointsa,$pointsb) = @_;
     my $t = superposition($pointsa, $pointsb);
     $pointsa .= _apply($t, $pointsa);
-    my $rmsd = rmsd($pointsa, $pointsb);
-    return wantarray ? ($t, $rmsd) : $t;
+    return $t;
 
 } # superpose
 

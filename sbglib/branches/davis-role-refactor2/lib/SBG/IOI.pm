@@ -42,7 +42,7 @@ use SBG::U::Config qw/config/;
 Needs to be a file handle, e.g. L<IO::String>, L<File::Temp>, or any native Perl
 file handle, e.g.
 
- $io = new SBG::IO(fh=>\*STDOUT, type=>'My::Class');
+ $io = new SBG::IO(fh=>\*STDOUT, objtype=>'My::Class');
  $io->write($some_object);
 
  $io = new SBG::IO(fh=>\*STDIN);
@@ -51,7 +51,8 @@ file handle, e.g.
 =cut
 has 'fh' => (
     is => 'rw',
-    handles => [qw/close eof flush print printf say autoflush opened /],
+    # Cannot delegate, as we might just have a GLOB sometimes
+#     handles => [qw/flush close/],
     default => sub { \*STDOUT },
     );
 
@@ -113,18 +114,18 @@ has 'string' => (
     );
 
 
-=head2 type
+=head2 objtype
 
-The sub-type to use for any objects dynamically created by B<read>
+The sub-objtype to use for any objects dynamically created by B<read>
 
 =cut
-has 'type' => (
+has 'objtype' => (
     is => 'rw',
     isa => 'ClassName',
     );
 
 # ClassName does not validate if the class isn't already loaded. Preload it here
-before 'type' => sub {
+before 'objtype' => sub {
     my ($self, $classname) = @_;
     return unless $classname;
     Module::Load::load($classname);
@@ -132,11 +133,43 @@ before 'type' => sub {
 
 
 ################################################################################
+=head2 flush
+
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
+
+
+=cut
+sub flush {
+    my ($self,) = @_;
+    $self->fh->flush if $self->fh->can('flush');
+} # flush
+
+
+################################################################################
+=head2 close
+
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
+
+
+=cut
+sub close {
+    my ($self,) = @_;
+    close $self->fh;
+} # close
+
+
+################################################################################
 =head2 read
 
  Function: Reads the next object from the stream.
  Example : my $obj = $io->read();
- Returns : new instance of subclass defined by B<type>
+ Returns : new instance of subclass defined by B<objtype>
  Args    : NA
 
 =cut

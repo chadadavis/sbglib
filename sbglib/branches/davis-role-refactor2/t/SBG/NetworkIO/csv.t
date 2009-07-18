@@ -31,7 +31,6 @@ is(scalar(@graphs), 2, "partition()");
 # Probably will require defining == for SBG::Network
 $TODO = "Test write()";
 ok 0;
-$io = new SBG::NetworkIO::csv;
+# $io = new SBG::NetworkIO::csv;
 # $io->write($net);
-
 

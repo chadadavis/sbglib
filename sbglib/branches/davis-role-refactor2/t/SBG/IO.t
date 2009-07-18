@@ -33,6 +33,8 @@ my ($tfh1, $tpath1) = tempfile();
 my $io1 = new SBG::IO(fh=>$tfh1);
 $io1->write("Writing to temp file handle ( $tpath1 )");
 $io1->flush;
+$io1->close;
+
 ok(-s $tpath1, "Writing to temp file handle ( $tpath1 )");
 
 # Test writing temp file, using file path

@@ -137,6 +137,7 @@ sub _run {
     my $io = new SBG::DomainIO::stamp(tempfile=>1);
     $io->write($dom);
     my $path = $io->file;
+    $io->close;
 
     # NB the -v option is necessary if you want the filename of the PDB file
     my $cofm = config()->val(qw/cofm executable/) || 'cofm';
@@ -148,7 +149,9 @@ sub _run {
     }
 
     my %res;
-    while (<$cofmfh>) {
+    while (my $_ = <$cofmfh>) {
+
+
         if (/^Domain\s+\S+\s+(\S+)/i) {
             $res{file} = $1;
         } elsif (/^REMARK Domain/) {
@@ -158,7 +161,8 @@ sub _run {
             $res{Rmax} = $a[13];
             ($res{Cx}, $res{Cy}, $res{Cz}) = ($a[16], $a[17], $a[18]);
         }
-    }
+
+    } # while
 
     return unless %res;
     

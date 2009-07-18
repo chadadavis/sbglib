@@ -75,8 +75,8 @@ $TODO = "test overlap_vol()";
 $s1->radius(100);
 $s2->radius(200);
 $expectoverlap = $s1->radius + $s2->radius - $expectdist;
-float_is($s1->overlap_vol($s2), $expectoverlap, 'overlap_vol()', $tolerance);
-
+# float_is($s1->overlap_vol($s2), $expectoverlap, 'overlap_vol()', $tolerance);
+ok 0;
 
 
 

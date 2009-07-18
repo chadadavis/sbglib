@@ -64,6 +64,7 @@ has 'query' => (
 =cut
 has 'subject' => (
     is => 'rw',
+    handles => [ qw/coords/ ],
     );
 
 

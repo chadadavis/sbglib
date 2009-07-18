@@ -31,19 +31,25 @@ use SBG::Domain;
 use PDL::Core qw/pdl ones/;
 use PDL::IO::Misc qw/rcols/;
 
-# Write PDB file by writing a STAMP Dom file and haveing 'transform' create PDB
+# Write PDB file by writing a STAMP Dom file and having 'transform' create PDB
 use SBG::DomainIO::stamp;
 
 
-=head2 type
+=head2 objtype
 
-The sub-type to use for any dynamically created objects. Should implement
+The sub-objtype to use for any dynamically created objects. Should implement
 L<SBG::DomainI> role. Default "L<SBG::Domain>" .
 
 =cut
-has '+type' => (
-    default => 'SBG::Domain',
-    );
+# has '+objtype' => (
+#     default => 'SBG::Domain',
+#     );
+
+
+sub BUILD {
+    my ($self) = @_;
+    $self->objtype('SBG::Domain') unless $self->objtype;
+}
 
 
 =head2 atom_type
@@ -124,9 +130,9 @@ sub read {
     my $coords = $self->coords();
 
     # What type of Domain to create:
-    my $type = $self->type;
+    my $objtype = $self->objtype;
     # Also note the file that was read from
-    my $dom = $type->new(coords=>$coords, file=>$self->file());
+    my $dom = $objtype->new(coords=>$coords, file=>$self->file());
     return $dom;
 
 }
@@ -179,4 +185,5 @@ sub coords {
 
 ################################################################################
 __PACKAGE__->meta->make_immutable;
+no Moose;
 1;

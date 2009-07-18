@@ -10,10 +10,13 @@ SBG::Superposition - Represents a pair of L<DomainI>, superpositioned
 
 =head1 DESCRIPTION
 
+'scores' can contain 
+
+ Sc RMS len nfit seq_id sec_id q_len d_len n_sec n_equiv
 
 =head1 SEE ALSO
 
-L<SBG::TransformI> , L<SBG::ContainerI> , L<SBG::DomainI>
+L<SBG::TransformI> , L<SBG::DomainI>
 
 =cut
 
@@ -29,14 +32,12 @@ with 'SBG::Role::Storable';
 with 'SBG::Role::Transformable';
 
 
-use Scalar::Util qw/refaddr/;
-
-
-# STAMP score fields
-our @stats = qw/Sc RMS len nfit seq_id sec_id q_len d_len n_sec n_equiv/;
-has \@stats => (
-    is => 'rw',
+use overload (
+    '""' => 'stringify',
     );
+
+use Scalar::Util qw/refaddr/;
+use Moose::Autobox;
 
 
 =head2 isid
@@ -97,11 +98,13 @@ sub identity {
     my $self = __PACKAGE__->new(
         to => $dom,
         from => $dom,
+        scores => {
         isid=> 1,
         Sc  => 10,
         RMS => 0,
         seq_id => 100,
         sec_id => 100,
+        },
         );
     return $self;
 };
@@ -127,6 +130,75 @@ sub transform {
     $self->from()->transform($matrix);
     return $self;
 } # transform
+
+
+################################################################################
+=head2 apply
+
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
+
+
+=cut
+sub apply {
+    my ($self,@objs) = @_;
+    $self->transformation->apply(@objs)
+
+} # apply
+
+
+
+################################################################################
+=head2 inverse
+
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
+
+
+=cut
+sub inverse {
+    my ($self,) = @_;
+    my $class = ref $self;
+    my $copy = $class->new(%$self);
+
+    # If it's just the identity, don't change anything
+    return $copy if $self->isid;
+
+    my $from = $copy->from->clone;
+    my $to = $copy->to->clone;
+    # The Transforms are the inverse of one another
+    $to->transformation($from->transformation->inverse);
+    # Swap
+    $copy->to($from);
+    $copy->from($to);
+    # And update alignment lengths
+    $copy->scores->put('q_len', $self->scores->at('d_len'));
+    $copy->scores->put('d_len', $self->scores->at('q_len'));
+
+    return $copy;
+
+} # inverse
+
+
+################################################################################
+=head2 stringify
+
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
+
+
+=cut
+sub stringify {
+    my ($self,) = @_;
+    return '' . $self->transformation;
+
+} # stringify
 
 
 ###############################################################################

@@ -20,6 +20,6 @@ while (my $iaction = $io->read) {
 is(scalar(@iactions), 17, "read()");
 
 # Verify that no duplicate nodes created
-is($io->count, 6, "Node cache");
+is($io->count, 6, "Unique node cache");
 
 

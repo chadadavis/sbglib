@@ -2,13 +2,13 @@
 
 =head1 NAME
 
-SBG::ContainerI - A set of L<SBG::DomainI>
+SBG::DomainSetI - A set of L<SBG::DomainI>
 
 =head1 SYNOPSIS
 
  package SBG::Domain::MyDomainImplementation;
  use Moose;
- with 'SBG::ContainerI'; 
+ with 'SBG::DomainSetI'; 
 
  sub domains { return \@domains }
 
@@ -25,16 +25,14 @@ L<SBG::DomainI>, L<Moose::Role>
 
 ################################################################################
 
-package SBG::ContainerI;
+package SBG::DomainSetI;
 use Moose::Role;
 
 
-with qw/
-SBG::Role::Storable
-SBG::Role::Dumpable
-SBG::Role::Clonable
-SBG::Role::Transformable
-/; 
+with 'SBG::Role::Clonable';
+with 'SBG::Role::Dumpable';
+with 'SBG::Role::Storable';
+with 'SBG::Role::Transformable';
 
 
 ################################################################################
@@ -47,30 +45,9 @@ SBG::Role::Transformable
 
 
 =cut
-has 'domains' => (
-    is => 'rw',
-    isa => 'ArrayRef[SBG::DomainI]',
-    );
+requires 'domains';
 
 
-################################################################################
-=head2 transform
-
- Function: 
- Example : 
- Returns : 
- Args    : 
-
-
-=cut
-sub transform {
-    my ($self, $matrix) = @_;
-
-    foreach (@{$self->domains}) {
-        $_->transform($matrix);
-    }
-    return $self;
-}
 
 
 ################################################################################

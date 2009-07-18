@@ -12,7 +12,9 @@ SBG::Network - Additions to Bioperl's L<Bio::Network::ProteinNet>
 =head1 DESCRIPTION
 
 NB A L<Bio::Network::ProteinNet>, from which this module inherits, is a blessed
-arrayref, rather than a blessed hashref.
+arrayref, rather than a blessed hashref. This means it is not easy to add any
+additional attributes to this object, even if it is extending another class
+
 
 =head1 SEE ALSO
 
@@ -105,7 +107,7 @@ Also adds index ID (from B<accession_number>) to Node. Then, you can:
 override 'add_node' => sub {
     my ($self, $node) = @_;
     my $res = $self->SUPER::add_node($node);
-    my ($protein) = $node->proteins or return;
+    my ($protein) = $node->proteins;
     $self->add_id_to_node($protein->accession_number, $node);
     return $res;
 };
@@ -183,12 +185,14 @@ sub build {
         my ($p1) = $node1->proteins;
         my ($p2) = $node2->proteins;
         my @interactions = $searcher->search($p1, $p2);
-        
+        next unless @interactions;
+        $self->add_edge($node1, $node2);
         foreach my $iaction (@interactions) {
             $self->add_interaction(
                 -nodes=>[$node1,$node2],
                 -interaction=>$iaction,
                 );
+            $self->add_id_to_interaction("$iaction", $iaction);
         }
     }
     

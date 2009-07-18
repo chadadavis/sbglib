@@ -62,7 +62,7 @@ sub get_descriptor {
         }
     }
     seek $fh, 0, 0;
-    while (<$fh>) {
+    while (my $_ = <$fh>) {
         next unless /^(\S+) ($scopid) { (.*?) }$/;
         return ($1, $2, $3);
     }

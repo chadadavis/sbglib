@@ -38,7 +38,7 @@ package SBG::DomainI;
 use Moose::Role;
 
 
-with 'SBG::Role::Clonable';
+# with 'SBG::Role::Clonable' => { excludes => [ qw/clone/ ] };
 with 'SBG::Role::Dumpable';
 with 'SBG::Role::Scorable';
 with 'SBG::Role::Storable';
@@ -57,6 +57,9 @@ use overload (
 
 # Get address of a reference
 use Scalar::Util qw(refaddr);
+use Clone;
+use Module::Load;
+use File::Basename qw/basename/;
 
 
 use PDL::Lite;
@@ -83,6 +86,7 @@ Will be coerced to lowercase.
 has 'pdbid' => (
     is => 'rw',
     isa => 'SBG.PDBID',
+    required => 0,
     # Coerce to lowercase
     coerce => 1,
     );
@@ -166,6 +170,20 @@ sub _build_coords {
 
 
 ################################################################################
+=head2 centroid
+
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
+
+Center of mass of all coordinates;
+
+=cut
+requires 'centroid';
+
+
+################################################################################
 =head2 overlap
 
  Function: Extent to which two domains clash in space
@@ -175,6 +193,34 @@ sub _build_coords {
 
 =cut
 requires 'overlap';
+
+
+
+################################################################################
+=head2 clone
+
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
+
+
+Overriden from Role::Clonable::clone because PDL objects cannot be clone'd
+
+=cut
+sub clone {
+    my ($self,) = @_;
+    my $type = ref $self;
+    load($type);
+    # Copy construction
+    my $basic = $type->new(%$self);
+    # Now make an explicit PDL copy
+    $basic->coords($self->coords->copy) if $self->has_coords;
+    # Transform needs to worry about its own cloning. But we have to know to
+    # call it ...
+    $basic->transformation($self->transformation->clone);
+    return $basic;
+}
 
 
 ################################################################################
@@ -207,18 +253,17 @@ coordinates).
 
 =cut
 sub transform {
-    my ($self,$matrix) = @_;
-#     return $self unless defined($matrix) && $self->has_coords;
+    my ($self, $matrix) = @_;
     return $self unless defined($matrix);
 
     # Transform coords
-    my $newcoords = transpose($matrix x transpose $self->coords);
-    $self->coords($newcoords);
+    my $coords = $self->coords;
+    $coords .= transpose($matrix x transpose($coords));
 
     # Update the cumulative transformation
     # I.e. transform the current transformation by the given matrix
-    my $prod = $self->transformation->transform($matrix);
-    $self->transformation($prod);
+    $self->transformation->transform($matrix);
+
     return $self;
 
 } # transform
@@ -259,6 +304,7 @@ See also L<uniqueid>
 sub id {
     my ($self) = @_;
     my $str = $self->pdbid;
+    $str ||= basename($self->file) . '_' if $self->file;
     $str .= ($self->_descriptor_short || '');
     return $str;
 } 
@@ -299,8 +345,7 @@ sub uniqueid {
 =cut
 sub stringify {
     my ($self) = @_;
-    my $s = ($self->pdbid || '') . ($self->_descriptor_short || '');
-    return $s;
+    return $self->id;
 }
 
 
@@ -326,8 +371,7 @@ sub equal {
     return 1 if refaddr($self) == refaddr($other);
 
     # Fields, from most general to more specific
-#     my @fields = qw/pdbid descriptor file/;
-    my @fields = qw/pdbid descriptor/;
+    my @fields = qw/pdbid descriptor file/;
     foreach (@fields) {
         # If any field is different, the containing objects are different
         return 0 if 

@@ -25,20 +25,28 @@ use Moose;
 
 with 'SBG::IOI';
 
-use SBG::TransformI;
+
 use PDL::Core qw/zeroes pdl/;
 
+use SBG::TransformI;
+use SBG::Transform::Affine;
 
-=head2 type
+=head2 objtype
 
-The sub-type to use for any dynamically created objects. Should do 
+The sub-objtype to use for any dynamically created objects. Should do 
 L<SBG::TransformI>
 
 =cut
-has '+type' => (
-    required => 1,
-    default => 'SBG::Transform::Affine',
-    );
+# has 'objtype' => (
+#     required => 1,
+#     default => 'SBG::Transform::Affine',
+#     );
+
+
+sub BUILD {
+    my ($self) = @_;
+    $self->objtype('SBG::Transform::Affine') unless $self->objtype;
+}
 
 
 ################################################################################
@@ -71,13 +79,13 @@ sub read {
         # (X,Y,Z,T)
         push @rows, [ split ' ' ];
     }
-    my $type = $self->type();
-    return $type->new() unless @rows;
+    my $objtype = $self->objtype();
+    return $objtype->new() unless @rows;
     # Required for homogenous coords
     push @rows, [ 0, 0, 0, 1 ];
     my $mat = pdl(@rows);
 
-    return $type->new(matrix=>$mat);
+    return $objtype->new(matrix=>$mat);
 
 } # read
 

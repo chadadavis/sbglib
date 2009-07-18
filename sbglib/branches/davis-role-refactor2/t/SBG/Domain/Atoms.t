@@ -4,12 +4,13 @@ use Test::More 'no_plan';
 use SBG::U::Test qw/float_is pdl_approx/;
 use Data::Dumper;
 use Data::Dump qw/dump/;
-use FindBin;
-my $dir = $FindBin::RealBin;
+use FindBin qw/$Bin/;
 
-use SBG::Domain::Atoms;
 use PDL::Lite;
 use PDL::Core qw/pdl/;
+
+use SBG::Domain::Atoms;
+use SBG::DomainIO::stamp;
 
 
 # Check expected number of atoms in a chain
@@ -20,14 +21,13 @@ is($dom1->coords->dim(1), 1870, "Loading all atoms of a chain");
 
 # Check expected coords of a chain, (where there's no transform)
 my $first_atom = pdl [[ 43.24, 11.99, -6.915 ]];
-pdl_approx($dom1->coords->slice('0:2,0'), $first_atom, "First atom coords");
+pdl_approx($dom1->coords->slice('0:2,0'), $first_atom, "Coords of first AA");
 
 
 # Load a modelw with multiple domains, some with transformations
-use SBG::DomainIO::stamp;
-my $file = "$dir/data/model.dom";
+my $file = "$Bin/data/model.dom";
 my $io = new SBG::DomainIO::stamp(
-    file=>"<$file", type=>'SBG::Domain::Atoms');
+    file=>"<$file", objtype=>'SBG::Domain::Atoms');
 # By default only CA coords
 my @doms2 = $io->read;
 is(@doms2, 6, "Read in " . scalar(@doms2) . " domains, array context");
@@ -48,6 +48,4 @@ my $first_ca_trans = pdl [ [ -20.709 , -68.236 , -33.582 ] ];
 pdl_approx($dom2_0->coords->slice('0:2,0'), $first_ca_trans,
            "Verifying coords of transformed CA");
 
-
-__END__
 

@@ -1,44 +1,123 @@
 #!/usr/bin/env perl
 
-use strict;
-use SBG::Eval;
-use SBG::DomainIO;
-use SBG::Domain;
-use SBG::NetworkIO;
+use Modern::Perl;
 
-# Command line:
-# ./mkbench ./1abc_templates-02.csv
+use Moose::Autobox;
+use Data::Dump qw/dump/;
 
-my $templates_file = shift or die;
-my $net = new SBG::NetworkIO(-file=>$templates_file)->read or die;
+use SBG::Seq;
+use SBG::Node;
+use SBG::Interaction;
+use SBG::Network;
+use SBG::Complex;
 
-my %truecomponents;
-foreach my $node (sort $net->nodes) {
-    my $name = "$node";
-    print "Node $name\n";
-    my $dom = mk_dom $name;
-    my $longid=$dom->pdbid . $dom->chainid . '.' . $dom->scopid;
-    $truecomponents{$longid} = $dom;
-}
+use SBG::DB::scop qw/scopdomain/;
+use SBG::Search::Bench qw/pdbids components search/;
+use SBG::U::List qw/pairs/;
+use SBG::Role::Storable;
+use SBG::U::Log qw/log/;
+log()->init('TRACE');
 
-my $domfile = $templates_file;
-$domfile =~ s/templates/bench/;
-$domfile =~ s/csv/dom/;
-my $io = new SBG::DomainIO(-file=>">$domfile");
-
-# Do these sorted, so that order of chains will hopefully match
-# (Only will be true when all components present)
-foreach my $key (sort keys %truecomponents) {
-    my $d = $truecomponents{$key};
-    $d->label($key);
-    my $f = $d->file;
-    $f =~ s|/data/pdb/(.{4})\.brk|/g/data/pdb\1.ent|;
-    $d->file($f);
-    $io->write($d, -id=>'label');
+my @ids; 
+if (@ARGV) {
+    while (<>) {
+        chomp;
+        push @ids, $_;
+    }
+} else {
+    @ids = pdbids();
 }
 
 
-print "Benchmark domains: $domfile\n";
+foreach my $pdbid (@ids) {
+    say $pdbid;
+    my @files = <$pdbid*.stor>;
+    unless (@files) {
+        my $net = _pdb2net($pdbid);
+        @files = _save($pdbid, $net);
+    }
+    print "\t";
+    foreach my $netfile (@files) {
+        my @fields = split '-', $netfile;
+        my $basename = join '-', @fields[0,1];
+        print "$basename ";
+        my $subnet = retrieve $netfile;
+        _net2complex($subnet, $basename);
+    }
+    print "\n";
+}
 
 
+sub _pdb2net {
+    my ($pdbid) = @_;
 
+    my $components = [ components($pdbid) ];
+    my $seqs = $components->map(sub{new SBG::Seq(-accession_number=>$_)});
+    my $nodes = $seqs->map(sub{new SBG::Node($_)});
+    my $net = new SBG::Network;
+    $net->add_node($_) for @$nodes;
+    say "\tnodes ", scalar($net->nodes);
+    # Use this interaction search routine to build the network's interactions
+    $net->build(new SBG::Search::Bench);
+    say "\tedges ", scalar($net->edges);
+    say "\tinteractions ", scalar($net->interactions);
+    return $net;
+}
+
+
+sub _save {
+    my ($pdbid, $net) = @_;
+    my @subnets = $net->partition;
+    say "\tsubnets ", scalar(@subnets);
+    my @files;
+    for (my $i = 0; $i < @subnets; $i++) {
+        # 1-based counting
+        my $basename = sprintf "%s-%04d", $pdbid, $i+1;
+        my $netfile = "$basename-net.stor";
+        $subnets[$i]->store($netfile) unless -f $netfile;
+        my $complexfile = "$basename-complex.stor";    
+        unless (-s $complexfile) {
+            my $complex = _net2complex($subnets[$i], $basename);
+            $complex->store($complexfile);
+        }
+        push @files, $netfile;
+    }
+    return @files;
+}
+
+
+sub _net2complex {
+    my ($net, $basename) = @_;
+    my @nodes = $net->nodes;
+    my $complex = new SBG::Complex;
+    foreach my $node (@nodes) {
+        $complex->set($node, scopdomain($node));
+    }
+    return $complex;
+}
+
+
+# Geometrically hash complex, to determine uniqueness
+sub _gh_complex {
+    my ($complex) = @_;
+
+    our $gh;
+    $gh ||= new SBG::GeometricHash(binsize=>1.5);
+
+    my $id = $complex->id;
+    # Keep objects in defined order
+    my $keys = $complex->keys;
+    my $models = $keys->map(sub{$complex->get($_)});
+    my $doms = $models->map(sub{$_->subject});
+    my $centroids = $doms->map(sub{$_->center});
+    
+    my $class = $gh->exact($centroids); # No labels (find all)
+    if (defined $class) {
+        print "\tComplex $id already represented in cluster $class\n";
+        return;
+    } else {
+        $class = $gh->put(undef, $centroids, $keys);
+        return wantarray ? ($complex, $class) : $complex;
+    }
+}
+ 

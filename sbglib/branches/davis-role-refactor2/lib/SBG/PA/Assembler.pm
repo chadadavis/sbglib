@@ -13,7 +13,6 @@ use PA;
 =head1 REQUIRES
 
 * Graph
-* Graph::Traversal::DFS
 * SBG::GeometricHash
 
 
@@ -53,7 +52,7 @@ sub sub_test {
         $state->{'active'}{$src}++;
         $state->{'active'}{$dest}++;
     } else {
-        $logger->debug("Clash: $dest on $occupied");
+        log()->debug("Clash: $dest on $occupied");
     }
 
     return ! $occupied;
@@ -107,7 +106,7 @@ sub sub_solution_pathhash {
     my ($state, $graph, $nodecover, $edges, $rejects) = @_;
     our %paths;
 
-    $logger->trace(join('|', @$nodecover));
+    log()->trace(join('|', @$nodecover));
 
     # Get the subgraph and find the path from one end to other
     my $sg = _subgraph2($graph, @$edges);
@@ -115,7 +114,7 @@ sub sub_solution_pathhash {
 
     my $pathid = join(' ', @path);
     if ($paths{$pathid}) {
-        $logger->trace("Dup path: $pathid");
+        log()->trace("Dup path: $pathid");
         return;
     }
 

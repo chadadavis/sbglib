@@ -5,6 +5,10 @@ use SBG::U::Test qw/float_is pdl_approx/;
 use Data::Dumper;
 use Data::Dump qw/dump/;
 use File::Temp;
+use Carp;
+$SIG{__DIE__} = \&confess;
+
+use Moose::Autobox;
 
 use SBG::U::Log qw/log/;
 log()->init('TRACE');
@@ -13,10 +17,15 @@ $File::Temp::KEEP_ALL = 1;
 use SBG::STAMP qw/superposition/;
 use SBG::Domain;
 use SBG::DomainIO::pdb;
+use SBG::DomainIO::stamp;
 use PDL;
+use SBG::Run::rasmol;
+
 
 # Tolerate rounding differences between stamp (using clib) and PDL
 my $toler = 0.25;
+
+my $DEBUG = 0;
 
 # get domains for chains of interest
 my $doma = SBG::Domain->new(pdbid=>'2br2', descriptor=>'CHAIN A');
@@ -45,6 +54,64 @@ pdl_approx($dtoa_sup->transformation->matrix,
            $dtoa_expect,
            "superposition($domd, $doma)",
            $toler);
+
+
+# Also achievable by using inverse() from the Transformation
+pdl_approx($atod_sup->transformation->inverse->matrix,
+           $dtoa_expect,
+           "superposition($doma, $domd)->transformation->inverse",
+           $toler);
+
+
+# Test chaining of superpositions
+# get domains for whole chains 
+$ca = SBG::Domain->new(pdbid=>'2br2', descriptor=>'CHAIN A');
+$cb = SBG::Domain->new(pdbid=>'2br2', descriptor=>'CHAIN B');
+$cc = SBG::Domain->new(pdbid=>'2br2', descriptor=>'CHAIN C');
+$cd = SBG::Domain->new(pdbid=>'2br2', descriptor=>'CHAIN D');
+
+$supcacc = superposition($ca, $cc);
+$supcccd = superposition($cc, $cd);
+$supcacc->apply($ca);
+$supcccd->apply($ca);
+# How to verify non-visually?
+rasmol [$ca, $cd] if $DEBUG;
+
+
+# Now change up the order
+$ca = SBG::Domain->new(pdbid=>'2br2', descriptor=>'CHAIN A');
+$cb = SBG::Domain->new(pdbid=>'2br2', descriptor=>'CHAIN B');
+$cc = SBG::Domain->new(pdbid=>'2br2', descriptor=>'CHAIN C');
+$cd = SBG::Domain->new(pdbid=>'2br2', descriptor=>'CHAIN D');
+
+$supcacc = superposition($ca, $cc);
+$supcacc->apply($ca);
+# Now we're doing the superposition of a domain that already has a transform
+$supcccd = superposition($ca, $cd);
+$supcccd->apply($ca);
+# How to verify non-visually?
+rasmol [$ca, $cd] if $DEBUG;
+
+
+# Finally, do it on both sides, parallel superpositions
+$ca = SBG::Domain->new(pdbid=>'2br2', descriptor=>'CHAIN A');
+$cb = SBG::Domain->new(pdbid=>'2br2', descriptor=>'CHAIN B');
+$cc = SBG::Domain->new(pdbid=>'2br2', descriptor=>'CHAIN C');
+$cd = SBG::Domain->new(pdbid=>'2br2', descriptor=>'CHAIN D');
+
+# Put A onto C
+$supcacc = superposition($ca, $cc);
+$supcacc->apply($ca);
+# Put B onto D
+my $supcbcd = superposition($cb, $cd);
+$supcbcd->apply($cb);
+
+# Put moved A onto moved B (ie C onto D)
+my $supcacb = superposition($ca, $cb);
+$supcacb->apply($ca);
+
+# How to verify non-visually?
+rasmol [$ca, $cd] if $DEBUG;
 
 
 # Test sub-segments of chains
@@ -102,16 +169,23 @@ $double->apply($d2br2a2);
 
 # Collect all 6 domains, 2 native, 2 transformed once, 2 transformed twice
 my @doms = ($d2br2d0,$d2br2a0,$d2br2d1,$d2br2a1,$d2br2d2,$d2br2a2);
+rasmol \@doms if $DEBUG;
 
-# Finally, transform the whole thing into a coordinate file, a la STAMP
-my $io = new SBG::DomainIO::pdb(tempfile=>1);
-$io->write(@doms);
-my $file = $io->file;
-if (ok(-r $file, "Should find a hexamer in PDB file: $file")) {
-#     `rasmol $file 2>/dev/null`;
+
+# Test iRMSD
+# Make pairs of domains :
+sub _d {
+    my ($pdb, $chain) = @_;
+    return new SBG::Domain(pdbid=>$pdb, descriptor=>"CHAIN $chain");
 }
 
+my $doms1 = [ _d(qw/1vor K/), _d(qw/1vor R/) ];
+my $doms2 = [ _d(qw/1vp0 K/), _d(qw/1vp0 R/) ];
+$irmsd = SBG::STAMP::irmsd($doms1, $doms2);
+float_is($irmsd, 5.11, "iRMSD", 0.01);
+$irmsd = SBG::STAMP::irmsd($doms2, $doms1);
+float_is($irmsd, 5.11, "iRMSD", 0.01);
 
 
-
-
+$TODO = "Test STAMP::irmsd for domains with an existing transformation";
+ok 0;

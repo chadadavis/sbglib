@@ -21,7 +21,8 @@ SBG::Run::rasmol - Rasmol utilities
 package SBG::Run::rasmol;
 use base qw/Exporter/;
 
-our @EXPORT_OK = qw(rasmol pdb2img);
+our @EXPORT = qw/rasmol/;
+our @EXPORT_OK = qw/rasmol pdb2img/;
 
 use strict;
 use warnings;
@@ -46,7 +47,7 @@ If no 'file' option is provided, a temporary file is created and returned
 
 =cut
 sub rasmol {
-    my ($self, $doms, %ops) = @_;
+    my ($doms, %ops) = @_;
     my $rasmol = config()->val(qw/rasmol executable/) || 'rasmol';
     my $io;
     if ($ops{'file'}) { 
@@ -56,7 +57,7 @@ sub rasmol {
     }
     $io->write(@$doms);
     my $cmd = "$rasmol " . $io->file;
-    system($cmd) == 0 or
+    system("$cmd 2>/dev/null") == 0 or
         log()->error("Failed: $cmd\n\t$!");
 
     return $io->file;
@@ -77,6 +78,12 @@ sub rasmol {
 
 NB This does not seem to work with rasmol-gtk.  Use rasmol-classic, or just
 rasmol. Set this in the C<config.ini>
+
+Example script, highlight contacts with chain A:
+
+ my $script = 
+   "select *A\ncolor grey\nselect (!*A and within(10.0, *A))\ncolor HotPink";
+
 
 =cut
 sub pdb2img {

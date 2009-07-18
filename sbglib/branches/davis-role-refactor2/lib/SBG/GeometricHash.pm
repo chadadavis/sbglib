@@ -28,33 +28,32 @@ same size (same # of points) as the current query.  For simply finding models
 that are a superset of the current query, the method class() is appropriate.
 
 
+Heavily based on L<PDL>. Works with L<PDL> or L<PDL::Matrix> data.
+
+Uses L<PDL::Transform> for the transformation work.
+
+
+NB testing single points in axis is problematic if X==Y==0 This results in not
+being able to create a non-ambiguous basis for the transformations.
+
+
 =head1 SEE ALSO
 
 1. Wolfson, H. & Rigoutsos, I. Geometric hashing: an overview. Computational
 Science & Engineering, IEEE 4, 10-21(1997).
 
-The (incomplete) interface is based on L<Moose::Autobox::Hash>
-
-       at
-       put
-       exists
-       keys
-       values
-       kv
-       slice
-       meta
 
 =cut
 
-
 package SBG::GeometricHash;
+
+use strict;
+use warnings;
 
 use PDL::Lite;
 use PDL::Core qw/pdl zeroes/;
 use PDL::Basic qw/sequence/;
 use PDL::Primitive qw/random/;
-use PDL::Matrix;
-use PDL::MatrixOps;
 use PDL::Ufunc;
 use PDL::Transform;
 use PDL::NiceSlice;
@@ -62,6 +61,7 @@ use PDL::NiceSlice;
 use Math::Trig qw/rad2deg/;
 use Math::Round qw/nearest/;
 
+# TODO DEL
 use SBG::U::Log qw/log/;
 
 
@@ -112,10 +112,10 @@ sub exists {
     my ($self,$points,$labels) = @_;
 
     my %h = $self->at($points, $labels);
-    # Get models that cover all points
-    my @fullmatches = grep { @$points == $h{$_} } keys %h;
-    return unless @fullmatches;
-    return wantarray ? @fullmatches : $fullmatches[0];
+    # Get models that cover all points of the query
+    my @fullcovers = grep { @$points == $h{$_} } keys %h;
+    return unless @fullcovers;
+    return wantarray ? @fullcovers : $fullcovers[0];
 }
 
  
@@ -148,6 +148,8 @@ sub class {
 
 i.e a model is only matched when it is the same size as the query
 
+i.e. query is a subset of found model, and found model is subset of query
+
 =cut
 sub exact {
     my ($self,$points, $labels) = @_;
@@ -158,6 +160,7 @@ sub exact {
     my ($bijection) = grep { @a=split; $a[1] == @$points } @covers;
     log()->debug($bijection || '<none>');
     return unless $bijection;
+    # Remove end of label, containing basis indices
     my @f = split / /, $bijection;
     return $f[0];
 
@@ -171,7 +174,7 @@ sub exact {
  Function: 
  Example : 
  Returns : 
- Args    : $points an ArrayRef of L<PDL::Matrix>, each of dimension 1x3
+ Args    : $points an ArrayRef of L<PDL> (coordinates)
 
 Returns a hash of votes for specific models.
 
@@ -185,7 +188,7 @@ sub at {
 
     # Determine a basis transformation, to put model in a common frame of ref
     # Arbitrarily use first three points here, but any three would work
-    my $t = _basis($model, 0, 1, 2);
+    my $t = _basis($model, 0, 1, 2) or return;
     # Transform all points using this basis
     $model = $t->apply($model);
 
@@ -229,7 +232,7 @@ sub _votes {
     my %votes;
     # For each 3D point, hash it 
     for (my $i = 0; $i < $model->dim(1); $i++) {
-        # Each row is a 3D point
+        # Each row is a 3D point (NB list() is quite inefficient)
         my $point = join(' ',$model(,$i)->list);
         my $label = $labels ? $labels->[$i] : '';
         my $candidates = $self->_atkey($point, $label) || [];
@@ -255,13 +258,17 @@ sub put {
     our $classid;
     $modelid ||= ++$classid;
 
+    # If each (labelled) object contains multiple points, extract points.  Also
+    # assigns the object's label to each point in the object.
+    ($points, $labels) = _objs2points($points, $labels);
+
     # Get an array of points into a matrix;
     my $model = _model($points);
 
     log()->trace($model);
 
-    # For each triple of points, define a basis,
-    # Then hash all of the points after transforming into that basis
+    # For each triple of points, define one basis,
+    # For each basis, transform all points into that basis and hash them
     for (my $i = 0; $i < @$points; $i++) {
         for (my $j = 0; $j < @$points; $j++) {        
             next if $i == $j;
@@ -277,25 +284,46 @@ sub put {
 } # put
 
 
+# Convert an ArrayRef of objects (2D PDL) to an ArrayRef of points (1D PDL)
+# Expands labels for object to apply to each point within the object
+# Assumes a PDL, not PDL::Matrix
+sub _objs2points {
+    my ($objs, $labels) = @_;
 
-################################################################################
-# Private
+    my @points;
+    my @pointlabels;
+    for (my $i = 0; $i < @$objs; $i++) {
+        my $o = $objs->[$i];
+        my $dim;
+        if ($o->isa('PDL::Matrix')) {
+            # Row-major indexing
+            $dim = $o->dim(0);
+            push(@points, $o->slice("$_,")->squeeze) for (0..$dim-1);
+        } else {
+            # Column-major indexing
+            $dim = $o->dim(1);
+            push(@points, $o->slice(",$_")->squeeze) for (0..$dim-1);
+        }
+        push @pointlabels, (($labels->[$i]) x $dim);
+    }
+    return wantarray ? ([ @points ], [ @pointlabels ]) : [@points];
+}
 
 
 sub _one_basis {
     my ($self,$modelid, $model, $i, $j, $k, $labels) = @_;
     log()->trace(join(' ', $modelid, $i, $j, $k));
     # Determine a basis transformation, to put model in a common frame of ref
-    my $t = _basis($model, $i, $j, $k);
+    my $t = _basis($model, $i, $j, $k) or return;
     # Transform all points using this basis
     $model = $t->apply($model);
 
     # Binning
     $model = $self->_quantize($model);
 
-    # Specific to PDL::Matrix ?
     for (my $p = 0; $p < $model->dim(1); $p++) {
         # Each row is a 3D point
+        # is list() more inefficient than stringification?
         my $point = join(' ',$model(,$p)->list);
         my $label = $labels ? $labels->[$p] : '';
         $self->_append($point, $label, $modelid, $model->dim(1), $i, $j, $k);
@@ -305,7 +333,7 @@ sub _one_basis {
 
 sub _append {
     my ($self, $point, $label, $modelid, $size, $i, $j, $k) = @_;
-
+    $label ||= 'undef';
     # For each 3D point, hash it and append the model name to that point's list
     my $gh = $self->{'_gh'};
     $gh->{$point} ||= {};
@@ -320,17 +348,22 @@ sub _append {
  Function: 
  Example : 
  Returns : 
- Args    : 
+ Args    : ArrayRef[PDL] each piddle might be a single point or multiple
 
-Create a matrix model for a set of mpdl points, remove homogenous coords.
+Create a matrix model for a set of coordinates.
+
+Removes hmogenous coords, i.e. drops 4th dimension, if it exists;
+
 Result is row-major order, i.e. each row is a 3D point. 
 
 =cut
 sub _model {
     my ($points) = @_;
-    my $m = pdl(@$points)->squeeze;
+    my $m = pdl($points)->squeeze;
+    $m = $m->clump(1,2) if $m->dims == 3;
     # Drop last column, assuming these were homogenous vectors
     # (i.e. take columns, 0,1,2 (x,y,z)
+    # NB this is a PDL (not PDL::Matrix), so indexed in column-major order
     $m = $m(0:2,);
     return $m;
 
@@ -414,7 +447,11 @@ sub _basis {
     # First rotation, from Y-axis toward X-axis, about Z-axis
     # This gets b1 into the XZ plane
     my ($x,$y,$z) = $b1->list;
-    log()->warn("Y and X both 0, basis undefined") if 0==$y && 0==$x;    
+    if (0==$y && 0==$x) {
+        log()->debug("Skipping undefined basis: Y,X both 0");
+        return;
+    }
+
     # Angle between line (0,0)->(x,y) and the x-axis, which is the angle to
     # rotate by, from the y-axis, toward the x-axis, about the z-axis
     my $ry2x = rad2deg atan2 $y, $x;
@@ -427,7 +464,12 @@ sub _basis {
     # here, to get b1 onto the XY plane. Now b1 will be in the X-axis, since XZ
     # plane and XY plane intersect at the X-axis.
     ($x, $y, $z) = $b1->list;
-    log()->warn("X and Z both 0, basis undefined") if 0==$x && 0==$z;
+
+    if (0==$z && 0==$x) {
+        log()->debug("Skipping undefined basis: Z,X both 0");
+        return;
+    }
+
     # $z = rise and $x = run here, since we're rotating backward. Sign still
     # needs to be negative as well, however.  This is the angle between the line
     # (0,0)->(x,z) and the X-axis (not Z-axis). Since PDL::Transform rotates
@@ -441,7 +483,12 @@ sub _basis {
     # Third rotation, from Z-axis to Y-axis, about X-axis
     # This will leave $b1 on the X-axis, $b0 is rotated into the XY plane
     ($x, $y, $z) = $b2->list;
-    log()->warn("Z and Y both 0, basis undefined") if 0==$z && 0==$y;
+
+    if (0==$z && 0==$y) {
+        log()->debug("Skipping undefined basis: Z,Y both 0");
+        return;
+    }
+
     # Angle between line (0,0)->(y,z) and the y-axis, which is the angle to
     # rotate by, from the z-axis, toward the y-axis, about the x-axis
     my $rz2y = rad2deg atan2 $z, $y;

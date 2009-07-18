@@ -24,9 +24,10 @@ package SBG::Domain::Atoms;
 use Moose;
 
 # Defines what must be implemented to represent a 3D structure
-with qw/
-SBG::DomainI 
-/;
+with (
+    'SBG::DomainI',
+    );
+
 
 use overload (
     '""' => 'stringify',
@@ -34,9 +35,10 @@ use overload (
     fallback => 1,
     );
 
-use Carp qw/carp cluck/;
+use Carp;
 
 use SBG::DomainIO::pdb;
+use SBG::U::RMSD;
 
 
 =head2 atom_type
@@ -52,6 +54,13 @@ explicit trailing space). Likewise, 'C' will match 'CA', 'CB', 'CG', 'CG1',
 has 'atom_type' => (
     is => 'rw',
     default =>  'CA ',
+    );
+
+
+# Coords of center of mass
+has '_centroid' => (
+    is => 'rw',
+    isa => 'PDL',
     );
 
 
@@ -75,14 +84,35 @@ sub BUILD {
     $io->write($self);
     # Open the file for reading now
     $io = new SBG::DomainIO::pdb(file=>$io->file,atom_type=>$self->atom_type);
+    
+    # Get the coords directly from the IO obj.
     my $coords = $io->coords;
     $self->coords($coords);
+    $self->_centroid(SBG::U::RMSD::centroid($coords));
 
     # Loaded from a temp PDB file, so clear that path
     $self->clear_file;
 
     return $self;
 }
+
+
+
+################################################################################
+=head2 centroid
+
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
+
+
+=cut
+sub centroid {
+    my ($self,) = @_;
+    return $self->_centroid;
+
+} # centroid
 
 
 ################################################################################
@@ -103,5 +133,6 @@ sub overlap {
 
 ################################################################################
 __PACKAGE__->meta->make_immutable;
+no Moose;
 1;
 

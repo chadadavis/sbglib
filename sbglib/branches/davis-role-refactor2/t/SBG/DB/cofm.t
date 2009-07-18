@@ -4,7 +4,7 @@ use Test::More 'no_plan';
 use SBG::U::Test;
 $, = ' ';
 use Data::Dumper;
-use SBG::U::DB::cofm;
+use SBG::DB::cofm;
 use SBG::U::Test qw/float_is/;
 
 use PDL;
@@ -13,7 +13,7 @@ use PDL::Matrix;
 my $prec = 4;
 
 # query()
-my $res = SBG::U::DB::cofm::query('2nn6', 'A');
+my $res = SBG::DB::cofm::query('2nn6', 'A');
 
 ok($res, "query('2nn6', 'A')");
 my ($tx, $ty, $tz, $trg, $trmax) = (80.860, 12.450, 122.080, 26.738, 63.826);

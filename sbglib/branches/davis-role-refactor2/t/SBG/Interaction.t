@@ -40,3 +40,9 @@ is($gotmodels[$_], $models[$_], "Storing models in Interaction by Node")
     for (0..$#nodes);
 
 
+$TODO = "Test updating of primary_id";
+ok 0;
+
+
+$TODO = "Test equality, should be independent of Node endpoints";
+ok 0;

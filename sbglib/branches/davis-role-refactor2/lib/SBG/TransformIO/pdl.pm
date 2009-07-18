@@ -27,16 +27,21 @@ use PDL::Core qw/pdl/;
 use SBG::TransformI;
 
 
-=head2 type
+=head2 objtype
 
-The sub-type to use for any dynamically created objects. Should be
+The sub-objtype to use for any dynamically created objects. Should be
 L<SBG::TransformI> implementor.
 
 =cut
-has '+type' => (
-    required => 1,
-    default => 'SBG::Transform::PDL',
-    );
+# has '+objtype' => (
+#     required => 1,
+#     default => 'SBG::Transform::PDL',
+#     );
+
+sub BUILD {
+    my ($self) = @_;
+    $self->objtype('SBG::Transform::PDL') unless $self->objtype;
+}
 
 
 ################################################################################
@@ -58,7 +63,7 @@ sub read {
 
     my $post_offset;
     my @rows;
-    while (<$fh>) { 
+    while (my $_ = <$fh>) { 
         if (/Post-add:\s+\[(.*?)\]/) {
             $post_offset = pdl split(' ', $1);
             next;
@@ -75,12 +80,12 @@ sub read {
         }
     }
 
-    my $type = $self->type();
-    return $type->new() unless @rows;
+    my $objtype = $self->objtype();
+    return $objtype->new() unless @rows;
     # Create 3x3 matrix from 9-elem array
     my $mat = pdl @rows;
     # (OK if $post_offset is still undef here)
-    return $type->new(matrix=>$mat, post=>$post_offset);
+    return $objtype->new(matrix=>$mat, post=>$post_offset);
 
 } # read
 

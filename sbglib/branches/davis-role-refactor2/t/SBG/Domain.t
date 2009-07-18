@@ -1,15 +1,22 @@
 #!/usr/bin/env perl
 
+use warnings;
 use Test::More 'no_plan';
 use SBG::Domain;
 use SBG::Types;
+use Data::Dump qw/dump/;
+
+use Moose::Autobox;
 
 
-$d = new_ok(SBG::Domain);
+$d = new_ok('SBG::Domain');
 
 # NB You need to split off ChainID, cannot be in PDB ID
 ok(! eval { $d->pdbid('3didA') }, "Catching invalid PDB ID");
 ok(! eval { $d->pdbid('didi') }, "Catching invalid PDB ID");
+
+$d = new SBG::Domain(pdbid=>'2NN6');
+is($d->pdbid, '2nn6', "PDBID to lowercase");
 
 
 # Default descriptor ALL

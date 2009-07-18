@@ -37,6 +37,7 @@ with 'SBG::Role::Storable';
 
 use overload (
     '""' => 'stringify',
+    '==' => 'equal',
     fallback => 1,
     );
 
@@ -87,7 +88,9 @@ class. I.e. neither 'handles' nor 'provides' are useful.
 =cut
 sub set {
     my $self = shift;
-    return $self->models->put(@_);
+    $self->models->put(@_);
+    $self->_update_id;
+    return $self->models->at(@_);
 } # set
 sub get {
     my $self = shift;
@@ -124,11 +127,78 @@ override 'new' => sub {
     # bless'ing should be automatic!
     bless $obj, $class;
 
+    $obj->_update_id;
+
     return $obj;
 };
 
 
+################################################################################
+=head2 irmsd
+
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
+
+
+=cut
+sub irmsd {
+    my ($self, $other) = @_;
+
+    # Define mapping: Assume same keys to models
+    my $keys = $self->keys;
+    my $selfdoms = $keys->map(sub{$self->get($_)->subject});
+    my $otherdoms = $keys->map(sub{$other->get($_)->subject});
+    return unless $otherdoms->length == $self->doms->length;
+
+    my $res = SBG::STAMP::irmsd($selfdoms, $otherdoms);
+
+
+} # irmsd
+
+
+################################################################################
+=head2 domains
+
+ Function: 
+ Example : 
+ Returns : ArrayRef[SBG::DomainI]
+ Args    : 
+
+
+=cut
+sub domains {
+    my ($self,) = @_;
+    return $self->models->values->map(sub{$_->subject});
+
+} # domains
+
+
+# TODO DES belongs in DomSetI. 
+
+# NB A Network may contain multiple Interactions that are equal, as long as they
+# are connecting different Nodes
+
+sub equal {
+    my ($self, $other) = @_;
+
+    # Domains in each Interaction
+    my $selfdoms = $self->domains->sort;
+    my $otherdoms = $other->domains->sort;
+    
+    # Componentwise equality, only if all (two) are true
+    return all { $selfdoms->[$_] == $otherdoms->[$_] } (0..1);
+}
+
+
 sub stringify {
+    my ($self) = @_;
+    return $self->primary_id;
+}
+
+
+sub _update_id {
     my ($self) = @_;
     $self->primary_id($self->models->values->join('--'));
 }

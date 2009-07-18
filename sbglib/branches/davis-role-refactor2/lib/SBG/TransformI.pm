@@ -36,9 +36,9 @@ L<SBG::TransformIO::stamp> , L<SBG::DomainI> , L<SBG::ComplexI>
 
 package SBG::TransformI;
 use Moose::Role;
-use Moose::Util::TypeConstraints;
 
 
+# with 'SBG::Role::Clonable' => { excludes => [ qw/clone/ ] };
 with 'SBG::Role::Dumpable';
 with 'SBG::Role::Storable';
 with 'SBG::Role::Transformable';
@@ -47,11 +47,16 @@ with 'SBG::Role::Transformable';
 # NB this is not carried into implementing classes.
 # It is here as a suggestion of what you should be overloading
 use overload (
-    'x'  => 'apply', 
+    'x'  => 'mult', 
     '!'  => 'inverse', 
     '==' => 'equals',
     '""' => 'stringify',
     );
+
+
+# To override Clonable::clone
+use Clone;
+use Module::Load;
 
 
 ################################################################################
@@ -91,6 +96,19 @@ requires '_build_matrix';
 
 
 ################################################################################
+=head2 reset
+
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
+
+
+=cut
+requires 'reset';
+
+
+################################################################################
 =head2 apply
 
  Function: Applies this transformation to a given vector/matrix
@@ -101,6 +119,20 @@ requires '_build_matrix';
 
 =cut
 requires 'apply';
+
+
+
+################################################################################
+=head2 mult
+
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
+
+
+=cut
+requires 'mult';
 
 
 ################################################################################
@@ -128,6 +160,56 @@ requires 'inverse';
 =cut
 requires 'equals';
 
+
+
+################################################################################
+=head2 clone
+
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
+
+
+Overriden from Role::Clonable::clone because PDL objects cannot be clone'd
+
+=cut
+sub clone {
+    my ($self,) = @_;
+    my $type = ref $self;
+    load($type);
+    # Copy construction
+    my $basic;
+    # And make an explicit PDL copy (matrix will be overriden)
+    if ($self->has_matrix) {
+        $basic = $type->new(%$self, matrix=>$self->matrix->copy);
+    } else {
+        $basic = $type->new(%$self)
+    }
+
+    return $basic;
+}
+
+
+################################################################################
+=head2 relativeto
+
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
+
+C = B x A
+
+Given C (self) and A, solves for B transformation
+
+=cut
+sub relativeto {
+    my ($self,$other) = @_;
+
+    return $self x $other->inverse;
+
+} # relativeto
 
 ###############################################################################
 no Moose::Role;
