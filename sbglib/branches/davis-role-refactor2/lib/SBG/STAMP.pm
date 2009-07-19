@@ -207,9 +207,19 @@ sub _cache_get {
     my $key = "${from}--${to}";
     my $entry = $cache->entry($key);
 
-    log()->debug("Cache " . ($entry->exists ? 'hit' : 'miss') . " $key");
 
-    return $entry->thaw;
+    if ($entry->exists) {
+        my $data = $entry->thaw;
+        if (ref($data) eq 'ARRAY') {
+            log()->debug("Cache hit (negative) ", $key);
+            return;
+        } else {
+            log()->debug("Cache hit (positive) ", $key);
+            return $data;
+        }
+    } 
+    log()->debug("Cache miss ", $key);
+    return;
 
 } # _cache_get
 

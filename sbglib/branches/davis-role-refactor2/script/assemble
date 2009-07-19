@@ -95,7 +95,7 @@ foreach my $file (@files) {
     # Being computed by another process?
     my $lock = wlock($donefile, 1);
     unless ($lock) {
-        print "\tlocked\n";
+        print "$basename : locked\n";
         next;
     }
 
