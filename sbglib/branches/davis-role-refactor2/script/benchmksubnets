@@ -16,7 +16,10 @@ use SBG::Search::Bench qw/pdbids components search/;
 use SBG::U::List qw/pairs/;
 use SBG::Role::Storable;
 use SBG::U::Log qw/log/;
-log()->init('TRACE');
+
+my $DEBUG;
+# $DEBUG = 1;
+log()->init('TRACE') if $DEBUG;
 
 my @ids; 
 if (@ARGV) {
@@ -34,15 +37,7 @@ foreach my $pdbid (@ids) {
     my @files = <$pdbid*.stor>;
     unless (@files) {
         my $net = _pdb2net($pdbid);
-        @files = _save($pdbid, $net);
-    }
-    print "\t";
-    foreach my $netfile (@files) {
-        my @fields = split '-', $netfile;
-        my $basename = join '-', @fields[0,1];
-        print "$basename ";
-        my $subnet = retrieve $netfile;
-        _net2complex($subnet, $basename);
+        @files = _write_partitions($pdbid, $net);
     }
     print "\n";
 }
@@ -65,7 +60,7 @@ sub _pdb2net {
 }
 
 
-sub _save {
+sub _write_partitions {
     my ($pdbid, $net) = @_;
     my @subnets = $net->partition;
     say "\tsubnets ", scalar(@subnets);
@@ -73,51 +68,12 @@ sub _save {
     for (my $i = 0; $i < @subnets; $i++) {
         # 1-based counting
         my $basename = sprintf "%s-%04d", $pdbid, $i+1;
-        my $netfile = "$basename-net.stor";
+        my $netfile = "$basename.stor";
         $subnets[$i]->store($netfile) unless -f $netfile;
-        my $complexfile = "$basename-complex.stor";    
-        unless (-s $complexfile) {
-            my $complex = _net2complex($subnets[$i], $basename);
-            $complex->store($complexfile);
-        }
         push @files, $netfile;
     }
     return @files;
 }
 
 
-sub _net2complex {
-    my ($net, $basename) = @_;
-    my @nodes = $net->nodes;
-    my $complex = new SBG::Complex;
-    foreach my $node (@nodes) {
-        $complex->set($node, scopdomain($node));
-    }
-    return $complex;
-}
-
-
-# Geometrically hash complex, to determine uniqueness
-sub _gh_complex {
-    my ($complex) = @_;
-
-    our $gh;
-    $gh ||= new SBG::GeometricHash(binsize=>1.5);
-
-    my $id = $complex->id;
-    # Keep objects in defined order
-    my $keys = $complex->keys;
-    my $models = $keys->map(sub{$complex->get($_)});
-    my $doms = $models->map(sub{$_->subject});
-    my $centroids = $doms->map(sub{$_->center});
-    
-    my $class = $gh->exact($centroids); # No labels (find all)
-    if (defined $class) {
-        print "\tComplex $id already represented in cluster $class\n";
-        return;
-    } else {
-        $class = $gh->put(undef, $centroids, $keys);
-        return wantarray ? ($complex, $class) : $complex;
-    }
-}
  

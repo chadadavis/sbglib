@@ -12,6 +12,6 @@ export STAMPDIR=${STAMPDIR:=/g/russell1/apps/stamp.4.3/defs}
 
 export PATH=$PATH:/g/russell1/lbin
 
-complete -o default -C 'sbg -options' sbg
+complete -o default -C 'sbgobj -options' sbgobj
 
 

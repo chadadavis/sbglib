@@ -57,6 +57,7 @@ sub scopdomain {
         log()->error("Couldn't parse SCOP ID: $longid");
         return;
     }
+    # NB $chainid may be more than one character
     my ($pdbid, $chainid, $sccs) = ($1, $2, $3);
     
     # Given: 2hz1A.a.1.1.1-1, this matches:

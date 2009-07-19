@@ -49,7 +49,7 @@ our %sizes;
 our $gh = new SBG::GeometricHash(binsize=>1.5);
 
 # TODO DES needs to be OO
-my $file_pattern = '%scluster-%04d-model-%05d';
+my $file_pattern = '%smodel-%05d';
 
 # For debugging: Individual steps within one solution
 our $step = 1;
@@ -70,8 +70,10 @@ Bugs: assumes L<SBG::Domain::Sphere> implementation in L<SBG::Complex>
 sub sub_solution {
     my ($complex, $graph, $nodecover, $templates, $rejects) = @_;
 
+    _status();
+
     # Uninteresting unless at least two interfaces in solution
-    return unless $templates->length > 1;     
+    return unless defined($templates) && $templates->length > 1;     
 
     # A solution is now complete. Restart at step 1 for subsequent solution
     $solution++;    
@@ -99,25 +101,16 @@ sub sub_solution {
         $sizes{scalar(@$nodecover)}++;
     }
 
-    my $sizeheader = join(' ', map { "\#${_}-mer %3d"} sort keys %sizes);
-    # Flush console and setup in-line printing, unless redirected
-    if (-t STDOUT) {
-        local $| = 1;
-        printf 
-            "\033[1K\r" . # Carriage return, i.e. w/o linefeed
-            "#Aborted %5d #Solutions %5d #Dups %5d #Unique %5d Size dist.: " .
-            "$sizeheader ", 
-            $rejects, $solution, $dups, $classes,
-            map { $sizes{$_} } sort keys %sizes,
-            ;
-    }
+
     log()->debug("\n\n====== Class: $class Solution $solution\n",
                  "@$nodecover\n", "@$templates\n", );
 
     # Write solution to file, append an optional name and model solution counter
     my $file = sprintf($file_pattern, 
                        $complex->id ? $complex->id . '-' : '',
-                       $class, $solution);
+#                        $class, 
+                       $solution
+        );
     $complex->store($file . '.stor');
 
     return 1;
@@ -125,6 +118,26 @@ sub sub_solution {
 } # sub_solution
 
 
+sub _status {
+#     my $sizeheader = join(' ', map { "\#${_}-mer %3d"} sort keys %sizes);
+    my $sizeheader = join(', ', map { "%3d ${_}mers"} sort keys %sizes);
+    # Flush console and setup in-line printing, unless redirected
+    if (-t STDOUT) {
+        local $| = 1;
+        printf 
+            "\033[1K\r" . # Carriage return, i.e. w/o linefeed
+#             "#Aborted %5d #Solutions %5d #Dups %5d #Unique %5d Size dist.: " .
+#             "#Solutions %5d #Dups %5d #Unique %5d Size dist.: " .
+#             "%5d solutions, %5d dups, %5d unique, distribution: " .
+            "%5d unique, %5d dups, %5d total, distribution: " .
+            "$sizeheader ", 
+#             $rejects, 
+#             $solution, $dups, $classes,
+            $classes, $dups, $solution,
+            map { $sizes{$_} } sort keys %sizes,
+            ;
+    }
+}
 
 ################################################################################
 =head2 sub_test

@@ -10,22 +10,22 @@ $SIG{__DIE__} = \&confess;
 
 use Moose::Autobox;
 
-use SBG::U::Log qw/log/;
-log()->init('TRACE');
-$File::Temp::KEEP_ALL = 1;
-
 use SBG::STAMP qw/superposition/;
 use SBG::Domain;
 use SBG::DomainIO::pdb;
 use SBG::DomainIO::stamp;
 use PDL;
 use SBG::Run::rasmol;
+use SBG::U::Log qw/log/;
+
+my $DEBUG;
+# $DEBUG = 1;
+log()->init('TRACE') if $DEBUG;
+$File::Temp::KEEP_ALL = $DEBUG;
 
 
 # Tolerate rounding differences between stamp (using clib) and PDL
 my $toler = 0.25;
-
-my $DEBUG = 0;
 
 # get domains for chains of interest
 my $doma = SBG::Domain->new(pdbid=>'2br2', descriptor=>'CHAIN A');

@@ -25,7 +25,8 @@ use SBG::Run::rasmol;
 
 my $DEBUG;
 # $DEBUG= 1;
-# log()->init('TRACE') if $DEBUG;
+log()->init('TRACE') if $DEBUG;
+
 
 # Similar to example in STAMP.t but use at least two chained superpositions
 # Do not simply multiply transform twice, rather: chain them

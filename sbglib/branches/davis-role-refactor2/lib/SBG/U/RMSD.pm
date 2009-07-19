@@ -279,8 +279,6 @@ sub _rot_svd {
     # for chirality by using right-handed coordinates.  As a shortcut, just
     # invert the signs in the last column, when necessary 
 
-    # TODO or should this be the last row?
-    # Row vs. column order? Test this
     if (det $covariance < 0) {
         warn "determinant < 0";
         $V->slice('-1,') *= -1;

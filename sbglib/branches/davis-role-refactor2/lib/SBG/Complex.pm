@@ -398,10 +398,10 @@ sub rmsd {
    # Only consider common components
    my @cnames = intersection($self->models->keys, $other->models->keys);
 
-   my @selflist = map { $self->get($_)->coords } @cnames;
+   my @selflist = map { $self->get($_)->subject->centroid } @cnames;
    my $selfcoords = pdl(@selflist)->copy;
 
-   my @otherlist = map { $other->get($_)->coords } @cnames;
+   my @otherlist = map { $other->get($_)->subject->centroid } @cnames;
    # copy should not be necessary here
    my $othercoords = pdl(@otherlist);
 
@@ -439,22 +439,24 @@ sub superposition {
    # Pairwise Superpositions
    my $sups = [];
    my $rmsds = [];
+   my $scs = [];
    foreach my $key (@cnames) {
        my $selfdom = $self->get($key)->subject;
        my $otherdom = $other->get($key)->subject;
-
        my $sup = SBG::STAMP::superposition($selfdom, $otherdom);
        next unless $sup;
 
-       $sups->push($sup->transformation);
+       $sups->push($sup);
        $rmsds->push($sup->scores->at('RMS'));
+       $scs->push($sup->scores->at('Sc'));
    }
 
-   my $mats = $sups->map(sub{$_->matrix});
+   my $mats = $sups->map(sub{$_->transformation->matrix});
    my $summat = List::Util::reduce { our($a,$b); $a + $b } @$mats;
    my $avgmat = $summat / @$mats;
 
    my $rmsd = mean($rmsds);
+   my $sc = mean($scs);
 
    return wantarray ? ($avgmat, $rmsd, $sups) : $avgmat;
 
@@ -563,7 +565,9 @@ sub _mkmodel {
     my $type = $self->objtype;        
     my $cdom = $type->new(%$clone);
 
-    my $model = new SBG::Model(query=>$vmodel->query, subject=>$cdom);
+    my $model = new SBG::Model(
+        query=>$vmodel->query, subject=>$cdom, scores=>$vmodel->scores);
+
     return $model;
 }
 
@@ -605,6 +609,38 @@ sub check_clash {
 
 
 ################################################################################
+=head2 overlap
+
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
+
+TODO should be in a DomSetI interface
+=cut
+sub overlap {
+    my ($self, $other) = @_;
+    # Only consider common components
+    my @cnames = intersection($self->models->keys, $other->models->keys);
+    
+    my $overlaps = [];
+    foreach my $key (@cnames) {
+        my $selfdom = $self->get($key)->subject;
+        my $otherdom = $other->get($key)->subject;
+        
+        # Returns negative distance if no overlap at all
+        my $overlapfrac = $selfdom->overlap($otherdom);
+        # Non-overlapping domains just become 0
+        $overlapfrac = 0 if $overlapfrac < 0;
+        $overlaps->push($overlapfrac);
+    }
+    my $mean = mean($overlaps) || 0;
+    return $mean;
+
+} # overlap
+
+
+################################################################################
 =head2 globularity
 
  Function: 
@@ -634,10 +670,12 @@ sub globularity {
 
     $pdl = $pdl->clump(1,2) if $pdl->dims == 3;
 
-    my $radgy = SBG::U::RMSD::radius_gyr($pdl);
-    my $radmax = SBG::U::RMSD::radius_max($pdl);
+    my $centroid = SBG::U::RMSD::centroid($pdl);
+    my $radgy = SBG::U::RMSD::radius_gyr($pdl, $centroid);
+    my $radmax = SBG::U::RMSD::radius_max($pdl, $centroid);
 
-    return $radgy / $radmax;
+    # Convert PDL to scalar
+    return ($radgy / $radmax)->sclr;
 
 } # globularity
 

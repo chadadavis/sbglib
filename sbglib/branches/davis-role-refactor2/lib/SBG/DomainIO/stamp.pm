@@ -65,9 +65,23 @@ use SBG::Types qw/$re_pdb $re_descriptor/;
 
 
 
-
 ################################################################################
-# Accessors
+=head2 native
+
+ Function: Prevents writing the L<SBG::TransformI> of the domain
+ Example : 
+ Returns : Bool
+ Args    : Bool
+ Default : 0 (i.e. any transformation is printed by default)
+
+
+=cut
+has 'native' => (
+    is => 'ro',
+    isa => 'Bool',
+    default => 0,
+    );
+
 
 =head2 objtype
 
@@ -127,7 +141,8 @@ sub write {
         
         # Append transformation, if any
         my $trans = $dom->transformation;
-        if ($trans->has_matrix) {
+        # Don't print transformations in native mode
+        if ($trans->has_matrix && ! $self->native) {
             print $fh "\n";
             my $io = new SBG::TransformIO::stamp(fh=>$fh);
             $io->write($trans);

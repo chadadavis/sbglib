@@ -55,8 +55,7 @@ use Graph::UnionFind;
 use SBG::U::Log qw/log/;
 sub _d {
     my $d = shift;
-#     print STDERR ("\t" x $d), @_, "\n";
-    log()->debug("  " x $d, @_);
+    log()->trace("  " x $d, @_);
 }
 sub _d0 { _d(0,@_); }
 
@@ -546,6 +545,8 @@ sub _array2D {
 # TODO del
 sub DEMOLISH {
     my ($self) = @_;
+    $self->sub_solution()->();
+
     _d0 "Traversal done: rejected paths: " . $self->rejects;
     _d0 "Traversal done: rejected solutions: " . $self->rsolutions;
     _d0 "Traversal done: accepted solutions: " . $self->asolutions;

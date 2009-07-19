@@ -201,6 +201,10 @@ sub clone {
 
 C = B x A
 
+C x A^-1 = B x A x A^-1
+
+C x A^-1 = B
+
 Given C (self) and A, solves for B transformation
 
 =cut

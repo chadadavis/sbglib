@@ -2,11 +2,11 @@
 
 =head1 NAME
 
-B<sbg> - Interface to serialized objects 
+B<sbgobj> - Interface to serialized objects 
 
 =head1 SYNOPSIS
 
-sbg myfile.stor <object-method> <parameters> ...
+sbgobj myfile.stor <object-method> <parameters> ...
 
 =head1 DESCRIPTION
 
@@ -17,7 +17,7 @@ If no method is given, the object is printed.
 
 Uses bash autocomplete:
  
- complete -o default -C 'sbg -options' sbg
+ complete -o default -C 'sbgobj -options' sbgobj
 
 
 =head1 OPTIONS
@@ -52,7 +52,7 @@ use Moose::Autobox;
 use SBG::Role::Storable qw/module_for retrieve can_do/;
 use SBG::U::Log;
 
-
+use Data::Dump qw/dump/;
 
 ################################################################################
 
@@ -99,6 +99,9 @@ sub _methods {
     return unless defined($obj);
     my @all_methods;
     my $methods = $obj->can_do;
+    # TODO use this instead, but will contain different object
+#     my @methods = $obj->meta->get_all_methods;
+
     my $keys = $methods->keys->sort;
     foreach my $class (@$keys) {
         my $names = $methods->{$class}->sort;
@@ -143,3 +146,25 @@ sub _complete_options {
 
 
 
+
+__END__
+
+
+Make this a CGI as well
+Look for models in a given dir
+
+    # Save files;
+    my $domio;
+    $domio = new SBG::DomainIO::stamp(tempfile=>1);
+    $domio->write(@{$model->domains});
+    $obs{'modeldom'} = $domio->file;
+    $domio = new SBG::DomainIO::stamp(tempfile=>1);
+    $domio->write(@{$model->domains}, @{$target->domains});
+    $obs{'superdom'} = $domio->file;
+    my $pdbio = new SBG::DomainIO::pdb(tempfile=>1);
+    $domio = new SBG::DomainIO::
+                  
+    # Save STAMP DOM file of $model, before superpositioning it
+#     my $io = new SBG::DomainIO::stamp(tempfile=>1);
+#     $io->write(@{$model->domains});
+#     print $io->file;

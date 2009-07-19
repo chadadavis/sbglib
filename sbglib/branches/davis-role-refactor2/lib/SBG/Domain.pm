@@ -67,7 +67,8 @@ sub overlap {
 =cut
 sub centroid {
     my ($self,) = @_;
-
+    warn "Not implemented";
+    return;
 } # centroid
 
 

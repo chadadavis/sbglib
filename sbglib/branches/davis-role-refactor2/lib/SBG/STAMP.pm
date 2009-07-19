@@ -60,6 +60,7 @@ use SBG::U::Log qw/log/;
 Does not modify/transform B<$fromdom>
 
 
+# TODO DOC update this and these assumptions
 The L<SBG::Transformation> contained in the L<SBG::Superposition> object returned is relative. I.e. it is not a cumulative transformation from the native B<$fromdom> to your B<$todom>, rather it is the transformation to the B<native> <$todom>. I.e. if your B<$from> already has a transformation, this will be relative  
 
 If a L<SBG::DomainI> already has a non-identity L<SBG::TransformI>, it will also
@@ -67,13 +68,13 @@ be considered here. The Superposition returned contains a transformation that is
 relative to any transformation already existing in B<fromdom>
 
 =cut
-sub superposition {
+sub superposition_native {
     my ($fromdom, $ontodom, $ops) = @_;
+
     if ($fromdom == $ontodom) {
         log()->trace("Identity: $fromdom");
         return SBG::Superposition::identity($fromdom);
     }
-    log()->trace("$fromdom onto $ontodom");
 
     # Check cache
     my $superpos = _cache($fromdom, $ontodom);
@@ -87,10 +88,10 @@ sub superposition {
     our $basecmd;
     $basecmd ||= _config();
     my ($fullcmd, $prefix) = _setup_input($basecmd, $ontodom, $fromdom);
+    my $scanfile = "${prefix}.scan";
     $fullcmd .= " $ops" if $ops;
     log()->trace("\n$fullcmd");
-    system("$fullcmd > /dev/null");
-    my $scanfile = "${prefix}.scan";
+    system("$fullcmd > /dev/null 2>/dev/null");
     my $fh;
     unless (-s $scanfile && open($fh, $scanfile)) {
         log()->error("Error running stamp:\n$fullcmd");
@@ -99,6 +100,7 @@ sub superposition {
         return;
     }
 
+    # TODO DES need to be set in a Run object
     # Number of fits (residues?) that were performed
     my $minfit = config()->val('stamp', 'minfit') || 30;
     # Min Sc value to accept
@@ -113,7 +115,7 @@ sub superposition {
         # Read stats into hash        
         my %stats = split ' ', $line;
         # Is this the reference domain? Skip it;
-        # NB these are the same results if STAMP performed no fits
+        # NB these are the same values if STAMP performed no fits
         next if $stats{nfit} == 999 && $stats{n_equiv} == 999;
 
         # Skip if thresh too low
@@ -122,15 +124,10 @@ sub superposition {
             return;
         }
 
-        # Read in the domain being superposed onto the reference domain. This
-        # will also contain the (cumulative) transformation.
+        # Read in the domain being superposed onto the reference domain.
+        # This contains the transformation between the (untransformed) domains
         my $io = new SBG::DomainIO::stamp(fh=>$fh);
         my $dom = $io->read;
-        # Transformation relative to input transform
-        my $reltrans = 
-            $dom->transformation->relativeto($fromdom->transformation);
-        # Make this the transformation that we return in the Superposition
-        $dom->transformation($reltrans);
 
         # Create Superposition (the reference domain, $ontodom, hasn't changed)
         $superpos = new SBG::Superposition(
@@ -142,7 +139,45 @@ sub superposition {
     _cache($fromdom, $ontodom, $superpos);
     return $superpos;
 
+} # superposition_native
+
+
+
+################################################################################
+=head2 superposition
+
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
+
+
+=cut
+sub superposition {
+    my ($fromdom, $ontodom, $ops) = @_;
+    log()->trace("$fromdom onto $ontodom");
+    my $superpos = superposition_native($fromdom, $ontodom, $ops);
+    return unless defined $superpos;
+
+    return $superpos unless ($fromdom->transformation->has_matrix || 
+                             $ontodom->transformation->has_matrix);
+
+    # Right-to-left application of transformations to get fromdom=>ontodom
+    # First, inverse $fromdom back to it's native transform
+    # Then, apply the transform between the native domains
+    # Last, apply the transform stored in $ontodom, if any
+    my $prod = 
+        $ontodom->transformation x 
+        $superpos->transformation x 
+        $fromdom->transformation->inverse;
+
+    $superpos->transformation($prod);
+    return $superpos;
+
 } # superposition
+
+
+
 
 
 ################################################################################
@@ -158,9 +193,6 @@ Cache claims to even work between concurrent processes!
 =cut
 sub _cache {
     my ($from, $to, $data) = @_;
-    # Don't cache transformed domains
-    return if 
-        $from->transformation->has_matrix || $to->transformation->has_matrix;
 
     our $cache;
     $cache ||= new Cache::File(
@@ -177,6 +209,7 @@ sub _cache {
         my $ientry = $cache->entry($ikey);
         my $idata;
         if (ref($data) eq 'ARRAY') {
+            $idata = $data;
             log()->trace("Caching (negative) $key and $ikey");
         } else {
             $idata = $data->inverse;
@@ -245,17 +278,21 @@ sub _irmsd_rel {
 
 
 # Write domains to temporary files and create output tempfile for STAMP
+# native=>no transformations written
+# This is because we want the results on the native, unstransformed domains.
+# These can be cached. 
+# Any additional transformations are quick to just multiply afterward
 sub _setup_input {
     my ($basecmd, $probedom, @dbdoms) = @_;
 
-    # Write probe domain to file
-    my $ioprobe = new SBG::DomainIO::stamp(tempfile=>1);
+    # Write probe domain to file (native=>don't write the transformation
+    my $ioprobe = new SBG::DomainIO::stamp(tempfile=>1, native=>1);
     my $probefile = $ioprobe->file;
     $ioprobe->write($probedom);
     $ioprobe->close;
 
     # Write database domains to single file
-    my $iodb = new SBG::DomainIO::stamp(tempfile=>1);
+    my $iodb = new SBG::DomainIO::stamp(tempfile=>1, native=>1);
     my $dbfile = $iodb->file;
     foreach my $dom (@dbdoms) {
         $iodb->write($dom);
