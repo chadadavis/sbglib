@@ -6,7 +6,6 @@ use Test::More 'no_plan';
 use Data::Dumper;
 use Data::Dump qw/dump/;
 use Carp;
-$SIG{__DIE__} = \&confess;
 
 use SBG::U::Log qw/log/;
 
@@ -26,7 +25,7 @@ use SBG::Run::rasmol;
 my $DEBUG;
 # $DEBUG= 1;
 log()->init('TRACE') if $DEBUG;
-
+$SIG{__DIE__} = \&confess if $DEBUG;
 
 # Similar to example in STAMP.t but use at least two chained superpositions
 # Do not simply multiply transform twice, rather: chain them
@@ -60,23 +59,23 @@ my $interactions = [
 # State holder
 my $complex = new SBG::Complex(id=>'2br2test');
 
-my $test = \&SBG::CA::Assembler::sub_test;
-my $solved = \&SBG::CA::Assembler::sub_solution;
+my $assembler = new SBG::CA::Assembler;
 
-ok($test->($complex, $net, 'c1', 'c2', $interactions->[0]),'Add interaction');
-ok($test->($complex, $net, 'c2', 'c3', $interactions->[1]),'Add interaction');
-ok($test->($complex, $net, 'c3', 'c4', $interactions->[2]),'Add interaction');
-ok($test->($complex, $net, 'c4', 'c5', $interactions->[3]),'Add interaction');
-ok($test->($complex, $net, 'c5', 'c6', $interactions->[4]),'Add interaction');
+
+ok($assembler->test($complex, $net, 'c1', 'c2', $interactions->[0]),'Add interaction');
+ok($assembler->test($complex, $net, 'c2', 'c3', $interactions->[1]),'Add interaction');
+ok($assembler->test($complex, $net, 'c3', 'c4', $interactions->[2]),'Add interaction');
+ok($assembler->test($complex, $net, 'c4', 'c5', $interactions->[3]),'Add interaction');
+ok($assembler->test($complex, $net, 'c5', 'c6', $interactions->[4]),'Add interaction');
 
 rasmol($complex->domains) if $DEBUG;
 
-ok($solved->($complex, $net, [$net->nodes], $interactions, 0),
+ok($assembler->solution($complex, $net, [$net->nodes], $interactions, 0),
     'Checking solution');
 
 
 # Now try to save the same solution, verify rejection of duplicate
-ok(! $solved->($complex, $net, [$net->nodes], $interactions, 0),
+ok(! $assembler->solution($complex, $net, [$net->nodes], $interactions, 0),
     'Duplicate detection');
 
 

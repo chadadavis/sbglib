@@ -37,23 +37,47 @@ use SBG::GeometricHash;
 
 
 # Number of solved partial solutions
-our $solution = 0;
+has 'solutions' => (
+    is => 'rw',
+    isa => 'Int',
+    default => 0,
+    );
+
 # Number of duplicate solutions (matching an existing class)
-our $dups = 0;
-# Number of unique solutions, only first solution in a class is saved
-our $classes = 0;
+has 'dups' => (
+    is => 'rw',
+    isa => 'Int',
+    default => 0,
+    );
+
+# Number of unique solutions, only first solution in a class is unique
+has 'classes' => (
+    is => 'rw',
+    isa => 'Int',
+    default => 0,
+    );
+
 # Size distribution of unique solutions (i.e. of classes)
-our %sizes;
+has 'sizes' => (
+    is => 'rw',
+    isa => 'HashRef[Int]',
+    default => sub { {} },
+    );
 
 # 3D geometric hash
-our $gh = new SBG::GeometricHash(binsize=>1.5);
+has 'gh' => (
+    is => 'ro',
+    isa => 'SBG::GeometricHash',
+    default => sub { new SBG::GeometricHash(binsize=>1.5) },
+    );
 
-# TODO DES needs to be OO
-my $file_pattern = '%smodel-%05d';
 
-# For debugging: Individual steps within one solution
-our $step = 1;
-
+# File name pattern for saving assemblies
+has 'pattern' => (
+    is => 'ro',
+    isa => 'Str',
+    default => '%smodel-%05d',
+    );
 
 
 ################################################################################
@@ -67,17 +91,16 @@ our $step = 1;
 Bugs: assumes L<SBG::Domain::Sphere> implementation in L<SBG::Complex>
 
 =cut
-sub sub_solution {
-    my ($complex, $graph, $nodecover, $templates, $rejects) = @_;
+sub solution {
+    my ($self, $complex, $graph, $nodecover, $templates, $rejects) = @_;
 
-    _status();
+    $self->_status();
 
     # Uninteresting unless at least two interfaces in solution
     return unless defined($templates) && $templates->length > 1;     
 
-    # A solution is now complete. Restart at step 1 for subsequent solution
-    $solution++;    
-    $step = 1;
+    # A solution is now complete.
+    $self->solutions($self->solutions+1);
 
     # Get domains and their coords out of the complex model
     my $componentlabels = $complex->keys;
@@ -87,60 +110,60 @@ sub sub_solution {
 
     # Check if duplicate, based on geometric hash
     # exact() requires that the sizes match on both sides (i.e. no subsets)
-    my $class = $gh->exact($coords, $componentlabels);
+    my $class = $self->gh->exact($coords, $componentlabels);
     if (defined $class) {
-        $dups++;
-        log()->debug('Duplicate solution. Total duplicates: ', $dups);
+        $self->dups($self->dups+1);
+        log()->debug('Duplicate solution. Total duplicates: ', $self->dups);
         return;
     } else {
         # undef => Don't name the model
-        $class = $gh->put(undef, $coords, $componentlabels);
+        $class = $self->gh->put(undef, $coords, $componentlabels);
+
         # Counter for classes created so far
-        $classes = $class unless $class < $classes;
+#         $self->classes($class) unless $class < $self->classes;
+        $self->classes($self->classes+1);
+        log()->trace("Class ", $class);
+
         # Count number of occurences of unique complex solution *of this size*
-        $sizes{scalar(@$nodecover)}++;
+        my $sizeclass = $nodecover->length;
+        my $sizeclassn = $self->sizes->at($sizeclass) || 0;
+        $self->sizes->put($sizeclass, $sizeclassn+1);
+
+        # Write solution to file, append an optional name and model solution
+        # counter
+        my $file = sprintf($self->pattern, 
+                           $complex->id ? $complex->id . '-' : '',
+                           $class, 
+            );
+        $complex->store($file . '.stor');
     }
-
-
-    log()->debug("\n\n====== Class: $class Solution $solution\n",
-                 "@$nodecover\n", "@$templates\n", );
-
-    # Write solution to file, append an optional name and model solution counter
-    my $file = sprintf($file_pattern, 
-                       $complex->id ? $complex->id . '-' : '',
-#                        $class, 
-                       $solution
-        );
-    $complex->store($file . '.stor');
 
     return 1;
 
-} # sub_solution
+} # solution
 
 
 sub _status {
-#     my $sizeheader = join(' ', map { "\#${_}-mer %3d"} sort keys %sizes);
-    my $sizeheader = join(', ', map { "%3d ${_}mers"} sort keys %sizes);
+    my ($self) = @_;
+    my $keys = $self->sizes->keys->sort;
+    my $sizeheader = $keys->map(sub{ "%3d ${_}mers" })->join(', ');
+
     # Flush console and setup in-line printing, unless redirected
     if (-t STDOUT) {
         local $| = 1;
         printf 
             "\033[1K\r" . # Carriage return, i.e. w/o linefeed
-#             "#Aborted %5d #Solutions %5d #Dups %5d #Unique %5d Size dist.: " .
-#             "#Solutions %5d #Dups %5d #Unique %5d Size dist.: " .
-#             "%5d solutions, %5d dups, %5d unique, distribution: " .
             "%5d unique, %5d dups, %5d total, distribution: " .
             "$sizeheader ", 
-#             $rejects, 
-#             $solution, $dups, $classes,
-            $classes, $dups, $solution,
-            map { $sizes{$_} } sort keys %sizes,
+            $self->classes, $self->dups, $self->solutions,
+            $keys->map(sub{ $self->sizes->at($_) })->flatten,
             ;
     }
 }
 
+
 ################################################################################
-=head2 sub_test
+=head2 test
 
  Function: 
  Example : 
@@ -156,8 +179,8 @@ Returns true/false == success/failure to use/add interaction template
 
 =cut
 
-sub sub_test {
-    my ($complex, $graph, $src, $dest, $iaction_id) = @_;
+sub test {
+    my ($self, $complex, $graph, $src, $dest, $iaction_id) = @_;
     log()->trace(join('|',$src,$dest,$iaction_id));
 
     # Interaction object, from ID, Network hashes these
@@ -166,10 +189,9 @@ sub sub_test {
     # Try to add the interaction
     $complex->add_interaction($ix, $src, $dest) or return;
     # Success
-    $step++;
     return 1;
 
-} # sub_test
+} # test
 
 
 

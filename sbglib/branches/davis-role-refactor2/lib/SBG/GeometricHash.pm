@@ -82,6 +82,7 @@ sub new {
     bless $self, $class;
     $self->{_gh} ||= {};
     $self->{binsize} ||= 1;
+    $self->{classid} = 0;
     return $self;
 }
 
@@ -255,8 +256,11 @@ If no model name is provided, generic class ID numbers will be created.
 =cut 
 sub put { 
     my ($self, $modelid, $points, $labels) = @_;
-    our $classid;
-    $modelid ||= ++$classid;
+
+    unless (defined $modelid) {
+        $self->{'classid'}++;
+        $modelid = $self->{'classid'};
+    }
 
     # If each (labelled) object contains multiple points, extract points.  Also
     # assigns the object's label to each point in the object.

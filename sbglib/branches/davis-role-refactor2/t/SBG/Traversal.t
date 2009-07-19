@@ -69,8 +69,7 @@ my %expected = (
 
 # Create a traversal
 my $trav = new SBG::Traversal(graph=>$net, 
-                              sub_test=>\&try_template,
-                              sub_solution=>\&got_an_answer,
+                              assembler=>new TestAssembler,
     );
 
 $trav->traverse;
@@ -90,9 +89,15 @@ exit;
 
 ################################################################################
 
+package TestAssembler;
+use Moose;
+
+# with 'SBG::AsseblerI';
+
 # In these callbacks, the default $state will just be a HashRef
-sub got_an_answer {
-    my ($state, $g, $nodecover, $templates) = @_;
+sub solution {
+    my ($self, $state, $g, $nodecover, $templates) = @_;
+    return unless defined($nodecover);
     my @ids;
     foreach my $t (@$templates) {
         push @ids, ex_id($t);
@@ -109,8 +114,8 @@ sub got_an_answer {
 }
 
 
-sub try_template {
-    my ($state, $graph, $u, $v, $alt_id) = @_;
+sub test {
+    my ($self, $state, $graph, $u, $v, $alt_id) = @_;
     # Our test index of this template
     my $templ_id = ex_id($alt_id);
 

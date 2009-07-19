@@ -76,7 +76,18 @@ has 'graph' => (
     );
 
 
-=head2 sub_test
+=head2 assembler
+
+=cut
+has 'assembler' => (
+    is => 'ro',
+#     isa => 'SBG::AssemblerI',
+    required => 1,
+    );
+
+
+=head2 test
+
 
 Call back function. Should return true if an edge is to be used in the
 traversal. It is called as:
@@ -113,12 +124,7 @@ You can then access this, e.g. on a L<Bio::Network::ProteinNet> via:
 
 
 =cut
-has 'sub_test' => (
-    is => 'rw',
-    isa => 'CodeRef',
-    required => 1,
-    default => sub { 1 },
-    );
+
 
 
 =head2 sub_solution 
@@ -152,12 +158,7 @@ ArrayRef of the names of the nodes in the solution.
 ArrayRef of the names of the alternate edge IDs in the solution graph.
 
 =cut
-has 'sub_solution' => (
-    is => 'rw',
-    isa => 'CodeRef',
-    required => 1,
-    default => sub { },
-    );
+
 
 
 =head2 minsize
@@ -366,7 +367,7 @@ sub _do_edges {
     }
 
     # As child nodes in traversal may change partial solutions, clone these
-    # This implicitly allows us to backtrack later if $sub_test() fails, etc
+    # This implicitly allows us to backtrack later if $test() fails, etc
     my $stateclone = $state->clone();
 
     # Do we want to go ahead and traverse this edge?
@@ -389,8 +390,8 @@ sub _test_alt {
     my ($self, $uf, $stateclone, $src, $dest, $alt_id, $d) = @_;
 
     # Do we want to go ahead and traverse this edge?
-    my $callback = $self->sub_test;
-    my $success = $callback->($stateclone, $self->graph, $src, $dest, $alt_id);
+    my $success = $self->assembler->test(
+        $stateclone, $self->graph, $src, $dest, $alt_id);
 
     if (! $success) {
         # Current edge was rejected, but alternative multiedges may remain
@@ -513,9 +514,10 @@ sub _do_solution {
 #         _d $d, "Duplicate";
 #     } else {
 #         $self->_solved->put($solution_label, 1);
-    my $callback = $self->sub_solution;
+
     log()->debug("Solution: ", join(' ', @{$self->_nodecover->keys}));
-    if ($callback->($state, $self->graph, $nodes, $alts, $self->rejects)) {
+    if ($self->assembler->solution(
+            $state, $self->graph, $nodes, $alts, $self->rejects)) {
         $self->asolutions($self->asolutions+1);
         log()->trace("Accepted solution");
     } else {
@@ -545,7 +547,9 @@ sub _array2D {
 # TODO del
 sub DEMOLISH {
     my ($self) = @_;
-    $self->sub_solution()->();
+    
+    # TODO Shouldn't need thisx
+    $self->assembler->solution();
 
     _d0 "Traversal done: rejected paths: " . $self->rejects;
     _d0 "Traversal done: rejected solutions: " . $self->rsolutions;

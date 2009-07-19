@@ -52,7 +52,6 @@ use File::Basename;
 use List::MoreUtils qw/each_arrayref/;
 use POSIX;
 use Carp;
-$SIG{__DIE__} = \&confes;;
 
 use SBG::Role::Storable;
 use SBG::Network;
@@ -72,9 +71,11 @@ my $result = GetOptions(\%ops,
                         'c|complete',
                         's|size=s',
                         'l|log=s',
+                        'd|debug',
     );                  
 if ($ops{'h'}) { pod2usage(-exitval=>1, -verbose=>2); }
 SBG::U::Log::init($ops{'l'}) if $ops{'l'};
+$SIG{__DIE__} = \&confes if $ops{'d'};
 
 
 my @files = @ARGV;
@@ -157,8 +158,7 @@ sub _one_net {
     # -test is the function to call when trying to place an interaction
     # -partial is the function to call when one complex solution is complete
     my $t = new SBG::Traversal(graph=>$net, 
-                               sub_test=>\&SBG::CA::Assembler::sub_test, 
-                               sub_solution=>\&SBG::CA::Assembler::sub_solution,
+                               assembler=>new SBG::CA::Assembler,
                                minsize=>$minsize,
         );
     # Each result is a complex, this is a placeholder for the aglorithm's state
