@@ -69,7 +69,7 @@ relative to any transformation already existing in B<fromdom>
 
 =cut
 sub superposition_native {
-    my ($fromdom, $ontodom, $ops) = @_;
+    my ($fromdom, $ontodom, $ops, $nocache) = @_;
 
     if ($fromdom == $ontodom) {
         log()->trace("Identity: $fromdom");
@@ -77,8 +77,8 @@ sub superposition_native {
     }
 
     # Check cache
-    my $superpos = _cache($fromdom, $ontodom);
-    if ($superpos) {
+    my $superpos = $nocache ? undef : _cache_get($fromdom, $ontodom);
+    if (defined $superpos) {
         # Negative cache? (i.e. superpostion previously found not possible)
         return if ref($superpos) eq 'ARRAY';
         # Cache hit
@@ -96,7 +96,7 @@ sub superposition_native {
     unless (-s $scanfile && open($fh, $scanfile)) {
         log()->error("Error running stamp:\n$fullcmd");
         # Negative cache
-        _cache($fromdom, $ontodom, []);
+        _cache_set($fromdom, $ontodom, []) unless $nocache;
         return;
     }
 
@@ -120,8 +120,8 @@ sub superposition_native {
 
         # Skip if thresh too low
         if ($stats{Sc} < $scancut || $stats{nfit} < $minfit) {
-            _cache($fromdom, $ontodom, []);
-            return;
+            _cache_set($fromdom, $ontodom, []) unless $nocache;
+            last;
         }
 
         # Read in the domain being superposed onto the reference domain.
@@ -132,12 +132,19 @@ sub superposition_native {
         # Create Superposition (the reference domain, $ontodom, hasn't changed)
         $superpos = new SBG::Superposition(
             to=>$ontodom, from=>$dom, scores=>{%stats} );
+        # Don't need to parse the rest once we have the transformation
         last;
     }
 
     unlink $scanfile unless $File::Temp::KEEP_ALL;
-    _cache($fromdom, $ontodom, $superpos);
-    return $superpos;
+
+    if (defined $superpos) {
+        _cache_set($fromdom, $ontodom, $superpos) unless $nocache;
+        return $superpos;
+    } else {
+        _cache_set($fromdom, $ontodom, []) unless $nocache;
+        return;
+    }
 
 } # superposition_native
 
@@ -181,7 +188,7 @@ sub superposition {
 
 
 ################################################################################
-=head2 _cache
+=head2 _cache_get
 
  Function: 
  Example : 
@@ -191,8 +198,8 @@ sub superposition {
 Cache claims to even work between concurrent processes!
 
 =cut
-sub _cache {
-    my ($from, $to, $data) = @_;
+sub _cache_get {
+    my ($from, $to) = @_;
 
     our $cache;
     $cache ||= new Cache::File(
@@ -200,32 +207,55 @@ sub _cache {
     my $key = "${from}--${to}";
     my $entry = $cache->entry($key);
 
-    if (defined $data) {
-
-        $entry->freeze($data);
-
-        # Also cache the inverse superposition (NB [] means negative cache)
-        my $ikey = "${to}--${from}";
-        my $ientry = $cache->entry($ikey);
-        my $idata;
-        if (ref($data) eq 'ARRAY') {
-            $idata = $data;
-            log()->trace("Caching (negative) $key and $ikey");
-        } else {
-            $idata = $data->inverse;
-            log()->trace("Caching $key and $ikey");
-        }
-        $ientry->freeze($idata);
-        log()->trace("Caching $key and $ikey");
-    }
-
     log()->debug("Cache " . ($entry->exists ? 'hit' : 'miss') . " $key");
 
-    # If it was just cached, it's now there, this serves as confirmation too
-    $data = $entry->thaw;
-    return $data;
+    return $entry->thaw;
 
-} # _cache
+} # _cache_get
+
+
+=head2 _cache_set
+
+ Function: 
+ Example : 
+ Returns : Re-retrieved object from cache
+ Args    : [] implies negative caching
+
+Cache claims to even work between concurrent processes!
+
+=cut
+sub _cache_set {
+    my ($from, $to, $data) = @_;
+
+    log()->trace($data);
+
+    our $cache;
+    $cache ||= new Cache::File(
+        cache_root => ($ENV{TMPDIR} || '/tmp') . '/sbgsuperposition');
+
+    # Also cache the inverse superposition
+    my $key = "${from}--${to}";
+    my $ikey = "${to}--${from}";
+
+    my $entry = $cache->entry($key);
+    my $ientry = $cache->entry($ikey);
+
+    my $idata;
+    # (NB [] means negative cache)
+    if (ref($data) eq 'ARRAY') {
+        $idata = $data;
+        log()->trace("Cache write (negative) $key and $ikey");
+    } else {
+        $idata = $data->inverse;
+        log()->trace("Cache write (positive) $key and $ikey");
+    }
+
+    $entry->freeze($data);
+    $ientry->freeze($idata);
+    # Verification;
+    return $entry->exists;
+
+} # _cache_set
 
 
 ################################################################################
@@ -344,7 +374,7 @@ sub _config {
         );
 
     my $com = "$stamp $stamp_pars";
-    log()->trace("\n$com");
+
     return $com;
 } # _config
 

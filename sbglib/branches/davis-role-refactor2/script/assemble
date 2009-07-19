@@ -51,6 +51,8 @@ use Moose::Autobox;
 use File::Basename;
 use List::MoreUtils qw/each_arrayref/;
 use POSIX;
+use Carp;
+$SIG{__DIE__} = \&confes;;
 
 use SBG::Role::Storable;
 use SBG::Network;
@@ -75,37 +77,44 @@ if ($ops{'h'}) { pod2usage(-exitval=>1, -verbose=>2); }
 SBG::U::Log::init($ops{'l'}) if $ops{'l'};
 
 
-my $file = shift;
-my $net = retrieve($file) or
-    pod2usage(-exitval=>1, -verbose=>1, -message=>"$file is not an object");
-my $basename = basename($file,'.stor');
+my @files = @ARGV;
 
-_print_net($basename, $net);
-my $minsize = _minsize($net, %ops);
+foreach my $file (@files) {
 
-my $donefile = "${basename}.done";
+    my $basename = basename($file,'.stor');
+    my $donefile = "${basename}.done";
+    
+    # Already finished?
+    if (-s $donefile) {
+        my $d = `cat ${basename}.done`;
+        chomp $d;
+        printf "$basename : %5d already done\n", $d;
+        next;
+    }
+
+    # Being computed by another process?
+    my $lock = wlock($donefile, 1);
+    unless ($lock) {
+        print "\tlocked\n";
+        next;
+    }
 
 
-if (-s "${basename}.done") {
-    my $d = `cat ${basename}.done`;
-    chomp $d;
-    printf "%5d already done\n", $d;
-    exit;
+    # Load the Network object
+    my $net = retrieve($file) or
+        pod2usage(-exitval=>1, -verbose=>1, -message=>"$file is not an object");
+    _print_net($basename, $net);
+    my $minsize = _minsize($net, %ops);
+
+    # Traverse the network
+    _one_net($net, $basename, $minsize);
+    print "\n";
+
+    my @done = <${basename}*.stor>;
+    my $done = scalar(@done);
+    `echo $done > ${basename}.done`;
+    unlink $lock;
 }
-
-my $lock = wlock($donefile, 1);
-unless ($lock) {
-    print "\tlocked\n";
-    exit;
-}
-
-_one_net($net, $basename, $minsize);
-print "\n";
-my @done = <${basename}*.stor>;
-my $done = scalar(@done);
-`echo $done > ${basename}.done`;
-unlink $lock;
-
 
 exit;
 
