@@ -32,10 +32,30 @@ use SBG::GeometricHash;
 use PDL::Matrix;
 use SBG::U::Log qw/log/;
 
+use Graph::Undirected;
+
 our $gh = new SBG::GeometricHash(binsize=>1);
 
-sub sub_test {
-    my ($state, $graph, $src, $dest, $edge_id) = @_;
+
+################################################################################
+=head2 new
+
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
+
+=cut
+sub new {
+    my ($class, %self) = @_;
+    my $self = { %self };
+    bless $self, $class;
+    return $self;
+}
+
+
+sub test {
+    my ($self, $state, $graph, $src, $dest, $edge_id) = @_;
 
     # Check that peptides stays linear, no branching
     # Only need to check $src, not $dest, since traversal doesn't do cycles
@@ -73,8 +93,10 @@ sub _pl {
 }
 
 
+# No longer using this version ...
 sub sub_solution_gh {
-    my ($state, $graph, $nodecover, $edges, $rejects) = @_;
+    my ($self, $state, $graph, $nodecover, $edges, $rejects) = @_;
+    return unless defined $nodecover;
     our $gh;
     our %edgesets;
 
@@ -102,10 +124,12 @@ sub sub_solution_gh {
 }
 
 
-sub sub_solution_pathhash {
-    my ($state, $graph, $nodecover, $edges, $rejects) = @_;
-    our %paths;
+# THis version based on path hash
+sub solution {
+    my ($self, $state, $graph, $nodecover, $edges, $rejects) = @_;
+    return unless defined $nodecover;
 
+    our %paths;
     log()->trace(join('|', @$nodecover));
 
     # Get the subgraph and find the path from one end to other

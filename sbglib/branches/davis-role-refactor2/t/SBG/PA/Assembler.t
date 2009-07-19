@@ -43,11 +43,7 @@ ok(-r $dotfile, "Plotting $dotfile");
 unlink $dotfile;
 
 my $t = new SBG::Traversal(graph=>$graph, 
-                           sub_test=>
-                           \&SBG::PA::Assembler::sub_test, 
-#                            sub_solution=>\&PA::sub_solution_gh,
-                           sub_solution=>
-                           \&SBG::PA::Assembler::sub_solution_pathhash,
+                           assembler=>new SBG::PA::Assembler,
                            minsize=>$minsize,
     );
 my $accepted = $t->traverse();
