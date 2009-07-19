@@ -9,6 +9,7 @@ all_from => 'lib/SBG.pm';
 requires 'Bio::Seq' => '1.006';
 requires 'Bio::Network::Node' => '0'; 
 requires 'Bio::Network::ProteinNet' => '0'; 
+requires 'Cache::File' => 0;
 requires 'Config::IniFiles' => '0';
 requires 'ExtUtils::F77' => '0'; # Required by PDL::Slatec
 requires 'File::Basename' => '0'; 
