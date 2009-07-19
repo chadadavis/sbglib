@@ -27,7 +27,7 @@ use SBG::U::List qw/flatten/;
 use SBG::Run::rasmol;
 
 my $DEBUG;
-$DEBUG = 1;
+#$DEBUG = 1;
 log()->init('TRACE') if $DEBUG;
 
 
