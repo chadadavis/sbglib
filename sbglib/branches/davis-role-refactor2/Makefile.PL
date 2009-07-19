@@ -7,7 +7,8 @@ use inc::Module::Install;
 all_from => 'lib/SBG.pm';
 
 requires 'Bio::Seq' => '1.006';
-# requires 'Bio::Network::ProteinNet' => '1.006'; 
+requires 'Bio::Network::Node' => '1.006'; 
+requires 'Bio::Network::ProteinNet' => '1.006'; 
 requires 'Config::IniFiles' => '0';
 requires 'ExtUtils::F77' => '0'; # Required by PDL::Slatec
 requires 'File::Basename' => '0'; 
@@ -37,6 +38,7 @@ requires 'PDL::Basic' => '0';
 requires 'PDL::Core' => '0'; 
 requires 'PDL::IO::Misc' => '0'; 
 requires 'PDL::IO::Storable' => '0'; 
+requires 'PDL::LinearAlgebra' => '0'; 
 requires 'PDL::Lite' => '0'; 
 requires 'PDL::Math' => '0'; 
 requires 'PDL::Matrix' => '0'; 

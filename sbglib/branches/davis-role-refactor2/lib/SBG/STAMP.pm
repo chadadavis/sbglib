@@ -212,7 +212,7 @@ sub _cache_get {
         my $data = $entry->thaw;
         if (ref($data) eq 'ARRAY') {
             log()->debug("Cache hit (negative) ", $key);
-            return;
+            return [];
         } else {
             log()->debug("Cache hit (positive) ", $key);
             return $data;
