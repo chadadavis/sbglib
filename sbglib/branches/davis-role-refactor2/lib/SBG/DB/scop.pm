@@ -32,7 +32,8 @@ use SBG::Domain;
 
 # TODO Needs to be in a DB
 # Maps e.g. 2hz1A.a.1.1.1-1 to { A 2 _ to A 124 _ }
-our $scopdb = "$ENV{HOME}/work/ca/benchmark/scop_1.73.dom.gz";
+#our $scopdb = "$ENV{HOME}/work/ca/benchmark/scop_1.73.dom.gz";
+our $scopdb = "/g/russell2/davis/work/ca/benchmark/scop_1.73.dom.gz";
 
 
 ################################################################################
