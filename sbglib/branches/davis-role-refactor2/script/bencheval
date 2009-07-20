@@ -124,20 +124,20 @@ foreach my $modelfile (@ARGV) {
         _superposition_scores($model),# sc
         );
 
-    rasmol $model->domains;
-    rasmol $target->domains;
 
     # Superpose model onto target
+    # TODO BUG cannot transform model here, as it already has a transform
+    # And it's not multiplied correctly
+
 #     my ($avgmat, $avgrmsd, ) = $model->superposition($target);
-    my ($avgmat, $avgrmsd, ) = $target->superposition($model);
+#     my ($avgmat, $avgrmsd, ) = $target->superposition($model);
+    my ($avgmat, $avgrmsd, ) = $target->superposition2($model);
 
-#     $model->transform($avgmat);
     $target->transform($avgmat);
-    
-    print $avgmat;
 
-    rasmol $target->domains;
-    exit;
+
+    rasmol [ @{$target->domains}, @{$model->domains} ];
+
 
     # Now that they're in one coordinate frame, get component-wise overlaps
     $obs{'olap'} = $model->overlap($target);
@@ -148,8 +148,8 @@ foreach my $modelfile (@ARGV) {
     $obs{$_} *= 100.0 for (qw/cover glob olap/); # seqid/); # seqid already a %
 
     # Rewrite model file in target's frame of reference, for convenience later
-    # TODO broken
-    $model->store("${mbase}-sup.stor");
+#     my $io = SBG::DomainIO::stamp(file=>">${mbase}-sup.stor");
+#     $io->write(@{$target->domains}, @{model->domains});
 
     $observations->push(\%obs);
 

@@ -453,6 +453,9 @@ sub superposition {
 
    my $mats = $sups->map(sub{$_->transformation->matrix});
    my $summat = List::Util::reduce { our($a,$b); $a + $b } @$mats;
+
+# TODO DEL
+#    my $avgmat = $summat;
    my $avgmat = $summat / @$mats;
 
    my $rmsd = mean($rmsds);
@@ -462,6 +465,32 @@ sub superposition {
 
 } # superposition
 
+
+sub superposition2 {
+    my ($self, $other) = @_;
+    # Only consider common components
+    my @cnames = intersection($self->models->keys, $other->models->keys);
+    my @selflist = map { $self->get($_)->subject->centroid } @cnames;
+    my $selfcoords = pdl(@selflist)->copy;
+
+    my @otherlist = map { $other->get($_)->subject->centroid } @cnames;
+    # copy should not be necessary here
+    my $othercoords = pdl(@otherlist);
+
+    # Clump into a 2D matrix, if there is a 3rd dimension
+    # I.e. normally have an outer dimension representing individual domains.
+    # Then each domain is a 2D matrix of coordinates
+    # This clumps the whole set of domains into a single matrix of coords
+    $selfcoords = $selfcoords->clump(1,2) if $selfcoords->dims == 3;
+    $othercoords = $othercoords->clump(1,2) if $othercoords->dims == 3; 
+
+    my $transmatrix = SBG::U::RMSD::superpose($selfcoords, $othercoords);
+    my $rmsd = SBG::U::RMSD::rmsd($selfcoords, $othercoords);
+    
+    return wantarray ? ($transmatrix, $rmsd) : $transmatrix;
+
+
+}
 
 ################################################################################
 =head2 merge
