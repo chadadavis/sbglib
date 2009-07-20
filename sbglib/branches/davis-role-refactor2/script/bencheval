@@ -63,13 +63,15 @@ use autobox ARRAY => 'SBG::U::List';
 # use Statistics::Basic;
 use SBG::U::List qw/mean sum/;
 
+use SBG::Eval;
 use SBG::Role::Storable;
 
-# TODO DEL
-use SBG::Run::rasmol qw/rasmol/;
-
+use SBG::Run::rasmol qw/rasmol pdb2img/;
+use SBG::DomainIO::stamp;
+use SBG::DomainIO::pdb;
 
 ################################################################################
+
 
 
 my %ops;
@@ -108,52 +110,16 @@ my $observations = [];
 
 
 foreach my $modelfile (@ARGV) { 
-    my $model = retrieve $modelfile;
-    next unless defined($model);
-    my $msize = $model->count;
-    next if $msize < $minsize;
     my $mbase = basename($modelfile, '.stor');
-    my ($mid) = $mbase =~ /-(\d+)$/;
     print STDERR "$mbase\n";
-    my %obs = (
-        target=>$tbase, tsize=>$tsize, model=>$mid, msize=>$msize,
-        glob=>$model->globularity,
-        cover=>1.0 * $msize / $tsize,
-        _domain_scores($model),       # eval seqid
-        _interaction_scores($model),  # irmsd zscore pval
-        _superposition_scores($model),# sc
-        );
+    my $evalfile = "eval/${mbase}.stor";
 
+    my $ev = _load_eval($evalfile, $modelfile);
 
-    # Superpose model onto target
-    # TODO BUG cannot transform model here, as it already has a transform
-    # And it's not multiplied correctly.
-    # So we have to transform target onto model
+    $observations->push($ev);
 
-    my ($avgmat, $avgrmsd, ) = $model->superposition($target);
-#     my ($avgmat, $avgrmsd, ) = $target->superposition($model);
-#     my ($avgmat, $avgrmsd, ) = $target->superposition2($model);
+    _outputs($evalfile, $modelfile, $target);
 
-#     $target->transform($avgmat);
-    $model->transform($avgmat);
-
-
-    rasmol [ @{$target->domains}, @{$model->domains} ];
-
-
-    # Now that they're in one coordinate frame, get component-wise overlaps
-    $obs{'olap'} = $model->overlap($target);
-    # RMSD of centroids after superposition 
-#     $obs{'rmsd'} = $model->rmsd($target);
-    $obs{'rmsd'} = $avgrmsd;
-
-    $obs{$_} *= 100.0 for (qw/cover glob olap/); # seqid/); # seqid already a %
-
-    # Rewrite model file in target's frame of reference, for convenience later
-#     my $io = SBG::DomainIO::stamp(file=>">${mbase}-sup.stor");
-#     $io->write(@{$target->domains}, @{model->domains});
-
-    $observations->push(\%obs);
 
 } # foreach $modelfile
 
@@ -175,6 +141,7 @@ if (my $best = $ops{'b'}) {
 
 
 _print_csv($observations);
+# _print_html($observations);
 
 
 exit;
@@ -188,10 +155,10 @@ sub _print_csv {
     our $pattern;
     unless ($header) {
         $header = sprintf join(' ',
-qw/%10s %5s %5s %5s %5s%%  %6s %4s%%  %7s %9s %5s%% %9s   %6s %4s%%/),
+qw/%10s %5s %5s %5s %5s%%  %6s %4s%%  %7s %9s %5s%% %12s %6s %4s%%/),
             @fields;
         $pattern = join(' ', 
-qw/%10s %5d %5s %5d %6.f %6.3f %5.f %7.3f %9g  %6.f %9g %6.3f  %5.f/); 
+qw/%10s %5d %5s %5d %6.f %6.3f %5.f %7.3f %9g  %6.f %12g %6.3f  %5.f/); 
         print "\n";
         print "$header\n";
     }
@@ -200,6 +167,154 @@ qw/%10s %5d %5s %5d %6.f %6.3f %5.f %7.3f %9g  %6.f %9g %6.3f  %5.f/);
         # Print by fixed order given in @fields
         printf "$pattern\n", map { $row->{$_} } @fields;
     }
+}
+
+use CGI qw/:standard/;
+
+sub _print_html {
+    my ($table) = @_;
+    
+    print header if defined($ENV{GATEWAY_INTERFACE});
+
+    my $htable = [ th([@fields]) ];
+
+    foreach my $row (@$table) {
+        push @$htable, td([map { $row->{$_} } @fields ]);
+    }
+
+    print start_html('Bench');
+    print table({-border=>'5px'},
+                caption('Bench'),
+                Tr($htable)
+        );
+
+    print end_html;
+}
+
+
+sub _load_eval {
+    my ($evalfile, $modelfile) = @_;
+
+    my $ev;
+    if (-s $evalfile) {
+        print STDERR "$evalfile : already done\n";
+        $ev = retrieve $evalfile;
+        return $ev;
+    }
+
+    # Being computed by another process?
+    my $lock = wlock($evalfile, 1);
+    unless ($lock) {
+        print STDERR "$evalfile : locked\n";
+        next;
+    }
+
+    $ev = _eval_one($modelfile);
+    $ev->store($evalfile) unless -s $evalfile;
+    unlink $lock;
+    return $ev;
+}
+
+
+sub _eval_one {
+    my ($modelfile) = @_;
+
+    my $model = retrieve $modelfile;
+    next unless defined($model);
+    my $msize = $model->count;
+    next if $msize < $minsize;
+    my $mbase = basename($modelfile, '.stor');
+    my ($mid) = $mbase =~ /-(\d+)$/;
+
+    my %obs = (
+        target=>$tbase, tsize=>$tsize, model=>$mid, msize=>$msize,
+        glob=>$model->globularity,
+        cover=>1.0 * $msize / $tsize,
+        _domain_scores($model),       # eval seqid
+        _interaction_scores($model),  # irmsd zscore pval
+        _superposition_scores($model),# sc
+        );
+
+
+    # Superpose model onto target
+    # TODO BUG cannot transform model here, as it already has a transform
+    # And it's not multiplied correctly.
+    # So we have to transform target onto model
+
+    my ($avgmat, $urmsd, $usc ) = $target->superposition3($model);
+    $target->transform($avgmat);
+
+    $obs{avgmat} = $avgmat;
+
+    # 'sc' field is already reserved for mean linker Sc score
+#     $obs{'sc'} = $usc;
+
+    # RMSD of centroids after superposition 
+#     $obs{'rmsd'} = $model->rmsd($target);
+    # Mean RMSD of componentwise superposition
+    $obs{'rmsd'} = $urmsd;
+
+    # Now that they're in one coordinate frame, get component-wise overlaps
+    $obs{'olap'} = $model->overlap($target);
+
+    $obs{$_} *= 100.0 for (qw/cover glob olap/); # seqid/); # seqid already a %
+
+    # Put the target back where it came from
+    # TODO wouldnt be necessary if transforming the model would work ...
+    $target->transform($avgmat->inv);
+
+
+    return new SBG::Eval(%obs);
+
+
+}
+
+
+# STill want to save: mbase tbase targetfile modelfile 
+sub _outputs {
+    my ($evalfile, $modelfile, $target) = @_;
+
+    my $mbase = basename($modelfile, '.stor');
+    my $pdbfile = "pdb/${mbase}.pdb";
+
+    if (-s $pdbfile) {
+        print STDERR "$pdbfile already done\n";
+        return;
+    }
+
+    my $lock = wlock($pdbfile, 1);
+    unless ($lock) {
+        print STDERR "$pdbfile : locked\n";
+        return;
+    }
+
+    my $model = retrieve $modelfile;
+    my $ev = retrieve $evalfile;
+    my $avgmat = $ev->avgmat;
+
+    # transform ...
+    $target->transform($avgmat);
+
+    my $targetasdom = $target->merge;
+    my $modelasdom = $model->merge;
+
+    my $domfile = "dom/${mbase}.dom";
+    my $ppmfile = "ppm/${mbase}.ppm";
+
+    # Rewrite model file in target's frame of reference, for convenience later
+    my $domio = new SBG::DomainIO::stamp(file=>">$domfile");
+    my $pdbio = new SBG::DomainIO::pdb(file=>">$pdbfile");
+    $domio->write(@{$target->domains}, @{$model->domains});
+    $pdbio->write($targetasdom, $modelasdom);
+    pdb2img(pdb=>$pdbfile, img=>$ppmfile);
+
+
+# TODO needed here?
+    # Put the target back where it came from
+    # TODO wouldnt be necessary if transforming the model would work ...
+    $target->transform($avgmat->inv);
+
+    unlink $lock;
 }
 
 
@@ -283,5 +398,20 @@ sub _superposition_scores {
     return %obs;
 } # _superposition_scores
 
+
+
+sub wlock {
+    my $file = shift or return;
+    my $attempts = shift || 5;
+    my $lock = "${file}.lock";
+    until (symlink("$ENV{HOSTNAME}-$$", $lock)){
+        $attempts--;
+        return unless $attempts > 0;
+        sleep 1 + int rand(3);
+        my $full = rel2abs($lock);
+        print STDERR "Waiting for lock: $full ($attempts)\n";
+    }
+    return $lock;
+} # wlock
 
 

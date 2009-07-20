@@ -44,9 +44,9 @@ use overload (
 use Moose::Autobox;
 
 use PDL::Lite;
-use PDL::Core qw/pdl squeeze/;
+use PDL::Core qw/pdl squeeze zeroes/;
 
-use SBG::U::List qw/intersection mean/;
+use SBG::U::List qw/intersection mean sum/;
 use SBG::U::Log qw/log/;
 use SBG::U::RMSD;
 use SBG::STAMP;
@@ -454,18 +454,57 @@ sub superposition {
    my $mats = $sups->map(sub{$_->transformation->matrix});
    my $summat = List::Util::reduce { our($a,$b); $a + $b } @$mats;
 
-# TODO DEL
-#    my $avgmat = $summat;
+   # TODO BUG this causes a scaling as well
    my $avgmat = $summat / @$mats;
 
    my $rmsd = mean($rmsds);
    my $sc = mean($scs);
 
-   return wantarray ? ($avgmat, $rmsd, $sups) : $avgmat;
+   return wantarray ? ($avgmat, $rmsd, $sc, $sups) : $avgmat;
 
 } # superposition
 
+# weighted averages of Sc scores
+sub superposition3 {
+   my ($self,$other) = @_;
+   # Only consider common components
+   my @cnames = intersection($self->models->keys, $other->models->keys);
 
+   # Pairwise Superpositions
+   my $sups = [];
+   my $rmsds = [];
+   my $scs = [];
+   foreach my $key (@cnames) {
+       my $selfdom = $self->get($key)->subject;
+       my $otherdom = $other->get($key)->subject;
+       my $sup = SBG::STAMP::superposition($selfdom, $otherdom);
+       next unless $sup;
+
+       $sups->push($sup);
+       $rmsds->push($sup->scores->at('RMS'));
+       $scs->push($sup->scores->at('Sc'));
+   }
+
+   my $scsum = sum($scs);
+
+   my $mats = $sups->map(sub{$_->transformation->matrix});
+
+   my $summat = zeroes(4,4);
+
+   for (my $i = 0; $i < @$mats; $i++) {
+       $summat += $mats->[$i] * ($scs->[$i] / $scsum);
+   }
+
+   my $avgmat = $summat;
+
+   my $rmsd = mean($rmsds);
+   my $sc = mean($scs);
+
+   return wantarray ? ($avgmat, $rmsd, $sc, $sups) : $avgmat;
+
+} # superposition
+
+# Just superpose the centroids
 sub superposition2 {
     my ($self, $other) = @_;
     # Only consider common components

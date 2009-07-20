@@ -25,7 +25,17 @@ use Moose;
 with 'SBG::Role::Storable';
 with 'SBG::Role::Clonable';
 
+my @extrinsic = qw/target tsize model msize cover rmsd olap irmsd/;
+my @intrinsic = qw/pval seqid eval sc glob/;
+my @fields = (@extrinsic, @intrinsic);
 
+has \@fields => (
+    is => 'rw',
+    );
+
+has 'avgmat' => (
+    is => 'rw',
+    );
 
 
 

@@ -90,22 +90,21 @@ sub pdb2img {
     my (%o) = @_;
     $o{pdb} or return;
     $o{img} = $o{pdb} . '.ppm' unless $o{img};
+    $o{mode} ||= 'cartoon';
+
     log()->trace("$o{pdb} => $o{img}");
     my $rasmol = config()->val(qw/rasmol classic/) || 'rasmol';
     my $fh;
-    my $cmd = "$rasmol -nodisplay >/dev/null";
-#     my $cmd = "$rasmol -nodisplay ";
+    my $cmd = "$rasmol -nodisplay >/dev/null 2>/dev/null";
     log()->trace($cmd);
     unless(open $fh, "| $cmd") {
         log()->error("Failed: $cmd\n\t$!");
         return;
     }
-    print $fh <<HERE;
-load "$o{pdb}"
-wireframe off
-spacefill
-color chain
-HERE
+    print $fh "load \"$o{pdb}\"\n";
+    print $fh "color chain\n";
+    print $fh "wireframe off\n";
+    print $fh "$o{mode}\n";
 
     # Any additional options
     print $fh "$o{script}\n" if $o{script};
