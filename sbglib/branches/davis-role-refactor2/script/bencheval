@@ -221,7 +221,7 @@ sub _load_eval {
 
     my $ev;
     if (-s $evalfile) {
-        print STDERR "$evalfile : already done\n";
+#         print STDERR "$evalfile : already done\n";
         $ev = retrieve $evalfile;
         return $ev;
     }
@@ -234,7 +234,10 @@ sub _load_eval {
     }
 
     $ev = _eval_one($modelfile);
-    $ev->store($evalfile) unless -s $evalfile;
+    if (! -s $evalfile) {
+        $ev->store($evalfile);
+        warn "evalfile written\n";
+    }
     unlink $lock;
     return $ev;
 }
@@ -337,7 +340,7 @@ sub _domfile {
     my ($domfile, $model, $target) = @_;
 
     if (-s $domfile) {
-        print STDERR "$domfile already done\n";
+#         print STDERR "$domfile already done\n";
         return;
     }
     my $lock = wlock($domfile, 1);
@@ -349,7 +352,7 @@ sub _domfile {
     # Rewrite model file in target's frame of reference, for convenience later
     my $domio = new SBG::DomainIO::stamp(file=>">$domfile");
     $domio->write(@{$target->domains}, @{$model->domains});
-    warn "wrote $domfile\n";
+    warn "$domfile written\n";
     unlink $lock;
 }
 
@@ -358,7 +361,7 @@ sub _pdbfile {
     my ($pdbfile, $model, $target) = @_;
 
     if (-s $pdbfile) {
-        print STDERR "$pdbfile already done\n";
+#         print STDERR "$pdbfile already done\n";
         return;
     }
     my $lock = wlock($pdbfile, 1);
@@ -373,7 +376,7 @@ sub _pdbfile {
     # Rewrite model file in target's frame of reference, for convenience later
     my $pdbio = new SBG::DomainIO::pdb(file=>">$pdbfile");
     $pdbio->write($targetasdom, $modelasdom);
-    warn "wrote $pdbfile\n";
+    warn "$pdbfile written\n";
     unlink $lock;
 }
 
@@ -385,7 +388,7 @@ sub _ppmfile {
     my $ppmfile = "ppm/${mbase}.ppm";
 
     if (-s $ppmfile) {
-        print STDERR "$ppmfile already done\n";
+#         print STDERR "$ppmfile already done\n";
         return;
     }
     my $lock = wlock($ppmfile, 1);
@@ -395,7 +398,7 @@ sub _ppmfile {
     }
 
     pdb2img(pdb=>$pdbfile, img=>$ppmfile);
-    warn "wrote $ppmfile\n";
+    warn "$ppmfile written\n";
     unlink $lock;
 }
 
