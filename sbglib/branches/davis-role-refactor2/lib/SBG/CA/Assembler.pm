@@ -68,7 +68,8 @@ has 'sizes' => (
 has 'gh' => (
     is => 'ro',
     isa => 'SBG::GeometricHash',
-    default => sub { new SBG::GeometricHash(binsize=>1.5) },
+#     default => sub { new SBG::GeometricHash(binsize=>1.5) },
+    default => sub { new SBG::GeometricHash(binsize=>2) },
     );
 
 

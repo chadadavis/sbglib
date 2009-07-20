@@ -127,13 +127,15 @@ foreach my $modelfile (@ARGV) {
 
     # Superpose model onto target
     # TODO BUG cannot transform model here, as it already has a transform
-    # And it's not multiplied correctly
+    # And it's not multiplied correctly.
+    # So we have to transform target onto model
 
-#     my ($avgmat, $avgrmsd, ) = $model->superposition($target);
+    my ($avgmat, $avgrmsd, ) = $model->superposition($target);
 #     my ($avgmat, $avgrmsd, ) = $target->superposition($model);
-    my ($avgmat, $avgrmsd, ) = $target->superposition2($model);
+#     my ($avgmat, $avgrmsd, ) = $target->superposition2($model);
 
-    $target->transform($avgmat);
+#     $target->transform($avgmat);
+    $model->transform($avgmat);
 
 
     rasmol [ @{$target->domains}, @{$model->domains} ];
