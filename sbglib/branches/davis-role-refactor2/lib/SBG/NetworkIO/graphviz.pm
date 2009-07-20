@@ -48,8 +48,8 @@ sub read {
 
     warn "Not implemented";
 
-    while (my $_ = <$fh>) {
-        next unless //;
+    while (my $line = <$fh>) {
+        next unless $line =~ //;
         chomp;
     }
 

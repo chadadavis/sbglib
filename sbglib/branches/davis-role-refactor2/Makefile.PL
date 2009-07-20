@@ -34,6 +34,7 @@ requires 'Moose::Autobox' => '0';
 requires 'Moose::Role' => '0'; 
 requires 'Moose::Util::TypeConstraints' => '0'; 
 requires 'MooseX::StrictConstructor' => '0'; 
+requires 'MooseX::Role::Parameterized' => '0'; 
 requires 'PDL' => '2.4.4';
 requires 'PDL::Basic' => '0'; 
 requires 'PDL::Core' => '0'; 

@@ -71,8 +71,8 @@ sub search {
 
     my $io = new SBG::InteractionIO::CSV(file=>$tpath);
     my @interactions;
-    while (my $_ = $io->read) {
-        push @interactions, $_
+    while (my $line = $io->read) {
+        push @interactions, $line;
     }
     
     log->debug("$comp1 $comp2 : ", scalar(@interactions), " hits");

@@ -19,7 +19,7 @@ use SBG::Run::rasmol;
 use SBG::U::Log qw/log/;
 
 my $DEBUG;
-# $DEBUG = 1;
+#$DEBUG = 1;
 log()->init('TRACE') if $DEBUG;
 $File::Temp::KEEP_ALL = $DEBUG;
 

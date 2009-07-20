@@ -94,7 +94,7 @@ sub _build_config {
     my ($self,$inifile) = @_;
     $inifile ||= _find_config();
     my $_config;
-    unless (-r $inifile) {
+    unless (defined($inifile) && -r $inifile) {
         carp "Cannot read configuration: $inifile\n";
         $_config = new Config::IniFiles;
     } else {

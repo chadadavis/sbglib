@@ -106,9 +106,9 @@ sub superposition_native {
     # Min Sc value to accept
     my $scancut = config()->val('stamp', 'scancut') || 2.0;
     
-    while (my $_ = <$fh>) {
+    while (my $read = <$fh>) {
         # Save only the fields, all separated by spaces
-        next unless /^\# (Sc.*?)fit_pos/;
+        next unless $read =~ /^\# (Sc.*?)fit_pos/;
         # Cleanup key names
         my $line = $1;
         $line =~ s/=//g;

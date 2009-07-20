@@ -62,8 +62,8 @@ sub components {
     my $cmd = "zgrep -P \'^ -- Can model $pdbid (\\S+) (\\S+)\' $templatedb";
     open my $fh, "$cmd|";
     my @components;
-    while (my $_ = <$fh>) {
-        my @fields = split;
+    while (my $line = <$fh>) {
+        my @fields = split ' ', $line;
         push @components, @fields[4,5];
     }
     return uniq @components;
@@ -85,8 +85,8 @@ sub pdbids {
     my $cmd = "zgrep -o -P \'^ -- Can model (\\S+)\' $templatedb|sort|uniq";
     open my $fh, "$cmd|";
     my @ids;
-    while (my $_ = <$fh>) {
-        my @fields = split ' ';
+    while (my $line = <$fh>) {
+        my @fields = split ' ', $line;
         push @ids, $fields[-1];
     }
     return uniq @ids;
@@ -134,9 +134,9 @@ sub search {
     my ($pdb) = $accno1 =~ /^($re_pdb)/;
     my @interactions;
     open my $fh, "zcat $templatedb|";
-    while (my $_ = <$fh>) {
+    while (my $line = <$fh>) {
 
-        next unless
+        next unless $line =~ 
             /^ -- Can model $pdb (($accno1) ($accno2)|($accno2) ($accno1)) on (\S+) (\S+)\s+(.*)/;
 
         # Could have matched either way around, split the grouped match
@@ -145,7 +145,6 @@ sub search {
         my $scores = $8;
         log()->trace("$comp1($templ1)--$comp2($templ2)");
 
-        
         # Parse score line
         my ($eval1, $sid1, $eval2, $sid2, 
             $coverage, $coverage_frac, 

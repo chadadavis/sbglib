@@ -63,12 +63,12 @@ sub read {
 
     my $post_offset;
     my @rows;
-    while (my $_ = <$fh>) { 
-        if (/Post-add:\s+\[(.*?)\]/) {
+    while (my $line = <$fh>) { 
+        if ($line =~ /Post-add:\s+\[(.*?)\]/) {
             $post_offset = pdl split(' ', $1);
             next;
         }
-        if (/Forward matrix/) {
+        if ($line =~ /Forward matrix/) {
             <$fh>;
             # Read three lines
             @rows = map { scalar <$fh> } 1..3;

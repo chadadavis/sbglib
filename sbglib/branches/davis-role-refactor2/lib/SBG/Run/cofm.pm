@@ -149,13 +149,13 @@ sub _run {
     }
 
     my %res;
-    while (my $_ = <$cofmfh>) {
+    while (my $line = <$cofmfh>) {
 
 
-        if (/^Domain\s+\S+\s+(\S+)/i) {
+        if ($line =~ /^Domain\s+\S+\s+(\S+)/i) {
             $res{file} = $1;
-        } elsif (/^REMARK Domain/) {
-            my @a = quotewords('\s+', 0, $_);
+        } elsif ($line =~ /^REMARK Domain/) {
+            my @a = quotewords('\s+', 0, $line);
             # Extract coords for radius-of-gyration and xyz of centre-of-mass
             $res{Rg} = $a[10];
             $res{Rmax} = $a[13];
