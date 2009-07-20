@@ -108,6 +108,8 @@ my $tsize = $target->count;
 # Keyed by size of models, list of observations (i.e. models) of that size
 my $observations = [];
 
+mkdir($_) for qw/pdb ppm dom eval/;
+
 
 foreach my $modelfile (@ARGV) { 
     my $mbase = basename($modelfile, '.stor');
@@ -123,6 +125,8 @@ foreach my $modelfile (@ARGV) {
 
 } # foreach $modelfile
 
+
+# TODO This also needs to be wrapped in a report() sub
 
 # Sort
 if (my $f = $ops{'f'}) {
@@ -140,8 +144,8 @@ if (my $best = $ops{'b'}) {
 }
 
 
-_print_csv($observations);
-# _print_html($observations);
+# _print_csv($observations);
+_print_html($observations);
 
 
 exit;
@@ -150,7 +154,7 @@ exit;
 ################################################################################
 # target tsize model msize cover rmsd olap irmsd pval zscore seqid eval sc glob
 sub _print_csv {
-    my ($table) = @_;
+    my ($table, $tbase) = @_;
     our $header;
     our $pattern;
     unless ($header) {
@@ -172,20 +176,40 @@ qw/%10s %5d %5s %5d %6.f %6.3f %5.f %7.3f %9g  %6.f %12g %6.3f  %5.f/);
 use CGI qw/:standard/;
 
 sub _print_html {
-    my ($table) = @_;
+    my ($table, $tbase) = @_;
     
     print header if defined($ENV{GATEWAY_INTERFACE});
 
-    my $htable = [ th([@fields]) ];
+    my @htmlfields = (@fields, qw/pdb dom ppm/);
+
+    my $htable = [ th([@htmlfields]) ];
 
     foreach my $row (@$table) {
-        push @$htable, td([map { $row->{$_} } @fields ]);
+        my $mbase = join('-', $row->{target}, 'model', $row->{model});
+        
+        $row->{rmsd} = sprintf("%.2f", $row->{rmsd});
+        $row->{irmsd} = sprintf("%.2f", $row->{irmsd});
+        $row->{sc} = sprintf("%.2f", $row->{sc});
+        $row->{glob} = sprintf("%6.2f", $row->{glob}); 
+        $row->{seqid} = sprintf("%6.2f", $row->{seqid}); 
+        $row->{cover} = sprintf("%6.2f", $row->{cover}); 
+
+        my @ordrow = map { $row->{$_} } @fields;
+
+        push 
+            @ordrow, 
+            a({-href=>"pdb/$mbase.pdb"}, 'pdb'), 
+            a({-href=>"dom/$mbase.dom"}, 'dom'), 
+            a({-href=>"ppm/$mbase.ppm"}, 'ppm'),
+            ;
+
+        push @$htable, td(\@ordrow);
     }
 
     print start_html('Bench');
     print table({-border=>'5px'},
                 caption('Bench'),
-                Tr($htable)
+                Tr({-align=>'right'}, $htable)
         );
 
     print end_html;
@@ -206,7 +230,7 @@ sub _load_eval {
     my $lock = wlock($evalfile, 1);
     unless ($lock) {
         print STDERR "$evalfile : locked\n";
-        next;
+        return;
     }
 
     $ev = _eval_one($modelfile);
@@ -252,12 +276,15 @@ sub _eval_one {
     # RMSD of centroids after superposition 
 #     $obs{'rmsd'} = $model->rmsd($target);
     # Mean RMSD of componentwise superposition
-    $obs{'rmsd'} = $urmsd;
+    $obs{rmsd} = $urmsd;
 
     # Now that they're in one coordinate frame, get component-wise overlaps
-    $obs{'olap'} = $model->overlap($target);
+    $obs{olap} = $model->overlap($target);
 
-    $obs{$_} *= 100.0 for (qw/cover glob olap/); # seqid/); # seqid already a %
+    foreach (qw/cover glob olap/) {
+        $obs{$_} = sprintf("%6.2f", 100.0 * $obs{$_}); 
+    }
+    # NB seqid/); # seqid already a %
 
     # Put the target back where it came from
     # TODO wouldnt be necessary if transforming the model would work ...
@@ -276,17 +303,15 @@ sub _outputs {
 
     my $mbase = basename($modelfile, '.stor');
     my $pdbfile = "pdb/${mbase}.pdb";
-
-    if (-s $pdbfile) {
-        print STDERR "$pdbfile already done\n";
-        return;
+    my $domfile = "dom/${mbase}.dom";
+    my $ppmfile = "ppm/${mbase}.ppm";
+    my @files = ($pdbfile, $domfile, $ppmfile);
+    my @locks = map { "$_.lock" } @files;
+    my $alldone = 1;
+    foreach (@files) {
+        unless (-e $_ || -e "$_.lock") { $alldone = 0 }
     }
-
-    my $lock = wlock($pdbfile, 1);
-    unless ($lock) {
-        print STDERR "$pdbfile : locked\n";
-        return;
-    }
+    return if $alldone;
 
     my $model = retrieve $modelfile;
     my $ev = retrieve $evalfile;
@@ -295,25 +320,82 @@ sub _outputs {
     # transform ...
     $target->transform($avgmat);
 
-    my $targetasdom = $target->merge;
-    my $modelasdom = $model->merge;
-
-    my $domfile = "dom/${mbase}.dom";
-    my $ppmfile = "ppm/${mbase}.ppm";
-
-    # Rewrite model file in target's frame of reference, for convenience later
-    my $domio = new SBG::DomainIO::stamp(file=>">$domfile");
-    my $pdbio = new SBG::DomainIO::pdb(file=>">$pdbfile");
-    $domio->write(@{$target->domains}, @{$model->domains});
-    $pdbio->write($targetasdom, $modelasdom);
-    pdb2img(pdb=>$pdbfile, img=>$ppmfile);
-
+    _domfile($domfile, $model, $target);
+    _pdbfile($pdbfile, $model, $target);
+    _ppmfile($mbase, $model, $target);
 
 # TODO needed here?
     # Put the target back where it came from
     # TODO wouldnt be necessary if transforming the model would work ...
     $target->transform($avgmat->inv);
 
+}
+
+
+
+sub _domfile {
+    my ($domfile, $model, $target) = @_;
+
+    if (-s $domfile) {
+        print STDERR "$domfile already done\n";
+        return;
+    }
+    my $lock = wlock($domfile, 1);
+    unless ($lock) {
+        print STDERR "$domfile : locked\n";
+        return;
+    }
+
+    # Rewrite model file in target's frame of reference, for convenience later
+    my $domio = new SBG::DomainIO::stamp(file=>">$domfile");
+    $domio->write(@{$target->domains}, @{$model->domains});
+    warn "wrote $domfile\n";
+    unlink $lock;
+}
+
+
+sub _pdbfile {
+    my ($pdbfile, $model, $target) = @_;
+
+    if (-s $pdbfile) {
+        print STDERR "$pdbfile already done\n";
+        return;
+    }
+    my $lock = wlock($pdbfile, 1);
+    unless ($lock) {
+        print STDERR "$pdbfile : locked\n";
+        return;
+    }
+
+    my $targetasdom = $target->merge;
+    my $modelasdom = $model->merge;
+
+    # Rewrite model file in target's frame of reference, for convenience later
+    my $pdbio = new SBG::DomainIO::pdb(file=>">$pdbfile");
+    $pdbio->write($targetasdom, $modelasdom);
+    warn "wrote $pdbfile\n";
+    unlink $lock;
+}
+
+
+sub _ppmfile {
+    my ($mbase, $model, $target) = @_;
+
+    my $pdbfile = "pdb/${mbase}.pdb";
+    my $ppmfile = "ppm/${mbase}.ppm";
+
+    if (-s $ppmfile) {
+        print STDERR "$ppmfile already done\n";
+        return;
+    }
+    my $lock = wlock($ppmfile, 1);
+    unless ($lock) {
+        print STDERR "$pdbfile : locked\n";
+        return;
+    }
+
+    pdb2img(pdb=>$pdbfile, img=>$ppmfile);
+    warn "wrote $ppmfile\n";
     unlink $lock;
 }
 
