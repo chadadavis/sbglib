@@ -91,9 +91,23 @@ SBG::U::Log::init($ops{'l'}) if $ops{'l'};
 
 
 # Score Fields
+# TODO fields, range, formats, etc can all go in Eval class
 my @extrinsic = qw/target tsize model msize cover rmsd olap irmsd/;
 my @intrinsic = qw/pval seqid eval sc glob/;
 my @fields = (@extrinsic, @intrinsic);
+my $boundary = 4;
+my @ranges = (
+    ([]) x $boundary, # First fields are labels, no ranges
+    [0,100 ], # cover
+    [10,0  ], # rmsd
+    [0,100 ], # olap
+    [20,0  ], # irmsd
+    [5,0   ], # pval
+    [0,100 ], # seqid
+    [1e-20,1e-100], # eval
+    [0,10  ], # sc
+    [0,100 ], # glob
+    );
 
 
 # First file is the target/benchmark/true complex
@@ -144,8 +158,8 @@ if (my $best = $ops{'b'}) {
 }
 
 
-# _print_csv($observations);
-_print_html($observations);
+_print_csv($observations, $tbase);
+# _print_html($observations, $tbase);
 
 
 exit;
@@ -173,16 +187,19 @@ qw/%10s %5d %5s %5d %6.f %6.3f %5.f %7.3f %9g  %6.f %12g %6.3f  %5.f/);
     }
 }
 
-use CGI qw/:standard/;
+use CGI qw/:standard *table/;
+
+# target tsize model msize cover rmsd olap irmsd pval zscore seqid eval sc glob
 
 sub _print_html {
     my ($table, $tbase) = @_;
     
     print header if defined($ENV{GATEWAY_INTERFACE});
+    print start_html($tbase);
+    print start_table({-border=>'1'}, $tbase);
 
     my @htmlfields = (@fields, qw/pdb dom ppm/);
-
-    my $htable = [ th([@htmlfields]) ];
+    print th([@htmlfields]);
 
     foreach my $row (@$table) {
         my $mbase = join('-', $row->{target}, 'model', $row->{model});
@@ -194,23 +211,25 @@ sub _print_html {
         $row->{seqid} = sprintf("%6.2f", $row->{seqid}); 
         $row->{cover} = sprintf("%6.2f", $row->{cover}); 
 
+        # Maintain order
         my @ordrow = map { $row->{$_} } @fields;
 
-        push 
-            @ordrow, 
-            a({-href=>"pdb/$mbase.pdb"}, 'pdb'), 
-            a({-href=>"dom/$mbase.dom"}, 'dom'), 
-            a({-href=>"ppm/$mbase.ppm"}, 'ppm'),
+        my @tdrow = map { td($_) } @ordrow[0..$boundary-1];
+
+
+        for (my $i = $boundary; $i < @ordrow; $i++) {
+            my $color = mapcolor($ordrow[$i], @{$ranges[$i]});
+            push @tdrow, td({-bgcolor=>$color}, $ordrow[$i]);
+        }
+
+       push 
+           @tdrow, 
+            td(a({-href=>"pdb/$mbase.pdb"}, 'pdb')), 
+            td(a({-href=>"dom/$mbase.dom"}, 'dom')),
+            td(({-href=>"ppm/$mbase.ppm"}, 'ppm')),
             ;
-
-        push @$htable, td(\@ordrow);
+        print Tr({-align=>'right'}, "@tdrow"), "\n";
     }
-
-    print start_html('Bench');
-    print table({-border=>'5px'},
-                caption('Bench'),
-                Tr({-align=>'right'}, $htable)
-        );
 
     print end_html;
 }
@@ -498,5 +517,29 @@ sub wlock {
     }
     return $lock;
 } # wlock
+
+
+sub mapcolor {
+    my ($val, $min, $max, $colora, $colorb) = @_;
+    $colora ||= 0x33;
+    $colorb ||= 0xff;
+    my $mapped = maprange($val, $min, $max, $colora, $colorb);
+    my $hex = sprintf("%x", $mapped);
+    my $hexstr = '#' . ($hex x 3);
+    return $hexstr;
+}
+
+sub maprange {
+    my ($val, $min1, $max1, $min2, $max2) = @_;
+    return interpolate( norm($val, $min1, $max1), $min2, $max2);
+}
+sub interpolate {
+    my ($norm, $min, $max) = @_;
+    return $min + ($max - $min) * $norm;
+}
+sub norm {
+    my ($val, $min, $max) = @_;
+    return ($val - $min) / ($max - $min);
+}
 
 
