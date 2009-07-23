@@ -199,6 +199,7 @@ has 'overlap_thresh' => (
     is => 'rw',
     isa => 'Num',
     default => 0.5,
+#     default => 2,
     );
 
 

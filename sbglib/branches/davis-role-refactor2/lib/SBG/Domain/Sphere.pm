@@ -86,7 +86,7 @@ has 'center' => (
 has 'radius' => (
     is => 'rw',
     isa => 'Num',
-    default => 5,
+    default => 0,
     );
 
 
@@ -196,7 +196,7 @@ sub overlap_lin {
     # Max possible overlap: twice the smaller radius
     my $max = 2 * List::Util::min($self->radius, $other->radius);
     $diff = $max if $diff > $max;
-    SBG::U::Log::log()->debug("$diff overlap between ($self) and ($other)");
+    SBG::U::Log::log()->debug("overlap: $diff dist: $dist radii: $sum_radii on ($self) vs ($other)");
     return $diff;
 } # overlap_lin
 
