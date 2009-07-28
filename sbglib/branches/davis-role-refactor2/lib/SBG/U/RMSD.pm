@@ -41,7 +41,7 @@ package SBG::U::RMSD;
 require Exporter;
 our @ISA = qw(Exporter);
 # Automatically exported symbols
-our @EXPORT    = qw();
+our @EXPORT    = qw//;
 # Manually exported symbols
 our @EXPORT_OK = qw/
 rmsd centroid radius_gyr radius_max superposition superpose translation
@@ -285,7 +285,7 @@ sub _rot_svd {
     }
 
     # TODO Each of these is the transpose of the other. Which is correct?
-    # my $rot=$V x $Wt->transpose;
+#     my $rot=$V x $Wt->transpose;
     my $rot=$Wt x $V->transpose;
     return $rot;
 }
