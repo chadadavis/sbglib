@@ -90,6 +90,7 @@ has 'pattern' => (
  Args    : 
 
 Bugs: assumes L<SBG::Domain::Sphere> implementation in L<SBG::Complex>
+Really? Maybe it just assumes a 'centroid' method.
 
 =cut
 sub solution {
@@ -106,6 +107,7 @@ sub solution {
     # Get domains and their coords out of the complex model
     my $componentlabels = $complex->keys;
     my $doms = $complex->domains;
+
     # Use only the centroid point, less accurate, but sufficient
     my $coords = $doms->map(sub{$_->centroid});
 
