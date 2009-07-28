@@ -1,5 +1,7 @@
 #!/usr/bin/env perl
 
+use strict;
+use warnings;
 use Test::More 'no_plan';
 use SBG::U::Test qw/float_is pdl_approx/;
 use Data::Dumper;
@@ -9,17 +11,19 @@ use Carp;
 $SIG{__DIE__} = \&confess;
 
 use Moose::Autobox;
+use PDL;
 
 use SBG::STAMP qw/superposition/;
 use SBG::Domain;
 use SBG::DomainIO::pdb;
 use SBG::DomainIO::stamp;
-use PDL;
+
+use SBG::Run::cofm qw/cofm/;
 use SBG::Run::rasmol;
 use SBG::U::Log qw/log/;
 
 my $DEBUG;
-#$DEBUG = 1;
+# $DEBUG = 1;
 log()->init('TRACE') if $DEBUG;
 $File::Temp::KEEP_ALL = $DEBUG;
 
@@ -27,13 +31,18 @@ $File::Temp::KEEP_ALL = $DEBUG;
 # Tolerate rounding differences between stamp (using clib) and PDL
 my $toler = 0.25;
 
+
+# One hexameric ring of 2br2: CHAINS ADCFEB 
+# (only unique interfaces: A/B and A/D) (B/D homologs, A/C homologs, etc)
+
+
 # get domains for chains of interest
 my $doma = SBG::Domain->new(pdbid=>'2br2', descriptor=>'CHAIN A');
 my $domb = SBG::Domain->new(pdbid=>'2br2', descriptor=>'CHAIN B');
 my $domd = SBG::Domain->new(pdbid=>'2br2', descriptor=>'CHAIN D');
 
 # A simple superposition, homologous whole chains
-$atod_sup = superposition($doma, $domd);
+my $atod_sup = superposition($doma, $domd);
 # The value computed externally by STAMP, the reference values
 my $atod_expect = pdl
  [ -0.55482 ,  0.24558 , -0.79490 ,     -52.48704 ],
@@ -48,7 +57,7 @@ pdl_approx($atod_sup->transformation->matrix,
 
 
 # The opposite superposition should have the inverse transformation matrix
-$dtoa_sup = superposition($domd, $doma);
+my $dtoa_sup = superposition($domd, $doma);
 my $dtoa_expect = $atod_expect->inv;
 pdl_approx($dtoa_sup->transformation->matrix,
            $dtoa_expect,
@@ -65,13 +74,13 @@ pdl_approx($atod_sup->transformation->inverse->matrix,
 
 # Test chaining of superpositions
 # get domains for whole chains 
-$ca = SBG::Domain->new(pdbid=>'2br2', descriptor=>'CHAIN A');
-$cb = SBG::Domain->new(pdbid=>'2br2', descriptor=>'CHAIN B');
-$cc = SBG::Domain->new(pdbid=>'2br2', descriptor=>'CHAIN C');
-$cd = SBG::Domain->new(pdbid=>'2br2', descriptor=>'CHAIN D');
+my $ca = SBG::Domain->new(pdbid=>'2br2', descriptor=>'CHAIN A');
+my $cb = SBG::Domain->new(pdbid=>'2br2', descriptor=>'CHAIN B');
+my $cc = SBG::Domain->new(pdbid=>'2br2', descriptor=>'CHAIN C');
+my $cd = SBG::Domain->new(pdbid=>'2br2', descriptor=>'CHAIN D');
 
-$supcacc = superposition($ca, $cc);
-$supcccd = superposition($cc, $cd);
+my $supcacc = superposition($ca, $cc);
+my $supcccd = superposition($cc, $cd);
 $supcacc->apply($ca);
 $supcccd->apply($ca);
 # How to verify non-visually?
@@ -172,6 +181,28 @@ my @doms = ($d2br2d0,$d2br2a0,$d2br2d1,$d2br2a1,$d2br2d2,$d2br2a2);
 rasmol \@doms if $DEBUG;
 
 
+
+# Test superposition for single domains with existing transformation
+sub _mksphere {
+    my ($pdbid, $chain) = @_;
+    my $dom = new SBG::Domain(pdbid=>$pdbid, descriptor=>"CHAIN $chain");
+    return cofm($dom);
+}
+
+my $movingb = _mksphere('2br2', 'B');
+my $staticd = _mksphere('2br2', 'D');
+my $staticf = _mksphere('2br2', 'F');
+
+my $sup1 = superposition($movingb, $staticd);
+$sup1->apply($movingb);
+my $sup2 = superposition($movingb, $staticf);
+$sup2->apply($movingb);
+
+# Now check RMSD between b and f
+my $rmsd = $movingb->rmsd($staticf);
+float_is($rmsd, 6.55, "RMSD after transformation", $toler);
+
+
 # Test iRMSD
 # Make pairs of domains :
 sub _d {
@@ -181,10 +212,12 @@ sub _d {
 
 my $doms1 = [ _d(qw/1vor K/), _d(qw/1vor R/) ];
 my $doms2 = [ _d(qw/1vp0 K/), _d(qw/1vp0 R/) ];
+my $irmsd;
 $irmsd = SBG::STAMP::irmsd($doms1, $doms2);
 float_is($irmsd, 5.11, "iRMSD", 0.01);
 $irmsd = SBG::STAMP::irmsd($doms2, $doms1);
-float_is($irmsd, 5.11, "iRMSD", 0.01);
+float_is($irmsd, 5.11, "iRMSD reverse", 0.01);
+
 
 
 $TODO = "Test STAMP::irmsd for domains with an existing transformation";
