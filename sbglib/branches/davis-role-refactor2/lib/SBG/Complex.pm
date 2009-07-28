@@ -46,7 +46,7 @@ use Moose::Autobox;
 use PDL::Lite;
 use PDL::Core qw/pdl squeeze zeroes/;
 
-use SBG::U::List qw/intersection mean sum/;
+use SBG::U::List qw/intersection mean sum flatten/;
 use SBG::U::Log qw/log/;
 use SBG::U::RMSD;
 use SBG::STAMP;
@@ -215,8 +215,14 @@ has 'overlap_thresh' => (
 =cut
 sub domains {
     my ($self,) = @_;
-    my $vals = $self->models->values or return;
-    return $vals->map(sub { $_->subject });
+
+    # Order of models attribute
+    my $keys = $self->keys;
+    return unless @$keys;
+
+    my $models = $keys->map(sub{ $self->get($_) });
+    my $domains = $models->map(sub { $_->subject });
+    return $domains;
 
 } # domains
 
@@ -263,6 +269,38 @@ sub keys {
     my $self = shift;
     return $self->models->keys;
 }
+
+
+
+################################################################################
+=head2 coords
+
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
+
+
+TODO Belongs in DomSetI
+
+=cut
+sub coords {
+    my ($self,@cnames) = @_;
+    # Only consider common components
+    @cnames = ($self->models->keys) unless @cnames;
+    @cnames = flatten(@cnames);
+    
+    my @aslist = map { $self->get($_)->subject->coords } @cnames;
+    my $coords = pdl(@aslist);
+    
+    # Clump into a 2D matrix, if there is a 3rd dimension
+    # I.e. normally have an outer dimension representing individual domains.
+    # Then each domain is a 2D matrix of coordinates
+    # This clumps the whole set of domains into a single matrix of coords
+    $coords = $coords->clump(1,2) if $coords->dims == 3;
+    return $coords;
+    
+} # coords
 
 
 ################################################################################
@@ -369,6 +407,8 @@ sub transform {
  Args    : 
 
 
+In an array context, this returns the names of the common components
+
 =cut
 sub coverage {
     my ($self, $other) = @_;
@@ -397,27 +437,32 @@ TODO belongs in a ModelSet role
 sub rmsd {
    my ($self,$other) = @_;
    # Only consider common components
-   my @cnames = intersection($self->models->keys, $other->models->keys);
+   my @cnames = $self->coverage($other);
 
-   my @selflist = map { $self->get($_)->subject->centroid } @cnames;
-   my $selfcoords = pdl(@selflist)->copy;
-
-   my @otherlist = map { $other->get($_)->subject->centroid } @cnames;
-   # copy should not be necessary here
-   my $othercoords = pdl(@otherlist);
-
-
-   # Clump into a 2D matrix, if there is a 3rd dimension
-   # I.e. normally have an outer dimension representing individual domains.
-   # Then each domain is a 2D matrix of coordinates
-   # This clumps the whole set of domains into a single matrix of coords
-   $selfcoords = $selfcoords->clump(1,2) if $selfcoords->dims == 3;
-   $othercoords = $othercoords->clump(1,2) if $othercoords->dims == 3; 
+   # make a copy before superposition
+   my $selfcoords = $self->coords->copy;
+   my $othercoords = $other->coords->copy;
 
    my $transmatrix = SBG::U::RMSD::superpose($selfcoords, $othercoords);
    my $rmsd = SBG::U::RMSD::rmsd($selfcoords, $othercoords);
-   return $rmsd;
+
+   return wantarray? ($rmsd, $transmatrix) : $rmsd;
+
 } # rmsd
+
+
+# Assumes complex already transformed
+sub rmsdonly {
+   my ($self,$other) = @_;
+   my @cnames = $self->coverage($other);
+   my $selfcoords = $self->coords->copy;
+   my $othercoords = $other->coords->copy;
+
+   my $rmsd = SBG::U::RMSD::rmsd($selfcoords, $othercoords);
+   return $rmsd;
+
+} # 
+
 
 
 ################################################################################
@@ -435,7 +480,7 @@ sub rmsd {
 sub superposition {
    my ($self,$other) = @_;
    # Only consider common components
-   my @cnames = intersection($self->models->keys, $other->models->keys);
+   my @cnames = $self->coverage($other);
 
    # Pairwise Superpositions
    my $sups = [];
@@ -465,11 +510,12 @@ sub superposition {
 
 } # superposition
 
+
 # weighted averages of Sc scores
-sub superposition3 {
+sub superposition_weighted {
    my ($self,$other) = @_;
    # Only consider common components
-   my @cnames = intersection($self->models->keys, $other->models->keys);
+   my @cnames = $self->coverage($other);
 
    # Pairwise Superpositions
    my $sups = [];
@@ -505,32 +551,273 @@ sub superposition3 {
 
 } # superposition
 
-# Just superpose the centroids
-sub superposition2 {
-    my ($self, $other) = @_;
-    # Only consider common components
-    my @cnames = intersection($self->models->keys, $other->models->keys);
-    my @selflist = map { $self->get($_)->subject->centroid } @cnames;
-    my $selfcoords = pdl(@selflist)->copy;
 
-    my @otherlist = map { $other->get($_)->subject->centroid } @cnames;
-    # copy should not be necessary here
-    my $othercoords = pdl(@otherlist);
+# To be called as $target->superposition_frame($model)
+use SBG::Run::cofm qw/cofm/;
 
-    # Clump into a 2D matrix, if there is a 3rd dimension
-    # I.e. normally have an outer dimension representing individual domains.
-    # Then each domain is a 2D matrix of coordinates
-    # This clumps the whole set of domains into a single matrix of coords
-    $selfcoords = $selfcoords->clump(1,2) if $selfcoords->dims == 3;
-    $othercoords = $othercoords->clump(1,2) if $othercoords->dims == 3; 
+sub superposition_frame_cofm {
+   my ($self,$other) = @_;
+   # Only consider common components
+   my @cnames = $self->coverage($other);
 
-    my $transmatrix = SBG::U::RMSD::superpose($selfcoords, $othercoords);
-    my $rmsd = SBG::U::RMSD::rmsd($selfcoords, $othercoords);
-    
-    return wantarray ? ($transmatrix, $rmsd) : $transmatrix;
+   # Pairwise Superpositions
+   my $sups = [];
+   my $rmsds = [];
+   my $scs = [];
+
+   foreach my $key (@cnames) {
+       my $selfdom = $self->get($key)->subject;
+       my $otherdom = $other->get($key)->subject;
+       my $othernativedom = new SBG::Domain(pdbid=>$otherdom->pdbid,
+                                            descriptor=>$otherdom->descriptor);
+       $othernativedom = cofm($othernativedom);
+       my $nativesup = SBG::STAMP::superposition($selfdom, $othernativedom);
+       
+       next unless $nativesup;
+
+       # TODO All of this can be in another method: $c->setframe($othercomplex)
+
+       # Set crosshairs
+       $selfdom = cofm($selfdom);
+       # Transform
+       $nativesup->apply($selfdom);
+       # Rebuild crosshairs over there
+       $selfdom->_build_coords;
+       # Reverse transform
+       $nativesup->inverse->apply($selfdom);
+
+       # After this, superpositioning $selfdom onto $otherdom should align
+       # crosshairs
+
+       # need to do this still? Should be identity anyway, nearly
+       $selfdom->transformation->clear_matrix;
+       # TODO Test here:
 
 
-}
+       # Now get the real superposition of $selfdom onto current location of
+       # $otherdom
+       my $sup = SBG::STAMP::superposition($selfdom, $otherdom);
+
+       $sups->push($sup);
+       $rmsds->push($sup->scores->at('RMS'));
+       $scs->push($sup->scores->at('Sc'));
+   }
+
+   my $scsum = sum($scs);
+
+   my $mats = $sups->map(sub{$_->transformation->matrix});
+
+   my $summat = zeroes(4,4);
+
+   for (my $i = 0; $i < @$mats; $i++) {
+       $summat += $mats->[$i] * ($scs->[$i] / $scsum);
+   }
+
+   my $avgmat = $summat;
+
+   my $rmsd = mean($rmsds);
+   my $sc = mean($scs);
+
+   return wantarray ? ($avgmat, $rmsd, $sc, $sups) : $avgmat;
+
+} # 
+
+
+# Don't use the native orientation, just go right to where the model dom is
+sub superposition_frame_cofm2 {
+   my ($self,$other) = @_;
+   # Only consider common components
+   my @cnames = $self->coverage($other);
+
+   # Pairwise Superpositions
+   my $sups = [];
+   my $rmsds = [];
+   my $scs = [];
+
+   foreach my $key (@cnames) {
+       my $selfdom = $self->get($key)->subject;
+       my $otherdom = $other->get($key)->subject;
+
+       # Now get the real superposition of $selfdom onto current location of
+       # $otherdom
+       my $sup = SBG::STAMP::superposition($selfdom, $otherdom);
+       
+       next unless $sup;
+
+       # TODO All of this can be in another method: $c->setframe($othercomplex)
+
+       # Set crosshairs
+       $selfdom = cofm($selfdom);
+       # Transform
+       $sup->apply($selfdom);
+       # Rebuild crosshairs over there
+       $selfdom->_build_coords;
+       # Reverse transform
+       $sup->inverse->apply($selfdom);
+
+       # After this, superpositioning $selfdom onto $otherdom should align
+       # crosshairs
+
+       # need to do this still? Should be identity anyway, nearly
+       $selfdom->transformation->clear_matrix;
+       # TODO Test here:
+
+
+
+       $sups->push($sup);
+       $rmsds->push($sup->scores->at('RMS'));
+       $scs->push($sup->scores->at('Sc'));
+   }
+
+   my $scsum = sum($scs);
+
+   my $mats = $sups->map(sub{$_->transformation->matrix});
+
+   my $summat = zeroes(4,4);
+
+   for (my $i = 0; $i < @$mats; $i++) {
+       $summat += $mats->[$i] * ($scs->[$i] / $scsum);
+   }
+
+   my $avgmat = $summat;
+
+   my $rmsd = mean($rmsds);
+   my $sc = mean($scs);
+
+   return wantarray ? ($avgmat, $rmsd, $sc, $sups) : $avgmat;
+
+} # 
+
+
+# Don't use the native orientation, just go right to where the model dom is
+# Requires resetting frame of ref of $self first
+sub superposition_frame_cofm3 {
+   my ($self,$other) = @_;
+   # Only consider common components
+   my @cnames = $self->coverage($other);
+
+   # Pairwise Superpositions
+   my $sups = [];
+   my $rmsds = [];
+   my $scs = [];
+
+   foreach my $key (@cnames) {
+       my $selfdom = $self->get($key)->subject;
+       my $otherdom = $other->get($key)->subject;
+
+       # Now get the real superposition of $selfdom onto current location of
+       # $otherdom
+       my $sup = SBG::STAMP::superposition($selfdom, $otherdom);
+       
+       next unless $sup;
+
+       # TODO All of this can be in another method: $c->setframe($othercomplex)
+
+       # Set crosshairs
+       $selfdom = cofm($selfdom);
+       # Transform
+       $sup->apply($selfdom);
+       # Rebuild crosshairs over there
+       $otherdom->_build_coords;
+       $selfdom->_build_coords;
+       # Reverse transform
+       $sup->inverse->apply($selfdom);
+
+       # After this, superpositioning $selfdom onto $otherdom should align
+       # crosshairs
+
+       # need to do this still? Should be identity anyway, nearly
+       $selfdom->transformation->clear_matrix;
+       # TODO Test here:
+
+
+
+       $sups->push($sup);
+       $rmsds->push($sup->scores->at('RMS'));
+       $scs->push($sup->scores->at('Sc'));
+   }
+
+   my $scsum = sum($scs);
+
+   my $mats = $sups->map(sub{$_->transformation->matrix});
+
+   my $summat = zeroes(4,4);
+
+   for (my $i = 0; $i < @$mats; $i++) {
+       $summat += $mats->[$i] * ($scs->[$i] / $scsum);
+   }
+
+   my $avgmat = $summat;
+
+   my $rmsd = mean($rmsds);
+   my $sc = mean($scs);
+
+   return wantarray ? ($avgmat, $rmsd, $sc, $sups) : $avgmat;
+
+} # 
+
+sub superposition_frame {
+   my ($self,$other) = @_;
+   # Only consider common components
+   my @cnames = $self->coverage($other);
+
+   # Pairwise Superpositions
+   my $sups = [];
+   my $rmsds = [];
+   my $scs = [];
+
+   foreach my $key (@cnames) {
+       my $selfdom = $self->get($key)->subject;
+       my $otherdom = $other->get($key)->subject;
+       my $othernativedom = new SBG::Domain(pdbid=>$otherdom->pdbid,
+                                            descriptor=>$otherdom->descriptor);
+       my $nativesup = SBG::STAMP::superposition($selfdom, $othernativedom);
+
+       next unless $nativesup;
+
+       # TODO All of this can be in another method: $c->setframe($othercomplex)
+
+
+       # Inverse of the rotation matrix (no translation)
+       # Will define the orientation of the crosshairs, relative to $nativedom
+       my $invrotmat = $nativesup->transformation->rotation->inverse;
+
+       # After this, superpositioning $selfdom onto $otherdom should align
+       # crosshairs
+       $invrotmat->apply($selfdom);
+       # Now pretend we were never transformed
+       $selfdom->transformation->clear_matrix;
+       # TODO Test here:
+
+
+       # Now get the real superposition of $selfdom onto current $otherdom
+       my $sup = SBG::STAMP::superposition($selfdom, $otherdom);
+
+       $sups->push($sup);
+       $rmsds->push($sup->scores->at('RMS'));
+       $scs->push($sup->scores->at('Sc'));
+   }
+
+   my $scsum = sum($scs);
+
+   my $mats = $sups->map(sub{$_->transformation->matrix});
+
+   my $summat = zeroes(4,4);
+
+   for (my $i = 0; $i < @$mats; $i++) {
+       $summat += $mats->[$i] * ($scs->[$i] / $scsum);
+   }
+
+   my $avgmat = $summat;
+
+   my $rmsd = mean($rmsds);
+   my $sc = mean($scs);
+
+   return wantarray ? ($avgmat, $rmsd, $sc, $sups) : $avgmat;
+
+} # 
+
+
 
 ################################################################################
 =head2 merge
@@ -690,7 +977,7 @@ TODO should be in a DomSetI interface
 sub overlap {
     my ($self, $other) = @_;
     # Only consider common components
-    my @cnames = intersection($self->models->keys, $other->models->keys);
+    my @cnames = $self->coverage($other);
     
     my $overlaps = [];
     foreach my $key (@cnames) {
