@@ -109,20 +109,36 @@ has '_hair_len' => (
 
 sub _build_coords {
     my ($self) = @_;
- 
-    my $r = $self->_hair_len;
-    # Get initial center
-    my $c = $self->center->squeeze;
 
-    my $dims = $c->dim(0);
+    my $c;
+    my $coords;
+    my $dims; 
+    if ($self->has_coords) {
+        # Use curent center
+        $c = $self->centroid;
+        $dims = $c->dim(0);
+        $coords = $self->coords;
+    } else {
+        # Use center that was passed as argument
+        $c = $self->center->squeeze;
+        $dims = $c->dim(0);
+        $coords = zeroes($dims, 7);
+    }
+
     my $x = zeroes $dims;
     my $y = zeroes $dims;
     my $z = zeroes $dims;
+
+    my $r = $self->_hair_len;
+    # Fill in just X coord
     $x->slice('0') .= $r;
+    # Fill in just Y coord
     $y->slice('1') .= $r;
+    # Fill in just Z coord
     $z->slice('2') .= $r;
 
-    my $coords = pdl [ $c, $c+$x, $c-$x, $c+$y, $c-$y, $c+$z, $c-$z ];
+    # Center, followed by X +/- offset, Y +/- offset, Z +/- offset
+    $coords .= pdl [ $c, $c+$x, $c-$x, $c+$y, $c-$y, $c+$z, $c-$z ];
 
     return $coords;
 }
