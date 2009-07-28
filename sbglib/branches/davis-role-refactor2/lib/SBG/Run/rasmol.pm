@@ -32,6 +32,7 @@ use File::Temp qw(tempfile tempdir);
 use SBG::U::Log qw/log/;
 use SBG::U::Config qw/config/;
 use SBG::DomainIO::pdb;
+use SBG::U::List qw/flatten/;
 
 
 ################################################################################
@@ -47,15 +48,12 @@ If no 'file' option is provided, a temporary file is created and returned
 
 =cut
 sub rasmol {
-    my ($doms, %ops) = @_;
+    my (@doms) = @_;
+    @doms = SBG::U::List::flatten(@doms);
+
     my $rasmol = config()->val(qw/rasmol executable/) || 'rasmol';
-    my $io;
-    if ($ops{'file'}) { 
-        $io = new SBG::DomainIO::pdb(file=>$ops{'file'});
-    } else {
-        $io = new SBG::DomainIO::pdb(tempfile=>1);
-    }
-    $io->write(@$doms);
+    my $io = new SBG::DomainIO::pdb(tempfile=>1);
+    $io->write(@doms);
     my $cmd = "$rasmol " . $io->file;
     system("$cmd 2>/dev/null") == 0 or
         log()->error("Failed: $cmd\n\t$!");
