@@ -199,6 +199,8 @@ has 'overlap_thresh' => (
     is => 'rw',
     isa => 'Num',
     default => 0.5,
+# TODO DEL testing max paths:
+#     default => 0.0,
 #     default => 2,
     );
 
@@ -454,9 +456,11 @@ sub rmsd {
 # Assumes complex already transformed
 sub rmsdonly {
    my ($self,$other) = @_;
+
+   # Subset coords based on common components
    my @cnames = $self->coverage($other);
-   my $selfcoords = $self->coords->copy;
-   my $othercoords = $other->coords->copy;
+   my $selfcoords = $self->coords(@cnames)->copy;
+   my $othercoords = $other->coords(@cnames)->copy;
 
    my $rmsd = SBG::U::RMSD::rmsd($selfcoords, $othercoords);
    return $rmsd;
@@ -910,6 +914,7 @@ sub add_interaction {
 
 
 # Create a concrete model for a given abstract model in an interaction
+use SBG::Run::cofm qw/cofm/;
 sub _mkmodel {
     my ($self, $iaction, $key) = @_;
     my $vmodel = $iaction->get($key);
@@ -919,7 +924,10 @@ sub _mkmodel {
     my $clone = $vdom->clone;
     # Now copy construct into the desired type
     my $type = $self->objtype;        
+
+    # TODO DEL testing if this solves the missing radius issue
     my $cdom = $type->new(%$clone);
+#     my $cdom = cofm($clone);
 
     my $model = new SBG::Model(
         query=>$vmodel->query, subject=>$cdom, scores=>$vmodel->scores);

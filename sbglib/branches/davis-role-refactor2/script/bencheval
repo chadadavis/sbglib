@@ -52,6 +52,7 @@ use Pod::Usage;
 use Getopt::Long;
 use File::Basename;
 use POSIX; # qw/ceil/;
+use Carp;
 
 use Data::Dump qw/dump/;
 use Moose::Autobox;
@@ -84,10 +85,12 @@ my $result = GetOptions(\%ops,
                         'b|best=s',  # Best N (or N%) (per size, if -u)
                         'r|reverse', # reverse sort
                         'u|unique',  # unique by size (diff. sizes separately)
+                        'd|debug',   # print stack trace on dead
     );                  
 
 if ($ops{'h'}) { pod2usage(-exitval=>1, -verbose=>2); }
 SBG::U::Log::init($ops{'l'}) if $ops{'l'};
+$SIG{__DIE__} = \&confess if $ops{'d'};
 
 
 # Score Fields
@@ -158,8 +161,8 @@ if (my $best = $ops{'b'}) {
 }
 
 
-_print_csv($observations, $tbase);
-# _print_html($observations, $tbase);
+# _print_csv($observations, $tbase);
+_print_html($observations, $tbase);
 
 
 exit;
@@ -287,7 +290,8 @@ sub _eval_one {
     # And it's not multiplied correctly.
     # So we have to transform target onto model
 
-    my ($avgmat, $urmsd, $usc ) = $target->superposition3($model);
+    my ($avgmat, $urmsd, $usc ) = $target->superposition_frame_cofm3($model);
+
     $target->transform($avgmat);
 
     $obs{avgmat} = $avgmat;
@@ -298,10 +302,14 @@ sub _eval_one {
     # RMSD of centroids after superposition 
 #     $obs{'rmsd'} = $model->rmsd($target);
     # Mean RMSD of componentwise superposition
-    $obs{rmsd} = $urmsd;
+#     $obs{rmsd} = $urmsd;
+    # RMSD of crosshairs
+    $obs{rmsd} = $target->rmsdonly($model);
 
     # Now that they're in one coordinate frame, get component-wise overlaps
-    $obs{olap} = $model->overlap($target);
+    # TODO divide by 0 erorr
+#     $obs{olap} = $model->overlap($target);
+    $obs{olap} = 0;
 
     foreach (qw/cover glob olap/) {
         $obs{$_} = sprintf("%6.2f", 100.0 * $obs{$_}); 
@@ -344,7 +352,7 @@ sub _outputs {
 
     _domfile($domfile, $model, $target);
     _pdbfile($pdbfile, $model, $target);
-    _ppmfile($mbase, $model, $target);
+#     _ppmfile($mbase, $model, $target);
 
 # TODO needed here?
     # Put the target back where it came from
