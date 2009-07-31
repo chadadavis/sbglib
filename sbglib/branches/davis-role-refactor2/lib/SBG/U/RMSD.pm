@@ -49,7 +49,7 @@ rmsd centroid radius_gyr radius_max superposition superpose translation
 
 
 use PDL::Lite;
-use PDL::Core qw/pdl ones inplace/;
+use PDL::Core qw/pdl ones inplace sclr/;
 use PDL::Reduce qw/reduce/;
 use PDL::Ufunc qw/sumover average max/;
 use PDL::MatrixOps qw/svd det identity/;
@@ -89,7 +89,7 @@ sub rmsd {
     $diff = inplace($diff)**2;
     # Reduce each row (each point) via sumover, producing a vector of sums.
     # Then reduce the column vector via average, producing a scalar
-    return sqrt(average(sumover($diff)));
+    return sqrt(sclr(average(sumover($diff))));
 
 } # rmsd
 

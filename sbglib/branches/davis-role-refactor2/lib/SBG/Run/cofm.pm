@@ -80,6 +80,7 @@ sub cofm {
                                          file=>$fields->{file},
                                          center=>$center,
                                          radius=>$fields->{Rg},
+                                         length=>$fields->{nres},
         );
 
 
@@ -154,6 +155,8 @@ sub _run {
 
         if ($line =~ /^Domain\s+\S+\s+(\S+)/i) {
             $res{file} = $1;
+        } elsif ($line =~ / (\d+) CAs in total/) {
+            $res{nres} = $1;
         } elsif ($line =~ /^REMARK Domain/) {
             my @a = quotewords('\s+', 0, $line);
             # Extract coords for radius-of-gyration and xyz of centre-of-mass

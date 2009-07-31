@@ -131,6 +131,22 @@ has 'file' => (
 
 
 ################################################################################
+=head2 length
+
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
+
+
+=cut
+has 'length' => (
+    is => 'rw',
+    isa => 'Int',
+    );
+
+
+################################################################################
 =head2 transformation
 
 The L<SBG::Transform> describing any applied transformations
@@ -373,10 +389,12 @@ sub equal {
     # Fields, from most general to more specific
     my @fields = qw/pdbid descriptor file/;
     foreach (@fields) {
-        # If any field is different, the containing objects are different
-        return 0 if 
-            (defined($self->$_) || defined($other->$_)) && 
-            $self->$_ ne $other->$_;
+        # If both undefined, then they are not necessarily unequal
+        next if !defined($self->$_) && !defined($other->$_);
+        # If one is defined but the other undefined, they are unequal
+        return 0 if defined($self->$_) ^ defined($other->$_);
+        # Here both are defined, are they equal
+        return 0 if $self->$_ ne $other->$_;
     }
     # Assume equal if metadata is same and transformations are same
     my $transeq = $self->transformation == $other->transformation;

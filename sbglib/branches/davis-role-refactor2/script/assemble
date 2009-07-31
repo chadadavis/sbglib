@@ -22,6 +22,10 @@ In increasing order: TRACE DEBUG INFO WARN ERROR FATAL
 I.e. setting B<-l WARN> (the default) will log warnings errors and fatal
 messages, but no info or debug messages to the log file (B<log.log>)
 
+=head2 -f|ile Log file
+
+Default: <network name>.log in current directory
+
 =head2 -c|omplete
 
 Only produce complex models that contain every component of the network
@@ -71,10 +75,10 @@ my $result = GetOptions(\%ops,
                         'c|complete',
                         's|size=s',
                         'l|log=s',
+                        'f|file=s', 
                         'd|debug',
     );                  
 if ($ops{'h'}) { pod2usage(-exitval=>1, -verbose=>2); }
-SBG::U::Log::init($ops{'l'}) if $ops{'l'};
 $SIG{__DIE__} = \&confes if $ops{'d'};
 
 
@@ -84,6 +88,10 @@ foreach my $file (@files) {
 
     my $basename = basename($file,'.stor');
     my $donefile = "${basename}.done";
+    $ops{'f'} ||= "${basename}.log";
+    SBG::U::Log::init($ops{'l'}, $ops{'f'}) if $ops{'l'};
+    
+
     
     # Already finished?
     if (-s $donefile) {

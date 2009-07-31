@@ -56,6 +56,7 @@ argmax
 argmin
 mean
 avg
+median
 variance
 stddev
 sequence
@@ -65,6 +66,9 @@ union
 pairs
 reorder
 thresh
+maprange
+interpolate
+norm
 );
 
 
@@ -153,6 +157,20 @@ sub mean {
     return sum(@_) / @_;
 }
 sub avg { return mean @_ }
+
+
+sub median {
+    @_ = flatten @_;
+    return unless @_;
+    @_ = sort { $a <=> $b } @_;
+    my $n = $#_;
+    if (@_ % 2) {
+        return $_[$n/2];
+    } else {
+        return ($_[$n/2] + $_[$n/2+1]) / 2.0;
+    }
+}
+
 
 # Variance of a list 
 sub variance {
@@ -280,6 +298,23 @@ sub reorder ($;$&) {
     my @sorted = map { $dict{$_} } @$ordering;
     return wantarray ? @sorted : \@sorted;
 } # reorder
+
+
+sub maprange {
+    my ($val, $min1, $max1, $min2, $max2) = @_;
+    return $val unless $max1 - $min1;
+    return interpolate( norm($val, $min1, $max1), $min2, $max2);
+}
+
+sub interpolate {
+    my ($norm, $min, $max) = @_;
+    return $min + ($max - $min) * $norm;
+}
+
+sub norm {
+    my ($val, $min, $max) = @_;
+    return ($val - $min) / ($max - $min);
+}
 
 
 ################################################################################

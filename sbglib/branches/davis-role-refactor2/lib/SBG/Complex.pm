@@ -44,7 +44,7 @@ use overload (
 use Moose::Autobox;
 
 use PDL::Lite;
-use PDL::Core qw/pdl squeeze zeroes/;
+use PDL::Core qw/pdl squeeze zeroes sclr/;
 
 use SBG::U::List qw/intersection mean sum flatten/;
 use SBG::U::Log qw/log/;
@@ -926,8 +926,9 @@ sub _mkmodel {
     my $type = $self->objtype;        
 
     # TODO DEL testing if this solves the missing radius issue
-    my $cdom = $type->new(%$clone);
-#     my $cdom = cofm($clone);
+#     my $cdom = $type->new(%$clone);
+    # Yes, cofm is required to setup the radius here
+    my $cdom = cofm($clone);
 
     my $model = new SBG::Model(
         query=>$vmodel->query, subject=>$cdom, scores=>$vmodel->scores);
@@ -1023,23 +1024,14 @@ complex are arranged. E.g. high for an exosome, low for actin fibers
 sub globularity {
     my ($self,) = @_;
 
-    my $doms = $self->domains;
-    my $coords = $doms->map(sub{$_->coords});
-    my $pdl = pdl($coords);
-
-    # Clump into a 2D matrix, if there is a 3rd dimension
-    # I.e. normally have an outer dimension representing individual domains.
-    # Then each domain is a 2D matrix of coordinates
-    # This clumps the whole set of domains into a single matrix of coords
-
-    $pdl = $pdl->clump(1,2) if $pdl->dims == 3;
-
+    my $pdl = $self->coords;
     my $centroid = SBG::U::RMSD::centroid($pdl);
+
     my $radgy = SBG::U::RMSD::radius_gyr($pdl, $centroid);
     my $radmax = SBG::U::RMSD::radius_max($pdl, $centroid);
 
     # Convert PDL to scalar
-    return ($radgy / $radmax)->sclr;
+    return ($radgy / $radmax);
 
 } # globularity
 
