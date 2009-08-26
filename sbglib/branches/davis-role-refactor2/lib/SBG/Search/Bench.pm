@@ -40,7 +40,7 @@ use SBG::U::Log qw/log/;
 
 # TODO  needs to be in DB
 #our $templatedb = "$ENV{HOME}/work/ca/benchmark/interactions-uniq.gz";
-our $templatedb = "/g/russell2/davis/work/ca/benchmark/interactions-uniq.gz";
+our $templatedb = "/g/russell2/davis/work/ca/data/interactions-uniq.gz";
 
 
 
