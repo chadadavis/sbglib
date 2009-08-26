@@ -24,13 +24,17 @@ use Moose;
 
 with 'SBG::SearchI';
 
+use File::Temp qw/tempfile/;
+
 use SBG::InteractionIO;
 use SBG::Interaction;
-use SBG::Template;
+use SBG::Model;
 use SBG::Domain;
+use SBG::Seq;
+use SBG::Node;
 
 use SBG::Types;
-use SBG::Log;
+use SBG::U::Log qw/log/;
 
 
 has 'file' => (
@@ -49,36 +53,30 @@ has 'file' => (
 
 =cut
 sub search {
-   my ($self, $seq1, $seq2) = @_;
-
-   my @templates = $self->_grep_db($seq1, $seq2);
-
-   return @templates;
-
-}
-
-
-################################################################################
-=head2 _grep_db
-
- Function: 
- Example : 
- Returns : 
- Args    : 
-
-
-=cut
-sub _grep_db {
     my ($self, $seq1, $seq2) = @_;
     my ($comp1, $comp2) = map {$_->accession_number} ($seq1, $seq2);
 
     # Grep the lines from database, space-delimited, either order
-    my $cmd = "egrep \'^ *($comp1 +$comp2|$comp2 +$comp1) +\' " . $self->file;
-    my @lines = `$cmd`;
-    $logger->trace(sprintf "pair: %3d hits: %s -- %s",
-                   scalar(@lines), $comp1, $comp2);
+    # Save in tempfile
+    my $fh = new File::Temp;
+    my $tpath = $fh->filename;
+    my $grep = "egrep \'^ *($comp1 +$comp2|$comp2 +$comp1) +\' ";
+    my $cmd = join(" ", $grep, $self->file, ">$tpath");
+    $fh->close;
 
-    my @interactions = map { SBG::InteractionIO::parse $_ } @lines;
+    unless (-s $tpath) {
+        log->debug("$comp1 $comp2 : 0 hits");
+        return;
+    }
+
+    my $io = new SBG::InteractionIO::CSV(file=>$tpath);
+    my @interactions;
+    while (my $line = $io->read) {
+        push @interactions, $line;
+    }
+    
+    log->debug("$comp1 $comp2 : ", scalar(@interactions), " hits");
+
     return @interactions;
 
 } # _grep_db
@@ -86,4 +84,5 @@ sub _grep_db {
 
 ################################################################################
 __PACKAGE__->meta->make_immutable;
+no Moose;
 1;

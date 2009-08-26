@@ -52,11 +52,10 @@ use Graph::UnionFind;
 
 # Debug printing (to trace recursion and it's unwinding)
 # TODO del
-use SBG::Log;
+use SBG::U::Log qw/log/;
 sub _d {
     my $d = shift;
-#     print STDERR ("\t" x $d), @_, "\n";
-    $logger->debug("  " x $d, @_);
+    log()->trace("  " x $d, @_);
 }
 sub _d0 { _d(0,@_); }
 
@@ -77,7 +76,18 @@ has 'graph' => (
     );
 
 
-=head2 sub_test
+=head2 assembler
+
+=cut
+has 'assembler' => (
+    is => 'ro',
+#     isa => 'SBG::AssemblerI',
+    required => 1,
+    );
+
+
+=head2 test
+
 
 Call back function. Should return true if an edge is to be used in the
 traversal. It is called as:
@@ -114,12 +124,7 @@ You can then access this, e.g. on a L<Bio::Network::ProteinNet> via:
 
 
 =cut
-has 'sub_test' => (
-    is => 'rw',
-    isa => 'CodeRef',
-    required => 1,
-    default => sub { 1 },
-    );
+
 
 
 =head2 sub_solution 
@@ -153,12 +158,7 @@ ArrayRef of the names of the nodes in the solution.
 ArrayRef of the names of the alternate edge IDs in the solution graph.
 
 =cut
-has 'sub_solution' => (
-    is => 'rw',
-    isa => 'CodeRef',
-    required => 1,
-    default => sub { },
-    );
+
 
 
 =head2 minsize
@@ -299,7 +299,7 @@ sub traverse {
         $self->_altcover({});
         $self->_nodecover({});
         # Start with a fresh state object, not defiled from previous rounds
-        my $clone = Clone::clone($state);
+        my $clone = $state->clone();
         # Go!
         $self->_do_nodes($uf, $clone, 0);
     }
@@ -367,7 +367,7 @@ sub _do_edges {
     }
 
     # As child nodes in traversal may change partial solutions, clone these
-    # This implicitly allows us to backtrack later if $sub_test() fails, etc
+    # This implicitly allows us to backtrack later if $test() fails, etc
     my $stateclone = $state->clone();
 
     # Do we want to go ahead and traverse this edge?
@@ -390,8 +390,8 @@ sub _test_alt {
     my ($self, $uf, $stateclone, $src, $dest, $alt_id, $d) = @_;
 
     # Do we want to go ahead and traverse this edge?
-    my $callback = $self->sub_test;
-    my $success = $callback->($stateclone, $self->graph, $src, $dest, $alt_id);
+    my $success = $self->assembler->test(
+        $stateclone, $self->graph, $src, $dest, $alt_id);
 
     if (! $success) {
         # Current edge was rejected, but alternative multiedges may remain
@@ -508,19 +508,21 @@ sub _do_solution {
     return unless $alts->length;
     return if $self->minsize > $nodes->length;
 
+# TODO DES resolve uniqueness of edge alternatives
 #     my $solution_label = $alts->join(',');
 #     if ($self->_solved->at($solution_label)) {
 #         _d $d, "Duplicate";
 #     } else {
 #         $self->_solved->put($solution_label, 1);
-    my $callback = $self->sub_solution;
-    $logger->debug("Solution: ", join(' ', @{$self->_nodecover->keys}));
-    if ($callback->($state, $self->graph, $nodes, $alts, $self->rejects)) {
+
+    log()->debug("Solution: ", join(' ', @{$self->_nodecover->keys}));
+    if ($self->assembler->solution(
+            $state, $self->graph, $nodes, $alts, $self->rejects)) {
         $self->asolutions($self->asolutions+1);
-        $logger->trace("Accepted solution");
+        log()->trace("Accepted solution");
     } else {
         $self->rsolutions($self->rsolutions+1);
-        $logger->trace("Rejected solution");
+        log()->trace("Rejected solution");
     }
 #     }
 
@@ -542,15 +544,22 @@ sub _array2D {
 }
 
 
-sub DESTROY {
+# TODO del
+sub DEMOLISH {
     my ($self) = @_;
+    
+    # TODO Shouldn't need thisx
+    $self->assembler->solution();
+
     _d0 "Traversal done: rejected paths: " . $self->rejects;
     _d0 "Traversal done: rejected solutions: " . $self->rsolutions;
     _d0 "Traversal done: accepted solutions: " . $self->asolutions;
 }
 
-###############################################################################
 
+###############################################################################
+__PACKAGE__->meta->make_immutable;
+no Moose;
 1;
 
 __END__

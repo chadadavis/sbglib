@@ -1,30 +1,19 @@
 #!/usr/bin/env perl
 
 use Test::More 'no_plan';
-use SBG::Test 'float_is';
+use SBG::U::Test 'float_is';
 use Carp;
 use Data::Dumper;
-use FindBin;
-use File::Temp qw/tempfile/;
-my $dir = $FindBin::RealBin;
-$, = ' ';
+use FindBin qw/$Bin/;
 
 use SBG::Traversal;
-use SBG::NetworkIO;
+use SBG::NetworkIO::csv;
 
 # Load up a network
-my $file = "$dir/simple_network.csv";
-my $io = new SBG::NetworkIO(file=>$file);
+my $file = "$Bin/data/simple_network.csv";
+my $io = new SBG::NetworkIO::csv(file=>$file);
 my $net = $io->read;
 
-# GraphViz
-SKIP: {
-    skip "GraphViz needs update";
-    my $graphout = "graph.dot";
-    SBG::NetworkIO::graphviz($net, $graphout,-edge_color=>'grey');
-    ok(-r $graphout, "GraphViz creation: $graphout");
-    unlink $graphout;
-}
 
 # For the sake of testing, define some incompatible sets of templates.  Anything
 # in the same set is all not compatible.  NB alternative templates for a single
@@ -80,8 +69,7 @@ my %expected = (
 
 # Create a traversal
 my $trav = new SBG::Traversal(graph=>$net, 
-                              sub_test=>\&try_template,
-                              sub_solution=>\&got_an_answer,
+                              assembler=>new TestAssembler,
     );
 
 $trav->traverse;
@@ -101,9 +89,15 @@ exit;
 
 ################################################################################
 
+package TestAssembler;
+use Moose;
+
+# with 'SBG::AsseblerI';
+
 # In these callbacks, the default $state will just be a HashRef
-sub got_an_answer {
-    my ($state, $g, $nodecover, $templates) = @_;
+sub solution {
+    my ($self, $state, $g, $nodecover, $templates) = @_;
+    return unless defined($nodecover);
     my @ids;
     foreach my $t (@$templates) {
         push @ids, ex_id($t);
@@ -120,8 +114,8 @@ sub got_an_answer {
 }
 
 
-sub try_template {
-    my ($state, $graph, $u, $v, $alt_id) = @_;
+sub test {
+    my ($self, $state, $graph, $u, $v, $alt_id) = @_;
     # Our test index of this template
     my $templ_id = ex_id($alt_id);
 

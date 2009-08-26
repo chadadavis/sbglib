@@ -27,13 +27,13 @@ use Moose::Role;
 use Module::Load;
 use SBG::Domain;
 
-=head2 type
+=head2 objtype
 
-The sub-type to use for any dynamically created objects. Should be
+The sub-objtype to use for any dynamically created objects. Should be
 L<SBG::Domain> or a sub-class of that. Default "L<SBG::Domain>" .
 
 =cut
-has 'type' => (
+has 'objtype' => (
     is => 'rw',
     isa => 'ClassName',
     required => 1,
@@ -41,7 +41,7 @@ has 'type' => (
     );
 
 # ClassName does not validate if the class isn't already loaded. Preload it here.
-before 'type' => sub {
+before 'objtype' => sub {
     my ($self, $classname) = @_;
     return unless $classname;
     Module::Load::load($classname);
@@ -62,5 +62,6 @@ requires 'search';
 
 
 ################################################################################
+no Moose::Role;
 1;
 

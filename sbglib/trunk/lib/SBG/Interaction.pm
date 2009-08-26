@@ -24,51 +24,82 @@ L<Bio::Network::Interaction> , L<SBG::Node>
 
 package SBG::Interaction;
 use Moose;
-extends qw/Bio::Network::Interaction/;
-with 'SBG::Storable';
 
-use SBG::HashFields;
+# Explicitly extend Moose::Object when inheriting from non-Moose class
+# Order is relevant here, first class listed provides 'new()' method
+extends qw/Bio::Network::Interaction Moose::Object/;
+
+
+with 'SBG::Role::Dumpable';
+with 'SBG::Role::Scorable';
+with 'SBG::Role::Storable';
+
 
 use overload (
-    '""' => '_asstring',
+    '""' => 'stringify',
+    '==' => 'equal',
     fallback => 1,
+    );
+
+
+use Moose::Autobox;
+use SBG::Model;
+
+
+################################################################################
+=head2 models
+
+ Function: Sets the L<SBG::Model> used to model one of the L<SBG::Node>s
+ Example : my $model = new SBG::Model(query=>$myseq, subject=>$mydomain);
+           $interaction->put($mynode, $model);
+           my $model = $interaction->at($node1);
+           my ($seq, $domain) = ($model->query, $model->subject);
+ Returns : The L<SBG::Model> used to model a given L<SBG::Node>
+ Args    : L<SBG::Node>
+           L<SBG::Model> 
+
+my ($node1, $node2) = $interaction->nodes;
+my $model1 = new SBG::Model(query=>$node1->proteins, $template_domain1);
+$interaction->put($node1,$model1);
+my $model1 = $interaction->at($node1);
+
+=cut
+has 'models' => (
+    isa => 'HashRef[SBG::Model]',
+    is => 'ro',
+    lazy => 1,
+    default => sub { {} },
     );
 
 
 
 ################################################################################
-# Accessors
+=head2 set/get/keys
 
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
 
-################################################################################
-=head2 template
-
- Function: Sets the L<SBG::Domain> used to model one of the L<SBG::Nodes>
- Example : $interaction->template($node1, $dom1);
- Returns : The L<SBG::Domain> used to model $node for this L<SBG::Interaction>
- Args    : L<SBG::Node>
-           optional L<SBG::Domain> 
-
-my ($node1, $node2) = $interaction->nodes;
-$interaction->template($node1,$dom1);
-$interaction->template($node2,$dom2);
+Shouldn't be necessary, but neither L<Moose::Autobox> nor
+L<MooseX::AttributeHelpers> create attributes that are instances of their own
+class. I.e. neither 'handles' nor 'provides' are useful.
 
 =cut
-hashfield 'template', 'templates';
-
-
-################################################################################
-=head2 score
-
- Function:
- Example : $ix->score('e-value', 3e-3);
- Returns :
- Args    :
-
-keys: zscore pval irmsd
-=cut
-hashfield 'score';
-
+sub set {
+    my $self = shift;
+    $self->models->put(@_);
+    $self->_update_id;
+    return $self->models->at(@_);
+} # set
+sub get {
+    my $self = shift;
+    return $self->models->at(@_);
+}
+sub keys {
+    my $self = shift;
+    return $self->models->keys;
+}
 
 
 ################################################################################
@@ -82,68 +113,100 @@ hashfield 'score';
 Delegates to L<Bio::Network::Interaction>
 
 =cut
-sub new () {
-    my $class = shift;
-    my $self = $class->SUPER::new(@_);
-    bless $self, $class;
-    return $self;
-}
+override 'new' => sub {
+    my ($class, @ops) = @_;
+    
+    # This creates a Bio::Network::Interaction
+    my $obj = $class->SUPER::new(@ops);
+
+    # This appends the Bio::Network:: with goodies from Moose::Object
+    # __INSTANCE__ place-holder fulfilled by $obj (Bio::Network::Interaction)
+    # NB @ops is passed here, as this object has Moose attributes
+    $obj = $class->meta->new_object(__INSTANCE__ => $obj, @ops);
+
+    # bless'ing should be automatic!
+    bless $obj, $class;
+
+    $obj->_update_id;
+
+    return $obj;
+};
 
 
 ################################################################################
-=head2 names
+=head2 irmsd
 
- Title   : names
- Usage   :
- Function:
- Example :
- Returns : 
- Args    :
-
-
-=cut
-sub names {
-   my ($self,@args) = @_;
-   return sort keys %{$self->{template}};
-}
-
-
-################################################################################
-=head2 ascsv
-
- Function: Return tab-separated line of components and their templates 
+ Function: 
  Example : 
  Returns : 
  Args    : 
 
-E.g.:
-
-RRP41 RRP42  2br2 { A 108 _ to A 148 _ } 2br2 { D 108 _ to D 148 _ } 
-
-See L<SBG::NetworkIO>
 
 =cut
-sub ascsv {
+sub irmsd {
+    my ($self, $other) = @_;
+
+    # Define mapping: Assume same keys to models
+    my $keys = $self->keys;
+    my $selfdoms = $keys->map(sub{$self->get($_)->subject});
+    my $otherdoms = $keys->map(sub{$other->get($_)->subject});
+    return unless $otherdoms->length == $self->doms->length;
+
+    my $res = SBG::STAMP::irmsd($selfdoms, $otherdoms);
+
+
+} # irmsd
+
+
+################################################################################
+=head2 domains
+
+ Function: 
+ Example : 
+ Returns : ArrayRef[SBG::DomainI]
+ Args    : 
+
+
+=cut
+sub domains {
     my ($self,) = @_;
-    my ($node1, $node2) = sort $self->nodes;
-    my ($templ1, $templ2) = map { $self->template($_) } ($node1, $node2);
-    my ($dom1, $dom2) = map { $_->domain } ($templ1, $templ2);
-    my ($pdb1, $pdb2) = map { $_->pdbid } ($dom1, $dom2);
-    my ($descr1, $descr2) = map { $_->descriptor } ($dom1, $dom2);
-    return "$node1\t$node2\t$pdb1\t{ $descr1 }\t$pdb2\t{ $descr2 }";
+    return $self->models->values->map(sub{$_->subject});
+
+} # domains
+
+
+# TODO DES belongs in DomSetI. 
+
+# NB A Network may contain multiple Interactions that are equal, as long as they
+# are connecting different Nodes
+
+sub equal {
+    my ($self, $other) = @_;
+
+    # Domains in each Interaction
+    my $selfdoms = $self->domains->sort;
+    my $otherdoms = $other->domains->sort;
+    
+    # Componentwise equality, only if all (two) are true
+    return all { $selfdoms->[$_] == $otherdoms->[$_] } (0..1);
 }
 
 
-sub _asstring {
+sub stringify {
     my ($self) = @_;
     return $self->primary_id;
 }
 
 
-###############################################################################
-__PACKAGE__->meta->make_immutable;
-1;
+sub _update_id {
+    my ($self) = @_;
+    $self->primary_id($self->models->values->join('--'));
+}
 
-__END__
+
+###############################################################################
+__PACKAGE__->meta->make_immutable(inline_constructor=>0);
+no Moose;
+1;
 
 

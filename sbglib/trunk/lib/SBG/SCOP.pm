@@ -13,7 +13,7 @@ SBG::SCOP - Utilities for working with SCOP, a functional interface
 
 =head1 SEE ALSO
 
-L<SBG::DB>
+L<SBG::U::DB>
 
 =cut
 

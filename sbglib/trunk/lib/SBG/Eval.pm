@@ -20,70 +20,178 @@ L<SBG::NetworkIO> , L<SBG::ComplexIO>
 ################################################################################
 
 package SBG::Eval;
-use SBG::Root -base;
+use Moose;
 
-# TODO DES don't need all of these
-our @EXPORT = qw(parse_scopid get_descriptor mk_dom);
+with 'SBG::Role::Storable';
+with 'SBG::Role::Clonable';
 
-use warnings;
+use Moose::Autobox;
+use autobox ARRAY => 'SBG::U::List';
+use SBG::U::List qw/mean sum median/;
 
-use SBG::Domain;
 
-# TODO config.ini
-# Needs to be in MySQL
-my $scopdb = "/g/russell1/data/pdbrep/scop_1.73.dom";
+my @extrinsic = qw/target tsize model msize cover rmsd olap irmsd/;
+my @intrinsic = qw/pval seqid eval sc glob/;
+my @fields = (@extrinsic, @intrinsic);
+
+has \@fields => (
+    is => 'rw',
+    );
+
+has 'tobject' => (
+    is => 'rw',
+    isa => 'SBG::Complex',
+    );
+
+has 'mobject' => (
+    is => 'rw',
+    isa => 'SBG::Complex',
+    );
+
+has 'avgmat' => (
+    is => 'rw',
+    );
+
+
+has 'target' => (
+    is => 'rw',
+    isa => 'SBG::Eval::Field',
+    default => sub {
+        new SBG::Eval::Field(
+            label=>'target',flabel='%10s',fvalue=>'%10s') }
+    );
+
+
+has 'tsize' => (
+    is => 'rw',
+    isa => 'SBG::Eval::Field',
+    default => sub {
+        new SBG::Eval::Field(
+            label=>'tsize',flabel='%5s',fvalue=>'%5d') }
+    );
+
+
+has 'model' => (
+    is => 'rw',
+    isa => 'SBG::Eval::Field',
+    default => sub {
+        new SBG::Eval::Field(
+            label=>'model',flabel='%5s',fvalue=>'%5s') }
+    );
+
+
+has 'msize' => (
+    is => 'rw',
+    isa => 'SBG::Eval::Field',
+    default => sub {
+        new SBG::Eval::Field(
+            label=>'msize',flabel='%5s',fvalue=>'%5d') }
+    );
+
+
+has 'cover' => (
+    is => 'rw',
+    isa => 'SBG::Eval::Field',
+    default => sub { 
+        new SBG::Eval:Field(
+            range=>[0,100],label=>'cover',flabel=>'%5s%%', fvalue=>'%6.f') }
+    );
+
+
+has 'rmsd' => (
+    is => 'rw',
+    isa => 'SBG::Eval::Field',
+    default => sub { 
+        new SBG::Eval:Field(
+            range=>[50,0],label=>'RMSD',flabel=>'%4s',fvalue=>'%4.1f') }
+    );
+
+
+has 'overlap' => (
+    is => 'rw',
+    isa => 'SBG::Eval::Field',
+    default => sub { 
+        new SBG::Eval:Field(
+            range=>[0,100],label=>'overlap',flabel=>'%7s%%',fvalue=>'%8.f') }
+    );
+
+
+has 'irmsd' => (
+    is => 'rw',
+    isa => 'SBG::Eval::Field',
+    default => sub { 
+        new SBG::Eval:Field(
+            range=>[20,0],label=>'iRMSD',flabel=>'%5s',fvalue=>'%5.2f') }
+    );
+
+
+has 'pval' => (
+    is => 'rw',
+    isa => 'SBG::Eval::Field',
+    default => sub { 
+        new SBG::Eval:Field(
+            range=>[5,0],label=>'pVal',flabel=>'%9s',fvalue=>'%9g') }
+    );
+
+
+has 'zscore' => (
+    is => 'rw',
+    isa => 'SBG::Eval::Field',
+    default => sub { 
+        new SBG::Eval:Field(
+            range=>[-5,5],label=>'Zscore',flabel=>'%6s',fvalue=>'%6.f') }
+    );
+
+
+has 'seqid' => (
+    is => 'rw',
+    isa => 'SBG::Eval::Field',
+    default => sub { 
+        new SBG::Eval:Field(
+            range=>[0,100],label=>'SeqID',flabel=>'%5s%%',fvalue=>'%6.f') }
+    );
+
+
+has 'eval' => (
+    is => 'rw',
+    isa => 'SBG::Eval::Field',
+    default => sub { 
+        new SBG::Eval:Field(
+            range=>[1e-20,1e-100],label=>'EVal',flabel=>'%12s',fvalue=>'%12g') }
+    );
+
+
+has 'sc' => (
+    is => 'rw',
+    isa => 'SBG::Eval::Field',
+    default => sub { 
+        new SBG::Eval:Field(
+            range=>[0,10],label=>'Sc',flabel=>'%6s',fvalue=>'%6.3f') }
+    );
+
+
+has 'glob' => (
+    is => 'rw',
+    isa => 'SBG::Eval::Field',
+    default => sub { 
+        new SBG::Eval:Field(
+            range=>[0,100],label=>'glob',flabel=>'%5s%%',fvalue=>'%6.f') }
+    );
+
+
+
+sub BUILD {
+    my ($self) = @_;
+
+
+}
+
 
 
 ################################################################################
-
-# Returns PDBid,chainid,scop_classification
-# TODO DES move to SCOP
-sub parse_scopid {
-    my $scopid = shift;
-    unless ($scopid =~ /^(\d.{3})(.*?)\.(.*?)$/) {
-        print STDERR "Couldn't parse SCOP ID: $scopid\n";
-        return;
-    }
-    return ($1,$2,$3);
-}
-
-
-
-# Returns filepath,scopid,stamp_descriptor
-# TODO DES move to SCOP
-sub get_descriptor {
-    my $scopid = shift;
-    # Static opened file handle
-    our $fh;
-    unless ($fh) {
-        unless (open $fh, $scopdb) {
-            $logger->error("Cannot open: $scopdb ($!)");
-            return;
-        }
-    }
-    seek $fh, 0, 0;
-    while (<$fh>) {
-        next unless /^(\S+) ($scopid) { (.*?) }$/;
-        return ($1, $2, $3);
-    }
-    return;
-}
-
-# TODO DES move to SCOP
-sub mk_dom {
-    my ($str) = @_;
-    my ($pdbid, $chainid, $scopid) = parse_scopid($str);
-    my ($file, undef, $descriptor) = get_descriptor($str);
-    my $dom = new SBG::Domain(
-        -pdbid=>$pdbid, -chainid=>$chainid, -scopid=>$scopid,
-        -file=>$file, -descriptor=>$descriptor);
-}
-
-
-
-################################################################################
+__PACKAGE__->meta->make_immutable;
+no Moose;
 1;
 
-__END__
 
 

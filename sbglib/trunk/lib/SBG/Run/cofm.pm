@@ -2,26 +2,32 @@
 
 =head1 NAME
 
-SBG::Run::cofm - Wrapper for running B<cofm> (centre-of-mass), with DB caching.
+SBG::Run::cofm - Wrapper for running B<cofm> (centre-of-mass)
 
 
 =head1 SYNOPSIS
 
- use SBG::Run::cofm;
- $hashref = SBG::Run::cofm::run('2nn6','A 13 _ to A 331 _');
- $hashref = SBG::Run::cofm::run('2nn6','CHAIN A CHAIN B');
+ use SBG::Run::cofm qw/cofm/;
+
+ my $dom = new SBG::DomainI(pdbid=>'2nn6', descriptor=>'A 13 _ to A 331 _');
+ my $centroid = cofm($dom);
+
+ my $dom = new SBG::DomainI(pdbid=>'2nn6', descriptor=>'A 13 _ to A 331 _');
+
+ $hashref = cofm('2nn6','A 13 _ to A 331 _');
+ $hashref = cofm('2nn6','CHAIN A CHAIN B');
 
 
 =head1 DESCRIPTION
 
-Looks up cached centre-of-mass in database, if available. This is only the case
-for full chains. Otherwise, cofm is executed anew.
-
-Also fetches radius of gyration and maximum radius of the centre of mass.
+Fetches center of mass, radius of gyration and maximum radius of the centre of
+mass.
 
 =head1 SEE ALSO
 
-L<SBG::DB::cofm> , L<SBG::Domain::CofM>
+B<cofm> is a program in the STAMP suite.
+
+L<SBG::U::DB::cofm> , L<SBG::Domain::CofM>
 
 =cut
 
@@ -31,52 +37,54 @@ package SBG::Run::cofm;
 use base qw/Exporter/;
 our @EXPORT_OK = qw/cofm/;
 
-use Text::ParseWords;
+use Text::ParseWords qw/quotewords/;
+use PDL::Lite;
+use PDL::Core qw/pdl/;
 
-use SBG::Types qw/$re_chain $re_chain_id $re_ic $re_pos/;
-use SBG::DB::cofm;
-use SBG::Config qw/config/;
-use SBG::Domain;
-use SBG::DomainIO;
-use SBG::Log;
+use SBG::Domain::Sphere;
+use SBG::DomainIO::stamp;
+
+use SBG::U::Log qw/log/;
+use SBG::U::Config qw/config/;
+
 
 ################################################################################
 =head2 cofm
 
  Function: 
  Example : 
- Returns : HashRef with keys: Cx, Cy,Cz, Rg, Rmax, file, descriptor
- Args    : 
+ Returns : L<SBG::Domain::Sphere>
+ Args    : L<SBG::DomainI>
 
-If the Domain is one entire chain, the database cache is queried
-first. Otherwise cofm is run locally, if available.
 
 B<cofm> must be in your PATH, or defined in a B<config.ini> file
 
-The DB cache stores uppercase PDB IDs. The B<cofm> program will accept any case.
+NB if the input L<SBG::DomainI> has a B<transformation>, this is not saved in
+the newly created L<SBG::Domain::Sphere>
+
+TODO option to use Rg or Rmax as the resulting radius
 
 =cut
 sub cofm {
-    my ($pdbid, $descriptor) = @_;
-    return unless $pdbid && $descriptor;
-    my $dom = new SBG::Domain(pdbid=>$pdbid, descriptor=>$descriptor);
+    my ($dom) = @_;
 
-    my $res;
-    # If descriptor contains just one full chain, try the cache first;
-    my $chainid = $dom->wholechain();
-    $res = SBG::DB::cofm::query($pdbid, $chainid) if $chainid;
+    my $fields = _run($dom) or return;
 
-    # Couldn't get from DB, try running computation locally, on descriptor
-    $res = _run($pdbid, $descriptor) unless defined($res);
+    # Copy construct
+    # Append 1 for homogenous coordinates
+    # TODO needs to be contained in Domain::Sphere hook
+    my $center = pdl($fields->{Cx}, $fields->{Cy}, $fields->{Cz}, 1);
 
-    unless ($res) {
-        $logger->warn(
-            "Cannot get centre-of-mass for ${pdbid} \{ ${descriptor} \}");
-        return;
-    }
+    my $sphere = new SBG::Domain::Sphere(pdbid=>$dom->pdbid,
+                                         descriptor=>$dom->descriptor,
+                                         file=>$fields->{file},
+                                         center=>$center,
+                                         radius=>$fields->{Rg},
+                                         length=>$fields->{nres},
+        );
 
-    # keys: (Cx, Cy, Cz, Rg, Rmax, description, file, descriptor)
-    return $res;
+
+    return $sphere;
 
 } # cofm
 
@@ -86,8 +94,8 @@ sub cofm {
 
  Function: Computes centre-of-mass and radius of gyration of STAMP domain
  Example : 
- Returns : HashRef with keys: Cx, Cy,Cz, Rg, Rmax, description, file, descriptor
- Args    : L<SBG::Domain>
+ Returns : HashRef with keys: Cx, Cy,Cz, Rg, Rmax, file, 
+ Args    : L<SBG::DomainI>
 
 Runs external B<cofm> appliation. Must be in your environment's B<$PATH>
 
@@ -124,75 +132,47 @@ All of the ATOM lines are saved, as new-line separated text in the 'description'
 
 =cut
 sub _run {
-    my ($pdbid, $descriptor) = @_;
-    return unless $pdbid && $descriptor;
+    my ($dom) = @_;
+
     # Get dom into a stamp-formatted file
-    my $io = _spitdom($pdbid, $descriptor) or return;
+    my $io = new SBG::DomainIO::stamp(tempfile=>1);
+    $io->write($dom);
     my $path = $io->file;
+    $io->close;
 
     # NB the -v option is necessary if you want the filename of the PDB file
     my $cofm = config()->val(qw/cofm executable/) || 'cofm';
     my $cmd = "$cofm -f $path -v |";
     my $cofmfh;
     unless (open $cofmfh, $cmd) {
-        $logger->error("Failed:\n\t$cmd\n\t$!");
+        log()->error("Failed:\n\t$cmd\n\t$!");
         return;
     }
 
-
     my %res;
-    while (<$cofmfh>) {
-        if (/^Domain\s+\S+\s+(\S+)/i) {
+    while (my $line = <$cofmfh>) {
+
+
+        if ($line =~ /^Domain\s+\S+\s+(\S+)/i) {
             $res{file} = $1;
-        } elsif (/^REMARK Domain/) {
-            my @a = quotewords('\s+', 0, $_);
+        } elsif ($line =~ / (\d+) CAs in total/) {
+            $res{nres} = $1;
+        } elsif ($line =~ /^REMARK Domain/) {
+            my @a = quotewords('\s+', 0, $line);
             # Extract coords for radius-of-gyration and xyz of centre-of-mass
             $res{Rg} = $a[10];
             $res{Rmax} = $a[13];
             ($res{Cx}, $res{Cy}, $res{Cz}) = ($a[16], $a[17], $a[18]);
-
-# Don't need to parse this, easily computable
-#         } elsif (/^ATOM/) {
-#             $res{description} .= $_;
-
         }
-    }
 
-    unless (%res) {
-        return;
-    }
+    } # while
+
+    return unless %res;
     
     # keys: (Cx, Cy,Cz, Rg, Rmax, description, file, descriptor)
     return \%res;
 
-} # run
-
-
-
-################################################################################
-=head2 _spitdom
-
- Function: 
- Example : 
- Returns : 
- Args    : 
-
-Dumps domain in STAMP format to file.
-
-=cut
-sub _spitdom {
-    my ($pdbid, $descriptor) = @_;
-    my $dom = new SBG::Domain(pdbid=>$pdbid,descriptor=>$descriptor);
-    my $io = new SBG::DomainIO(tempfile=>1);
-    $io->write($dom);
-    $io->close;
-    my $path = $io->file;
-    unless (-s $path) {
-        $logger->error("Failed to write Domain to: $path");
-        return;
-    }
-    return $io;
-}
+} # _run
 
 
 

@@ -10,7 +10,9 @@ SBG::Types -
 
 =head1 DESCRIPTION
 
-...
+NB coercion will only happen when the input type does not already satisfy the 
+type constraints. It will not happen by default in every case.
+
 
 =head1 SEE ALSO
 
@@ -25,12 +27,13 @@ use Moose;
 use Moose::Util::TypeConstraints;
 
 extends qw/Moose::Object Exporter/;
-our @EXPORT_OK = qw(
+
+our @EXPORT_OK = qw/
 $pdb41 $re_pdb 
 $re_chain_id $re_chain 
 $re_descriptor $re_ic $re_pos
 $re_seg $re_chain_seg 
-);
+/;
 
 
 # A file path 
@@ -54,10 +57,14 @@ subtype 'SBG.ChainID'
     => where { /^$re_chain_id$/ };
 
 
-our $re_pdb = '\d\w{3}';
+our $re_pdb = '\d[a-z0-9]{3}';
 subtype 'SBG.PDBID'
     => as 'Str',
     => where { /^$re_pdb$/ };
+# Force lc (lowercase)
+coerce 'SBG.PDBID'
+    => from 'Str'
+    => via { lc $_ };
 
 
 # Splits e.g. 2nn6A into (2nn6,A)
@@ -65,16 +72,14 @@ subtype 'SBG.PDBID'
 our $pdb41 = "($re_pdb)($re_chain_id)";
 
 
+# STAMP chain descriptor
 our $re_chain = 'CHAIN\s+' . $re_chain_id;
-
 
 # Residue insertion code (character, STAMP uses _ for undefined)
 our $re_ic = '[_a-zA-Z]';
 
-
 # NB: Residue IDs can be negative
 our $re_pos = '-?\d+';
-
 
 # A segment, e.g. A 134 _ to A 233 A
 our $re_seg = 
@@ -98,15 +103,16 @@ our $re_descriptor = "ALL|($re_chain_segs)";
 
 subtype 'SBG.Descriptor'
     => as 'Str',
-    => where { 
-        /^\s*($re_descriptor)\s*$/
-};
+    # Disallow multiple whitespace blocks
+    => where { /^\s*($re_descriptor)\s*$/ && ! /\s\s+/ };
+# Remove extra whitespace
 coerce 'SBG.Descriptor'
     => from 'Str'
     => via { s/\s+/ /g; $_ };
 
 
 ################################################################################
-
 __PACKAGE__->meta->make_immutable;
+no Moose::Util::TypeConstraints;
+no Moose;
 1;

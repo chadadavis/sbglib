@@ -26,27 +26,43 @@ L<Bio::Network::Node> , L<SBG::Network>
 
 package SBG::Node;
 use Moose;
-extends qw/Bio::Network::Node/;
-with 'SBG::Storable';
+extends qw/Bio::Network::Node Moose::Object/;
+with 'SBG::Role::Storable';
 
 use overload (
-    '""' => '_asstring',
+    '""' => 'stringify',
     'cmp' => '_compare',
     fallback => 1,
     );
 
 
+
 ################################################################################
+=head2 new
 
-sub new () {
-    my $class = shift;
-    my $self = $class->SUPER::new(@_);
-    bless $self, $class;
-    return $self;
-}
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
 
 
-sub _asstring {
+=cut
+override 'new' => sub {
+    my ($class, @ops) = @_;
+    
+    my $obj = $class->SUPER::new(@ops);
+
+    # This appends the object with goodies from Moose::Object
+    # __INSTANCE__ place-holder fulfilled by $obj 
+    $obj = $class->meta->new_object(__INSTANCE__ => $obj);
+
+    # bless'ing should be automatic!
+    bless $obj, $class;
+    return $obj;
+};
+
+
+sub stringify {
     my ($self) = @_;
     return join(",", $self->proteins);
 } # _asstring
@@ -54,7 +70,7 @@ sub _asstring {
 
 sub _compare {
     my ($a, $b) = @_;
-    return unless ref($b) && $b->isa("Bio::Network::Node");
+
     # Assume each Node holds just one protein
     # Need to stringify here, otherwise it's recursive
     return "$a" cmp "$b";
@@ -62,6 +78,7 @@ sub _compare {
 
 
 ###############################################################################
-__PACKAGE__->meta->make_immutable;
+__PACKAGE__->meta->make_immutable(inline_constructor => 0);
+no Moose;
 1;
 

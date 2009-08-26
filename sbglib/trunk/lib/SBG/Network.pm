@@ -12,7 +12,9 @@ SBG::Network - Additions to Bioperl's L<Bio::Network::ProteinNet>
 =head1 DESCRIPTION
 
 NB A L<Bio::Network::ProteinNet>, from which this module inherits, is a blessed
-arrayref, rather than a blessed hashref.
+arrayref, rather than a blessed hashref. This means it is not easy to add any
+additional attributes to this object, even if it is extending another class
+
 
 =head1 SEE ALSO
 
@@ -25,20 +27,22 @@ L<Bio::Network::ProteinNet> , L<Bio::Network::Interaction> , L<SBG::Interaction>
 
 package SBG::Network;
 use Moose;
-extends qw/Bio::Network::ProteinNet/;
-with 'SBG::Storable';
-with 'SBG::Dumpable';
+# NB Order of inheritance matters here
+extends qw/Bio::Network::ProteinNet Moose::Object/;
 
-use File::Temp qw/tempfile/;
-use SBG::List qw/pairs/;
-use SBG::Log;
+with qw/
+SBG::Role::Storable
+SBG::Role::Dumpable
+/;
+
+
+use SBG::U::List qw/pairs/;
+use SBG::U::Log qw/log/;
 
 use overload (
-    '""' => '_asstring',
+    '""' => 'stringify',
     );
 
-
-################################################################################
 
 
 ################################################################################
@@ -61,34 +65,77 @@ The bug is that stringification of SGB::Node is ignored, which causes Storable
 to not be able to store/retrieve a SBG::Network correctly.
 
 =cut
-sub new () {
-    my $class = shift;
-    my $self = $class->SUPER::new(refvertexed=>0, @_);
-    bless $self, $class;
-    return $self;
+override 'new' => sub {
+    my ($class, @ops) = @_;
+    
+    # This creates a Bio::Network::ProteinNet
+    my $obj = $class->SUPER::new(refvertexed=>0, @ops);
+
+    # Normally, we would override a non-Moose base class with: But we don't,
+    # since Bio::Network::ProteinNet is an ArrayRef, not a HashRef, like most
+    # objects.
+
+#     $obj = $class->meta->new_object(__INSTANCE__ => $obj);
+
+    # bless'ing should be automatic!
+    bless $obj, $class;
+    return $obj;
+};
+
+
+sub stringify {
+    my ($self) = @_;
+    return join(",", sort($self->nodes()));
 }
 
 
 ################################################################################
-=head2 add
+=head2 add_node
 
  Function: Adds L<Bio::Network::Node> to L<Bio::Network::ProteinNet> 
- Example : $node = new Bio::Seq(-accession_number=>"RRP43"); $net->add($node);
+ Example : $seq = new Bio::Seq(-accession_number=>"RRP43"); 
+           $node = new Bio::Network::Node($seq); 
+           $net->add_node($node);
  Returns : $self
  Args    : A L<Bio::Network::Node> or subclass
 
-Also adds index ID (from accession_number) to Node. Then later:
+Also adds index ID (from B<accession_number>) to Node. Then, you can:
 
  $node = $net->nodes_by_id('RRP43');
 
 =cut
-sub add {
+override 'add_node' => sub {
     my ($self, $node) = @_;
-    $self->add_node($node);
+    my $res = $self->SUPER::add_node($node);
     my ($protein) = $node->proteins;
     $self->add_id_to_node($protein->accession_number, $node);
-    return $self;
-}
+    return $res;
+};
+
+
+################################################################################
+=head2 add_interaction
+
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
+
+Delegates to L<Bio::Network::ProteinNet> but makes sure that the Interaction has
+a primary_id.
+
+=cut
+override 'add_interaction' => sub {
+    my ($self, %ops) = @_;
+    my $iaction = $ops{'-interaction'};
+    my $nodes = $ops{'-nodes'};
+    unless (defined $iaction->primary_id) {
+        $iaction->primary_id(join('--', @$nodes));
+    }
+    my $res = $self->SUPER::add_interaction(%ops);
+    return $res;
+
+}; # add_interaction
 
 
 ################################################################################
@@ -100,7 +147,7 @@ sub add {
  Args    : NA
 
 NB these will contain the original interactions for the nodes that are still
-present, including multiple interactions between two nodes.
+present, including any multiple interactions between two nodes.
 
 =cut
 sub partition {
@@ -131,20 +178,21 @@ TODO doc
 =cut
 sub build {
     my ($self, $searcher) = @_;
-    unless ($searcher && $searcher->does('SBG::SearchI')) {
-        $logger->erorr("Need a SBG::SearchI to do the template search");
-        return;
-    }
+
     # For all pairs
     foreach my $pair (pairs($self->nodes)) {
         my ($node1, $node2) = @$pair;
         my ($p1) = $node1->proteins;
         my ($p2) = $node2->proteins;
         my @interactions = $searcher->search($p1, $p2);
-        
+        next unless @interactions;
+        $self->add_edge($node1, $node2);
         foreach my $iaction (@interactions) {
             $self->add_interaction(
-                -nodes=>[$node1,$node2],-interaction=>$iaction);
+                -nodes=>[$node1,$node2],
+                -interaction=>$iaction,
+                );
+            $self->add_id_to_interaction("$iaction", $iaction);
         }
     }
     
@@ -152,68 +200,8 @@ sub build {
 }
 
 
-# Do output from scratch in order to accomodate multiple edges
-# TODO DOC
-# TODO options? Can GraphViz module still be used to parse these out?
-sub graphviz {
-    my ($graph, $file) = @_;
-    $file ||= 'graph.dot';
-    my $fh;
-    unless (open $fh, ">$file") {
-        $logger->error("Cannot write to: ", $file, " ($!)");
-        return;
-    }
-    return unless $graph && $fh;
-
-    my $pdb = "http://www.rcsb.org/pdb/explore/explore.do?structureId=";
-
-    my $str = join("\n",
-                   "graph {",
-                   "\tnode [fontsize=6];",
-                   "\tedge [fontsize=8, color=grey];",
-                   ,"");
-    # For each connection between two nodes, get all of the templates
-    foreach my $e ($graph->edges) {
-        # Don't ask me why u and v are reversed here. But it's correct.
-        my ($v, $u) = @$e;
-        # Names of templates for this edge
-        my @templ_ids = $graph->get_edge_attribute_names($u, $v);
-        foreach my $t (@templ_ids) {
-            # The actual interaction object for this template
-            my $ix = $graph->get_interaction_by_id($t);
-            # Look up what domains model which halves of this interaction
-            my $uname = $ix->template($u)->seq;
-            my $vname = $ix->template($v)->seq;
-            my $udom = $ix->template($u)->domain;
-            my $vdom = $ix->template($v)->domain;
-             $str .= "\t\"" . $uname . "\" -- \"" . $vname . "\" [" . 
-                join(', ', 
-#                      "label=\"" . $ix->weight . "\"",
-                     "headlabel=\"" . $udom->pdbid . "\"",
-                     "taillabel=\"" . $vdom->pdbid . "\"",
-                     "headtooltip=\"" . $udom->descriptor . "\"",
-                     "tailtooltip=\"" . $vdom->descriptor . "\"",
-                     "headURL=\"" . $pdb . $udom->pdbid . "\"",
-                     "tailURL=\"" . $pdb . $vdom->pdbid . "\"",
-                     "];\n");
-        }
-    }
-
-    $str .= "}\n";
-    print $fh $str;
-    return $file;
-}
-
-
-sub _asstring {
-    my ($self) = @_;
-    return join(",", sort($self->nodes()));
-}
-
-
 ###############################################################################
-__PACKAGE__->meta->make_immutable;
+__PACKAGE__->meta->make_immutable(inline_constructor=>0);
+no Moose;
 1;
-
-
 

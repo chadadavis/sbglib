@@ -4,16 +4,15 @@ use Test::More 'no_plan';
 use File::Temp qw(tempfile);
 use SBG::IO;
 use FindBin qw/$Bin/;
+use Data::Dump qw/dump/;
 
-my $io = new_ok "SBG::IO";
 
 # Open a not-yet-opened file
-my $file = "$Bin/2nn6.dom";
-
+my $file = "$Bin/data/2nn6.dom";
 my $iofile = new SBG::IO(file=>"<$file");
-
 ok($iofile && $iofile->fh, "new(file=>\"<$file\")");
 ok($iofile->close, "close()");
+
 
 # Open an already-opened filehandle
 open my $fh, "<$file";
@@ -34,6 +33,8 @@ my ($tfh1, $tpath1) = tempfile();
 my $io1 = new SBG::IO(fh=>$tfh1);
 $io1->write("Writing to temp file handle ( $tpath1 )");
 $io1->flush;
+$io1->close;
+
 ok(-s $tpath1, "Writing to temp file handle ( $tpath1 )");
 
 # Test writing temp file, using file path

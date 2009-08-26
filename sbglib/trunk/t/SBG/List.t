@@ -5,10 +5,10 @@ $,=' ';
 
 # Autoboxing native types
 use Moose::Autobox;
-# Also: Look for methods of ARRAY objects in SBG::List
-use autobox ARRAY => SBG::List;
+# Also: Look for methods of ARRAY objects in SBG::U::List
+use autobox ARRAY => SBG::U::List;
 # Add this in to test
-use SBG::List qw(union intersection nsort flatten lcp pairs mean swap);
+use SBG::U::List qw(union intersection nsort flatten lcp pairs mean swap);
 
 
 my @a = 1..10;

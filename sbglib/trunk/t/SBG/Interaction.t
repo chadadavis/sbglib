@@ -1,39 +1,48 @@
 #!/usr/bin/env perl
 
 use Test::More 'no_plan';
-use SBG::Test 'float_is';
-use Carp;
+use SBG::U::Test 'float_is';
 use Data::Dumper;
-$, = ' ';
+use Data::Dump qw/dump/;
 
 use SBG::Interaction;
+use SBG::Model;
+use SBG::Node;
+use SBG::Seq;
+use SBG::Domain;
+use Moose::Autobox;
+
+# Setup a Network Interaction object
+# RRP45 and RRP41
+my @accnos = qw/Q86Y41 Q9NPD3/;
+# Bio::Seq objects
+my @seqs = map { new SBG::Seq(-accession_number=>$_) } @accnos;
+# Bio::Network::Node objects
+my @nodes = map { new SBG::Node($seqs[$_]) } (0..$#seqs);
+# The corresponding template domains
+my @templates = map { 
+    new SBG::Domain(pdbid=>'2nn6',descriptor=>"CHAIN $_") 
+} qw/A B/;
+# Store each in a Model container
+my @models = map { 
+    new SBG::Model(query=>$nodes[$_], subject=>$templates[$_]) 
+} (0..$#seqs);
+
+# An interaction (model) connects two nodes, each has a model
+my $interaction = new SBG::Interaction;
+# Note which nodes have which models, for this interaction
+$interaction->models->put($nodes[$_],$models[$_]) for (0..$#seqs);
+
+# Sanity test
+my @gotmodels = map { $interaction->models->at($_) } @nodes;
+
+is($gotmodels[$_], $models[$_], "Storing models in Interaction by Node") 
+    for (0..$#nodes);
 
 
-# new()
-my $label1 = "component1-component2(template1-template2)";
-my $i1 = new SBG::Interaction(-id=>$label1, -weight => 33.3);
-isa_ok($i1, "Bio::Network::Interaction");
-isa_ok($i1, "SBG::Interaction");
-
-my $label2 = "component3-component4(template3-template4)";
-my $i2 = new SBG::Interaction(-id=>$label2, -weight => 66.6);
-
-is("$i2", $label2, "Stringification from 'primary_id'");
-ok($i1 le $i2, "String comparison: le");
-ok($i2 ge $i1, "String comparison: ge");
-
-my $i3 = new SBG::Interaction(-id=>$label2, -weight => 99.9);
-is($i2, $i3, "String equality, between unique objects");
-
-TODO: {
-    local $TODO = 'Test Interaction->template("key") = $domain';
-    ok(1);
-}
-
-TODO: {
-    local $TODO = 'test creating an interation using SBG::Node and SBG::Domain';
-    ok(1);
-}
+$TODO = "Test updating of primary_id";
+ok 0;
 
 
-
+$TODO = "Test equality, should be independent of Node endpoints";
+ok 0;

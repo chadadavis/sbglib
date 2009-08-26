@@ -21,17 +21,46 @@ SBG::Run::rasmol - Rasmol utilities
 package SBG::Run::rasmol;
 use base qw/Exporter/;
 
-our @EXPORT_OK = qw(pdb2img);
+our @EXPORT = qw/rasmol/;
+our @EXPORT_OK = qw/rasmol pdb2img/;
 
 use strict;
 use warnings;
 
 use File::Temp qw(tempfile tempdir);
 
-use SBG::Log;
-use SBG::Config qw/config/;
+use SBG::U::Log qw/log/;
+use SBG::U::Config qw/config/;
+use SBG::DomainIO::pdb;
+use SBG::U::List qw/flatten/;
+
 
 ################################################################################
+=head2 rasmol
+
+ Function: Runs rasmol on given list of L<SBG::DomainI> objects
+ Example : 
+ Returns : Path to PDB file written to
+ Args    : $doms, ArrayRef of L<SBG::DomainI> 
+
+
+If no 'file' option is provided, a temporary file is created and returned
+
+=cut
+sub rasmol {
+    my (@doms) = @_;
+    @doms = SBG::U::List::flatten(@doms);
+
+    my $rasmol = config()->val(qw/rasmol executable/) || 'rasmol';
+    my $io = new SBG::DomainIO::pdb(tempfile=>1);
+    $io->write(@doms);
+    my $cmd = "$rasmol " . $io->file;
+    system("$cmd 2>/dev/null") == 0 or
+        log()->error("Failed: $cmd\n\t$!");
+
+    return $io->file;
+} # rasmol
+
 
 
 ################################################################################
@@ -48,27 +77,32 @@ use SBG::Config qw/config/;
 NB This does not seem to work with rasmol-gtk.  Use rasmol-classic, or just
 rasmol. Set this in the C<config.ini>
 
+Example script, highlight contacts with chain A:
+
+ my $script = 
+   "select *A\ncolor grey\nselect (!*A and within(10.0, *A))\ncolor HotPink";
+
+
 =cut
 sub pdb2img {
     my (%o) = @_;
     $o{pdb} or return;
     $o{img} = $o{pdb} . '.ppm' unless $o{img};
-    $logger->trace("$o{pdb} => $o{img}");
+    $o{mode} ||= 'cartoon';
+
+    log()->trace("$o{pdb} => $o{img}");
     my $rasmol = config()->val(qw/rasmol classic/) || 'rasmol';
     my $fh;
-    my $cmd = "$rasmol -nodisplay >/dev/null";
-#     my $cmd = "$rasmol -nodisplay ";
-    $logger->trace($cmd);
+    my $cmd = "$rasmol -nodisplay >/dev/null 2>/dev/null";
+    log()->trace($cmd);
     unless(open $fh, "| $cmd") {
-        $logger->error("Failed: $cmd");
+        log()->error("Failed: $cmd\n\t$!");
         return;
     }
-    print $fh <<HERE;
-load "$o{pdb}"
-wireframe off
-spacefill
-color chain
-HERE
+    print $fh "load \"$o{pdb}\"\n";
+    print $fh "color chain\n";
+    print $fh "wireframe off\n";
+    print $fh "$o{mode}\n";
 
     # Any additional options
     print $fh "$o{script}\n" if $o{script};
@@ -81,7 +115,7 @@ HERE
     # Need to explicitly close before checking for output file
     close $fh;
     unless (-s "$o{img}") {
-        $logger->error("Rasmol failed to write: $o{img}");
+        log()->error("Rasmol failed to write: $o{img}\n\t$!");
         return;
     }
     return $o{img};

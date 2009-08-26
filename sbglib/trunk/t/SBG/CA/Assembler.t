@@ -1,63 +1,102 @@
 #!/usr/bin/env perl
 
-use Test::More 'no_plan';
-
+use strict;
 use warnings;
+use Test::More 'no_plan';
+use Data::Dumper;
+use Data::Dump qw/dump/;
+use Carp;
 
-use SBG::STAMP;
-use SBG::Domain::CofM;
+use SBG::U::Log qw/log/;
+
+use Moose::Autobox;
+use List::MoreUtils qw/mesh/;
+
+use SBG::Seq;
+use SBG::Node;
 use SBG::Domain;
-use SBG::CA::Assembler qw(linker);
+use SBG::Interaction;
+use SBG::Network;
+use SBG::Complex;
+use SBG::CA::Assembler; # qw(linker);
+use SBG::Run::cofm qw/cofm/;
+use SBG::Run::rasmol;
 
-TODO: {
-    local $TODO = "Update test";
-    ok(1);
-}
-
-__END__
-
+my $DEBUG;
+# $DEBUG= 1;
+log()->init('TRACE') if $DEBUG;
+$SIG{__DIE__} = \&confess if $DEBUG;
 
 # Similar to example in STAMP.t but use at least two chained superpositions
-# Do not simply multiply twice, instead: chain them!
+# Do not simply multiply transform twice, rather: chain them
 
 # Based on archael exosome (2br2: one ring: Chains DABEFC )
 # 2 unique chains: A (and every 2nd), B (and every 2nd)
 # Templates: D-A(and A-D), A-B(and B-A)
+# Linker superpositions b<=>d or a<=>e or a<=>a or b<=>b
 
-# link b<=>d or a<=>e or a<=>a or b<=>b
-my @doms;
-my @templates = (
-    [new SBG::Domain(-label=>'2br2D-c1'), new SBG::Domain(-label=>'2br2A-c2')],
-    [new SBG::Domain(-label=>'2br2A-c2'), new SBG::Domain(-label=>'2br2B-c3')],
-    [new SBG::Domain(-label=>'2br2D-c3'), new SBG::Domain(-label=>'2br2A-c4')],
-    [new SBG::Domain(-label=>'2br2A-c4'), new SBG::Domain(-label=>'2br2B-c5')],
-    [new SBG::Domain(-label=>'2br2D-c5'), new SBG::Domain(-label=>'2br2A-c6')],
-    );
 
-my ($firstsrc, $firstdest) = @{shift @templates};
-$firstsrc = SBG::CofM::cofm($firstsrc);
-$firstdest = SBG::CofM::cofm($firstdest);
-push @doms, $firstsrc, $firstdest;
-my $ref = $firstdest;
+my $components = [ qw/c1 c2 c3 c4 c5 c6/ ];
+my $seqs = $components->map(sub{new SBG::Seq(-accession_number=>$_)});
+my $seqmap = { mesh @$components, @$seqs };
+my $nodes = $seqs->map(sub{new SBG::Node($_)});
+my $nodemap = { mesh @$components, @$nodes };
+my $doms = [ qw/A B D/ ];
+my $dommap = { map {$_ => _mkdom($_)} @$doms };
 
-foreach my $t (@templates) {
-    my ($srcdom, $destdom) = @$t;
-    $srcdom = SBG::CofM::cofm($srcdom);
-    $destdom = SBG::CofM::cofm($destdom);
-    $destdom = linker($ref, $srcdom, $destdom);
-    push @doms, $destdom;
-    $ref = $destdom;
+my $net = new SBG::Network;
+$net->add_node($_) for @$nodes;
+
+my $interactions = [
+    _mkia($nodemap->{c1}, $dommap->{D}, $nodemap->{c2}, $dommap->{A}),
+    _mkia($nodemap->{c2}, $dommap->{A}, $nodemap->{c3}, $dommap->{B}),
+    _mkia($nodemap->{c3}, $dommap->{D}, $nodemap->{c4}, $dommap->{A}),
+    _mkia($nodemap->{c4}, $dommap->{A}, $nodemap->{c5}, $dommap->{B}),
+    _mkia($nodemap->{c5}, $dommap->{D}, $nodemap->{c6}, $dommap->{A}),
+    # Could also make an iteration from c6 to c1 to close the ring ...
+    ];
+
+# State holder
+my $complex = new SBG::Complex(id=>'2br2test');
+
+my $assembler = new SBG::CA::Assembler;
+
+
+ok($assembler->test($complex, $net, 'c1', 'c2', $interactions->[0]),'Add interaction');
+ok($assembler->test($complex, $net, 'c2', 'c3', $interactions->[1]),'Add interaction');
+ok($assembler->test($complex, $net, 'c3', 'c4', $interactions->[2]),'Add interaction');
+ok($assembler->test($complex, $net, 'c4', 'c5', $interactions->[3]),'Add interaction');
+ok($assembler->test($complex, $net, 'c5', 'c6', $interactions->[4]),'Add interaction');
+
+rasmol($complex->domains) if $DEBUG;
+
+ok($assembler->solution($complex, $net, [$net->nodes], $interactions, 0),
+    'Checking solution');
+
+
+# Now try to save the same solution, verify rejection of duplicate
+ok(! $assembler->solution($complex, $net, [$net->nodes], $interactions, 0),
+    'Duplicate detection');
+
+
+sub _mkia {
+    my ($nodea, $doma, $nodeb, $domb) = @_;
+    my $i = new SBG::Interaction;
+    $i->set($nodea, new SBG::Model(query=>$nodea, subject=>$doma));
+    $i->set($nodeb, new SBG::Model(query=>$nodeb, subject=>$domb));
+    $net->add_interaction(-interaction=>$i,
+                          -nodes=>[$nodea, $nodeb]);
+    return $i;
 }
 
-# use File::Temp qw(tempfile);
-# use SBG::DomainIO;
-# my (undef, $domfile) = tempfile();
-# my $io = new SBG::DomainIO(-file=>">$domfile");
-# $io->write($_) for @doms;
-# print "dom: $domfile\n";
-my $pdbfile = transform(-doms=>\@doms);
-ok($pdbfile, "transform() created a PDB file");
-`rasmol $pdbfile` if $pdbfile;
+sub _mkdom {
+    my ($chain) = @_;
+    my $dom = new SBG::Domain(pdbid=>'2br2', descriptor=>"CHAIN $chain");
+    my $sphere = cofm($dom);
+    return $sphere;
+}
 
-__END__
+
+
+
 

@@ -7,17 +7,15 @@ SBG::DB::cofm - Database interface to cached centres-of-mass of PDB chains
 
 =head1 SYNOPSIS
 
- use SBG::DB::COFM;
+ use SBG::DB::cofm;
 
 
 =head1 DESCRIPTION
 
-You do not need to use this module directly. Use L<SBG::Run::cofm> instead.
-
 
 =head1 SEE ALSO
 
-L<SBG::Domain::CofM> , L<SBG::Run::cofm>
+L<SBG::Domain::Sphere> , L<SBG::Run::cofm>
 
 =cut
 
@@ -27,18 +25,17 @@ package SBG::DB::cofm;
 use base qw/Exporter/;
 our @EXPORT_OK = qw/query/;
 
-use IO::String;
-use PDL::Matrix;
 use DBI;
 
-use SBG::Config qw/config/;
-use SBG::Log;
-use SBG::DB;
+use SBG::U::DB;
+use SBG::U::Config qw/config/;
+use SBG::U::Log qw/log/;
+
 
 ################################################################################
 =head2 query
 
- Function: Fetches centre-of-mass and radius of gyration of known PDB chains
+ Function: Fetches centre-of-mass and radius of gyration of whole PDB chains
  Example : my $hash=SBG::DB::cofm::query('2nn6','A');
  Returns : XYZ of CofM, ATOM lines, radii, PDB file, STAMP descriptor
  Args    : pdbid - string (not case sensitive)
@@ -65,7 +62,7 @@ sub query {
     my $pdbstr = "pdb|$pdbid|$chainid";
     my $db = config()->val(qw/cofm db/) || "trans_1_6";
     my $host = config()->val(qw/cofm host/);
-    my $dbh = SBG::DB::connect($db, $host);
+    my $dbh = SBG::U::DB::connect($db, $host);
     # Static handle, prepare it only once
     our $cofm_sth;
 
@@ -81,13 +78,13 @@ sub query {
                                 ));
 
     unless ($cofm_sth) {
-        $logger->error($dbh->errstr);
+        log()->error($dbh->errstr);
         return;
     }
 
     if (! $cofm_sth->execute($pdbstr, "CHAIN $chainid")) {
 
-        $logger->error($cofm_sth->errstr);
+        log()->error($cofm_sth->errstr);
         return;
     }
     # (Cx, Cy, Cz, Rg, Rmax, file, descriptor);

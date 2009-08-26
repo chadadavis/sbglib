@@ -1,21 +1,25 @@
-
 #!/usr/bin/env perl
 
 =head1 NAME
 
-SBG::Run::pdbc - Wrapper for running B<pdbc>
+SBG::Run::pdbc - Wrapper for running B<pdbc> (to get entry/chain descriptions
 
 
 =head1 SYNOPSIS
 
- use SBG::Run::pdbc;
+ use SBG::Run::pdbc qw/pdbc/;
 
+ my $dom = new SBG::DomainI(pdbid=>'2nn6', descriptor=>'A 13 _ to A 331 _');
+ my %fields = pdbc($dom);
+ print "Entry description:", $fields{'header'};
+ print "Chain A description:", $fields{'A'};
 
 =head1 DESCRIPTION
 
 
 =head1 SEE ALSO
 
+L<SBG::DomainI>
 
 =cut
 
@@ -25,46 +29,70 @@ package SBG::Run::pdbc;
 use base qw/Exporter/;
 our @EXPORT_OK = qw/pdbc/;
 
-use SBG::DomainIO;
-use SBG::Log;
+
+use SBG::Types qw/$pdb41/;
 
 ################################################################################
 =head2 pdbc
 
- Function: Runs STAMP's pdbc and opens its output as the internal input stream.
- Example : my $domio = pdbc('2nn6');
-           my $dom = $domio->read();
-           # or all in one:
-           my $first_dom = pdbc(pdbid=>'2nn6')->read();
- Returns : $self (success) or undef (failure)
- Args    : @ids - begins with one PDB ID, followed by any number of chain IDs
+ Function: 
+ Example : 
+ Returns : Hash
+ Args    : L<SBG::DomainI>
 
-Depending on the configuration of STAMP, domains may be searched in PQS first.
 
- my $io = new SBG::DomainIO;
- $io->pdbc('2nn6');
- # Get the first domain (i.e. chain) from 2nn6
- my $dom = $io->read;
+B<pdbc> must be in your PATH
 
 =cut
 sub pdbc {
-    my $str = join("", @_);
-    return unless $str;
-    my $io = new SBG::DomainIO(tempfile=>1);
-    my $path = $io->file;
-    my $cmd;
-    $cmd = "pdbc -d $str > ${path}";
-    $logger->trace($cmd);
-    # NB checking system()==0 fails, even when successful
-    system($cmd);
-    # So, just check that file was written to instead
-    unless (-s $path) {
-        $logger->error("Failed:\n\t$cmd\n\t$!");
-        return 0;
-    }
-    return $io;
+    my ($str) = @_;
+    our %cache;
+
+    my ($pdb, $chain) = $str =~ /^(\d\w{3})(.)?/;
+    $cache{$pdb} ||= _run($pdb);
+    return $cache{$pdb};
 
 } # pdbc
+
+
+sub _run {
+    my ($pdb, ) = @_;
+    open my $pdbcfh, "pdbc -d ${pdb}|";
+    # Process header first
+    my $header = _header($pdbcfh, $pdb);
+    # Suck up other chains
+    my %fields = _chains($pdbcfh);
+    # Add the header in
+    $fields{'header'} = $header;    
+    return \%fields;
+}
+
+
+sub _header {
+    my ($pdbcfh, $pdb) = @_;
+    
+    my $first = <$pdbcfh>;
+    my@fields = split ' ', $first;
+    # Remove leading comment
+    shift @fields if $fields[0] eq '%';
+    # Remove date and entry 24-OCT-00   1G3N
+    pop @fields if $fields[$#fields] eq uc($pdb);
+    pop @fields if $fields[$#fields] =~ /\d{2}-[A-Z]{3}-\d{2}/;
+    # Concate the rest back together
+    my $desc = join(' ', @fields);
+    return $desc;
+}
+
+sub _chains {
+    my ($pdbcfh,) = @_;
+    my %chain2desc;
+    my $slurp = join('', <$pdbcfh>);
+    while ($slurp =~ /MOLECULE:\s*(.*?);.*?CHAIN:\s*(.)/gms) {
+        $chain2desc{$2} = $1;
+    }
+    return %chain2desc;
+}
+	
 
 
 ################################################################################
