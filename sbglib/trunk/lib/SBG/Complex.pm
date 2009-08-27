@@ -33,6 +33,7 @@ with 'SBG::Role::Clonable';
 with 'SBG::Role::Scorable';
 with 'SBG::Role::Storable';
 with 'SBG::Role::Transformable';
+with 'SBG::Role::Versionable';
 
 
 use overload (

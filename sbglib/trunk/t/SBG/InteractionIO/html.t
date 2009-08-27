@@ -19,14 +19,17 @@ my @iactions;
 while (my $iaction = $in->read) {
     push @iactions, $iaction;
 }
-# Parsed all interactions
+# Parsed all ineractions
 is(scalar(@iactions), 17, "read()");
 
 # Verify that no duplicate nodes created
 is($in->count, 6, "Unique node cache");
 
 
-# my $out = new SBG::InteractionIO::html(tempfile=>1);
-my $out = new SBG::InteractionIO::html(file=>">/usr/local/tmp/sbg_0vGfs");
+$TODO = "Verify written interactions";
+my $out = new SBG::InteractionIO::html(tempfile=>1);
 $out->write(@iactions);
-print STDERR $out->file, "\n";
+ok(0);
+
+
+

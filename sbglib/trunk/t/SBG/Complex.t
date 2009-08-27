@@ -240,7 +240,10 @@ $file = $iocofm->file;
 @mdoms = map { $complex->get($_)->subject } @names;
 @tdoms = map { $true_complex->get($_)->subject } @names;
 $iocofm->write(@mdoms, @tdoms);
-`ras $file`;
+
+$TODO = "Verify cofm result";
+ok(0);
+
 
 
 

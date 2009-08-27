@@ -12,6 +12,16 @@ SBG::STAMP - Interface to Structural Alignment of Multiple Proteins (STAMP)
 
 Only does pairwise superpositions at the moment.
 
+The B<stamp> binary must exist in you B<PATH>.
+
+Additionally STAMP requires the variable B<STAMPDIR> to be set to its B<defs>
+subdirectory, where it stores its data files. This might look something like
+this in most cases:
+
+ export STAMPDIR=/usr/local/stamp.4.3/defs
+ export PATH=$PATH:$STAMPDIR/../bin/linux
+
+
 =head1 SEE ALSO
 
 L<SBG::DomainI> , L<SBG::Superposition> , <U::RMSD>
@@ -202,11 +212,13 @@ sub _cache_get {
     my ($from, $to) = @_;
 
     our $cache;
-    $cache ||= new Cache::File(
-        cache_root => ($ENV{TMPDIR} || '/tmp') . '/sbgsuperposition');
+    unless (defined $cache) {
+        my $cachedir = 
+            ($ENV{CACHEDIR} || $ENV{TMPDIR} || '/tmp') . '/sbgsuperposition';
+        $cache = new Cache::File(cache_root => $cachedir);
+    }
     my $key = "${from}--${to}";
     my $entry = $cache->entry($key);
-
 
     if ($entry->exists) {
         my $data = $entry->thaw;

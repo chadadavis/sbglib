@@ -7,13 +7,14 @@ use SBG::U::Test 'float_is';
 use Carp;
 use Data::Dumper;
 use FindBin;
+
 use File::Temp qw/tempfile/;
-$File::Temp::KEEP_ALL = 1;
-my $dir = $FindBin::RealBin;
-# Space-separated outputs
-$, = ' ';
-# Auto-Flush STDOUT
-$| = 1;
+use SBG::U::Log qw/log/;
+my $DEBUG;
+$DEBUG = 1;
+log()->init('TRACE') if $DEBUG;
+$File::Temp::KEEP_ALL = $DEBUG;
+
 
 ################################################################################
 
@@ -25,7 +26,7 @@ my $file = "/g/data/pdb/pdb2nn6.ent";
 # And highlight close residues
 my $chain = 'A';
 my $optstr = "select (!*$chain and within(10.0, *$chain))\ncolor white";
-my (undef, $img) = tempfile(SUFFIX=>'.ppm');
+my (undef, $img) = tempfile('sbg_XXXXX', TMPDIR=>1, SUFFIX=>'.ppm');
 pdb2img(pdb=>$file, script=>$optstr, img=>$img);
 if (ok($img && -r $img, "pdb2img() $file => $img")) {
 #    `display $img`;

@@ -5,22 +5,10 @@ use strict;
 
 =head1 NAME
 
-SBG - Structural Bioinformatics Group (base)
-
-=head1 VERSION
-
-Version 0.01
-
-=cut
-
-our $VERSION = '0.01';
+SBG - Structural Bioinformatics Group
 
 
 =head1 SYNOPSIS
-
-
-=cut
-
 
 
 =head1 AUTHOR
@@ -32,8 +20,6 @@ Chad A Davis, C<< <chad.a.davis at gmail.com> >>
 Please report any bugs or feature requests to C<bug-sbg at rt.cpan.org>, or through
 the web interface at L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=sbg>.  I will be notified, and then you'll
 automatically be notified of progress on your bug as I make changes.
-
-
 
 
 =head1 SUPPORT
@@ -71,10 +57,11 @@ L<http://search.cpan.org/dist/sbg>
 
 Copyright 2009 Chad A Davis, all rights reserved.
 
-This program is free software; you can redistribute it and/or modify it
-under the same terms as Perl itself.
-
 
 =cut
+
+
+our $VERSION = "1.00";
+
 
 1; # End of SBG

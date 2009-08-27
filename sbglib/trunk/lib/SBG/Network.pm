@@ -33,6 +33,7 @@ extends qw/Bio::Network::ProteinNet Moose::Object/;
 with qw/
 SBG::Role::Storable
 SBG::Role::Dumpable
+SBG::Role::Versionable
 /;
 
 

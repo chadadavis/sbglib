@@ -31,8 +31,16 @@ use base qw(Exporter);
 our @EXPORT = qw(store retrieve);
 our @EXPORT_OK = qw(module_for can_do retrieve_files);
 
+# Don't bring 'store' into this namespace, since we have that function too
+use Storable qw//;
 # Any contained PDL objects need this to de-serialize
 use PDL::IO::Storable;
+
+use Scalar::Util qw/blessed/;
+use SBG::U::List qw/flatten/;
+use Module::Load qw/load/;
+
+use Class::MOP::Class;
 
 
 
@@ -47,10 +55,12 @@ use PDL::IO::Storable;
 Just a wrapper for OO-style store()
 
 =cut
-use Storable qw//;
+
 sub store {
    my ($self,$file,@args) = @_;
-   return Storable::store($self, $file);
+#    return Storable::store($self, $file);
+   # Use network order to be able to share object files between architectures
+   return Storable::nstore($self, $file);
 } # store
 
 
@@ -69,18 +79,49 @@ unintended side effects.
 See also L<bless> , L<overload>
 
 =cut
-use Storable qw//;
-use Scalar::Util qw/blessed/;
+
+
 sub retrieve {
    my ($file) = @_;
    return unless -r $file;
    my $obj = Storable::retrieve($file);
+   # Load the module definition for the type of object
    module_for($obj);
    my $class = blessed($obj);
    # Bless back into own class (restores 'overload' functionality)
    bless $obj, $class if $class;
+   # See if the module has been updated since object was stored.
+   check_version($obj);
    return $obj;
 } # retrieve
+
+
+################################################################################
+=head2 check_version
+
+ Function: Confirms that the module version has not changed for stored objects
+ Example : 
+ Returns : Successful version validation (Bool)
+ Args    : 
+
+
+=cut
+sub check_version {
+    my ($retrieved) = @_;
+    my $type = blessed($retrieved) or return;
+    if ($retrieved->can('does') && $retrieved->does("SBG::Role::Versionable")) {
+        # The current version of the module
+        my $class_ver = eval("\$${type}::VERSION") || $SBG::VERSION;
+        # Vs. the version of the module that was saved in the stored object
+        if ($class_ver ne $retrieved->version()) {
+            warn 
+                "Using $type $class_ver on object of version " . 
+                $retrieved->version(), "\n";
+            return 0;
+        }
+    }
+    return 1;
+} # check_version
 
 
 ################################################################################
@@ -92,7 +133,7 @@ sub retrieve {
  Args    : Paths to files containing L<Storable> objects
 
 =cut
-use SBG::U::List qw/flatten/;
+
 sub retrieve_files {
     @_ = flatten @_;
     my @a = map { flatten retrieve($_) } @_;
@@ -114,8 +155,6 @@ way.
 BUGS: Why does Perl not do this automatically when deserializing an object?
 
 =cut
-use Module::Load qw/load/;
-use Scalar::Util qw/blessed/;
 sub module_for {
     my ($obj) = @_;
     my $class = blessed($obj) or return;
@@ -152,8 +191,7 @@ $VAR1 = {
 
 
 =cut
-use Class::MOP::Class;
-use Scalar::Util qw/blessed/;
+
 sub can_do {
     my ($obj) = @_;
     my $class = blessed $obj;

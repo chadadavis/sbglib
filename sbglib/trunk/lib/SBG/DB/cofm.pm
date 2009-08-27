@@ -41,8 +41,6 @@ use SBG::U::Log qw/log/;
  Args    : pdbid - string (not case sensitive)
            chainid - character (case sensitive)
 
-Looks for cached results in database (defined in B<config.ini>).
-
 Only appropriate for full-chain queries. 
 Otherwise, see L<SBG::Run::cofm>
 
