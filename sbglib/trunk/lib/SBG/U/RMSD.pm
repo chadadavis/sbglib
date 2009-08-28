@@ -51,7 +51,7 @@ rmsd centroid radius_gyr radius_max superposition superpose translation
 use PDL::Lite;
 use PDL::Core qw/pdl ones inplace sclr/;
 use PDL::Reduce qw/reduce/;
-use PDL::Ufunc qw/sumover average max/;
+use PDL::Ufunc qw/sumover average max all/;
 use PDL::MatrixOps qw/svd det identity/;
 
 
@@ -207,17 +207,19 @@ sub superposition {
     # Create an affine transformation matrix 4x4 from the 3x3
     my $affine = _affine($rot);
 
-    # The following steps have to be done in this order, to get the translation
+    # The following steps have to be done in this order to be compatible with
+    # the order in which STAMP does it.
 
-    # 1. Rotate $copya, this superposes both at the origin
-    $copya = _apply($affine, $copya);
-    # 2. Translate $copya back
+    # Translate copya back to where it came from
     $copya += $centroida;
-    # 3. Rotate $copya back
-    $copya = _apply($affine->inv, $copya);
 
-    # Finally, get translation required to move $copya to $pointsb
+    # Rotate $copya (about the origin)
+    $copya = _apply($affine, $copya);
+
+    # Determine the translation required to get the rotated copya onto pointsb
     my $transl = $centroidb - centroid($copya);
+
+    # Make the affine matrix: combine rotation and translation
     $affine = _affine($affine, $transl);
 
     return $affine;
@@ -280,15 +282,15 @@ sub _rot_svd {
     # invert the signs in the last column, when necessary 
 
     if (det $covariance < 0) {
+        # This doesn't seem to ever happen
         warn "determinant < 0";
         $V->slice('-1,') *= -1;
     }
 
-    # TODO Each of these is the transpose of the other. Which is correct?
-#     my $rot=$V x $Wt->transpose;
     my $rot=$Wt x $V->transpose;
     return $rot;
 }
+
 
 # Determine rotation matrix, based on symmetric square roots
 # Doesn't (seem to) work if covariance matrix (crossprod) is non singular
