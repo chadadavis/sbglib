@@ -21,8 +21,9 @@ exit unless $subnets->length;
 my $complexes = $subnets->map(sub{_net2complex($_)});
 
 for (my $i = 0; $i < @$files; $i++) {
+    print STDERR $complexes->[$i], "\n";
     unless (defined _unique($complexes->[$i])) {
-        print "Deleting duplicate subnet ", $files->[$i], "\n";
+        print STDERR "Deleting duplicate subnet ", $files->[$i], "\n";
         unlink $files->[$i];
     }
 }
