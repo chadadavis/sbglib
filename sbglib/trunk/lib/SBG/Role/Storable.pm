@@ -91,7 +91,10 @@ sub retrieve {
    # Bless back into own class (restores 'overload' functionality)
    bless $obj, $class if $class;
    # See if the module has been updated since object was stored.
-   check_version($obj);
+   
+   # TODO add this back in after re-creating all objects
+#    check_version($obj);
+
    return $obj;
 } # retrieve
 

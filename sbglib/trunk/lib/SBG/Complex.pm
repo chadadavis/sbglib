@@ -360,7 +360,7 @@ sub network {
     }
 
     return $net;
-} 
+} # network
 
 
 ################################################################################
@@ -434,6 +434,8 @@ RMSD between common domains between this and another complex.
 Models are associated by name. Models present in one complex but not the other
 are not considered. Undefined when no common models.
 
+NB only works when complexes have same number of points
+
 TODO belongs in a ModelSet role
 
 =cut
@@ -446,28 +448,13 @@ sub rmsd {
    my $selfcoords = $self->coords->copy;
    my $othercoords = $other->coords->copy;
 
+   # NB only works if same number of points in both complexes
    my $transmatrix = SBG::U::RMSD::superpose($selfcoords, $othercoords);
    my $rmsd = SBG::U::RMSD::rmsd($selfcoords, $othercoords);
 
    return wantarray? ($rmsd, $transmatrix) : $rmsd;
 
 } # rmsd
-
-
-# Assumes complex already transformed
-sub rmsdonly {
-   my ($self,$other) = @_;
-
-   # Subset coords based on common components
-   my @cnames = $self->coverage($other);
-   my $selfcoords = $self->coords(@cnames)->copy;
-   my $othercoords = $other->coords(@cnames)->copy;
-
-   my $rmsd = SBG::U::RMSD::rmsd($selfcoords, $othercoords);
-   return $rmsd;
-
-} # 
-
 
 
 ################################################################################
@@ -554,7 +541,7 @@ sub superposition_weighted {
 
    return wantarray ? ($avgmat, $rmsd, $sc, $sups) : $avgmat;
 
-} # superposition
+} # superposition_weighted
 
 
 # To be called as $target->superposition_frame($model)
@@ -625,7 +612,7 @@ sub superposition_frame_cofm {
 
    return wantarray ? ($avgmat, $rmsd, $sc, $sups) : $avgmat;
 
-} # 
+} # superposition_frame_cofm
 
 
 # Don't use the native orientation, just go right to where the model dom is
@@ -691,7 +678,7 @@ sub superposition_frame_cofm2 {
 
    return wantarray ? ($avgmat, $rmsd, $sc, $sups) : $avgmat;
 
-} # 
+} # superposition_frame_cofm2
 
 
 # Don't use the native orientation, just go right to where the model dom is
@@ -759,7 +746,73 @@ sub superposition_frame_cofm3 {
 
    return wantarray ? ($avgmat, $rmsd, $sc, $sups) : $avgmat;
 
-} # 
+} # superposition_frame_cofm3
+
+
+# Try using (fixed) RMSD::superposition
+# Still based on putting cofm in right frame of reference
+sub superposition_points {
+   my ($self,$other) = @_;
+   # Only consider common components
+   my @cnames = $self->coverage($other);
+
+   my $selfcofms = [];
+   my $othercofms = [];
+
+   foreach my $key (@cnames) {
+       my $selfdom = $self->get($key)->subject;
+       my $otherdom = $other->get($key)->subject;
+
+       $selfdom = _setcrosshairs($selfdom, $otherdom) or next;
+       $selfcofms->push($selfdom);
+       $othercofms->push(cofm($otherdom));
+
+   }
+
+   my $selfcoords = pdl($selfcofms->map(sub{ $_->coords }));
+   my $othercoords = pdl($othercofms->map(sub{ $_->coords }));
+
+   $selfcoords = $selfcoords->clump(1,2) if $selfcoords->dims == 3;
+   $othercoords = $othercoords->clump(1,2) if $othercoords->dims == 3;
+
+   my $trans = SBG::U::RMSD::superpose($selfcoords, $othercoords);
+   # Now it has been transformed
+   my $rmsd = SBG::U::RMSD::rmsd($selfcoords, $othercoords);
+
+   return wantarray ? ($trans, $rmsd) : $trans;
+
+} # superposition_points
+
+
+# set crosshairs of one domain, based on second
+sub _setcrosshairs {
+    my ($selfdom, $otherdom) = @_;
+
+       # Now get the superposition from current $selfdom onto current $otherdom
+       my $sup = SBG::STAMP::superposition($selfdom, $otherdom);
+       return unless $sup;
+
+       # Set crosshairs
+       $selfdom = cofm($selfdom);
+       # Transform
+       $sup->apply($selfdom);
+       # Rebuild crosshairs over there
+       $selfdom->_build_coords;
+# Why is $otherdom doing this? Esp. since otherdom isn't a new object!
+#        $otherdom->_build_coords; 
+
+    
+       # Reverse transform. After this, superpositioning $selfdom onto $otherdom
+       # should align crosshairs
+       $sup->inverse->apply($selfdom);
+
+       # need to do this still? Should be identity anyway, nearly
+       $selfdom->transformation->clear_matrix;
+       # TODO Test here:
+
+    return $selfdom;
+} # _setcrosshairs
+
 
 sub superposition_frame {
    my ($self,$other) = @_;
@@ -820,22 +873,21 @@ sub superposition_frame {
 
    return wantarray ? ($avgmat, $rmsd, $sc, $sups) : $avgmat;
 
-} # 
+} # superposition_frame
 
 
 
 ################################################################################
 =head2 merge
 
- Function: 
+ Function: Combines all of the domains in this complex into a single domain
  Example : 
  Returns : 
  Args    : 
 
+TODO put in a DomainSetI
 
 =cut
-
-# TODO put in a DomainSetI
 use SBG::DomainIO::pdb;
 use Module::Load;
 sub merge {
@@ -926,9 +978,8 @@ sub _mkmodel {
     # Now copy construct into the desired type
     my $type = $self->objtype;        
 
-    # TODO DEL testing if this solves the missing radius issue
-#     my $cdom = $type->new(%$clone);
-    # Yes, cofm is required to setup the radius here
+    # NB it is not sufficient to just do $type->new(%$clone) because cofm is
+    # required to setup the radius.
     my $cdom = cofm($clone);
 
     my $model = new SBG::Model(

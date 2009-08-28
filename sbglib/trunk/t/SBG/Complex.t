@@ -98,7 +98,7 @@ $iaction->set('RRP46', $mrrp46a);
 $complex->add_interaction($iaction, @{$iaction->keys});
 my $got_iaction = $complex->interactions->values->head;
 is_deeply($got_iaction, $iaction, "add_interaction: $iaction");
-# rasmol($complex->domains) if $DEBUG;
+rasmol($complex->domains) if $DEBUG;
 
 
 # First check overlap independently
@@ -117,7 +117,7 @@ $iaction->set('RRP45', $mrrp45d);
 ok($complex->add_interaction($iaction, 'RRP46', 'RRP45'),
    "Add 2nd Interaction");
 is($complex->count, 3, "Got 3rd domain from 2nd interaction");
-# rasmol($complex->domains) if $DEBUG;
+rasmol($complex->domains) if $DEBUG;
 
 
 # Use Interaction templates requiring a non-identity transformation
@@ -128,7 +128,7 @@ $iaction->set('RRP41', $mrrp41a);
 ok($complex->add_interaction($iaction, 'RRP45', 'RRP41'),
    "Add 3rd Interaction");
 is($complex->count, 4, "Got 4th domain from 3rd interaction");
-# rasmol($complex->domains) if $DEBUG;
+rasmol($complex->domains) if $DEBUG;
 
 
 # Test chaining of transformations (verfies matrix multiplication)
@@ -139,7 +139,7 @@ $iaction->set('RRP42', $mrrp42d);
 ok($complex->add_interaction($iaction, 'RRP41', 'RRP42'),
    "Add 4th Interaction");
 is($complex->count, 5, "Got 5th domain from 4th interaction");
-# rasmol($complex->domains) if $DEBUG;
+rasmol($complex->domains) if $DEBUG;
 
 
 # Verify ring closure doesn't create unacceptable clashes
@@ -150,7 +150,7 @@ $iaction->set('MTR3', $mmtr3a);
 ok($complex->add_interaction($iaction, 'RRP42', 'MTR3'),
    "Add 5th Interaction");
 is($complex->count, 6, "Got 6th domain from 5th interaction");
-# rasmol($complex->domains) if $DEBUG;
+rasmol($complex->domains) if $DEBUG;
 
 
 # Load Complex from a PDB, for benchmarking
@@ -179,11 +179,19 @@ float_is($coverage, 1.00, "coverage: $coverage", 0.01);
 
 
 
+
+
+
+
+
+
+
+
 ################################################################################
 
 
 # Test RMSD of crosshairs of (matching) components of complexes
-# First mistake: assuming Domain::Sphere implementation
+# TODO BUG assuming Domain::Sphere implementation
 
 use SBG::DomainIO::cofm;
 use SBG::DomainIO::pdbcofm;
@@ -211,28 +219,35 @@ $iocofm->write(@mdoms, @tdoms);
 # $transmat = $true_complex->superposition_frame_cofm($complex);
 # $transmat = $true_complex->superposition_frame_cofm2($complex);
 
-
 # Looks like this is commutative too!
 # $transmat = $true_complex->superposition_frame_cofm3($complex);
-$transmat = $complex->superposition_frame_cofm3($true_complex);
+# $transmat = $complex->superposition_frame_cofm3($true_complex);
+
+($transmat, $rmsd) = $complex->superposition_points($true_complex);
+print $transmat;
+print "RMSD: $rmsd\n";
+
+# rasmol($complex->domains, $true_complex->domains) if $DEBUG;
 
 # Now crosshairs have the proper orientation
 
 # Uses RMSD on crosshairs (neither of these work)
+# This will never work, because crosshairs have to have reference frame 1st
 # ($rmsd, $transmat) = $complex->rmsd($true_complex);
 # ($rmsd) = $complex->rmsd($true_complex);
 # ($rmsd, $transmat) = $true_complex->rmsd($complex);
 
-# Make to to transform the right one, based on computed superposition
+# Make sure to transform the right one, based on computed superposition
 # $true_complex->transform($transmat);
 $complex->transform($transmat);
 
 # Wow, there's one function that's actually commutative. Both work!
-# $rmsd = $true_complex->rmsdonly($complex);
-$rmsd = $complex->rmsdonly($true_complex);
-
-print "RMSD: $rmsd\n";
+# $rmsd = $true_complex->rmsd($complex);
+# $rmsd = $complex->rmsd($true_complex);
+# print "RMSD: $rmsd\n";
 # float_is($rmsd, 0, "RMSD of complex crosshairs", 0.1);
+
+rasmol($complex->domains, $true_complex->domains) if $DEBUG;
 
 
 $iocofm = new SBG::DomainIO::cofm(tempfile=>1);
@@ -246,14 +261,6 @@ ok(0);
 
 
 
-
-
-
-
-
-
-
-
 __END__
 
 
@@ -263,26 +270,6 @@ float_is($rmsd, 1.6, "mean rmsd over components: $rmsd", 0.1);
 
 $complex->transform($avgmat);
 rasmol [@{$complex->domains}, @{$true_complex->domains} ] if $DEBUG;
-
-
-SKIP: {
-
-skip "Skipping external STAMP of whole complexes";
-
-# Merge complexes into single domain (PDB file)
-my $d = $complex->merge;
-my $t = $true_complex->merge;
-
-# Superpose as single chains with STAMP
-my $sup = SBG::STAMP::superposition($d, $t, '-slide 25');
-# float_is($sup->RMS, 1.6, "RMSD of (sub)complexes as single chain", 0.1);
-
-# Transform and print output
-$sup->apply($d);
-rasmol [$d, $t];
-
-}
-
 
 
 
