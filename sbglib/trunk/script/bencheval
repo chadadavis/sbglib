@@ -181,7 +181,7 @@ sub evaltarget {
     # Output for all models on this target
     my $file = "html/${tbase}.html";
     open my $fh, ">$file";
-    print STDERR "$file\n";
+
     print $fh start_html($tbase);
     print $fh h2(rcsb("Target $tbase")), "\n";
     print $fh start_table({-border=>'1'});
@@ -251,7 +251,12 @@ sub evalmodel {
     my @keys = qw/target superpos dom rmsd cover msize tsize glob nres medsc avgsc seqids/;
     print $fh Tr(th([ @keys ]));
 
-    my %ev = (modelstats($target, $model), modellinks($mbase));
+    my %ev = (base=>$mbase);
+    modelstats(\%ev, $target, $model);
+    modellinks(\%ev);
+    modeloutputs(\%ev, $target, $model);
+
+
     my @seqids = @{$ev{'seqids'}};
 
     # skip if seqid thresh not met
@@ -274,61 +279,68 @@ sub evalmodel {
 
 
 sub modellinks {
-    my ($mbase) = @_;
-    my %ev;
+    my ($ev) = @_;
  
-    my ($tpdb, $tid, undef, $mid) = split '-', $mbase;
-    $ev{'target'} = rcsb($tpdb . '-' . $tid);
-    $ev{'model'} = a({-href=>"${mbase}.html"}, $mid);
-    $ev{'dom'} = a({-href=>"../dom/${mbase}.dom"}, 'dom');
-    $ev{'superpos'} = a({-href=>"../pdb/${mbase}.pdb"}, 'superpos');
-
-    return %ev;
+    my $base = $ev->{base};
+    my ($tpdb, $tid, undef, $mid) = split '-', $base;
+    $ev->{'target'} = rcsb($tpdb . '-' . $tid);
+    $ev->{'model'} = a({-href=>"${base}.html"}, $mid);
+    $ev->{'dom'} = a({-href=>"../dom/${base}.dom"}, 'dom');
+    $ev->{'superpos'} = a({-href=>"../pdb/${base}.pdb"}, 'superpos');
 }
+
 
 ################################################################################
 sub modelstats {
-    my ($target, $model) = @_;
-    my %ev;
-    $ev{'rmsd'} = sprintf "%.1f", modelrmsd($target, $model);
-    $ev{'cover'} = sprintf "%6.2f", 100.0 * $model->count / $target->count;
-    $ev{'msize'} = $model->count;
-    $ev{'tsize'} = $target->count;
-    $ev{'glob'} = sprintf "%6.2f", $model->globularity;
-    $ev{'nres'} = $model->domains->map(sub {$_->length})->sum;
+    my ($ev, $target, $model) = @_;
+
+#     my ($rmsd, $trans) = modelrmsd($target, $model);
+    my ($rmsd, $trans) = modelrmsd($model, $target);
+
+    $ev->{'rmsd'} = sprintf "%.1f", $rmsd;
+    $ev->{'trans'} = $trans;
+    $ev->{'cover'} = sprintf "%6.2f", 100.0 * $model->count / $target->count;
+    $ev->{'msize'} = $model->count;
+    $ev->{'tsize'} = $target->count;
+    $ev->{'glob'} = sprintf "%6.2f", $model->globularity;
+    $ev->{'nres'} = $model->domains->map(sub {$_->length})->sum;
 
     my $scs = $model->superpositions->values->map(sub{$_->scores->at('Sc')});
 
-    $ev{'medsc'} = sprintf "%.2f", $scs->median;
-    $ev{'avgsc'} = sprintf "%.2f", $scs->avg;
-    $ev{'sumsc'} = sprintf "%.2f", $scs->sum;
-    $ev{'minsc'} = sprintf "%.2f", $scs->min;
-    $ev{'maxsc'} = sprintf "%.2f", $scs->max;
+    $ev->{'medsc'} = sprintf "%.2f", $scs->median;
+    $ev->{'avgsc'} = sprintf "%.2f", $scs->avg;
+    $ev->{'sumsc'} = sprintf "%.2f", $scs->sum;
+    $ev->{'minsc'} = sprintf "%.2f", $scs->min;
+    $ev->{'maxsc'} = sprintf "%.2f", $scs->max;
 
     my $iactions = $model->interactions->values;
     my $models = $iactions->map(sub{ flatten $_->models->values });
     my $seqids = $models->map(sub{$_->scores->at('seqid')});
     $seqids = $seqids->map(sub{ isalpha($_) ? 0 : sprintf("%d",$_) });
     my @seqids = sort { $a <=> $b } @$seqids;
-    $ev{'seqids'} = [ shift(@seqids), pop(@seqids) ];
+    $ev->{'seqids'} = [ shift(@seqids), pop(@seqids) ];
 
 # TODO
 #     * avg clash %
 
-    return %ev;
 }
 
 
 ################################################################################
 
 sub modelrmsd {
-    my ($target, $model) = @_;
+    my ($model, $target) = @_;
 
-    my $transmat = $model->superposition_frame_cofm3($target);
+# TODO which superposition
+#     my $transmat = $model->superposition_frame_cofm3($target);
+    my ($transmat, $rmsd) = $model->superposition_points($target);
+
     # Now crosshairs have the proper orientation
-    $model->transform($transmat);
-    my $rmsd = $model->rmsdonly($target);
-    return $rmsd;
+#     $model->transform($transmat);
+
+    # TODO BUG this doesn't give the same answer as the above $rmsd
+#     my $rmsd = $model->rmsd($target);
+    return wantarray ? ($rmsd, $transmat) : $rmsd;
 }
 
 
@@ -403,7 +415,7 @@ sub _print_html {
     }
 
     print end_html;
-}
+} # _print_html
 
 
 sub _load_eval {
@@ -425,11 +437,11 @@ sub _load_eval {
     $ev = _eval_one($modelfile, $minsize);
     if (! -s $evalfile) {
         $ev->store($evalfile);
-        warn "evalfile written\n";
+        print STDERR "evalfile written\n";
     }
     unlink $lock;
     return $ev;
-}
+} # _load_eval
 
 
 sub _eval_one {
@@ -474,7 +486,7 @@ sub _eval_one {
     # Mean RMSD of componentwise superposition
 #     $obs{rmsd} = $urmsd;
     # RMSD of crosshairs
-    $obs{rmsd} = $target->rmsdonly($model);
+    $obs{rmsd} = $target->rmsd($model);
 
     # Now that they're in one coordinate frame, get component-wise overlaps
     # TODO divide by 0 erorr
@@ -494,7 +506,7 @@ sub _eval_one {
 #     return new SBG::Eval(%obs);
 
 
-}
+} # _eval_one
 
 
 # STill want to save: mbase tbase targetfile modelfile 
@@ -532,6 +544,37 @@ sub _outputs {
 }
 
 
+sub modeloutputs {
+    my ($ev, $target, $model) = @_;
+
+    my $mbase = $ev->{base};
+    my $pdbfile = "pdb/${mbase}.pdb";
+    my $domfile = "dom/${mbase}.dom";
+    my $ppmfile = "ppm/${mbase}.ppm";
+    my @files = ($pdbfile, $domfile, $ppmfile);
+    my @locks = map { "$_.lock" } @files;
+    my $alldone = 1;
+    foreach (@files) {
+        unless (-e $_ || -e "$_.lock") { $alldone = 0 }
+    }
+    return if $alldone;
+
+    my $transmat = $ev->{trans};
+
+    # transform ...
+    $model->transform($transmat);
+
+    _domfile($domfile, $model, $target);
+    _pdbfile($pdbfile, $model, $target);
+#     _ppmfile($mbase, $model, $target);
+
+# TODO needed here?
+    # Put the target back where it came from
+    # TODO wouldnt be necessary if transforming the model would work ...
+#     $target->transform($avgmat->inv);
+
+} # modeloutput
+
 
 sub _domfile {
     my ($domfile, $model, $target) = @_;
@@ -549,7 +592,7 @@ sub _domfile {
     # Rewrite model file in target's frame of reference, for convenience later
     my $domio = new SBG::DomainIO::stamp(file=>">$domfile");
     $domio->write(@{$target->domains}, @{$model->domains});
-    warn "$domfile written\n";
+#     print STDERR "$domfile written\n";
     unlink $lock;
 }
 
@@ -573,7 +616,7 @@ sub _pdbfile {
     # Rewrite model file in target's frame of reference, for convenience later
     my $pdbio = new SBG::DomainIO::pdb(file=>">$pdbfile");
     $pdbio->write($targetasdom, $modelasdom);
-    warn "$pdbfile written\n";
+    print STDERR "$pdbfile written\n";
     unlink $lock;
 }
 
