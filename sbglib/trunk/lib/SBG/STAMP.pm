@@ -194,7 +194,28 @@ sub superposition {
 } # superposition
 
 
+################################################################################
+=head2 _cache_init
 
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
+
+
+=cut
+sub _cache_init {
+
+    our $cache;
+    unless (defined $cache) {
+        my $cachedir = 
+            ($ENV{CACHEDIR} || $ENV{TMPDIR} || '/tmp') . '/sbgsuperposition';
+        $cache = new Cache::File(cache_root => $cachedir);
+        log()->trace($cachedir);
+    }
+    return $cache;
+
+} # _cache_init
 
 
 ################################################################################
@@ -211,12 +232,8 @@ Cache claims to even work between concurrent processes!
 sub _cache_get {
     my ($from, $to) = @_;
 
-    our $cache;
-    unless (defined $cache) {
-        my $cachedir = 
-            ($ENV{CACHEDIR} || $ENV{TMPDIR} || '/tmp') . '/sbgsuperposition';
-        $cache = new Cache::File(cache_root => $cachedir);
-    }
+    my $cache = _cache_init();
+
     my $key = "${from}--${to}";
     my $entry = $cache->entry($key);
 
@@ -249,12 +266,7 @@ Cache claims to even work between concurrent processes!
 sub _cache_set {
     my ($from, $to, $data) = @_;
 
-    log()->trace($data);
-
-    our $cache;
-    $cache ||= new Cache::File(
-        cache_root => 
-        ($ENV{CACHEDIR} || $ENV{TMPDIR} || '/tmp') . '/sbgsuperposition');
+    my $cache = _cache_init();
 
     # Also cache the inverse superposition
     my $key = "${from}--${to}";
@@ -271,6 +283,7 @@ sub _cache_set {
     } else {
         $idata = $data->inverse;
         log()->trace("Cache write (positive) $key and $ikey");
+        log()->trace($data);
     }
 
     $entry->freeze($data);
