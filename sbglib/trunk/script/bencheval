@@ -77,6 +77,7 @@ my %ops;
 my $result = GetOptions(\%ops,
                         'help|h',
                         'log|l=s',   # log level
+                        'logfile=s',   # log level
                         'debug|d',   # print stack trace when die
                         'output|o',  # html or csv
                         'size|s=s',  # minimum N (or N%) components per model
@@ -91,7 +92,7 @@ my $result = GetOptions(\%ops,
 
 
 if ($ops{'help'}) { pod2usage(-exitval=>1, -verbose=>2); }
-SBG::U::Log::init($ops{'log'}) if $ops{'log'};
+
 $SIG{__DIE__} = \&confess if $ops{'debug'};
 $ops{'size'} = '100%' if $ops{'complete'};
 
@@ -111,6 +112,12 @@ my @allkeys = qw/target model msize rmsd medsc seqids superpos/;
 
 # First file is the target/benchmark/true complex
 my $targetfile = shift or pod2usage(-exitval=>1);
+
+my $basename = basename($targetfile,'.stor');
+$ops{'logfile'} ||= "bench-${basename}.log";
+SBG::U::Log::init($ops{'log'}, $ops{'logfile'}) if $ops{'log'};
+
+
 # Eval all other files as models, against target
 my ($best, $all) = evaltarget(\%ops, $targetfile, @ARGV);
 

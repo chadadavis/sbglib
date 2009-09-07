@@ -88,7 +88,7 @@ foreach my $file (@files) {
 
     my $basename = basename($file,'.stor');
     my $donefile = "${basename}.done";
-    $ops{'f'} ||= "${basename}.log";
+    $ops{'f'} ||= "assemble-${basename}.log";
     SBG::U::Log::init($ops{'l'}, $ops{'f'}) if $ops{'l'};
     
 

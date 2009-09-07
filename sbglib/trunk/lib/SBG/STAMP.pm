@@ -208,9 +208,14 @@ sub _cache_init {
 
     our $cache;
     unless (defined $cache) {
-        my $cachedir = 
-            ($ENV{CACHEDIR} || $ENV{TMPDIR} || '/tmp') . '/sbgsuperposition';
-        $cache = new Cache::File(cache_root => $cachedir);
+        my $arch = `uname -m`;
+        chomp $arch;
+        my $base = $ENV{CACHEDIR} || $ENV{TMPDIR} || '/tmp';
+        my $cachedir = "${base}/sbgsuperposition_${arch}";
+        $cache = new Cache::File(
+            cache_root => $cachedir,
+            lock_level => Cache::File::LOCK_NFS(),
+            );
         log()->trace($cachedir);
     }
     return $cache;
