@@ -51,6 +51,7 @@ use warnings;
 use Pod::Usage;
 use Getopt::Long;
 use File::Basename;
+use File::Spec qw/rel2abs/;
 use POSIX; # qw/ceil/;
 use Carp;
 use CGI qw/:standard *table/;
@@ -138,7 +139,7 @@ exit;
 sub openidxhtml {
     my (@keys) = @_;
     my $file = "html/index.html";
-    my $lock = wlock($file, 60);
+    my $lock = wlock($file, 60) or return;
     if (-s $file) {
         open my $fh, ">>$file";
         return wantarray ? ($fh, $lock) : $fh;
@@ -156,7 +157,7 @@ sub openidxhtml {
 sub openallhtml {
     my (@keys) = @_;
     my $file = "html/all.html";
-    my $lock = wlock($file, 60);
+    my $lock = wlock($file, 60) or return;
     if (-s $file) {
         open my $fh, ">>$file";
         return wantarray ? ($fh, $lock) : $fh;
@@ -200,8 +201,10 @@ sub evaltarget {
 
     my $evmodels = [];
 
+    my $lock = wlock('rmsdcorr.csv', 100) or return;
     open my $rmsdfh, ">>rmsdcorr.csv";
     print $rmsdfh "#target\tmodel\trmsd\tavgsc\tmedsc\tsumsc\tminsc\tmaxsc\n";
+    unlink $lock;
 
     foreach my $modelfile (@modelfiles) { 
         my %ev = evalmodel($ops, $target, $modelfile) or next;
@@ -213,10 +216,11 @@ sub evaltarget {
         $evmodels->push({%ev});
 
         my @fields = map { $ev{$_} } qw/rmsd avgsc medsc sumsc minsc maxsc/;
-        my $lock = wlock('rmsdcorr.csv', 1);
+        $lock = wlock('rmsdcorr.csv', 100) or next;
+
         if ($lock) {
-        print $rmsdfh 
-            join("\t",$tbase,basename($modelfile,'.stor'), @fields), "\n";
+            print $rmsdfh 
+                join("\t",$tbase,basename($modelfile,'.stor'), @fields), "\n";
         }
         unlink $lock;
 
@@ -442,11 +446,7 @@ sub _load_eval {
     }
 
     # Being computed by another process?
-    my $lock = wlock($evalfile, 1);
-    unless ($lock) {
-        print STDERR "$evalfile : locked\n";
-        return;
-    }
+    my $lock = wlock($evalfile, 1) or return;
 
     $ev = _eval_one($modelfile, $minsize);
     if (! -s $evalfile) {
@@ -597,11 +597,8 @@ sub _domfile {
 #         print STDERR "$domfile already done\n";
         return;
     }
-    my $lock = wlock($domfile, 1);
-    unless ($lock) {
-        print STDERR "$domfile : locked\n";
-        return;
-    }
+    my $lock = wlock($domfile, 1) or return;
+
 
     # Rewrite model file in target's frame of reference, for convenience later
     my $domio = new SBG::DomainIO::stamp(file=>">$domfile");
@@ -618,11 +615,7 @@ sub _pdbfile {
 #         print STDERR "$pdbfile already done\n";
         return;
     }
-    my $lock = wlock($pdbfile, 1);
-    unless ($lock) {
-        print STDERR "$pdbfile : locked\n";
-        return;
-    }
+    my $lock = wlock($pdbfile, 1) or return;
 
     my $targetasdom = $target->merge;
     my $modelasdom = $model->merge;
@@ -645,11 +638,7 @@ sub _ppmfile {
 #         print STDERR "$ppmfile already done\n";
         return;
     }
-    my $lock = wlock($ppmfile, 1);
-    unless ($lock) {
-        print STDERR "$pdbfile : locked\n";
-        return;
-    }
+    my $lock = wlock($ppmfile, 1) or return;
 
     pdb2img(pdb=>$pdbfile, img=>$ppmfile);
 #     print "$ppmfile written\n";
@@ -741,15 +730,20 @@ sub _superposition_scores {
 
 
 sub wlock {
-    my $file = shift or return;
-    my $attempts = shift || 5;
+    my ($file, $requested) = @_;
+    return unless $file;
+    my $attempts = $requested || 5;
     my $lock = "${file}.lock";
     until (symlink("$ENV{HOSTNAME}-$$", $lock)){
         $attempts--;
-        return unless $attempts > 0;
+        unless ($attempts > 0) {
+            print STDERR "Failed to lock $file after $requested attempts\n";
+            return;
+        }
+
         sleep 1 + int rand(5);
-        my $full = rel2abs($lock);
-        print "Waiting for lock: $full ($attempts)\n";
+        my $full = File::Spec->rel2abs($lock);
+#         print "Waiting for lock: $full ($attempts)\n";
     }
     return $lock;
 } # wlock
