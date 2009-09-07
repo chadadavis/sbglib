@@ -253,7 +253,8 @@ sub _cache_set {
 
     our $cache;
     $cache ||= new Cache::File(
-        cache_root => ($ENV{TMPDIR} || '/tmp') . '/sbgsuperposition');
+        cache_root => 
+        ($ENV{CACHEDIR} || $ENV{TMPDIR} || '/tmp') . '/sbgsuperposition');
 
     # Also cache the inverse superposition
     my $key = "${from}--${to}";
