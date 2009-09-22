@@ -14,12 +14,17 @@ Only does pairwise superpositions at the moment.
 
 The B<stamp> binary must exist in you B<PATH>.
 
+NB this should not be /g/russell1/lbin/stamp
+
+See http://www.russell.embl.de/private/wiki/index.php/STAMP#Bugs
+
 Additionally STAMP requires the variable B<STAMPDIR> to be set to its B<defs>
 subdirectory, where it stores its data files. This might look something like
-this in most cases:
+this:
 
  export STAMPDIR=/usr/local/stamp.4.3/defs
  export PATH=$PATH:$STAMPDIR/../bin/linux
+
 
 
 =head1 SEE ALSO
@@ -58,7 +63,7 @@ use SBG::U::Log qw/log/;
 
 
 ################################################################################
-=head2 superposition
+=head2 superposition_native
 
  Function: Calculates superposition required to put $fromdom onto $ontodom
  Example :
@@ -69,13 +74,10 @@ use SBG::U::Log qw/log/;
 
 Does not modify/transform B<$fromdom>
 
+This superposition considers only the original locations of the domains, based
+on looking up the original PDB structure. Any transformations in the domain are
+ignored. For that, see L<SBG::STAMP::superposition>.
 
-# TODO DOC update this and these assumptions
-The L<SBG::Transformation> contained in the L<SBG::Superposition> object returned is relative. I.e. it is not a cumulative transformation from the native B<$fromdom> to your B<$todom>, rather it is the transformation to the B<native> <$todom>. I.e. if your B<$from> already has a transformation, this will be relative  
-
-If a L<SBG::DomainI> already has a non-identity L<SBG::TransformI>, it will also
-be considered here. The Superposition returned contains a transformation that is
-relative to any transformation already existing in B<fromdom>
 
 =cut
 sub superposition_native {
@@ -168,6 +170,8 @@ sub superposition_native {
  Returns : 
  Args    : 
 
+This will produce a superposition that considers any existing transformations in
+the given domains.
 
 =cut
 sub superposition {

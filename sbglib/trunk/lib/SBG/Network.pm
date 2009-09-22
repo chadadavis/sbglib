@@ -54,6 +54,9 @@ use overload (
  Returns : 
  Args    : 
 
+
+NB Need to override new() as Bio::Network::ProteinNet is not of Moose
+
 Normally the refvertexed=>1 option should be used to store objects at the graph
 nodes.
 
