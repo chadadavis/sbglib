@@ -58,7 +58,8 @@ requires 'Text::ParseWords' => '0';
 # requires_external_bin 'dot';
 
 # Automagically install above deps from CPAN
-auto_install(force=>1);
+#auto_install(force=>1);
+auto_install();
 
 # Test all *.t files, two levels deep
 WriteMakefile(test => {TESTS => 't/*.t t/*/*.t t/*/*/*.t'});
