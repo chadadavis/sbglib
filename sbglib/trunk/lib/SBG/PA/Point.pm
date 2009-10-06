@@ -6,7 +6,7 @@ Point -
 
 =head1 SYNOPSIS
 
-use Point
+use SBG::PA::Point
 
 =head1 DESCRIPTION
 

@@ -6,7 +6,7 @@ PA - Peptide assembler callbacks
 
 =head1 SYNOPSIS
 
-use PA;
+use SBG::PA::Assembler
 
 =head1 DESCRIPTION
 
