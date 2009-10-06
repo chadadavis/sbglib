@@ -45,7 +45,11 @@ use SBG::Domain::Sphere;
 use SBG::DomainIO::stamp;
 
 use SBG::U::Log qw/log/;
-use SBG::U::Config qw/config/;
+
+
+# TODO DES OO
+# cofm binary (should be in PATH)
+our $cofm = 'cofm';
 
 
 ################################################################################
@@ -141,7 +145,7 @@ sub _run {
     $io->close;
 
     # NB the -v option is necessary if you want the filename of the PDB file
-    my $cofm = config()->val(qw/cofm executable/) || 'cofm';
+    our $cofm;
     my $cmd = "$cofm -f $path -v |";
     my $cofmfh;
     unless (open $cofmfh, $cmd) {

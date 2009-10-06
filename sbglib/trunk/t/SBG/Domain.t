@@ -1,13 +1,14 @@
 #!/usr/bin/env perl
 
+# use strict;
 use warnings;
+
 use Test::More 'no_plan';
 use SBG::Domain;
 use SBG::Types;
 use Data::Dump qw/dump/;
 
 use Moose::Autobox;
-
 
 $d = new_ok('SBG::Domain');
 

@@ -31,7 +31,6 @@ use Moose;
 use Moose::Autobox;
 
 use SBG::U::Log qw/log/;
-use SBG::U::Config qw/config/;
 use SBG::STAMP qw/superposition/;
 use SBG::GeometricHash;
 

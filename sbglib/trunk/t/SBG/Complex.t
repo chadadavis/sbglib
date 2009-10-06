@@ -27,7 +27,7 @@ use SBG::U::List qw/flatten/;
 use SBG::Run::rasmol;
 
 my $DEBUG;
-$DEBUG = 1;
+# $DEBUG = 1;
 log()->init('TRACE') if $DEBUG;
 $File::Temp::KEEP_ALL = $DEBUG;
 
@@ -224,8 +224,8 @@ $iocofm->write(@mdoms, @tdoms);
 # $transmat = $complex->superposition_frame_cofm3($true_complex);
 
 ($transmat, $rmsd) = $complex->superposition_points($true_complex);
-print $transmat;
-print "RMSD: $rmsd\n";
+print $transmat if $DEBUG;
+print "RMSD: $rmsd\n" if $DEBUG;
 
 # rasmol($complex->domains, $true_complex->domains) if $DEBUG;
 

@@ -31,7 +31,6 @@ use IO::File;
 use Module::Load;
 
 use SBG::U::Log qw/log/;
-use SBG::U::Config qw/config/;
 
 
 ################################################################################
@@ -260,8 +259,7 @@ sub _string {
 sub _tempfile {
     my ($self,) = @_;
 
-    my $tmpdir = config->val(qw/tmp tmpdir/) || $ENV{TMPDIR} || '/tmp';
-    my ($tfh, $tpath) = tempfile('sbg_XXXXX', DIR=>$tmpdir);
+    my ($tfh, $tpath) = tempfile('sbg_XXXXX', TMPDIR=>1);
     # Silly to re-open this, but $self->file() opens it anyway
     $tfh->close();
     $self->file('>' . $tpath);

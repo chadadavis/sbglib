@@ -30,9 +30,14 @@ use warnings;
 use File::Temp qw(tempfile tempdir);
 
 use SBG::U::Log qw/log/;
-use SBG::U::Config qw/config/;
 use SBG::DomainIO::pdb;
 use SBG::U::List qw/flatten/;
+
+# TODO DES OO
+# rasmol binary for viewing (e.g. 'rasmol' or 'rasmol-gtk')
+our $rasmol_gui = 'rasmol-gtk';
+# rasmol binary for converting (e.g. 'rasmol' or 'rasmol-classic')
+our $rasmol_converter = 'rasmol';
 
 
 ################################################################################
@@ -51,10 +56,10 @@ sub rasmol {
     my (@doms) = @_;
     @doms = SBG::U::List::flatten(@doms);
 
-    my $rasmol = config()->val(qw/rasmol executable/) || 'rasmol';
+    our $rasmol_gui;
     my $io = new SBG::DomainIO::pdb(tempfile=>1);
     $io->write(@doms);
-    my $cmd = "$rasmol " . $io->file;
+    my $cmd = "$rasmol_gui " . $io->file;
     system("$cmd 2>/dev/null") == 0 or
         log()->error("Failed: $cmd\n\t$!");
 
@@ -75,7 +80,7 @@ sub rasmol {
           img
 
 NB This does not seem to work with rasmol-gtk.  Use rasmol-classic, or just
-rasmol. Set this in the C<config.ini>
+rasmol (if that is equivalent to rasmol-classic on your system). 
 
 Example script, highlight contacts with chain A:
 
@@ -91,9 +96,9 @@ sub pdb2img {
     $o{mode} ||= 'cartoon';
 
     log()->trace("$o{pdb} => $o{img}");
-    my $rasmol = config()->val(qw/rasmol classic/) || 'rasmol';
+    our $rasmol_converter;
     my $fh;
-    my $cmd = "$rasmol -nodisplay >/dev/null 2>/dev/null";
+    my $cmd = "$rasmol_converter -nodisplay >/dev/null 2>/dev/null";
     log()->trace($cmd);
     unless(open $fh, "| $cmd") {
         log()->error("Failed: $cmd\n\t$!");
@@ -115,7 +120,7 @@ HERE
     # Need to explicitly close before checking for output file
     close $fh;
     unless (-s "$o{img}") {
-        log()->error("Rasmol failed to write: $o{img}\n\t$!");
+        log()->error("$rasmol_converter failed to write: $o{img}\n\t$!");
         return;
     }
     return $o{img};

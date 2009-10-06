@@ -57,9 +57,36 @@ use SBG::DomainIO::stamp;
 use SBG::Superposition;
 use SBG::Domain::Sphere;
 use SBG::Run::cofm qw/cofm/;
-
-use SBG::U::Config qw/config/;
 use SBG::U::Log qw/log/;
+
+
+# TODO DES need to be set in a Run object
+
+# STAMP binary (add full path, unless present in shell's PATH)
+# our $stamp = '/g/russell1/lbin/stamp';
+# our $stamp = '/usr/local/stamp.4.3/bin/stamp';
+# our $stamp = '/usr/local/stamp.4.4/bin/linux/stamp';
+our $stamp = 'stamp';
+# Number of trails to run
+our $nfit = 2;
+# query slides every N AAs along DB sequence
+our $slide = 5;
+# Number of fits (residues?) to accept
+our $minfit = 30;
+# Min Sc value to accept
+our $scancut = 2.0;
+# Additional parameter string
+our $parameters = 
+    join(' ',
+         "-s",           # scan mode: only query compared to each DB sequence
+         "-secscreen F", # Do not perform initial secondary structure screen
+         "-opd",         # one-per-domain: just one hit per query domain
+         "-n $nfit",
+         "-slide $slide",
+         "-minfit $minfit",
+         "-scancut $scancut", 
+    );
+our $cmd = "$stamp $parameters";
 
 
 ################################################################################
@@ -82,6 +109,8 @@ ignored. For that, see L<SBG::STAMP::superposition>.
 =cut
 sub superposition_native {
     my ($fromdom, $ontodom, $ops, $nocache) = @_;
+    our $minfit;
+    our $scancut;
 
     if ($fromdom == $ontodom) {
         log()->trace("Identity: $fromdom");
@@ -97,9 +126,7 @@ sub superposition_native {
         return $superpos;
     }
 
-    our $basecmd;
-    $basecmd ||= _config();
-    my ($fullcmd, $prefix) = _setup_input($basecmd, $ontodom, $fromdom);
+    my ($fullcmd, $prefix) = _setup_input($cmd, $ontodom, $fromdom);
     my $scanfile = "${prefix}.scan";
     $fullcmd .= " $ops" if $ops;
     log()->trace("\n$fullcmd");
@@ -112,11 +139,6 @@ sub superposition_native {
         return;
     }
 
-    # TODO DES need to be set in a Run object
-    # Number of fits (residues?) that were performed
-    my $minfit = config()->val('stamp', 'minfit') || 30;
-    # Min Sc value to accept
-    my $scancut = config()->val('stamp', 'scancut') || 2.0;
     
     while (my $read = <$fh>) {
         # Save only the fields, all separated by spaces
@@ -291,14 +313,16 @@ sub _cache_set {
         log()->trace("Cache write (negative) $key and $ikey");
     } else {
         $idata = $data->inverse;
-        log()->trace("Cache write (positive) $key and $ikey");
+        log()->trace("Cache write (positive) $key (forward)");
         log()->trace($data);
+        log()->trace("Cache write (positive) $ikey (reverse)");
+        log()->trace($idata);
     }
 
     $entry->freeze($data);
     $ientry->freeze($idata);
     # Verification;
-    return $entry->exists;
+    return $entry->exists && $ientry->exists;
 
 } # _cache_set
 
@@ -389,39 +413,6 @@ sub _setup_input {
 
     return ($fullcmd, $prefix)
 } # _setup_input
-
-
-# Default parameters for stamp
-sub _config {
-
-    # Get config setttings
-    my $stamp = config()->val('stamp', 'executable') || 'stamp';
-    # Number of fits (residues?) that were performed
-    my $minfit = config()->val('stamp', 'minfit') || 30;
-    # Min Sc value to accept
-    my $scancut = config()->val('stamp', 'scancut') || 2.0;
-    # Number of fits
-    my $nfit = config()->val('stamp', 'nfit') || 2;
-    # query slides every 5 AAs along DB sequence
-    my $slide = config()->val('stamp', 'slide') || 5;
-
-    my $stamp_pars = config()->val('stamp', 'params') || join(' ',
-        '-s',           # scan mode: only query compared to each DB sequence
-        '-secscreen F', # Do not perform initial secondary structure screen
-        '-opd',         # one-per-domain: just one hit per query domain
-        );
-
-    $stamp_pars .= join(' ', ' ',
-                        "-n $nfit",     
-                        "-slide $slide",
-                        "-minfit $minfit",
-                        "-scancut $scancut", 
-        );
-
-    my $com = "$stamp $stamp_pars";
-
-    return $com;
-} # _config
 
 
 ################################################################################

@@ -23,8 +23,6 @@ float_is($res->{'Cy'}, $ty, 'Cy', $prec);
 float_is($res->{'Cz'}, $tz, 'Cz', $prec);
 float_is($res->{'Rg'}, $trg,'Rg', $prec);
 float_is($res->{'Rmax'}, $trmax, 'Rmax',$prec);
-is($res->{'descriptor'}, 'CHAIN A', 'descriptor');
-ok($res->{'file'}, "File: " . $res->{'file'});
 
 
 

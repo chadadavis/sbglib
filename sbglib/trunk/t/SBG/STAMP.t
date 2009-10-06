@@ -29,7 +29,7 @@ $File::Temp::KEEP_ALL = $DEBUG;
 
 
 # Tolerate rounding differences between stamp (using clib) and PDL
-my $toler = 0.25;
+my $toler = 0.5;
 
 
 # One hexameric ring of 2br2: CHAINS ADCFEB 
