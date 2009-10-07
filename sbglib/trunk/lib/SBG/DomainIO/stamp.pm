@@ -207,7 +207,8 @@ sub read {
         my ($file, $pdbid, $descr) = ($1, $2, $3);
         ($pdbid) = $pdbid =~ /^($re_pdb)/;
         # Get only the params that are defined
-        my $params = {pdbid=>$pdbid, descriptor=>$descr, file=>$file};
+        my $params = {pdbid=>$pdbid, descriptor=>$descr};
+        $params->{file} = $file if $file;
         my $exists = $params->keys->grep(sub{defined $params->{$_}});
         $params = $params->hslice($exists);
 
