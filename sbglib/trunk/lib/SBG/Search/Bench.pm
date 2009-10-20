@@ -2,18 +2,17 @@
 
 =head1 NAME
 
-SBG::SCOPSearch - 
+SBG::Search::Bench - 
 
 =head1 SYNOPSIS
 
- use SBG::SCOPSearch;
 
 =head1 DESCRIPTION
 
 
 =head1 SEE ALSO
 
-L<SBG::Search> , L<SBG::Network> , L<SBG::Interaction> 
+L<SBG::SearchI> , L<SBG::Network> , L<SBG::Interaction> 
 
 =cut
 
