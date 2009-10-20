@@ -23,9 +23,9 @@ L<Bio::Seq>
 ################################################################################
 
 # overload stringify of external package
-package Bio::Seq;
-use overload ('""'=>'stringify');
-sub stringify { (shift)->display_id }
+# package Bio::Seq;
+# use overload ('""'=>'stringify');
+# sub stringify { (shift)->display_id }
 
 
 package SBG::Seq;
