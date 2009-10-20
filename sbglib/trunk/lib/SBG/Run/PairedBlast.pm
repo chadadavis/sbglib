@@ -18,9 +18,20 @@ foreach my $pair (@$pairs_of_hits) {
 
 =head1 DESCRIPTION
 
+
 Blasts two sequences and returns a list of pairs of
 L<Bio::Search::Hit::BlastHit> such that each hit of a pair come from the same
 PDB ID, as given by the B<pdbaa> Blast sequence database.
+
+Does not check any structural properties, i.e. whether the two matching regions
+are actually in contact, that they do not overlap along a single chain. Also
+performs no coordinate mapping. The coordinates of the hit objects refer to the
+sequence coordinates of B<pdba> which correspond to the SEQRES sequence. These
+are not the residue IDs of the structure.
+
+The order of the tuples in the returned array correspond to the order of the two
+given sequences. I.e. the first element of each pair corresponds to a hit for
+the first sequence given; analogously for the second hit of each pair.
 
 
 =head1 SEE ALSO
@@ -34,12 +45,11 @@ L<SBG::SearchI>
 # Overload stringification of external package
 package Bio::Search::Hit::BlastHit;
 use overload ('""' => 'stringify');
-sub stringify { return (shift)->name }
+sub stringify { (shift)->name }
 
 
 package SBG::Run::PairedBlast;
 use Moose;
-# use Bio::Tools::Run::StandAloneBlast;
 use Bio::Tools::Run::StandAloneNCBIBlast;
 extends qw/Bio::Tools::Run::StandAloneNCBIBlast Moose::Object/;
 
