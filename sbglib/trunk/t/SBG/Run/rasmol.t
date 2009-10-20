@@ -15,12 +15,14 @@ my $DEBUG;
 log()->init('TRACE') if $DEBUG;
 $File::Temp::KEEP_ALL = $DEBUG;
 
+use FindBin qw/$Bin/;
 
 ################################################################################
 
 use SBG::Run::rasmol qw/pdb2img/;
 
-my $file = "/g/data/pdb/pdb2nn6.ent";
+my $file = "$Bin/../../data/pdb2nn6.ent";
+
 
 # Convert to IMG
 # And highlight close residues
