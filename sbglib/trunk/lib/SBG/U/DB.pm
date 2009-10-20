@@ -58,6 +58,7 @@ sub connect {
     our %connections;
     # This is also OK, if $host is not defined
     my $dbh = $connections{$host}{$dbname};
+
     return $dbh if $dbh;
     my $dbistr = "dbi:mysql:dbname=$dbname";
     $dbistr .= ";host=$host" if $host;
@@ -74,6 +75,8 @@ sub connect {
             return;
         }
     }
+    # Update cache
+    $connections{$host}{$dbname} = $dbh;
     return $dbh;
 }
 
