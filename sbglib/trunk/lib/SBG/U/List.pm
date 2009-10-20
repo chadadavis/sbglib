@@ -252,7 +252,7 @@ sub pairs {
 # All pairs from two separate lists, each pair contains one element from each
 sub pairs2 {
     my ($list1, $list2) = @_;
-    reurn unless @$list1 && @$list2;
+    return unless @$list1 && @$list2;
     my @pairs;
     foreach my $l1 (@$list1) {
         foreach my $l2 (@$list2) {
