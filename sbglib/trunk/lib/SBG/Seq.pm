@@ -22,10 +22,12 @@ L<Bio::Seq>
 
 ################################################################################
 
+# Need to use the package first, before adding to it
+use Bio::Seq;
 # overload stringify of external package
-# package Bio::Seq;
-# use overload ('""'=>'stringify');
-# sub stringify { (shift)->display_id }
+package Bio::Seq;
+use overload ('""'=>'stringify');
+sub stringify { (shift)->display_id }
 
 
 package SBG::Seq;

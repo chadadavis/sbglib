@@ -42,6 +42,7 @@ L<SBG::SearchI>
 
 ################################################################################
 
+use Bio::Search::Hit::BlastHit;
 # Overload stringification of external package
 package Bio::Search::Hit::BlastHit;
 use overload ('""' => 'stringify');

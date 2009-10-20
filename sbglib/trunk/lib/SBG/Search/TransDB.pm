@@ -63,8 +63,8 @@ sub search {
 
     # Each pair of entities may find multiple contacts
     my @contacts = map { SBG::DB::contact::query(@$_) } @entitypairs;
-
     log()->trace(scalar(@contacts), ' contacts for Blast pair');
+    return unless @contacts;
 
     # Cluster contacts, based on iRMSD distance
     my $distmat = _distmat(\@contacts);

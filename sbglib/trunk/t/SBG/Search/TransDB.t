@@ -21,7 +21,6 @@ use SBG::Network;
 use Bio::SeqIO;
 
 use FindBin qw/$Bin/;
-# my $io = new Bio::SeqIO(-file=>"$Bin/../data/1acmC.fa");
 my $io = new Bio::SeqIO(-file=>"$Bin/../data/2br2AB.fa");
 my $seq1 = $io->next_seq;
 my $seq2 = $io->next_seq;
@@ -29,9 +28,7 @@ my $seq2 = $io->next_seq;
 my $transdb = SBG::Search::TransDB->new();
 my @interactions = $transdb->search($seq1, $seq2);
 
-
-
-print dump @interactions;
+is(scalar(@interactions), 12, "clustered interaction search");
 
 
 
