@@ -64,11 +64,13 @@ lcp
 intersection
 union
 pairs
+pairs2
 reorder
 thresh
 maprange
 interpolate
 norm
+interval_overlap
 );
 
 
@@ -204,20 +206,30 @@ sub sequence {
 # Objects are compared with string equality, 
 # but objects, rather than strings, are returned, if given as input
 sub intersection {
+    # Number of input arrays
     my $n = @_;
+    # Number of occurances of each thing
     my %counts;
+    # References to the original objects (otherwise they'd just be stringified)
     my %things;
-    foreach my $a (@_) {
+
+    # First uniq each array, otherwise counting will not work. We assume that N
+    # occurances of an object means that it occurred once in each array.
+    my @uniq = map { scalar(uniq($_)) } @_;
+
+    # Count occurances of each thing, over all arrays
+    foreach my $a (@uniq) {
         $counts{$_}++ for @$a;
         # Overwrites any string-equal objects previously seen
         $things{$_} = $_ for @$a;
     }
-    # Which elements exist in each input array
+    # Which elements exist in each input array (i.e. occur exactly N times)
     my @common = grep { $counts{$_} == $n } keys %counts;
-    # Get the corresponding values
+    # Get the corresponding values (i.e. the non-strigified version of objects)
     my @a = map { $things{$_} } @common;
     return wantarray ? @a : \@a;
-}
+
+} # intersection
 
 
 # Each element in the list(s) will be represented just once, unsorted
@@ -227,7 +239,7 @@ sub union {
 }
 
 
-# All one-directional combinations of two lists:
+# All one-directional paired combinations of a list:
 # pairs(a,b,c) => ([a,b],[a,c],[b,c])
 sub pairs {
     # For all indices 0 through $#_ of the @_ array:
@@ -235,6 +247,20 @@ sub pairs {
     #     Makes a pair, returning an array of 2-tuples
     return map { my $a=$_[$_]; map { [ $a , $_[$_] ]} ($_+1)..$#_ } 0..$#_
 }    
+
+
+# All pairs from two separate lists, each pair contains one element from each
+sub pairs2 {
+    my ($list1, $list2) = @_;
+    reurn unless @$list1 && @$list2;
+    my @pairs;
+    foreach my $l1 (@$list1) {
+        foreach my $l2 (@$list2) {
+            push @pairs, [ $l1, $l2 ];
+        }
+    }
+    return @pairs;
+}
 
 
 # longest_common_prefix 
@@ -314,6 +340,20 @@ sub interpolate {
 sub norm {
     my ($val, $min, $max) = @_;
     return ($val - $min) / ($max - $min);
+}
+
+
+# Overlap extent of two intervals
+# How much of first interval is covered by second interval
+sub interval_overlap {
+    my ($a0, $an, $b0, $bn) = @_;
+    my $alen = $an-$a0;
+
+    # Smallest end minus largest start
+    my $overlap = min($an, $bn) - max($a0, $b0);
+    $overlap = 0 if $overlap < 0;
+    # Fration of coverage
+    return 1.0 * $overlap / $alen;
 }
 
 
