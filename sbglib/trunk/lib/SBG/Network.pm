@@ -36,6 +36,7 @@ SBG::Role::Dumpable
 SBG::Role::Versionable
 /;
 
+use Cache::File;
 
 use SBG::U::List qw/pairs/;
 use SBG::U::Log qw/log/;
@@ -43,7 +44,6 @@ use SBG::U::Log qw/log/;
 use overload (
     '""' => 'stringify',
     );
-
 
 
 ################################################################################
@@ -78,13 +78,29 @@ override 'new' => sub {
     # Normally, we would override a non-Moose base class with: But we don't,
     # since Bio::Network::ProteinNet is an ArrayRef, not a HashRef, like most
     # objects.
-
 #     $obj = $class->meta->new_object(__INSTANCE__ => $obj);
 
     # bless'ing should be automatic!
     bless $obj, $class;
     return $obj;
 };
+
+
+# Has to use package vars, as Bio::Network is an ArrayRef not a HashRef
+sub cache {
+    my ($self) = @_;
+    our $cache;
+    return $cache if $cache;
+
+    my $base = $ENV{CACHEDIR} || $ENV{TMPDIR} || '/tmp';
+    my $cachedir = "${base}/sbgnetwork";
+    $cache = Cache::File->new(
+        cache_root => $cachedir,
+        lock_level => Cache::File::LOCK_NFS(),
+        );
+    log()->trace($cachedir);
+    return $cache;
+}
 
 
 sub stringify {
@@ -174,21 +190,29 @@ sub partition {
 
  Function: Uses B<searcher> to add interactions to network
  Example : $net->build();
- Returns : $self
+ Returns : The Network built, which may not be the same as the original object
  Args    : L<SBG::SearchI>
 
 TODO doc
 
 =cut
 sub build {
-    my ($self, $searcher) = @_;
+    my ($self, $searcher, $limit, $nocache) = @_;
+
+    # Check cache
+    my $cacheid = "$self";
+    my $cached = $nocache ? undef : $self->cache->thaw($cacheid);
+    if (defined $cached) {
+        log()->debug($cacheid, ' (cached)');
+        return $cached;
+    }
 
     # For all pairs
-    foreach my $pair (pairs($self->nodes)) {
+    foreach my $pair (pairs(sort $self->nodes)) {
         my ($node1, $node2) = @$pair;
         my ($p1) = $node1->proteins;
         my ($p2) = $node2->proteins;
-        my @interactions = $searcher->search($p1, $p2);
+        my @interactions = $searcher->search($p1, $p2, $limit, $nocache);
         next unless @interactions;
         $self->add_edge($node1, $node2);
         foreach my $iaction (@interactions) {
@@ -199,7 +223,14 @@ sub build {
             $self->add_id_to_interaction("$iaction", $iaction);
         }
     }
-    
+    $self->cache->freeze($cacheid, $self) unless $nocache;
+
+    log()->debug(scalar($self->nodes), ' nodes');
+    log()->debug(scalar($self->edges), ' edges');
+    log()->debug(scalar($self->interactions), ' interactions');
+    my @partitions = $self->partition;
+    log()->debug(scalar(@partitions), ' partitions');
+
     return $self;
 }
 
