@@ -111,8 +111,8 @@ sub write {
 
     my $str = join("\n",
                    "graph {",
-                   "\tnode [fontsize=8];",
-                   "\tedge [fontsize=6, color=grey];",
+                   "\tnode [fontsize=10];",
+                   "\tedge [fontsize=8, color=grey];",
                    ,"");
 
     # For each connection between two nodes, get all of the templates
