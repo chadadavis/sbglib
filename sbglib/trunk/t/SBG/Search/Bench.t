@@ -55,8 +55,8 @@ $net = new SBG::Network;
 $net->add_node($_) for @nodes;
 
 
-
-$net->build(new SBG::Search::Bench);
+# $net = $net->build(new SBG::Search::Bench, 0, 1); # nocache
+$net = $net->build(new SBG::Search::Bench);
 is($net->nodes, 12, 'Network::nodes');
 
 my @edges = $net->edges;
