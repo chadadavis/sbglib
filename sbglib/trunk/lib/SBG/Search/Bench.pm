@@ -37,10 +37,10 @@ use SBG::U::List qw/uniq/;
 use SBG::U::Log qw/log/;
 
 
-# TODO  needs to be in DB
-#our $templatedb = "$ENV{HOME}/work/ca/benchmark/interactions-uniq.gz";
+# TODO  needs to be in data directory
+# Lookup module path in %INC
+# our $templatedb = "/g/russell2/davis/work/ca/data/interactions-all.gz";
 our $templatedb = "/g/russell2/davis/work/ca/data/interactions-uniq.gz";
-
 
 
 ################################################################################
