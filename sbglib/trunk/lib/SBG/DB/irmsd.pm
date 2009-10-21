@@ -25,9 +25,10 @@ use base qw/Exporter/;
 our @EXPORT_OK = qw/query/;
 
 use DBI;
+use List::Util qw/min/;
+
 use SBG::U::DB;
 use SBG::U::Log qw/log/;
-
 
 # TODO DES OO
 our $database = "trans_3_0";
@@ -43,15 +44,6 @@ our $host = "wilee";
  Args    : 
            
 
-NB iRMSD stored only in one directions.
-
-Check for :
-
-1,2,1',2'
-1',2',1,2
-2,1,2',1'
-2',1',2,1
-
 =cut
 sub query {
     my ($contact1, $contact2) = @_;
@@ -66,30 +58,27 @@ sub query {
     my $a2 = $contact2->{id_entity1};
     my $b2 = $contact2->{id_entity2};
 
+    my %partner = ( $a1 => $b1, $b1 => $a1, $a2 => $b2, $b2 => $a2);
+    my %homolog = ( $a1 => $a2, $a2 => $a1, $b2 => $b1, $b1 => $b2);
+
+    my $a1 = min($a1,$a2,$b1,$b2);
+    my $b1 = $partner{$a1};
+    my $a2 = $homolog{$a1};
+    my $b2 = $homolog{$b1};
+
     $sth ||= $dbh->prepare("
 SELECT
 *
 FROM 
-irmsd
+irmsd_reordered
 WHERE (a1=? AND b1=? AND a2=? AND b2=?)
-OR (a1=? AND b1=? AND a2=? AND b2=?)
-OR (a1=? AND b1=? AND a2=? AND b2=?)
-OR (a1=? AND b1=? AND a2=? AND b2=?)
 ");
-
-
-
     unless ($sth) {
         log()->error($dbh->errstr);
         return;
     }
 
-    if (! $sth->execute(
-              $a1, $b1, $a2, $b2,
-              $b1, $a1, $b2, $a2,
-              $a2, $b2, $a1, $b1,
-              $b2, $a2, $b1, $a1,
-        )) {
+    if (! $sth->execute($a1, $b1, $a2, $b2,)) {
         log()->error($sth->errstr);
         return;
     }
