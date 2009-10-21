@@ -54,9 +54,18 @@ use Moose;
 use Bio::Tools::Run::StandAloneNCBIBlast;
 extends qw/Bio::Tools::Run::StandAloneNCBIBlast Moose::Object/;
 
+use Moose::Autobox;
+
 use SBG::U::List qw/intersection pairs2/;
 use SBG::U::Log qw/log/;
 
+
+has 'cache' => (
+    isa => 'HashRef[Bio::Search::Hit::HitI]',
+    is => 'ro',
+    lazy => 1,
+    default => sub { {} },
+    );
 
 
 ################################################################################
@@ -77,6 +86,7 @@ override 'new' => sub {
     $ops{'-database'} = 'pdbaa' unless defined $ops{'-database'};
     $ops{'-j'} = 2 unless defined $ops{'-j'};
     $ops{'-e'} = 0.01 unless defined $ops{'-e'};
+    $ops{'-b'} = 250 unless defined $ops{'-b'};
 
     # Create instance of parent class
     my $obj = $class->SUPER::new(%ops);
@@ -101,39 +111,56 @@ override 'new' => sub {
 
 =cut
 sub search {
-    my ($self, $seq1, $seq2) = @_;
+    my ($self, $seq1, $seq2, $limit, $nocache) = @_;
 
     # List of Blast Hits, indexed by PDB ID
-    my %hits1 = $self->_blast1($seq1);
-    my %hits2 = $self->_blast1($seq2);
+    my $hits1 = $self->_blast1($seq1, $limit, $nocache);
+    my $hits2 = $self->_blast1($seq2, $limit, $nocache);
 
     my @pairs;
     # Get the PDB IDs that are present at least once in each of two hit lists
-    foreach my $id (SBG::U::List::intersection([keys %hits1],[keys %hits2])) {
+    foreach my $id (SBG::U::List::intersection($hits1->keys, $hits2->keys)) {
         # Generate all 2-tuples between elements of one list and elements of the
         # other. I.e. all pairs of one hit in 1AD5 for the first sequence and
         # any hits from the second sequence that are also on 1AD5
-        push @pairs, SBG::U::List::pairs2($hits1{$id}, $hits2{$id});
+        push @pairs, SBG::U::List::pairs2($hits1->{$id}, $hits2->{$id});
     }
-
+    log()->debug(scalar(@pairs), ' Blast hit pairs');
     return @pairs;
 }
 
 
 # Blast a sequence and index hits by PDB ID (4-char)
 sub _blast1 {
-    my ($factory, $seq) = @_;
-    my @hits = $factory->blastpgp($seq)->next_result->hits;
-    log()->trace($seq->display_id(), ":", scalar(@hits), " hits");
-    # Index by pdbid
-    my %hitsbyid;
-    foreach my $h (@hits) {
-        my $pdbid = _gi2pdbid($h->name);
-        $hitsbyid{$pdbid} ||= [];
-        push @{$hitsbyid{$pdbid}}, $h;
-    }
-    return %hitsbyid;
+    my ($self, $seq, $limit, $nocache) = @_;
 
+    my $hits = $self->cache->at($seq);
+    if (!$nocache && $hits) {
+        log()->debug($seq->primary_id, ': ', $hits->length," hits (cached)");
+    } else {
+        $hits = [ $self->blastpgp($seq)->next_result->hits ];
+        log()->debug($seq->primary_id, ': ', $hits->length," hits");
+        $self->cache->put($seq, $hits);
+    }
+    $hits = $hits->slice([0..$limit-1]) if $limit && $limit < @$hits;
+    log()->debug($seq->primary_id, ': ', $limit, ' best hits') if $limit;
+    # Index by pdbid
+    my $hitsbyid = _hitsbyid($hits);
+    return $hitsbyid;
+}
+
+
+sub _hitsbyid {
+    my ($hits) = @_;
+
+    # Index by pdbid
+    my $hitsbyid = {};
+    foreach my $h (@$hits) {
+        my $pdbid = _gi2pdbid($h->name);
+        $hitsbyid->{$pdbid} ||= [];
+        $hitsbyid->at($pdbid)->push($h);
+    }
+    return $hitsbyid;
 }
 
 
