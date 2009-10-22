@@ -1,5 +1,7 @@
 #!/usr/bin/env perl
 
+use strict;
+use warnings;
 use Test::More 'no_plan';
 use SBG::U::Test 'float_is';
 use Carp;
@@ -48,15 +50,14 @@ $searcher = new SBG::Search::Bench;
 is(scalar(@iactions), 4, "search()");
 
 
-$net = new SBG::Network;
+my $net = new SBG::Network;
 @accnos = SBG::Search::Bench::components('2os7');
 @seqs = map { new SBG::Seq(-accession_number=>$_) } @accnos;
 @nodes = map { new SBG::Node($_) } @seqs;
 $net->add_node($_) for @nodes;
 
 
-# $net = $net->build(new SBG::Search::Bench, 0, 1); # nocache
-$net = $net->build(new SBG::Search::Bench);
+$net = $net->build(new SBG::Search::Bench, 0, 1); # no limits, nocache
 is($net->nodes, 12, 'Network::nodes');
 
 my @edges = $net->edges;
