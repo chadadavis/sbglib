@@ -27,7 +27,7 @@ use Bio::PrimarySeqI;
 # overload stringify of external package
 package Bio::PrimarySeqI;
 use overload ('""'=>'stringify');
-sub stringify { (shift)->display_id }
+sub stringify { my $self=shift(); $self->display_id || $self->primary_id }
 
 
 package SBG::Seq;

@@ -70,7 +70,7 @@ has 'subject' => (
 
 sub stringify {
     my ($self) = @_;
-    return $self->query->primary_id . '(' . $self->subject . ')';
+    return $self->query . '(' . $self->subject . ')';
 }
 
 
