@@ -277,7 +277,7 @@ different traversals could theoretically produce different results.
 sub traverse {
     my ($self, $state) = @_;
     # If no state object provide, use an empty hashref, Clone'able
-    $state = bless({}, 'Clone') unless defined $state;
+    $state //= bless({}, 'Clone');
 
     my @nodes = $self->graph->vertices();
 

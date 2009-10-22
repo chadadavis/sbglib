@@ -67,7 +67,7 @@ role {
 
     method 'clone' => sub {
         my ($self, $depth) = @_;
-        $depth = $self->clonedepth() unless defined $depth;
+        $depth //= $self->clonedepth();
         # Depth 2 means: copy the object (1) and the hashes/objects in it (2).
         # Does not copy what is referenced in/from those hashes/objects (3).
         return Clone::clone($self, $depth);

@@ -519,7 +519,7 @@ sub _vlen {
 # If $other not given, the origin (0,0,0) is assumed
 sub _sqdist {
     my ($selfc, $otherc) = @_;
-    $otherc = zeroes(3) unless defined($otherc);
+    $otherc //= zeroes(3);
     # Vector diff
     my $diff = $selfc - $otherc;
     my $squared = $diff ** 2;

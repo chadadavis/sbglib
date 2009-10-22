@@ -42,7 +42,7 @@ our @EXPORT_OK = qw(float_is pdl_approx);
 sub float_is ($$;$$) {
    my ($val1, $val2, $msg, $tol) = @_;
    return unless defined($val1) && defined($val2);
-   $tol = 1.0 unless defined $tol;
+   $tol //= 1.0;
    my $diff = abs($val1-$val2);
    $msg ||= "float_is: $diff < $tol";
    if(ok($diff < $tol, $msg)) {
@@ -67,7 +67,7 @@ sub float_is ($$;$$) {
 =cut
 sub pdl_approx ($$;$$) {
    my ($mat1, $mat2, $msg, $tol) = @_;
-   $tol = 1.0 unless defined $tol;
+   $tol //= 1.0;
    $msg ||= "pdlapprox (+/- $tol)";
 
    if (ok(all(approx($mat1, $mat2, $tol)),$msg)) {

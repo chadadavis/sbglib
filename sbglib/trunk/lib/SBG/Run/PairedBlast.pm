@@ -83,10 +83,10 @@ NB Need to override new() as Bio::Network::ProteinNet is not of Moose
 override 'new' => sub {
     my ($class, %ops) = @_;
 
-    $ops{'-database'} = 'pdbaa' unless defined $ops{'-database'};
-    $ops{'-j'} = 2 unless defined $ops{'-j'};
-    $ops{'-e'} = 0.01 unless defined $ops{'-e'};
-    $ops{'-b'} = 250 unless defined $ops{'-b'};
+    $ops{'-database'} //= 'pdbaa';
+    $ops{'-j'} //= 2;
+    $ops{'-e'} //= 0.01;
+    $ops{'-b'} //= 250;
 
     # Create instance of parent class
     my $obj = $class->SUPER::new(%ops);
