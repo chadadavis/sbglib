@@ -61,10 +61,10 @@ sub query {
     my %partner = ( $a1 => $b1, $b1 => $a1, $a2 => $b2, $b2 => $a2);
     my %homolog = ( $a1 => $a2, $a2 => $a1, $b2 => $b1, $b1 => $b2);
 
-    my $a1 = min($a1,$a2,$b1,$b2);
-    my $b1 = $partner{$a1};
-    my $a2 = $homolog{$a1};
-    my $b2 = $homolog{$b1};
+    $a1 = min($a1,$a2,$b1,$b2);
+    $b1 = $partner{$a1};
+    $a2 = $homolog{$a1};
+    $b2 = $homolog{$b1};
 
     $sth ||= $dbh->prepare("
 SELECT
