@@ -113,6 +113,7 @@ sub solution {
     # Check if duplicate, based on geometric hash
     # exact() requires that the sizes match on both sides (i.e. no subsets)
     my $class = $self->gh->exact($coords, $componentlabels);
+
     if (defined $class) {
         $self->dups($self->dups+1);
         log()->debug('Duplicate solution. Total duplicates: ', $self->dups);
@@ -137,10 +138,10 @@ sub solution {
                            $complex->id ? $complex->id . '-' : '',
                            $class, 
             );
-        $complex->store($file . '.stor');
+        $file .= '.stor';
+        $complex->store($file);
+        return $file;
     }
-
-    return 1;
 
 } # solution
 

@@ -70,13 +70,14 @@ ok($assembler->test($complex, $net, 'c5', 'c6', $interactions->[4]),'Add interac
 
 rasmol($complex->domains) if $DEBUG;
 
-ok($assembler->solution($complex, $net, [$net->nodes], $interactions, 0),
-    'Checking solution');
+my $solutionfile = 
+    $assembler->solution($complex, $net, [$net->nodes], $interactions, 0);
+ok($solutionfile, 'Checking solution');
+unlink $solutionfile;
 
-
+my $dup = $assembler->solution($complex, $net, [$net->nodes], $interactions, 0);
 # Now try to save the same solution, verify rejection of duplicate
-ok(! $assembler->solution($complex, $net, [$net->nodes], $interactions, 0),
-    'Duplicate detection');
+ok(! $dup, 'Duplicate detection');
 
 
 sub _mkia {
