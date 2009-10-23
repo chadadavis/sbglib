@@ -51,8 +51,14 @@ sub stringify { (shift)->name }
 
 package SBG::Run::PairedBlast;
 use Moose;
+use Bio::Tools::Run::StandAloneBlast;
 use Bio::Tools::Run::StandAloneNCBIBlast;
-extends qw/Bio::Tools::Run::StandAloneNCBIBlast Moose::Object/;
+# extends qw/Bio::Tools::Run::StandAloneNCBIBlast Moose::Object/;
+# extends qw/
+# Bio::Tools::Run::StandAloneBlast
+# Bio::Tools::Run::StandAloneNCBIBlast 
+# Moose::Object
+# /;
 
 use Moose::Autobox;
 
@@ -68,6 +74,17 @@ has 'cache' => (
     );
 
 
+has 'blast' => (
+    is => 'ro',
+    lazy_build => 1,
+    handles => [ qw/blastpgp/ ],
+    );
+
+sub _build_blast {
+    my ($self) = @_;
+    return Bio::Tools::Run::StandAloneBlast->new(j=>2,e=>0.01,b=>250,database=>'pdbaa');
+    }
+
 ################################################################################
 =head2 new
 
@@ -80,24 +97,24 @@ has 'cache' => (
 NB Need to override new() as Bio::Network::ProteinNet is not of Moose
 
 =cut
-override 'new' => sub {
-    my ($class, %ops) = @_;
-
-    $ops{'-database'} ||= 'pdbaa';
-    $ops{'-j'} ||= 2;
-    $ops{'-e'} ||= 0.01;
-    $ops{'-b'} ||= 250;
-
-    # Create instance of parent class
-    my $obj = $class->SUPER::new(%ops);
-
-    # Moosify it
-    $obj = $class->meta->new_object(__INSTANCE__ => $obj);
-
-    # bless'ing should be automatic!
-    bless $obj, $class;
-    return $obj;
-};
+#override 'new' => sub {
+#    my ($class, %ops) = @_;
+#
+#    $ops{'database'} ||= 'pdbaa';
+#    $ops{'j'} ||= 2;
+#    $ops{'e'} ||= 0.01;
+#    $ops{'b'} ||= 250;
+#
+#    # Create instance of parent class
+#    my $obj = $class->SUPER::new(%ops);
+#
+#    # Moosify it
+#    $obj = $class->meta->new_object(__INSTANCE__ => $obj);
+#
+#    # bless'ing should be automatic!
+#    bless $obj, $class;
+#    return $obj;
+#};
 
 
 ################################################################################

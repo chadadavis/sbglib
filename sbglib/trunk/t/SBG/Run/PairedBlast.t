@@ -24,7 +24,7 @@ my $seq1 = $io->next_seq;
 my $seq2 = $io->next_seq;
 
 # Get pairs of hits from common PDB structure
-my $blast = SBG::Run::PairedBlast->new;
+my $blast = SBG::Run::PairedBlast->new(-verbose=>1);
 
 my @hitpairs = $blast->search($seq1, $seq2);
 is(scalar(@hitpairs), 210, 'PairedBlast::search()');
