@@ -11,6 +11,7 @@ use inc::Module::Install;
 
 all_from => 'lib/SBG.pm';
 
+requires 'Bio::Tools::Run::StandAloneBlast' => '1.006001';
 requires 'Cache' => '0';
 requires 'CGI' => '0';
 requires 'Class::MOP' => '0';
