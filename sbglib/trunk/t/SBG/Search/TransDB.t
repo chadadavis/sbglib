@@ -37,7 +37,7 @@ $net = new SBG::Network;
 # Each node contains one sequence object
 $net->add_node($_) for @nodes;
 # Searcher tries to find interaction templates (edges) to connect nodes
-# $net = $net->build(new SBG::Search::TransDB, 0, 0);
+$net = $net->build(new SBG::Search::TransDB, 0, 0);
 
 # Potential interactions, between pairs of proteins
 my @edges = $net->edges;
@@ -54,11 +54,15 @@ my @subnets = $net->partition;
 use SBG::NetworkIO::graphviz;
 
 # $net->store("$name-net.stor");
-$pngio = SBG::NetworkIO::graphviz->new(file=>">$name-net.png");
+# $pngio = SBG::NetworkIO::graphviz->new(file=>">$name-net.png");
 $dotio = SBG::NetworkIO::graphviz->new(file=>">$name-net.dot");
 # $pngio->_write($net);
 $dotio->write($net);
 
+log()->debug("$name Done");
+
+# Dummy, until we run some other tests:
+ok 1;
 
 $TODO = "Test making Complex object from benchmark network";
 # ok 0;

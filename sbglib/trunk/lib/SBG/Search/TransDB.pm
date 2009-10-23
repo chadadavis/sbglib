@@ -111,7 +111,7 @@ sub _representative {
     my %reps;
     for (my $i = 0; $i < @$clusters; $i++) {
         my $cluster = $clusters->[$i];
-        $reps{$cluster} //= $contacts->[$i];
+        $reps{$cluster} = $contacts->[$i] unless defined $reps{$cluster};
     }
     return values %reps;
 }
