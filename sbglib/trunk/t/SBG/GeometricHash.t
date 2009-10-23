@@ -130,7 +130,7 @@ is ($gh->class($objpoints, $objlabels), 'Multi-point',
 sub _rand_obj {
     my ($rows, $cols, $limit, $homog) = @_;
     $limit ||= 100;
-    $homog //= 1;
+    $homog = 1 unless defined $homog;
     my $x = $limit * random($cols+$homog, $rows);
     $x->slice('3,') .= 1 if $homog;
     return $x;
