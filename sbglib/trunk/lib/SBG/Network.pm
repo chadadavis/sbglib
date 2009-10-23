@@ -93,7 +93,10 @@ sub cache {
     return $cache if $cache;
 
     my $base = $ENV{CACHEDIR} || $ENV{TMPDIR} || '/tmp';
-    my $cachedir = "${base}/sbgnetwork";
+    my $arch = `uname -m`;
+    chomp $arch;
+    my $cachedir = "${base}/sbgnetwork_${arch}";
+
     $cache = Cache::File->new(
         cache_root => $cachedir,
         lock_level => Cache::File::LOCK_NFS(),
