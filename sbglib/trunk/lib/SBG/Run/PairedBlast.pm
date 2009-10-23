@@ -52,13 +52,6 @@ sub stringify { (shift)->name }
 package SBG::Run::PairedBlast;
 use Moose;
 use Bio::Tools::Run::StandAloneBlast;
-use Bio::Tools::Run::StandAloneNCBIBlast;
-# extends qw/Bio::Tools::Run::StandAloneNCBIBlast Moose::Object/;
-# extends qw/
-# Bio::Tools::Run::StandAloneBlast
-# Bio::Tools::Run::StandAloneNCBIBlast 
-# Moose::Object
-# /;
 
 use Moose::Autobox;
 
