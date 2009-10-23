@@ -74,6 +74,33 @@ has 'cache' => (
     );
 
 
+has 'j' => (
+    is => 'rw',
+    isa => 'Maybe[Int]',
+    default => 2,
+    );
+
+
+has 'e' => (
+    is => 'rw',
+    isa => 'Maybe[Num]',
+    default => 0.01,
+    );
+
+
+has 'b' => (
+    is => 'rw',
+    isa => 'Maybe[Int]',
+    default => 250,
+    );
+
+has 'database' => (
+    is => 'rw',
+    isa => 'Str',
+    default => 'pdbaa',
+    );
+
+
 has 'blast' => (
     is => 'ro',
     lazy_build => 1,
@@ -82,39 +109,14 @@ has 'blast' => (
 
 sub _build_blast {
     my ($self) = @_;
-    return Bio::Tools::Run::StandAloneBlast->new(j=>2,e=>0.01,b=>250,database=>'pdbaa');
-    }
+    my $factory = Bio::Tools::Run::StandAloneBlast->new();
+    $factory->database($self->database);
+    $factory->j($self->j) if $self->j;
+    $factory->e($self->e) if $self->e;
+    $factory->b($self->b) if $self->b;
+    return $factory;
 
-################################################################################
-=head2 new
-
- Function: 
- Example : 
- Returns : 
- Args    : 
-
-
-NB Need to override new() as Bio::Network::ProteinNet is not of Moose
-
-=cut
-#override 'new' => sub {
-#    my ($class, %ops) = @_;
-#
-#    $ops{'database'} ||= 'pdbaa';
-#    $ops{'j'} ||= 2;
-#    $ops{'e'} ||= 0.01;
-#    $ops{'b'} ||= 250;
-#
-#    # Create instance of parent class
-#    my $obj = $class->SUPER::new(%ops);
-#
-#    # Moosify it
-#    $obj = $class->meta->new_object(__INSTANCE__ => $obj);
-#
-#    # bless'ing should be automatic!
-#    bless $obj, $class;
-#    return $obj;
-#};
+}
 
 
 ################################################################################
@@ -135,12 +137,14 @@ sub search {
     my $hits2 = $self->_blast1($seq2, $limit, $nocache);
 
     my @pairs;
+    my @common_pdbids = SBG::U::List::intersection($hits1->keys, $hits2->keys);
     # Get the PDB IDs that are present at least once in each of two hit lists
-    foreach my $id (SBG::U::List::intersection($hits1->keys, $hits2->keys)) {
+    foreach my $id (@common_pdbids) {
         # Generate all 2-tuples between elements of one list and elements of the
         # other. I.e. all pairs of one hit in 1AD5 for the first sequence and
         # any hits from the second sequence that are also on 1AD5
-        push @pairs, SBG::U::List::pairs2($hits1->{$id}, $hits2->{$id});
+        my @hitpairs = SBG::U::List::pairs2($hits1->{$id}, $hits2->{$id});
+        push @pairs, @hitpairs;
     }
     log()->debug(scalar(@pairs), ' Blast hit pairs');
     return @pairs;
@@ -155,9 +159,11 @@ sub _blast1 {
     if (!$nocache && $hits) {
         log()->debug($seq->primary_id, ': ', $hits->length," hits (cached)");
     } else {
-        $hits = [ $self->blastpgp($seq)->next_result->hits ];
+        my $res = $self->blastpgp($seq)->next_result;
+        $res->sort_hits;
+        $hits = [ $res->hits ];
         log()->debug($seq->primary_id, ': ', $hits->length," hits");
-        $self->cache->put($seq, $hits);
+        $self->cache->put($seq, $hits) unless $nocache;
     }
     $hits = $hits->slice([0..$limit-1]) if $limit && $limit < @$hits;
     log()->debug($seq->primary_id, ': ', $limit, ' best hits') if $limit;

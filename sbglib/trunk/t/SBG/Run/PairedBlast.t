@@ -24,14 +24,14 @@ my $seq1 = $io->next_seq;
 my $seq2 = $io->next_seq;
 
 # Get pairs of hits from common PDB structure
-my $blast = SBG::Run::PairedBlast->new(-verbose=>1);
+my $blast = SBG::Run::PairedBlast->new();
 
 my @hitpairs = $blast->search($seq1, $seq2);
 is(scalar(@hitpairs), 210, 'PairedBlast::search()');
 
 # Test limit
 @hitpairs = $blast->search($seq1, $seq2, 10);
-is(scalar(@hitpairs), 7, 'limit=10 monomeric hits each');
+is(scalar(@hitpairs), 10, 'limit=10 monomeric hits each');
 
 
 $TODO = "Test caching";
