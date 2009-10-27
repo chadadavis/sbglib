@@ -11,9 +11,6 @@ use SBG::Node;
 use SBG::Seq;
 use SBG::Interaction;
 
-# use Bio::Network::Node;
-# use SBG::Search::SCOP;
-
 
 # Sequences becomes nodes become networks
 my $seq1 = new SBG::Seq(-accession_number=>'RRP43');
