@@ -104,7 +104,7 @@ sub init {
         new("Log::Dispatch::File", filename => $logfile, mode => "append");
     
     # Define log format for appender
-    my $layout = Log::Log4perl::Layout::PatternLayout->new("%5p %-30M %m%n");
+    my $layout = Log::Log4perl::Layout::PatternLayout->new("%5p %-12H %-30M %m%n");
     # Set the layout of the appender
     $appender->layout($layout);
     # Register the appender with the logger
