@@ -174,11 +174,11 @@ present, including any multiple interactions between two nodes.
 
 =cut
 sub partition {
-    my ($self) = @_;
+    my ($self, %ops) = @_;
     my @partitions = $self->connected_components;
     my @graphs;
     foreach my $nodeset (@partitions) {
-        next unless @$nodeset > 2;
+        next if $ops{minsize} && @$nodeset < $ops{minsize};
         my $subgraph = $self->subgraph(@$nodeset);
         # Bless this back into our sub-class
         bless $subgraph;
@@ -196,15 +196,17 @@ sub partition {
  Returns : The Network built, which may not be the same as the original object
  Args    : L<SBG::SearchI>
 
-TODO doc
 
 =cut
 sub build {
-    my ($self, $searcher, $limit, $nocache) = @_;
+    my ($self, $searcher, %ops) = @_;
 
     # Check cache
+    $ops{cache} = 1 unless defined $ops{cache};
     my $cacheid = "$self";
-    my $cached = $nocache ? undef : $self->cache->thaw($cacheid);
+    my $cached = $ops{cache} ? $self->cache->thaw($cacheid) : undef;
+    log()->trace('cache:', $ops{cache});
+    log()->trace('cacheid:',$cacheid,',defined:',defined($cached));
     if (defined $cached) {
         log()->debug($cacheid, ' (cached)');
         return $cached;
@@ -215,9 +217,10 @@ sub build {
         my ($node1, $node2) = @$pair;
         my ($p1) = $node1->proteins;
         my ($p2) = $node2->proteins;
-        my @interactions = $searcher->search($p1, $p2, $limit, $nocache);
+        my @interactions = $searcher->search($p1, $p2, %ops);
         next unless @interactions;
         $self->add_edge($node1, $node2);
+
         foreach my $iaction (@interactions) {
             $self->add_interaction(
                 -nodes=>[$node1,$node2],
@@ -226,13 +229,11 @@ sub build {
             $self->add_id_to_interaction("$iaction", $iaction);
         }
     }
-    $self->cache->freeze($cacheid, $self) unless $nocache;
+    $self->cache->freeze($cacheid, $self) if $ops{cache};
 
     log()->debug(scalar($self->nodes), ' nodes');
     log()->debug(scalar($self->edges), ' edges');
     log()->debug(scalar($self->interactions), ' interactions');
-    my @partitions = $self->partition;
-    log()->debug(scalar(@partitions), ' partitions');
 
     return $self;
 }

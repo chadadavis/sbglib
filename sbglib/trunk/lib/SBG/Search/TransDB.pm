@@ -54,17 +54,17 @@ has 'blast' => (
  Example : 
  Returns : Array of <SBG::Interaction>
  Args    : Two L<Bio::Seq>s
-           limit number of Blast hit pairs to consder (default: 0 => no limit)
+           
 
 
 =cut
 sub search {
-    my ($self, $seq1, $seq2, $limit, $nocache) = @_;
+    my ($self, $seq1, $seq2, %ops) = @_;
 
-    my @hitpairs = $self->blast->search($seq1, $seq2, $limit, $nocache);
+    my @hitpairs = $self->blast->search($seq1, $seq2, %ops);
 
     # Foreach hit pair, lookup matching structures in entity table, 1-to-many
-    my @allentitypairs;
+    my %allentitypairs;
     my %entity2hit;
     foreach my $hitpair (@hitpairs) {
         my ($hit1, $hit2) = @$hitpair;
@@ -77,14 +77,15 @@ sub search {
         foreach my $epair (@entitypairs) {
             my ($e1, $e2) = @$epair;
             my $epairid = $e1->{id} . '--' . $e2->{id};
-            $entity2hit{$epairid} = $hitpair;
+            $entity2hit{$epairid} ||= $hitpair;
+            # There will be duplicates, hash them to get unique keys
+            $allentitypairs{$epairid} ||= $epair;
         }
-        push @allentitypairs, @entitypairs;
     }
-    log()->trace(scalar(@allentitypairs), ' entity pairs');
+    log()->trace(scalar keys %allentitypairs, ' entity pairs');
 
     # Each pair of entities may find multiple contacts, again 1-to-many
-    my @contacts = map { SBG::DB::contact::query(@$_) } @allentitypairs;
+    my @contacts = map { SBG::DB::contact::query(@$_) } values %allentitypairs;
     log()->trace(scalar(@contacts), ' contacts');
     return unless @contacts;
 
@@ -154,7 +155,6 @@ sub _distmat {
     for (my $i = 0; $i < @$contacts; $i++) {
         $distmat->[$i] ||= [];
         for (my $j = $i+1; $j < @$contacts; $j++) {
-#             my $irmsd = SBG::DB::irmsd::query($contacts->[$i],$contacts->[$j]);
             my $irmsd = SBG::DB::irmsd::query($contacts->[$i],$contacts->[$j]);
             # Column-major order, to produce a lower-diagonal distance matrix
             $distmat->[$j][$i] = $irmsd || 'Inf';
@@ -193,11 +193,11 @@ sub _contact2interaction {
     my $dom1 = SBG::DB::entity::id2dom($id1);
     my $dom2 = SBG::DB::entity::id2dom($id2);
 
-    my $model1 = new SBG::Model(query=>$seq1,subject=>$dom1,scores=>$scores1);
-    my $model2 = new SBG::Model(query=>$seq2,subject=>$dom2,scores=>$scores2);
+    my $model1 = SBG::Model->new(query=>$seq1,subject=>$dom1,scores=>$scores1);
+    my $model2 = SBG::Model->new(query=>$seq2,subject=>$dom2,scores=>$scores2);
 
     # Save interaction-specific scores in the interaction template
-    my $iaction = new SBG::Interaction(
+    my $iaction = SBG::Interaction->new(
         models=>{$seq1=>$model1, $seq2=>$model2},
         # Get these two scores from $contact HashRef as new HashRef
         scores=>$contact->hslice([qw/n_res1 n_res2/]),
@@ -214,6 +214,7 @@ sub _hspscores {
         evalue => $hsp->evalue,
         frac_identical => $hsp->frac_identical,
         frac_conserved => $hsp->frac_conserved,
+        seqid => 100.0 * $hsp->frac_identical,
         gaps => $hsp->gaps,
         length => $hsp->length,
     };

@@ -11,7 +11,7 @@ use File::Temp qw/tempfile/;
 use SBG::U::Log qw/log/;
 $SIG{__DIE__} = \&confess;
 my $DEBUG;
-$DEBUG = 1;
+# $DEBUG = 1;
 log()->init('TRACE') if $DEBUG;
 $File::Temp::KEEP_ALL = $DEBUG;
 
@@ -24,19 +24,22 @@ my $seq1 = $io->next_seq;
 my $seq2 = $io->next_seq;
 
 # Get pairs of hits from common PDB structure
-my $blast = SBG::Run::PairedBlast->new();
+# my $blast = SBG::Run::PairedBlast->new();
+my $blast = SBG::Run::PairedBlast->new(verbose=>$DEBUG);
 
 my @hitpairs = $blast->search($seq1, $seq2);
 is(scalar(@hitpairs), 210, 'PairedBlast::search()');
 
 # Test limit
-@hitpairs = $blast->search($seq1, $seq2, 10);
+@hitpairs = $blast->search($seq1, $seq2, limit=>10);
 is(scalar(@hitpairs), 10, 'limit=10 monomeric hits each');
 
 
 $TODO = "Test caching";
 @hitpairs = $blast->search($seq1, $seq2);
 ok(0);
+
+
 
 
 

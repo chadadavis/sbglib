@@ -93,6 +93,10 @@ has 'database' => (
     default => 'pdbaa',
     );
 
+has 'verbose' => (
+    is => 'rw',
+    isa => 'Bool',
+    );
 
 has 'blast' => (
     is => 'ro',
@@ -103,6 +107,10 @@ has 'blast' => (
 sub _build_blast {
     my ($self) = @_;
     my $factory = Bio::Tools::Run::StandAloneBlast->new();
+
+    $factory->verbose($self->verbose);
+    $factory->save_tempfiles($self->verbose);
+
     $factory->database($self->database);
     $factory->j($self->j) if $self->j;
     $factory->e($self->e) if $self->e;
@@ -123,14 +131,15 @@ sub _build_blast {
 
 =cut
 sub search {
-    my ($self, $seq1, $seq2, $limit, $nocache) = @_;
+    my ($self, $seq1, $seq2, %ops) = @_;
 
     # List of Blast Hits, indexed by PDB ID
-    my $hits1 = $self->_blast1($seq1, $limit, $nocache);
-    my $hits2 = $self->_blast1($seq2, $limit, $nocache);
+    my $hits1 = $self->_blast1($seq1, %ops);
+    my $hits2 = $self->_blast1($seq2, %ops);
 
     my @pairs;
-    my @common_pdbids = SBG::U::List::intersection($hits1->keys, $hits2->keys);
+    my @common_pdbids = intersection($hits1->keys,$hits2->keys);
+
     # Get the PDB IDs that are present at least once in each of two hit lists
     foreach my $id (@common_pdbids) {
         # Generate all 2-tuples between elements of one list and elements of the
@@ -146,20 +155,32 @@ sub search {
 
 # Blast a sequence and index hits by PDB ID (4-char)
 sub _blast1 {
-    my ($self, $seq, $limit, $nocache) = @_;
-
+    my ($self, $seq, %ops) = @_;
+    my $limit = $ops{limit};
+    $ops{cache} = 1 unless defined $ops{cache};
     my $hits = $self->cache->at($seq);
-    if (!$nocache && $hits) {
+    if ($ops{cache} && $hits) {
         log()->debug($seq->primary_id, ': ', $hits->length," hits (cached)");
     } else {
         my $res = $self->blastpgp($seq)->next_result;
         $res->sort_hits;
         $hits = [ $res->hits ];
-        log()->debug($seq->primary_id, ': ', $hits->length," hits");
-        $self->cache->put($seq, $hits) unless $nocache;
+        log()->debug($seq->primary_id, ': ', $hits->length," hits (raw)");
+        $self->cache->put($seq, $hits) if $ops{cache};
+    }
+    if ($ops{maxid}) {
+        $ops{maxiid} /= 100.0 if $ops{maxid} > 1;
+        log()->debug("Maxium sequence identity fraction:", $ops{maxid});
+        $hits = $hits->grep(sub{$_->hsp->frac_identical<=$ops{maxid}});
+    }
+    if ($ops{minid}) {
+        $ops{miniid} /= 100.0 if $ops{minid} > 1;
+        log()->debug("Minimum sequence identity fraction:", $ops{minid});
+        $hits = $hits->grep(sub{$_->hsp->frac_identical>=$ops{minid}});
     }
     $hits = $hits->slice([0..$limit-1]) if $limit && $limit < @$hits;
-    log()->debug($seq->primary_id, ': ', $limit, ' best hits') if $limit;
+    log()->debug($seq->primary_id, ': ', $hits->length," hits (filtered)");
+
     # Index by pdbid
     my $hitsbyid = _hitsbyid($hits);
     return $hitsbyid;
