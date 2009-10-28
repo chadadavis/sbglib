@@ -90,6 +90,7 @@ In order of increasing severity: $TRACE $DEBUG $INFO $WARN $ERROR $FATAL
 sub init {
     my ($level, $logfile) = @_;
     $level ||= 'WARN';
+    $level = uc $level;
     $logfile ||= 'log.log';
 
     # Initialize system logger
@@ -100,11 +101,15 @@ sub init {
     $logger->level(eval '$' . $level);
     
     # Log appenders (i.e. where the logs get sent)
+    my $appendertype = ("$logfile" eq '-') ? 
+        'Log::Log4perl::Appender::Screen' : 'Log::Dispatch::File';
     my $appender = Log::Log4perl::Appender->
-        new("Log::Dispatch::File", filename => $logfile, mode => "append");
-    
+        new($appendertype, filename => $logfile, mode => "append");
+
+    my $h = `hostname --short`;
+    chomp $h;
     # Define log format for appender
-    my $layout = Log::Log4perl::Layout::PatternLayout->new("%5p %-12H %-30M %m%n");
+    my $layout = Log::Log4perl::Layout::PatternLayout->new("%5p $h %-30M %m%n");
     # Set the layout of the appender
     $appender->layout($layout);
     # Register the appender with the logger
