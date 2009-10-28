@@ -38,6 +38,7 @@ SBG::Role::Versionable
 
 use Cache::File;
 
+use SBG::Node;
 use SBG::U::List qw/pairs/;
 use SBG::U::Log qw/log/;
 
@@ -162,6 +163,26 @@ override 'add_interaction' => sub {
 
 
 ################################################################################
+=head2 add_seq
+
+ Function: 
+ Example : 
+ Returns : 
+ Args    : An Array of L<Bio::PrimarySeqI>
+
+
+=cut
+sub add_seq {
+    my ($self, @seqs) = @_;
+    my @nodes = map { SBG::Node->new($_) } @seqs;
+    # Each node contains one sequence object
+    $self->add_node($_) for @nodes;
+    return $self;
+
+} # add_seq
+
+
+################################################################################
 =head2 partition
 
  Function: Subsets the network into connected sub graphs 
@@ -206,7 +227,8 @@ sub build {
     my $cacheid = "$self";
     my $cached = $ops{cache} ? $self->cache->thaw($cacheid) : undef;
     log()->trace('cache:', $ops{cache});
-    log()->trace('cacheid:',$cacheid,',defined:',defined($cached));
+    log()->trace('cacheid:',$cacheid);
+    log()->trace('cached:', defined($cached) || 0);
     if (defined $cached) {
         log()->debug($cacheid, ' (cached)');
         return $cached;
