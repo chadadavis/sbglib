@@ -61,40 +61,26 @@ if ($ops{'h'}) { pod2usage(-exitval=>1, -verbose=>2); }
 $SIG{__DIE__} = \&confes if $ops{'d'};
 
 
-my @files = @ARGV;
+my @fastafiles = @ARGV;
 
-foreach my $file (@files) {
+foreach my $file (@fastafiles) {
 
     my $basename = basename($file,'.fa');
     $ops{'f'} ||= "${basename}.log";
     SBG::U::Log::init($ops{'l'}, $ops{'f'}) if $ops{'l'};
-    
-    my $seqio = new Bio::SeqIO(-file=>$file);
-    my @seqs;
-    while (my $seq = $seqio->next_seq) {
-        push @seqs, $seq;
-    }
-    # Node objects from sequences
-    my @nodes = map { SBG::Node->new($_) } @seqs;
-    # Empty network
+
     my $net = SBG::Network->new;
-    # Each node contains one sequence object
-    $net->add_node($_) for @nodes;
-    # Searcher tries to find interaction templates (edges) to connect nodes
+    my $seqio = new Bio::SeqIO(-file=>$file);
+    while (my $seq = $seqio->next_seq) {
+        $net->add_seq($seq);
+    }
+
+    # Searcher tries to find interaction templates (edges) to connect seq nodes
     $net = $net->build(new SBG::Search::TransDB,
-                       cache=>1,maxid=>$ops{maxid},minid=>$ops{minid});
+                       maxid=>$ops{maxid},minid=>$ops{minid});
     
-    # use SBG::NetworkIO::graphviz;
-    # $net->store("$name-net.stor");
-    # $pngio = SBG::NetworkIO::graphviz->new(file=>">$name-net.png");
-    # $dotio = SBG::NetworkIO::graphviz->new(file=>">$name-net.dot");
-    # $pngio->_write($net);
-    # $dotio->write($net);
-    #
-    # use SBG::NetworkIO::html;
-    # $htmlio = SBG::NetworkIO::html->new(file=>">$name.html");
-    # $htmlio->write($net);
-    
+    $net->store("$name-net.stor");
+
     log()->debug("$basename Done");
 
 }
