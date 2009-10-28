@@ -163,7 +163,7 @@ sub module_for {
     my $class = blessed($obj) or return;
     Module::Load::load($class);
     UNIVERSAL::isa($obj, 'HASH') or return;
-    foreach my $k (%$obj) {
+    foreach my $k (keys %$obj) {
         module_for($obj->{$k});
     }
 }
