@@ -114,11 +114,11 @@ my @allkeys = qw/target model msize rmsd medsc seqids superpos/;
 my $targetfile = shift or pod2usage(-exitval=>1);
 
 my $basename = basename($targetfile,'.stor');
-$ops{'logfile'} ||= "bench-${basename}.log";
+$ops{'logfile'} ||= "log/eval-${basename}.log";
 SBG::U::Log::init($ops{'log'}, $ops{'logfile'}) if $ops{'log'};
 
 
-# Eval all other files as models, against target
+# Evaluate all other files as models, against target
 my ($best, $all) = evaltarget(\%ops, $targetfile, @ARGV);
 
 my $tbase = basename($targetfile, '.stor');
@@ -188,6 +188,15 @@ sub evaltarget {
         warn "No target in: $targetfile\n";
         return;
     }
+
+# TODO DEL
+# Hack to compensate for STAMP lowercasing chain IDs
+    foreach my $k ($target->keys->flatten) {
+        my $lck = lc $k;
+        $target->set($lck, $target->get($k));
+        $target->models->delete($k);
+    }
+
 
     # How much of the target complex do the models need to cover
     my $tsize = $target->count;
@@ -284,7 +293,7 @@ sub evalmodel {
     modellinks(\%ev);
     modeloutputs(\%ev, $target, $model);
 
-    my @seqids = @{$ev{'seqids'}};
+    my @seqids = @{$ev{'seqids'} || []};
 
     # skip if seqid thresh not met
     return if defined($ops->{'minseqid'}) && ! $seqids[0] >= $ops->{'minseqid'};
@@ -321,7 +330,8 @@ sub modelstats {
 
 #     my ($rmsd, $trans) = modelrmsd($target, $model);
     my ($rmsd, $trans) = modelrmsd($model, $target);
-
+    return unless $rmsd;
+        
     $ev->{'rmsd'} = sprintf "%.2f", $rmsd;
     $ev->{'trans'} = $trans;
     $ev->{'cover'} = sprintf "%6.2f", 100.0 * $model->count / $target->count;

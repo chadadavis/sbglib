@@ -755,6 +755,10 @@ sub superposition_points {
    my ($self,$other) = @_;
    # Only consider common components
    my @cnames = $self->coverage($other);
+   unless (@cnames) {
+       log()->error("No common components between complexes");
+       return;
+   }
 
    my $selfcofms = [];
    my $othercofms = [];
