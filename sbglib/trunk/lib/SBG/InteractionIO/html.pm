@@ -27,7 +27,6 @@ SBG::IOI
 
 
 
-use Carp;
 use CGI qw/th Tr td start_table end_table h2/;
 use SBG::U::List qw/flatten/;
 use SBG::U::HTML qw/formattd rcsb/;
@@ -58,12 +57,12 @@ sub write {
     my $rows = [ $heads ];
 
     foreach my $iaction (@interactions) {
-        my $keys = $iaction->keys;
+        my $keys = $iaction->keys->sort;
         next unless $keys->length;
         my $row = [];
-        my $models = $keys->map(sub { $iaction->models->at($_) });
-        my $ids = $models->map(sub { $_->subject->id });
-        my $seqids = $models->map(sub { $_->scores->at('seqid') });
+        my $models = $keys->map(sub {$iaction->models->at($_)});
+        my $ids = $models->map(sub{$_->subject->id});
+        my $seqids = $models->map(sub{ sprintf "%.2f",$_->scores->at('seqid')});
         my $rcsbs = $ids->map(sub{rcsb($_)});
 
         push @$row, formattd($iaction->scores->at('irmsd'));
@@ -98,7 +97,7 @@ sub write {
 =cut
 sub read {
     my ($self) = @_;
-    carp "Not implemented";
+    warn "Not implemented";
     return;
 }
 
