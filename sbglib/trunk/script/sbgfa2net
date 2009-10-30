@@ -41,6 +41,8 @@ use Carp;
 use File::Basename;
 use FindBin qw/$Bin/;
 
+use Moose::Autobox;
+
 use Bio::SeqIO;
 use SBG::U::Log qw/log/;
 use SBG::Network;
@@ -56,10 +58,10 @@ my $result = GetOptions(\%ops,
                         'maxid|x=i',
                         'minid|n=i',
                         'output|o=s',
+                        'cache|c=i',
     );                  
 if ($ops{'h'}) { pod2usage(-exitval=>1, -verbose=>2); }
 $SIG{__DIE__} = \&confes if $ops{'d'};
-
 
 my @fastafiles = @ARGV;
 
@@ -76,10 +78,26 @@ foreach my $file (@fastafiles) {
     }
 
     # Searcher tries to find interaction templates (edges) to connect seq nodes
-    $net = $net->build(new SBG::Search::TransDB,
-                       maxid=>$ops{maxid},minid=>$ops{minid});
+    my $buildops = {%ops}->hslice([qw/maxid minid cache/]);
+    $net = $net->build(new SBG::Search::TransDB,%$buildops);
     
-    $net->store($ops{output} || "$basename-net.stor");
-    log()->debug("$basename Done");
+    my $base = $ops{output} || $basename;
+    _write_partitions($net, $base);
 
+
+}
+
+
+sub _write_partitions {
+    my ($net, $label) = @_;
+    $label ||= '';
+    my @subnets = $net->partition;
+    my @files;
+    for (my $i = 0; $i < @subnets; $i++) {
+        # 1-based counting
+        my $filename = sprintf "%s-net-%04d.stor", $label, $i+1;
+        $subnets[$i]->store($filename) unless -f $filename;
+        push @files, $filename;
+    }
+    return @files;
 }
