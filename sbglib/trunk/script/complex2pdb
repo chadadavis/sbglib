@@ -61,9 +61,6 @@ use SBG::Role::Storable;
 use SBG::Complex;
 use SBG::DomainIO::pdb;
 
-# TODO DEL
-use SBG::Run::rasmol qw/rasmol/;
-
 
 ################################################################################
 
