@@ -81,10 +81,11 @@ has 'e' => (
     );
 
 
+# Number of hits to keep, per iteration of PSI-BLAST
 has 'b' => (
     is => 'rw',
     isa => 'Maybe[Int]',
-    default => 250,
+    default => 500,
     );
 
 has 'database' => (
@@ -169,12 +170,12 @@ sub _blast1 {
         $self->cache->put($seq, $hits) if $ops{cache};
     }
     if ($ops{maxid}) {
-        $ops{maxiid} /= 100.0 if $ops{maxid} > 1;
+        $ops{maxid} /= 100.0 if $ops{maxid} > 1;
         log()->debug("Maxium sequence identity fraction:", $ops{maxid});
         $hits = $hits->grep(sub{$_->hsp->frac_identical<=$ops{maxid}});
     }
     if ($ops{minid}) {
-        $ops{miniid} /= 100.0 if $ops{minid} > 1;
+        $ops{minid} /= 100.0 if $ops{minid} > 1;
         log()->debug("Minimum sequence identity fraction:", $ops{minid});
         $hits = $hits->grep(sub{$_->hsp->frac_identical>=$ops{minid}});
     }
