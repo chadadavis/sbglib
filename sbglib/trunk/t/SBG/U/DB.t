@@ -14,7 +14,7 @@ use SBG::U::DB qw/connect/;
 use Scalar::Util qw/refaddr/;
 
 # Test connection caching
-my $dbh1 = connect('trans_3_0', 'wilee');
-my $dbh2 = connect('trans_3_0', 'wilee');
+my $dbh1 = connect('trans_3_0', 'wilee.embl.de');
+my $dbh2 = connect('trans_3_0', 'wilee.embl.de');
 
 is(refaddr($dbh1),refaddr($dbh2), "connect() caching");
