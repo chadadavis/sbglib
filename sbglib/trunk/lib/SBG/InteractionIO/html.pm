@@ -62,7 +62,7 @@ sub write {
         my $row = [];
         my $models = $keys->map(sub {$iaction->models->at($_)});
         my $ids = $models->map(sub{$_->subject->id});
-        my $seqids = $models->map(sub{ sprintf "%.2f",$_->scores->at('seqid')});
+        my $seqids = $models->map(sub{sprintf "%.2f",$_->scores->at('seqid')||'Nan'});
         my $rcsbs = $ids->map(sub{rcsb($_)});
 
         push @$row, formattd($iaction->scores->at('irmsd'));

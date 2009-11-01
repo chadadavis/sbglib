@@ -151,15 +151,15 @@
 %   89 EXPRESSION_SYSTEM_VECTOR_TYPE: PLASMID;                              
 %   90 EXPRESSION_SYSTEM_PLASMID: PRSFDUET-1 (NOVAGEN)                      
 %     C.D.LIMA                                                              
-/g/data/pdb/pdb2nn6.ent 2nn6a { CHAIN A }
-/g/data/pdb/pdb2nn6.ent 2nn6b { CHAIN B }
-/g/data/pdb/pdb2nn6.ent 2nn6c { CHAIN C }
-/g/data/pdb/pdb2nn6.ent 2nn6d { CHAIN D }
-/g/data/pdb/pdb2nn6.ent 2nn6e { CHAIN E }
-/g/data/pdb/pdb2nn6.ent 2nn6f { CHAIN F }
-/g/data/pdb/pdb2nn6.ent 2nn6g { CHAIN G }
-/g/data/pdb/pdb2nn6.ent 2nn6h { CHAIN H }
-/g/data/pdb/pdb2nn6.ent 2nn6i { CHAIN I }
+ 2nn6a { CHAIN A }
+ 2nn6b { CHAIN B }
+ 2nn6c { CHAIN C }
+ 2nn6d { CHAIN D }
+ 2nn6e { CHAIN E }
+ 2nn6f { CHAIN F }
+ 2nn6g { CHAIN G }
+ 2nn6h { CHAIN H }
+ 2nn6i { CHAIN I }
 % resolution:  3.350 angstroms
 % refinement:  R =  0.00000 0.00000 0.00000 0.00000 0.00000 0.00000 0.00000 0.00000 0.00000 0.00000 0.00000
 %
