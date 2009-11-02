@@ -27,10 +27,7 @@ store($seq1, $file);
 
 my $seq2 = retrieve $file;
 
-diag dump $seq1;
-diag "$seq2";
-
-# is($seq1, $seq2, "store / retrieve");
+is($seq1, $seq2, "store / retrieve");
 
 
 

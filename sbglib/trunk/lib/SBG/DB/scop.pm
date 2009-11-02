@@ -26,6 +26,7 @@ package SBG::DB::scop;
 use base qw/Exporter/;
 our @EXPORT_OK = qw/scopdomain/;
 
+use File::Basename;
 use SBG::U::Log qw/log/;
 
 use SBG::Domain;
@@ -33,7 +34,7 @@ use SBG::Domain;
 # TODO Needs to be in a DB
 # Maps e.g. 2hz1A.a.1.1.1-1 to { A 2 _ to A 124 _ }
 #our $scopdb = "$ENV{HOME}/work/ca/benchmark/scop_1.73.dom.gz";
-our $scopdb = "/g/russell2/davis/work/ca/data/scop_1.73.dom.gz";
+our $scopdb = dirname(__FILE__) . "/scop_1.73.dom.gz";
 
 
 ################################################################################

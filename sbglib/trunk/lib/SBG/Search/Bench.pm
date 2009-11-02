@@ -27,6 +27,7 @@ our @EXPORT_OK = qw/components pdbids search/;
 with 'SBG::SearchI';
 
 use Text::ParseWords; # qw/parse_line/;
+use File::Basename;
 
 use SBG::Types qw/$re_pdb/;
 use SBG::Model;
@@ -36,12 +37,7 @@ use SBG::DB::scop qw/scopdomain/;
 use SBG::U::List qw/uniq/;
 use SBG::U::Log qw/log/;
 
-
-# TODO  needs to be in data directory
-# Lookup module path in %INC
-# our $templatedb = "/g/russell2/davis/work/ca/data/interactions-all.gz";
-our $templatedb = "/g/russell2/davis/work/ca/data/interactions-uniq.gz";
-
+our $templatedb = dirname(__FILE__) . "/interactions-uniq.gz";
 
 ################################################################################
 =head2 components

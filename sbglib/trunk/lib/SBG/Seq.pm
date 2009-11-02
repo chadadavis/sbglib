@@ -27,7 +27,9 @@ use Bio::PrimarySeqI;
 # overload stringify of external package
 package Bio::PrimarySeqI;
 use overload ('""'=>'stringify');
-sub stringify { my $self=shift(); $self->display_id || $self->primary_id }
+
+# NB cannot use ->primary_id in operator "" because it'd be recursive
+sub stringify { my $self=shift(); $self->display_id || $self->accession_number }
 
 
 package SBG::Seq;
@@ -39,8 +41,6 @@ SBG::Role::Storable
 /;
 
 use overload (
-    '""' => 'stringify',
-    'cmp' => '_compare',
     fallback => 1,
     );
 
@@ -68,18 +68,6 @@ override 'new' => sub {
     bless $obj, $class;
     return $obj;
 };
-
-
-sub stringify {
-    my ($self) = @_;
-    return $self->accession_number;
-}
-
-
-sub _compare {
-    my ($a, $b) = @_;
-    return $a->accession_number cmp $b->accession_number;
-}
 
 
 ###############################################################################

@@ -37,7 +37,7 @@ use SBG::U::List qw/flatten/;
 # rasmol binary for viewing (e.g. 'rasmol' or 'rasmol-gtk')
 our $rasmol_gui = 'rasmol-gtk';
 # rasmol binary for converting (e.g. 'rasmol' or 'rasmol-classic')
-our $rasmol_converter = 'rasmol';
+our $rasmol_converter = 'rasmol-classic';
 
 
 ################################################################################
