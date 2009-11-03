@@ -51,6 +51,7 @@ use Moose::Autobox;
 
 use SBG::Role::Storable qw/module_for retrieve can_do/;
 use SBG::U::Log;
+use SBG::Seq;
 
 use Data::Dump qw/dump/;
 
