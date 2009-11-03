@@ -210,6 +210,23 @@ sub partition {
 
 
 ################################################################################
+=head2 size
+
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
+
+
+=cut
+sub size {
+    my ($self,) = @_;
+    return scalar($self->nodes);
+
+} # size
+
+
+################################################################################
 =head2 build
 
  Function: Uses B<searcher> to add interactions to network
@@ -221,9 +238,9 @@ sub partition {
 =cut
 sub build {
     my ($self, $searcher, %ops) = @_;
-
     # Check cache
     $ops{cache} = 1 unless defined $ops{cache};
+
     my $cacheid = "$self";
     my $cached = $ops{cache} ? $self->cache->thaw($cacheid) : undef;
     log()->trace('cache:', $ops{cache});
