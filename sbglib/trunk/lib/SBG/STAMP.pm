@@ -244,6 +244,7 @@ sub _cache_init {
             );
         log()->trace($cachedir);
     }
+
     return $cache;
 
 } # _cache_init
@@ -264,12 +265,19 @@ sub _cache_get {
     my ($from, $to) = @_;
 
     my $cache = _cache_init();
-
     my $key = "${from}--${to}";
     my $entry = $cache->entry($key);
 
     if ($entry->exists) {
-        my $data = $entry->thaw;
+        # Cache::Entry dies when cache corruption, so eval it first
+        my $data = eval { $entry->thaw };
+        if ($@) {
+            log()->error("$key: $@");
+            $entry->remove;
+            log()->debug("still exists $key:", $entry->exists);
+            return;
+        }
+
         if (ref($data) eq 'ARRAY') {
             log()->debug("Cache hit (negative) ", $key);
             return [];
@@ -277,6 +285,9 @@ sub _cache_get {
             log()->debug("Cache hit (positive) ", $key);
             return $data;
         }
+
+
+
     } 
     log()->debug("Cache miss ", $key);
     return;
@@ -313,14 +324,18 @@ sub _cache_set {
         log()->trace("Cache write (negative) $key and $ikey");
     } else {
         $idata = $data->inverse;
-        log()->trace("Cache write (positive) $key (forward)");
-        log()->trace($data);
-        log()->trace("Cache write (positive) $ikey (reverse)");
-        log()->trace($idata);
+        log()->debug("Cache write (positive) $key (forward)");
+        log()->trace(ref($data), "\n", $data);
+        log()->debug("Cache write (positive) $ikey (reverse)");
+        log()->trace(ref($idata), "\n", $idata);
     }
 
     $entry->freeze($data);
     $ientry->freeze($idata);
+
+    log()->debug("$key exists:",$entry->exists,
+                 ",$ikey exists:",$ientry->exists);
+
     # Verification;
     return $entry->exists && $ientry->exists;
 
