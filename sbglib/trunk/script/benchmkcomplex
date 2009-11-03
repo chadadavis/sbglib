@@ -19,7 +19,7 @@ my $complex = _net2complex($subnet);
 
 my $out = "${base}.stor";
 if (-s $out) {
-    die "$out already exists in current dir. Run this elsewhere.\n";
+    die "$out already exists in current dir.\n";
 }
 $complex->store($out);
 exit;
