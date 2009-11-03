@@ -31,9 +31,9 @@ while (my $seq = $seqio->next_seq) {
     push @seqs, $seq;
 }
 # Node objects from sequences
-@nodes = map { new SBG::Node($_) } @seqs;
+my @nodes = map { new SBG::Node($_) } @seqs;
 # Empty network
-$net = new SBG::Network;
+my $net = new SBG::Network;
 # Each node contains one sequence object
 $net->add_node($_) for @nodes;
 # Searcher tries to find interaction templates (edges) to connect nodes
