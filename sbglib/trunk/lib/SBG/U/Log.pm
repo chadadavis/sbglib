@@ -109,7 +109,7 @@ sub init {
     my $h = `hostname --short`;
     chomp $h;
     # Define log format for appender
-    my $layout = Log::Log4perl::Layout::PatternLayout->new("%5p $h %-30M %m%n");
+    my $layout = Log::Log4perl::Layout::PatternLayout->new("%5p $h %-35M %m%n");
     # Set the layout of the appender
     $appender->layout($layout);
     # Register the appender with the logger
