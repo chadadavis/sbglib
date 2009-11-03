@@ -759,6 +759,7 @@ sub superposition_points {
        log()->error("No common components between complexes");
        return;
    }
+   log()->trace(scalar(@cnames), " common components");
 
    my $selfcofms = [];
    my $othercofms = [];
@@ -766,23 +767,27 @@ sub superposition_points {
    foreach my $key (@cnames) {
        my $selfdom = $self->get($key)->subject;
        my $otherdom = $other->get($key)->subject;
-
        $selfdom = _setcrosshairs($selfdom, $otherdom) or next;
+
        $selfcofms->push($selfdom);
        $othercofms->push(cofm($otherdom));
+   }
 
+   unless ($selfcofms->length > 1) {
+       log->warn("Too few component-wise superpositions to superpose complex");
+       return;
    }
 
    my $selfcoords = pdl($selfcofms->map(sub{ $_->coords }));
    my $othercoords = pdl($othercofms->map(sub{ $_->coords }));
-
    $selfcoords = $selfcoords->clump(1,2) if $selfcoords->dims == 3;
    $othercoords = $othercoords->clump(1,2) if $othercoords->dims == 3;
 
    my $trans = SBG::U::RMSD::superpose($selfcoords, $othercoords);
-   # Now it has been transformed
+   log()->trace($trans);
+   # Now it has been transformed already. Can measure RMSD of new coords
    my $rmsd = SBG::U::RMSD::rmsd($selfcoords, $othercoords);
-
+   log()->debug("rmsd:", $rmsd);
    return wantarray ? ($trans, $rmsd) : $trans;
 
 } # superposition_points
