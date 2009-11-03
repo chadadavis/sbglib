@@ -6,7 +6,7 @@ B<bencheval> - Evaluate a complex against models of it
 
 =head1 SYNOPSIS
 
- bencheval true-complex-file.stor model1.stor model2.stor ...
+ bencheval <true-complex.sto>r <model1.stor> [model2.stor ...]
 
 =head1 DESCRIPTION
 
@@ -58,18 +58,24 @@ use CGI qw/:standard *table/;
 use Data::Dump qw/dump/;
 use Moose::Autobox;
 use autobox ARRAY => 'SBG::U::List';
+
+use File::NFSLock;
+use Fcntl qw/LOCK_EX LOCK_NB/;
+
 use SBG::U::List qw/mean avg median sum min max flatten/;
 
 # use SBG::Eval;
 use SBG::Role::Storable;
 use SBG::U::HTML qw/formattd rcsb/;
 
+use SBG::Seq; # required to reinstate overload on SBG::PrimarySeqI
 use SBG::Run::pdbc qw/pdbc/;
 use SBG::Run::rasmol qw/rasmol pdb2img/;
 use SBG::DomainIO::stamp;
 use SBG::DomainIO::pdb;
 use SBG::InteractionIO::html;
 use SBG::SuperpositionIO::html;
+use SBG::U::Log;
 
 ################################################################################
 
@@ -103,7 +109,8 @@ unless (defined $ops{'field'}) {
     $ops{'thresh'} = 5;
 }
 
-mkdir($_) for qw/pdb dom html/;
+mkdir 'eval';
+mkdir("eval/$_") for qw/pdb dom html/;
 
 my @idxkeys = 
     qw/target nmodels ngood model msize rmsd medsc nres seqids superpos/;
@@ -114,7 +121,7 @@ my @allkeys = qw/target model msize rmsd medsc seqids superpos/;
 my $targetfile = shift or pod2usage(-exitval=>1);
 
 my $basename = basename($targetfile,'.stor');
-$ops{'logfile'} ||= "log/eval-${basename}.log";
+$ops{'logfile'} ||= "log/eval/${basename}.log";
 SBG::U::Log::init($ops{'log'}, $ops{'logfile'}) if $ops{'log'};
 
 
@@ -123,20 +130,20 @@ my ($best, $all) = evaltarget(\%ops, $targetfile, @ARGV);
 
 my $tbase = basename($targetfile, '.stor');
 my ($pdb, $tid) = split '-', $tbase;
-$best->{'target'} = rcsb($pdb) . '-' . a({-href=>"${tbase}.html"},$tid);
+$best->{'target'} = a({-href=>"${tbase}.html"},$tbase);
 
 my $idxrow = td([map { $best->{$_} } @idxkeys ]);
 my ($idxfh,$idxlock) = openidxhtml(@idxkeys);
 print $idxfh Tr($idxrow);
 close $idxfh;
-unlink $idxlock;
+$idxlock->unlock;
 
 my @allrows = map { my $m=$_; td([map { $m->{$_} } @allkeys ]) } @$all;
 my $allrow = Tr(\@allrows);
 my ($allfh, $alllock) = openallhtml(@allkeys);
 print $allfh Tr($allrow);
 close $allfh;
-unlink $alllock;
+$alllock->unlock;
 
 exit;
 
@@ -145,8 +152,12 @@ exit;
 
 sub openidxhtml {
     my (@keys) = @_;
-    my $file = "html/index.html";
-    my $lock = wlock($file, 60) or return;
+    my $file = "eval/html/index.html";
+    my $lock = File::NFSLock->new($file,LOCK_EX,60,5*60);
+    unless ($lock) {
+        warn "Could not lock for writing: $file";
+        return;
+    }
     if (-s $file) {
         open my $fh, ">>$file";
         return wantarray ? ($fh, $lock) : $fh;
@@ -163,8 +174,12 @@ sub openidxhtml {
 
 sub openallhtml {
     my (@keys) = @_;
-    my $file = "html/all.html";
-    my $lock = wlock($file, 60) or return;
+    my $file = "eval/html/all.html";
+    my $lock = File::NFSLock->new($file,LOCK_EX,60,5*60);
+    unless ($lock) {
+        warn "Could not lock for writing: $file";
+        return;
+    }
     if (-s $file) {
         open my $fh, ">>$file";
         return wantarray ? ($fh, $lock) : $fh;
@@ -175,6 +190,23 @@ sub openallhtml {
         print $fh start_table({-border=>'1'});
         print $fh Tr(th([ @keys ]));
         return wantarray ? ($fh, $lock) : $fh;
+    }
+}
+
+
+sub opencorrcsv {
+    my ($corrfile) = @_;
+    $corrfile ||= 'eval/rmsdcorr.csv';
+    if (my $lock = File::NFSLock->new($corrfile,LOCK_EX,100,5*60)) {
+        unless (-s $corrfile) {
+            open my $rmsdfh, ">>$corrfile";
+            printf 
+                $rmsdfh join('','#',("%10s")x8,"\n"),
+                qw/target model rmsd avgsc medsc sumsc minsc maxsc/;
+        }
+        # Otherwise it's already been opened and header was already written
+    } else {
+        warn "Could not lock for writing: $corrfile";
     }
 }
 
@@ -205,7 +237,7 @@ sub evaltarget {
 
     my $tbase = basename($targetfile, '.stor');
     # Output for all models on this target
-    my $file = "html/${tbase}.html";
+    my $file = "eval/html/${tbase}.html";
     open my $fh, ">$file";
 
     print $fh start_html($tbase);
@@ -217,10 +249,8 @@ sub evaltarget {
 
     my $evmodels = [];
 
-    my $lock = wlock('rmsdcorr.csv', 100) or return;
-    open my $rmsdfh, ">>rmsdcorr.csv";
-    print $rmsdfh "#target\tmodel\trmsd\tavgsc\tmedsc\tsumsc\tminsc\tmaxsc\n";
-    unlink $lock;
+    my $corrfile = 'eval/rmsdcorr.csv';
+    opencorrcsv($corrfile);
 
     foreach my $modelfile (@modelfiles) { 
         my %ev = evalmodel($ops, $target, $modelfile) or next;
@@ -228,20 +258,21 @@ sub evaltarget {
         print $fh Tr($row);
 
         my ($pdb, $tid) = split '-', $tbase;
-        $ev{'target'} = rcsb($pdb) . '-' . a({-href=>"${tbase}.html"},$tid);
+        $ev{'target'} = a({-href=>"${tbase}.html"},$pdb);
         $evmodels->push({%ev});
 
         my @fields = map { $ev{$_} } qw/rmsd avgsc medsc sumsc minsc maxsc/;
-        $lock = wlock('rmsdcorr.csv', 100) or next;
-
-        if ($lock) {
-            print $rmsdfh 
-                join("\t",$tbase,basename($modelfile,'.stor'), @fields), "\n";
+        
+        if (my $lock = File::NFSLock->new($corrfile,LOCK_EX,100,5*60)) {
+            open my $rmsdfh, ">>$corrfile";
+            my ($mid) = $modelfile =~ /model-(.*?).stor$/;
+            printf 
+                $rmsdfh join('',("%10s")x8, "\n"),
+                $tbase,$mid, @fields;
+        } else {
+            warn "Cannot lock for writing: $corrfile";
         }
-        unlink $lock;
-
     } # foreach $modelfile
-    close $rmsdfh;
 
     print $fh end_table();
     close $fh;
@@ -274,7 +305,7 @@ sub evalmodel {
     my $model = retrieve $modelfile;
 
     my $mbase = basename($modelfile, '.stor');
-    my $file = "html/${mbase}.html";
+    my $file = "eval/html/${mbase}.html";
     open my $fh, ">$file";
     print $fh start_html($mbase);
     print $fh h2("Model $mbase"), "\n";
@@ -283,8 +314,9 @@ sub evalmodel {
     print $fh Tr(th([ @keys ]));
 
     my %ev = (base=>$mbase);
-    my ($tpdb, $tid, undef, $mid) = split '-', $mbase;
-    $ev{'target'} = rcsb($tpdb . '-' . $tid);
+    my ($tlabel, $mid) = $mbase =~ /(.*?)-model-(.*?)/;
+    my ($tpdb, $tid) = split '-', $tlabel;
+    $ev{'target'} = a({-href=>"${tlabel}.html"},$tlabel);
 
     return unless defined($model);
     return if $model->count < $ops->{'size'};
@@ -317,7 +349,8 @@ sub evalmodel {
 sub modellinks {
     my ($ev) = @_;
     my $base = $ev->{base};
-    my ($tpdb, $tid, undef, $mid) = split '-', $base;
+
+    my ($targetlabel, $mid) = $base =~ /^(.*?)-model-(.*?)$/;
     $ev->{'model'} = a({-href=>"${base}.html"}, $mid);
     $ev->{'dom'} = a({-href=>"../dom/${base}.dom"}, 'dom');
     $ev->{'superpos'} = a({-href=>"../pdb/${base}.pdb"}, 'superpos');
@@ -330,10 +363,9 @@ sub modelstats {
 
 #     my ($rmsd, $trans) = modelrmsd($target, $model);
     my ($rmsd, $trans) = modelrmsd($model, $target);
-    return unless $rmsd;
         
-    $ev->{'rmsd'} = sprintf "%.2f", $rmsd;
-    $ev->{'trans'} = $trans;
+    $ev->{'rmsd'} = $rmsd ? sprintf("%.2f", $rmsd) : 'NaN';
+    $ev->{'trans'} = $trans if $trans;
     $ev->{'cover'} = sprintf "%6.2f", 100.0 * $model->count / $target->count;
     $ev->{'msize'} = $model->count;
     $ev->{'tsize'} = $target->count;
@@ -369,7 +401,7 @@ sub modelrmsd {
 # TODO which superposition
 #     my $transmat = $model->superposition_frame_cofm3($target);
     my ($transmat, $rmsd) = $model->superposition_points($target);
-
+    return unless $rmsd;
     # Now crosshairs have the proper orientation
 #     $model->transform($transmat);
 
@@ -442,9 +474,9 @@ sub _print_html {
 
        push 
            @tdrow, 
-            td(a({-href=>"pdb/$mbase.pdb"}, 'pdb')), 
-            td(a({-href=>"dom/$mbase.dom"}, 'dom')),
-            td(({-href=>"ppm/$mbase.ppm"}, 'ppm')),
+            td(a({-href=>"../pdb/$mbase.pdb"}, 'pdb')), 
+            td(a({-href=>"../dom/$mbase.dom"}, 'dom')),
+            td(({-href=>"../ppm/$mbase.ppm"}, 'ppm')),
             ;
         print Tr({-align=>'right'}, "@tdrow"), "\n";
     }
@@ -463,14 +495,16 @@ sub _load_eval {
     }
 
     # Being computed by another process?
-    my $lock = wlock($evalfile, 1) or return;
+    unless (my $lock = File::NFSLock->new($evalfile,LOCK_EX|LOCK_NB)) {
+        warn "$evalfile is already being processed";
+    }
 
     $ev = _eval_one($modelfile, $minsize);
     if (! -s $evalfile) {
         $ev->store($evalfile);
 #         print "evalfile written\n";
     }
-    unlink $lock;
+
     return $ev;
 } # _load_eval
 
@@ -545,14 +579,14 @@ sub _outputs {
     my ($evalfile, $modelfile, $target) = @_;
 
     my $mbase = basename($modelfile, '.stor');
-    my $pdbfile = "pdb/${mbase}.pdb";
-    my $domfile = "dom/${mbase}.dom";
-    my $ppmfile = "ppm/${mbase}.ppm";
+    my $pdbfile = "eval/pdb/${mbase}.pdb";
+    my $domfile = "eval/dom/${mbase}.dom";
+    my $ppmfile = "eval/ppm/${mbase}.ppm";
     my @files = ($pdbfile, $domfile, $ppmfile);
-    my @locks = map { "$_.lock" } @files;
+    my @locks = map { "$_.NFSlock" } @files;
     my $alldone = 1;
     foreach (@files) {
-        unless (-e $_ || -e "$_.lock") { $alldone = 0 }
+        unless (-e $_ || -e "$_.NFSLock") { $alldone = 0 }
     }
     return if $alldone;
 
@@ -579,14 +613,14 @@ sub modeloutputs {
     my ($ev, $target, $model) = @_;
 
     my $mbase = $ev->{base};
-    my $pdbfile = "pdb/${mbase}.pdb";
-    my $domfile = "dom/${mbase}.dom";
-    my $ppmfile = "ppm/${mbase}.ppm";
+    my $pdbfile = "eval/pdb/${mbase}.pdb";
+    my $domfile = "eval/dom/${mbase}.dom";
+    my $ppmfile = "eval/ppm/${mbase}.ppm";
     my @files = ($pdbfile, $domfile, $ppmfile);
-    my @locks = map { "$_.lock" } @files;
+    my @locks = map { "$_.NFSLock" } @files;
     my $alldone = 1;
     foreach (@files) {
-        unless (-e $_ || -e "$_.lock") { $alldone = 0 }
+        unless (-e $_ || -e "$_.NFSLock") { $alldone = 0 }
     }
     return if $alldone;
 
@@ -614,14 +648,12 @@ sub _domfile {
 #         print STDERR "$domfile already done\n";
         return;
     }
-    my $lock = wlock($domfile, 1) or return;
-
+    my $lock = File::NFSLock->new($domfile,LOCK_EX|LOCK_NB) or return;
 
     # Rewrite model file in target's frame of reference, for convenience later
     my $domio = new SBG::DomainIO::stamp(file=>">$domfile");
     $domio->write(@{$target->domains}, @{$model->domains});
 #     print "$domfile written\n";
-    unlink $lock;
 }
 
 
@@ -632,7 +664,7 @@ sub _pdbfile {
 #         print STDERR "$pdbfile already done\n";
         return;
     }
-    my $lock = wlock($pdbfile, 1) or return;
+    my $lock = File::NFSLock->new($pdbfile,LOCK_EX|LOCK_NB) or return;
 
     my $targetasdom = $target->merge;
     my $modelasdom = $model->merge;
@@ -641,25 +673,24 @@ sub _pdbfile {
     my $pdbio = new SBG::DomainIO::pdb(file=>">$pdbfile");
     $pdbio->write($targetasdom, $modelasdom);
 #     print "$pdbfile written\n";
-    unlink $lock;
+
 }
 
 
 sub _ppmfile {
     my ($mbase, $model, $target) = @_;
 
-    my $pdbfile = "pdb/${mbase}.pdb";
-    my $ppmfile = "ppm/${mbase}.ppm";
+    my $pdbfile = "eval/pdb/${mbase}.pdb";
+    my $ppmfile = "eval/ppm/${mbase}.ppm";
 
     if (-s $ppmfile) {
 #         print STDERR "$ppmfile already done\n";
         return;
     }
-    my $lock = wlock($ppmfile, 1) or return;
+    my $lock = File::NFSLock->new($ppmfile,LOCK_EX|LOCK_NB) or return;
 
     pdb2img(pdb=>$pdbfile, img=>$ppmfile);
 #     print "$ppmfile written\n";
-    unlink $lock;
 }
 
 
@@ -744,26 +775,6 @@ sub _superposition_scores {
     return %obs;
 } # _superposition_scores
 
-
-
-sub wlock {
-    my ($file, $requested) = @_;
-    return unless $file;
-    my $attempts = $requested || 5;
-    my $lock = "${file}.lock";
-    until (symlink("$ENV{HOSTNAME}-$$", $lock)){
-        $attempts--;
-        unless ($attempts > 0) {
-            print STDERR "Failed to lock $file after $requested attempts\n";
-            return;
-        }
-
-        sleep 1 + int rand(5);
-        my $full = File::Spec->rel2abs($lock);
-#         print "Waiting for lock: $full ($attempts)\n";
-    }
-    return $lock;
-} # wlock
 
 
 sub mapcolor {
