@@ -18,7 +18,7 @@ L<SBG::Network> , L<SBG::IOI>
 
 ################################################################################
 
-package SBG::NetworkIO::graphviz;
+package SBG::NetworkIO::dot;
 use Moose;
 
 with qw/
@@ -44,51 +44,17 @@ NB Not implemented
 sub read {
     my ($self,) = @_;
     my $fh = $self->fh;
-    my $net = new SBG::Network;
 
     warn "Not implemented";
+    my $net = new SBG::Network;
 
     while (my $line = <$fh>) {
         next unless $line =~ //;
         chomp;
     }
-
     return $net;
+
 } # read
-
-
-################################################################################
-=head2 write
-
- Title   : write
- Usage   : 
- Function: Uses L<Graph::Writer::GraphViz> to write a L<Graph> as an image
- Returns : NA
- Args    : 
-           %options - Options passed on to L<Graph::Writer::GraphViz> 
-
- my $io = new SBG::NetworkIO::graphviz(file=>">mygraph.png");
- $io->write($somegraph, 
-               -rankstep=>1.5,
-               -fontsize=>8,
-               %other_options,
- );
-
-=cut
-sub _write {
-    my ($self, $graph, %ops) = @_;
-    my $file = $self->file or return;
-
-    unless (defined $ops{-format}) {
-        ($ops{-format}) = $file =~ /\.([^\/]+?)$/;
-        $ops{-format} ||= 'png';
-    }
-
-    my $writer = Graph::Writer::GraphViz->new(%ops);
-    $writer->write_graph($graph, $file);
-    return $self;
-} # write
-
 
 
 ################################################################################

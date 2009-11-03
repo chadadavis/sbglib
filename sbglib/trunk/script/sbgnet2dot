@@ -1,0 +1,95 @@
+#!/usr/bin/env perl
+
+=head1 NAME
+
+B<sbgnetwork> - 
+
+=head1 SYNOPSIS
+
+sbgnetwork <fasta-sequences.fa>
+
+=head1 DESCRIPTION
+
+
+=head1 OPTIONS
+
+=head2 -h|elp Print this help page
+
+=head2 -l|og Set logging level
+
+In increasing order: TRACE DEBUG INFO WARN ERROR FATAL
+
+I.e. setting B<-l WARN> (the default) will log warnings errors and fatal
+messages, but no info or debug messages to the log file (B<log.log>)
+
+=head2 -f|ile Log file
+
+Default: <network name>.log in current directory
+
+
+=head1 SEE ALSO
+
+L<SBG::Network> , L<SBG::SearchI>
+
+=cut
+
+use strict;
+use warnings;
+use Pod::Usage;
+use Getopt::Long;
+use Carp;
+use File::Basename;
+use FindBin qw/$Bin/;
+
+use Bio::SeqIO;
+use SBG::U::Log qw/log/;
+use SBG::Node;
+use SBG::Network;
+use SBG::Search::TransDB;
+
+
+my %ops;
+my $result = GetOptions(\%ops,
+                        'h|help',
+                        'l|log=s',
+                        'f|file=s', 
+                        'd|debug',
+                        'maxid|x=i',
+                        'minid|n=i',
+    );                  
+if ($ops{'h'}) { pod2usage(-exitval=>1, -verbose=>2); }
+$SIG{__DIE__} = \&confes if $ops{'d'};
+
+
+my @fastafiles = @ARGV;
+
+foreach my $file (@fastafiles) {
+
+    my $basename = basename($file,'.fa');
+    $ops{'f'} ||= "${basename}.log";
+    SBG::U::Log::init($ops{'l'}, $ops{'f'}) if $ops{'l'};
+
+    my $net = SBG::Network->new;
+    my $seqio = new Bio::SeqIO(-file=>$file);
+    while (my $seq = $seqio->next_seq) {
+        $net->add_seq($seq);
+    }
+
+    # Searcher tries to find interaction templates (edges) to connect seq nodes
+    $net = $net->build(new SBG::Search::TransDB,
+                       maxid=>$ops{maxid},minid=>$ops{minid});
+    
+    # use SBG::NetworkIO::graphviz;
+    # $net->store("$name-net.stor");
+    # $pngio = SBG::NetworkIO::graphviz->new(file=>">$name-net.png");
+    # $dotio = SBG::NetworkIO::graphviz->new(file=>">$name-net.dot");
+    # $pngio->_write($net);
+    # $dotio->write($net);
+    #
+    # use SBG::NetworkIO::html;
+    # $htmlio = SBG::NetworkIO::html->new(file=>">$name.html");
+    # $htmlio->write($net);
+    
+    log()->debug("$basename Done");
+
+}
