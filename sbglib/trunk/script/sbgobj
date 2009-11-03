@@ -48,11 +48,15 @@ use Pod::Usage;
 use File::Temp;
 use Scalar::Util qw/blessed/;
 use Moose::Autobox;
+use Data::Dump qw/dump/;
 
 use SBG::Role::Storable qw/module_for retrieve can_do/;
 use SBG::U::Log;
 
-use Data::Dump qw/dump/;
+# Shouldn't need to explicitly load this, but overloading is not restored if not
+use SBG::Seq;
+
+
 
 ################################################################################
 
