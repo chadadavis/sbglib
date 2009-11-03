@@ -33,6 +33,12 @@ The order of the tuples in the returned array correspond to the order of the two
 given sequences. I.e. the first element of each pair corresponds to a hit for
 the first sequence given; analogously for the second hit of each pair.
 
+Remember to set the following variables:
+
+BLASTDB to the directory containing the blast databases
+BLASTDATADIR to the directory containing the blast databases
+BLASTMAT to the directory containing the BLOSUM and PAM substitution matrices
+
 
 =head1 SEE ALSO
 
