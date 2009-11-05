@@ -57,6 +57,9 @@ use List::MoreUtils qw/each_arrayref/;
 use POSIX;
 use Carp;
 
+use File::NFSLock;
+use Fcntl qw/LOCK_EX LOCK_NB/;
+
 use SBG::Role::Storable;
 use SBG::Network;
 use SBG::Traversal;
@@ -102,12 +105,10 @@ foreach my $file (@files) {
     }
 
     # Being computed by another process?
-    my $lock = wlock($donefile, 1);
-    unless ($lock) {
-        print "$basename : locked\n";
+    unless (my $lock = File::NFSLock->new($donefile,LOCK_EX|LOCK_NB)) {
+        print "$basename : locked\n"; # By?
         next;
     }
-
 
     # Load the Network object
     my $net = retrieve($file) or
@@ -122,7 +123,7 @@ foreach my $file (@files) {
     my @done = <${basename}*.stor>;
     my $done = scalar(@done);
     `echo $done > ${basename}.done`;
-    unlink $lock;
+
 }
 
 exit;
@@ -178,48 +179,5 @@ sub _one_net {
 }
 
 
-=head2 wlock
-
- Title   : wlock
- Usage   : my $lockfile = wlock("file.txt", 10); unlink $lockfile;
- Function: Sets a lock (as symlink) on the given file
- Returns : The link to the lock file, if it could be created, otherwise nothing
- Args    : The file that is to be exclusively opened.
-           The number of attempts to try to lock the file. Default 5.
-
-Routine fails, returning nothing, if it cannot create the lock within the given
-number of attempts.
-
-If you to test a lock without waiting, just set the number of attempts to 1.
-Otherwise the function will sleep for a second between each attempt to give any
-other processes a chance to finish what they are doing before attempting to lock
-the file again.
-
-The lock file returned by this method must be deleted by the caller after the
-lock is no longer needed. E.g.:
-
-my $database = "mydatabase.dat";
-my $lockfile = wlock($database);
-open (DB, ">$database");
-# Read or write the file
-close DB;
-# Release the lock, so that other processes can access the data file
-unlink $lockfile;
-
-=cut
-use File::Spec::Functions qw/rel2abs/;
-sub wlock {
-    my $file = shift or return;
-    my $attempts = shift || 5;
-    my $lock = "${file}.lock";
-    until (symlink("$ENV{HOSTNAME}-$$", $lock)){
-        $attempts--;
-        return unless $attempts > 0;
-        sleep 1 + int rand(3);
-        my $full = rel2abs($lock);
-        print STDERR "Waiting for lock: $full ($attempts)\n";
-    }
-    return $lock;
-} # wlock
 
 
