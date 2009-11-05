@@ -33,6 +33,7 @@ extends qw/Bio::Network::Interaction Moose::Object/;
 with 'SBG::Role::Dumpable';
 with 'SBG::Role::Scorable';
 with 'SBG::Role::Storable';
+with 'SBG::Role::Writable';
 
 
 use overload (

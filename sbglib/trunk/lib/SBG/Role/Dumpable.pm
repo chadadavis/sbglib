@@ -22,16 +22,18 @@ L<Moose>
 
 package SBG::Role::Dumpable;
 use Moose::Role;
+use base qw/Exporter/;
+our @EXPORT_OK = qw/dumper dump undump/;
 
-
-# Based on Data::Dumper::Dumper :
-# use Data::Dumper;
-# $Data::Dumper::Indent = 1;
-# our @EXPORT = qw(Dumper);
-
-# Based on Data::Dump::dump
+use Scalar::Util qw/blessed/;
 use Data::Dump;
-our @EXPORT = qw(dump);
+use Data::Dumper;
+$Data::Dumper::Indent = 1;
+$Data::Dumper::Purity = 1;
+
+# Any contained PDL objects need this to de-serialize, 
+# but probably not via Dumper and Dump, which probably don't even work with PDL
+use PDL::IO::Storable;
 
 
 ################################################################################
@@ -48,9 +50,27 @@ Intended to be able to use $obj->dump as a method
 sub dump {
    my ($self,$fh) = @_;
    $fh ||= \*STDOUT;
-#    print $fh Data::Dumper::Dumper $self;
    print $fh Data::Dump::dump $self;
+   return;
 } # dump
+
+
+sub dumper {
+   my ($self,$fh) = @_;
+   $fh ||= \*STDOUT;
+   print $fh Data::Dumper::Dumper $self;
+   return;
+} # dump
+
+
+sub undump {
+    my ($path) = @_;
+    my $str = `cat $path`;
+    my $obj;
+    $obj = eval $str;
+    return if $@;
+    return $obj;
+}
 
 
 ################################################################################

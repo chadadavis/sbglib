@@ -30,7 +30,7 @@ with 'SBG::Role::Dumpable';
 with 'SBG::Role::Scorable';
 with 'SBG::Role::Storable';
 with 'SBG::Role::Transformable';
-
+with 'SBG::Role::Writable';
 
 use overload (
     '""' => 'stringify',

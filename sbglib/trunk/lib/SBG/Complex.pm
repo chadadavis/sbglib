@@ -34,7 +34,7 @@ with 'SBG::Role::Scorable';
 with 'SBG::Role::Storable';
 with 'SBG::Role::Transformable';
 with 'SBG::Role::Versionable';
-
+with 'SBG::Role::Writable';
 
 use overload (
     '""' => 'stringify',
@@ -339,7 +339,7 @@ a graph, so we built it here, as needed.
 sub network {
     my ($self) = @_;
 
-    my $net = new SBG::Network;
+    my $net = SBG::Network->new;
 
     # Go through %{ $self->interactions }
     foreach my $i (@{$self->interactions->values}) {
@@ -351,7 +351,9 @@ sub network {
             @nodes = $i->nodes;
         } else {
             foreach my $key (@{$i->keys}) {
-                push(@nodes,new SBG::Node(new SBG::Seq(-accession_number=>$_)));
+                # TODO PROB always legit to use accession_number ?
+                push(@nodes,
+                     SBG::Node->new(SBG::Seq->new(-accession_number=>$_)));
             }
         }
         $net->add($_) for @nodes;
@@ -415,7 +417,7 @@ In an array context, this returns the names of the common components
 =cut
 sub coverage {
     my ($self, $other) = @_;
-
+    return unless $other;
     return intersection($self->models->keys, $other->models->keys);
 
 } # coverage

@@ -102,11 +102,17 @@ sub write {
     # A domain defines a subset of structure, write that to a temp file first
     my $domio = new SBG::DomainIO::stamp(tempfile=>1);
     $domio->write(@doms);
-
-    my $cmd = 'transform -g -f ' . $domio->file() . ' -o ' . $self->file();
+    $domio->flush;
+    # Need to redirect to a tempfile, in case stream goes e.g. to stdout
+    my $tmp = SBG::IO->new(tempfile=>1);
+    my $tmppath = $tmp->file;
+    my $cmd = 'transform -g -f ' . $domio->file() . ' -o ' . $tmppath;
     unless (system("$cmd > /dev/null") == 0) {
         warn "$cmd failed: $!";
     }
+    $tmp->flush;
+    my $fh = $self->fh;
+    print $fh `cat $tmppath`;
 
     return $self;
 } # write

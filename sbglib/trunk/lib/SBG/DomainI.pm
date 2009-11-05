@@ -43,6 +43,7 @@ with 'SBG::Role::Dumpable';
 with 'SBG::Role::Scorable';
 with 'SBG::Role::Storable';
 with 'SBG::Role::Transformable';
+with 'SBG::Role::Writable';
 
 
 # You will need to redefine this (i.e. copy) it to implementing classes
@@ -111,6 +112,12 @@ has 'descriptor' => (
     default => 'ALL',
     # Coerce from 'Str', defined in SBG::Types
     coerce => 1,
+    );
+
+
+has 'description' => (
+    is => 'rw',
+    isa => 'Str',
     );
 
 
@@ -426,6 +433,24 @@ sub _descriptor_short {
     $descriptor =~ s/\s+//g;
     return $descriptor;
 }
+
+
+################################################################################
+=head2 seq
+
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
+
+
+=cut
+sub seq {
+    my ($self,) = @_;
+    my $seq = SBG::Run::pbdseq($self);
+    return $seq;
+
+} # seq
 
 
 ################################################################################

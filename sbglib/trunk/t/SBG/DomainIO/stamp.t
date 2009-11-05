@@ -31,8 +31,9 @@ is_deeply(\@doms2, \@doms, "Reading domains in scalar context");
 # Write out a set of domains
 my $out = new SBG::DomainIO::stamp(tempfile=>1);
 $out->write(@doms);
+$out->close;
 # And read back in
-my $io3 = new SBG::DomainIO::stamp(file=>$io2->file);
+my $io3 = new SBG::DomainIO::stamp(file=>$out->file);
 my @doms3 = $io3->read;
 is_deeply(\@doms3, \@doms, "Re-reading written domains");
 

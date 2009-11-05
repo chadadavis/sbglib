@@ -176,6 +176,27 @@ requires 'read';
 
 
 ################################################################################
+=head2 read_all
+
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
+
+
+=cut
+sub read_all {
+    my ($self,) = @_;
+    my @results;
+    while (my $res = $self->read) {
+        push @results, $res;
+    }
+    return wantarray? @results : \@results;
+
+} # read_all
+
+
+################################################################################
 =head2 write
 
  Function: Writes given object/string to the output stream

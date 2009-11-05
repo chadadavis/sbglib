@@ -42,6 +42,7 @@ use Moose::Role;
 with 'SBG::Role::Dumpable';
 with 'SBG::Role::Storable';
 with 'SBG::Role::Transformable';
+with 'SBG::Role::Writable';
 
 
 # NB this is not carried into implementing classes.

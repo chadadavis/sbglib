@@ -23,6 +23,7 @@ requires 'Config::IniFiles' => '0';
 requires 'Data::Dump' => '0';
 requires 'File::Basename' => '0';
 requires 'File::Temp' => '0';
+requires 'Getopt::Complete' => '0';
 requires 'Graph' => '0.86';
 requires 'Graph::Writer::GraphViz' => '0';
 requires 'Log::Log4perl' => '0';
@@ -44,7 +45,7 @@ requires 'Text::ParseWords' => '0';
 requires_external_bin 'cofm';
 # requires_external_bin 'dot';
 requires_external_bin 'pdbc';
-# requires_external_bin 'pdbseq';
+requires_external_bin 'pdbseq';
 requires_external_bin 'stamp';
 requires_external_bin 'transform';
 

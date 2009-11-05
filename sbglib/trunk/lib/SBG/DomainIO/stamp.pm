@@ -115,10 +115,6 @@ Prints in STAMP format, along with any transform(s) that have been applied.
      $ioout->write($d);
  }
 
-Or, to just convert to a string, without any file I/O:
-
- my $str = new SBG::DomainIO->write($dom);
-
 NB, if there is no file name, the STAMP header line will begin just with a
 space, STAMP handles this to mean that it should look for the file in it's own
 list of PDB directories.
