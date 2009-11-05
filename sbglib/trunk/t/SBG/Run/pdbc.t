@@ -7,13 +7,18 @@ use Data::Dump qw/dump/;
 
 use SBG::Run::pdbc qw/pdbc/;
 use SBG::Domain;
+use Moose::Autobox;
 
-my $fields = pdbc('2nn6');
+my $pdbid = '2nn6';
+my $fields = pdbc($pdbid);
 
 is($fields->{'header'}, 'HYDROLASE/TRANSFERASE', "pdbc 'header' field");
-is(scalar keys %$fields, 10, 'pdbc 9 chains + header');
+is($fields->{chain}->keys->length, 9, "pdbc 9 chains in $pdbid");
 
-$fields = pdbc('2nn6A');
+my $chains = 'GH';
+my $subset = pdbc($pdbid . $chains);
+is($subset->{chain}->keys->length, 2, "pdbc chains subset $chains");
 
-
-
+$pdbid = '1g3n';
+$fields = pdbc($pdbid);
+is($fields->{chain}->keys->length, 6, "pdbc 6 chains in $pdbid");
