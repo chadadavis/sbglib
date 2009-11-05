@@ -69,7 +69,6 @@ use SBG::Role::Storable;
 use SBG::U::HTML qw/formattd rcsb/;
 
 use SBG::Seq; # required to reinstate overload on SBG::PrimarySeqI
-use SBG::Run::pdbc qw/pdbc/;
 use SBG::Run::rasmol qw/rasmol pdb2img/;
 use SBG::DomainIO::stamp;
 use SBG::DomainIO::pdb;
