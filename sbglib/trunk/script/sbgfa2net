@@ -47,6 +47,7 @@ use Bio::SeqIO;
 use SBG::U::Log qw/log/;
 use SBG::Network;
 use SBG::Search::TransDB;
+use SBG::GeometricHash;
 
 
 my %ops;
@@ -82,16 +83,16 @@ foreach my $file (@fastafiles) {
     $net = $net->build(new SBG::Search::TransDB,%$buildops);
     
     my $base = $ops{output} || $basename;
-    _write_partitions($net, $base);
+    my @subnets = $net->partition;
+    _write_partitions($base, @subnets);
 
 
 }
 
 
 sub _write_partitions {
-    my ($net, $label) = @_;
+    my ($label, @subnets) = @_;
     $label ||= '';
-    my @subnets = $net->partition;
     my @files;
     for (my $i = 0; $i < @subnets; $i++) {
         # 1-based counting
