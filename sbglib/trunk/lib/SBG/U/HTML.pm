@@ -51,7 +51,7 @@ sub rcsb {
     # If there is a chain, get its chain description, otherwise entry header
     my $pdbc = pdbc($pdb);
     my $title;
-    $title = $pdbc->{$chain} if $chain;
+    $title = $pdbc->{chain}{$chain} if $chain;
     $title ||= $pdbc->{'header'};
 
     my $base = 'http://www.rcsb.org/pdb/explore.do?structureId=';
