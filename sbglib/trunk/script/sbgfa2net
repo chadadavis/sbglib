@@ -83,7 +83,7 @@ foreach my $file (@fastafiles) {
     $net = $net->build(new SBG::Search::TransDB,%$buildops);
     
     my $base = $ops{output} || $basename;
-    my @subnets = $net->partition;
+    my @subnets = $net->partition(minsize=>3);
     _write_partitions($base, @subnets);
 
 
