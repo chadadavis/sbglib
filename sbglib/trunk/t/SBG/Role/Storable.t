@@ -10,7 +10,7 @@ use File::Temp qw/tempfile/;
 use SBG::U::Log qw/log/;
 $SIG{__DIE__} = \&confess;
 my $DEBUG;
-$DEBUG = 1;
+# $DEBUG = 1;
 log()->init('TRACE') if $DEBUG;
 $File::Temp::KEEP_ALL = $DEBUG;
 
