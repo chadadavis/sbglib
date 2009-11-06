@@ -29,15 +29,11 @@ use warnings;
 
 use File::Temp qw(tempfile tempdir);
 
+use Bio::Root::IO; # exists_exe
+
 use SBG::U::Log qw/log/;
 use SBG::DomainIO::pdb;
 use SBG::U::List qw/flatten/;
-
-# TODO DES OO
-# rasmol binary for viewing (e.g. 'rasmol' or 'rasmol-gtk')
-our $rasmol_gui = 'rasmol-gtk';
-# rasmol binary for converting (e.g. 'rasmol' or 'rasmol-classic')
-our $rasmol_converter = 'rasmol-classic';
 
 
 ################################################################################
@@ -56,7 +52,11 @@ sub rasmol {
     my (@doms) = @_;
     @doms = SBG::U::List::flatten(@doms);
 
-    our $rasmol_gui;
+    my $rasmol_gui = 
+        Bio::Root::IO->exists_exe('rasmol-gtk') ||
+        Bio::Root::IO->exists_exe('rasmol') or
+        return;
+
     my $io = new SBG::DomainIO::pdb(tempfile=>1);
     $io->write(@doms);
     my $cmd = "$rasmol_gui " . $io->file;
@@ -95,8 +95,12 @@ sub pdb2img {
     $o{img} = $o{pdb} . '.ppm' unless $o{img};
     $o{mode} ||= 'cartoon';
 
-    log()->trace("$o{pdb} => $o{img}");
-    our $rasmol_converter;
+    my $rasmol_converter = 
+        Bio::Root::IO->exists_exe('rasmol-classic') ||
+        Bio::Root::IO->exists_exe('rasmol') or
+        return;
+    log()->trace("$rasmol_converter: $o{pdb} => $o{img}");
+
     my $fh;
     my $cmd = "$rasmol_converter -nodisplay >/dev/null 2>/dev/null";
     log()->trace($cmd);
