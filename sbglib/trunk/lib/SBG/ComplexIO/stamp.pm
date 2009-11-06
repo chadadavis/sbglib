@@ -105,7 +105,7 @@ sub read {
     my ($self) = @_;
     my $fh = $self->fh or return;
 
-    my $io = SBG::DomainIO::stamp->new(fh=>$fh);
+    my $io = SBG::DomainIO::stamp->new(fh=>$fh,objtype=$self->objtype);
     my $doms = $io->read_all;
     my $models = $doms->map(sub{SBG::Model->new(query=>$_, subject=>$_)});
 

@@ -56,6 +56,7 @@ use Moose;
 with 'SBG::IOI';
 
 use Carp qw/carp cluck/;
+use Module::Load qw/load/;
 
 use Moose::Autobox;
 
@@ -209,6 +210,7 @@ sub read {
         $params = $params->hslice($exists);
 
         my $objtype = $self->objtype();
+        Module::Load::load($objtype);
         my $dom = $objtype->new(%$params);
 
         # Parse transformtion, if any
