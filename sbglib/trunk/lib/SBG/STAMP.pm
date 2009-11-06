@@ -48,7 +48,7 @@ superposition
 
 use Moose::Autobox;
 use File::Temp;
-use Cache::File;
+
 
 use PDL::Lite;
 use PDL::Core qw/pdl/;
@@ -58,6 +58,7 @@ use SBG::Superposition;
 use SBG::Domain::Sphere;
 use SBG::Run::cofm qw/cofm/;
 use SBG::U::Log qw/log/;
+use SBG::U::Cache qw/cache/;
 
 
 # TODO DES need to be set in a Run object
@@ -221,36 +222,6 @@ sub superposition {
 
 
 ################################################################################
-=head2 _cache_init
-
- Function: 
- Example : 
- Returns : 
- Args    : 
-
-
-=cut
-sub _cache_init {
-
-    our $cache;
-    unless (defined $cache) {
-        my $arch = `uname -m`;
-        chomp $arch;
-        my $base = $ENV{CACHEDIR} || $ENV{TMPDIR} || '/tmp';
-        my $cachedir = "${base}/sbgsuperposition_${arch}";
-        $cache = new Cache::File(
-            cache_root => $cachedir,
-            lock_level => Cache::File::LOCK_NFS(),
-            );
-        log()->trace($cachedir);
-    }
-
-    return $cache;
-
-} # _cache_init
-
-
-################################################################################
 =head2 _cache_get
 
  Function: 
@@ -264,7 +235,7 @@ Cache claims to even work between concurrent processes!
 sub _cache_get {
     my ($from, $to) = @_;
 
-    my $cache = _cache_init();
+    my $cache = SBG::U::Cache::cache('sbgsuperposition');
     my $key = "${from}--${to}";
     my $entry = $cache->entry($key);
 
@@ -308,7 +279,7 @@ Cache claims to even work between concurrent processes!
 sub _cache_set {
     my ($from, $to, $data) = @_;
 
-    my $cache = _cache_init();
+    my $cache = SBG::U::Cache::cache('sbgsuperposition');
 
     # Also cache the inverse superposition
     my $key = "${from}--${to}";

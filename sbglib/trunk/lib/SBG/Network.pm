@@ -36,11 +36,10 @@ with 'SBG::Role::Writable';
 with 'SBG::Role::Versionable';
 
 
-use Cache::File;
-
 use SBG::Node;
 use SBG::U::List qw/pairs/;
 use SBG::U::Log qw/log/;
+use SBG::U::Cache qw/cache/;
 
 use overload (
     '""' => 'stringify',
@@ -85,26 +84,6 @@ override 'new' => sub {
     bless $obj, $class;
     return $obj;
 };
-
-
-# Has to use package vars, as Bio::Network is an ArrayRef not a HashRef
-sub cache {
-    my ($self) = @_;
-    our $cache;
-    return $cache if $cache;
-
-    my $base = $ENV{CACHEDIR} || $ENV{TMPDIR} || '/tmp';
-    my $arch = `uname -m`;
-    chomp $arch;
-    my $cachedir = "${base}/sbgnetwork_${arch}";
-
-    $cache = Cache::File->new(
-        cache_root => $cachedir,
-        lock_level => Cache::File::LOCK_NFS(),
-        );
-    log()->trace($cachedir);
-    return $cache;
-}
 
 
 sub stringify {
@@ -241,14 +220,14 @@ sub build {
     # Check cache
     $ops{cache} = 1 unless defined $ops{cache};
 
-    my $cacheid = "$self";
-    my $cached = $ops{cache} ? $self->cache->thaw($cacheid) : undef;
     log()->trace('cache:', $ops{cache});
+    my $cacheid = "$self";
     log()->trace('cacheid:',$cacheid);
-    log()->trace('cached:', defined($cached) || 0);
-    if (defined $cached) {
-        log()->debug($cacheid, ' (cached)');
-        return $cached;
+    if ($ops{cache}) {
+        my $cache = SBG::U::Cache::cache('sbgnetwork');
+        my $cached = $cache->thaw($cacheid);
+        log()->trace('cached:', defined($cached) || 0);
+        return $cached if defined $cached;
     }
 
     # For all pairs
@@ -268,7 +247,10 @@ sub build {
             $self->add_id_to_interaction("$iaction", $iaction);
         }
     }
-    $self->cache->freeze($cacheid, $self) if $ops{cache};
+    if ($ops{cache}) {
+        my $cache = SBG::U::Cache::cache('sbgnetwork');
+        $cache->freeze($cacheid, $self);
+    }
 
     log()->debug(scalar($self->nodes), ' nodes');
     log()->debug(scalar($self->edges), ' edges');
