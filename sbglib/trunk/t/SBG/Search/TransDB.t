@@ -45,7 +45,7 @@ is(scalar(@edges), 10, 'edges()');
 
 # Potential *types* of interactions, between all interacting pairs
 # An edge may have multiple interactions
-is($net->interactions, 487, 'Network::interactions');
+is($net->interactions, 644, 'Network::interactions');
 
 # Interaction network is not necessarily connected, if templates scarce
 my @subnets = $net->partition;
