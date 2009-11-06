@@ -32,7 +32,7 @@ $net->add_interaction(
     -nodes=>[ $node1, $node2 ],
     -interaction => $interaction,
     );
-%iactions = $net->get_interactions($net->nodes);
+my %iactions = $net->get_interactions($net->nodes);
 my ($got) = values %iactions;
 is_deeply([sort $got->nodes], [sort $node1, $node2], "add_interaction");
 
