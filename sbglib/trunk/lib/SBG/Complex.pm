@@ -417,8 +417,8 @@ In an array context, this returns the names of the common components
 =cut
 sub coverage {
     my ($self, $other) = @_;
-    return unless $other;
-    return intersection($self->models->keys, $other->models->keys);
+    return unless defined $other;
+    return intersection($self->keys, $other->keys);
 
 } # coverage
 
