@@ -121,6 +121,13 @@ has 'description' => (
     );
 
 
+# entity.id field of TransDB
+has 'entity' => (
+    is => 'rw',
+    isa => 'Str',
+    );
+
+
 ################################################################################
 =head2 file
 

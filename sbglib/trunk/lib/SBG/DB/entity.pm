@@ -155,7 +155,7 @@ sub id2dom {
     our $id2domsth;
     $id2domsth ||= $dbh->prepare("
 SELECT 
-idcode,dom
+idcode,dom,id
 FROM entity
 WHERE id=?
 ");
@@ -175,9 +175,11 @@ WHERE id=?
         return;
     }
 
-    my $descriptor = $row->{'dom'};
-    my $pdbid = $row->{'idcode'};
-    my $dom = new SBG::Domain(pdbid=>$pdbid, descriptor=>$descriptor);
+    my $dom = SBG::Domain->(
+        pdbid=>$row->{'idcode'},
+        descriptor=>$row->{'dom'},
+        entity=>$row->{'id'},
+        );
     return $dom;
 
 } # id2dom
