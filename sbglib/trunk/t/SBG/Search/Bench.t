@@ -57,7 +57,7 @@ my $net = new SBG::Network;
 $net->add_node($_) for @nodes;
 
 
-$net = $net->build(new SBG::Search::Bench, 0, 1); # no limits, nocache
+$net = $net->build(new SBG::Search::Bench, cache=>0); # no limits, nocache
 is($net->nodes, 12, 'Network::nodes');
 
 my @edges = $net->edges;
@@ -66,10 +66,9 @@ is(scalar(@edges), 8, 'edges()');
 is($net->interactions, 44, 'Network::interactions');
 
 my @subnets = $net->partition;
-is(scalar(@subnets), 2, 'Network::partition');
+is(scalar(@subnets), 4, 'Network::partition');
+@subnets = $net->partition(minsize=>3);
+is(scalar(@subnets), 2, 'Network::partition minsize=>3');
 
-
-$TODO = "Test making Complex object from benchmark network";
-ok 0;
 
 
