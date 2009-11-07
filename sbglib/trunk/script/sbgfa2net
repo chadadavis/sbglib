@@ -97,7 +97,11 @@ sub _write_partitions {
     for (my $i = 0; $i < @subnets; $i++) {
         # 1-based counting
         my $filename = sprintf "%s-net-%04d.stor", $label, $i+1;
-        $subnets[$i]->store($filename) unless -f $filename;
+        if (-f $filename) {
+            print STDERR "$filename already exists. Skipping.\n";
+        } else {
+            $subnets[$i]->store($filename);
+        }
         push @files, $filename;
     }
     return @files;
