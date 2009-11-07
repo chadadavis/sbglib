@@ -172,7 +172,8 @@ sub _run {
     } # while
 
     return unless %res;
-    
+    return unless $res{nres} > 0;
+
     # keys: (Cx, Cy,Cz, Rg, Rmax, description, file, descriptor)
     return \%res;
 
