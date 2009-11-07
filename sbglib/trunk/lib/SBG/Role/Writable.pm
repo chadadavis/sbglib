@@ -46,7 +46,7 @@ sub write {
        my $format_module = "${class}IO::${format}";
        eval { load $format_module; };
        if ($@) {
-           warn "Could not load format: $format_module\n";
+           warn "Could not load format: $format_module :\n$@\n";
            return;
        }
        $io = $format_module->new(%ops);

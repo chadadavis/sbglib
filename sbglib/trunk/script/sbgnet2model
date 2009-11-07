@@ -36,7 +36,7 @@ Minimum size of a complex model, in number of components, e.g.
 
  -s 4 (4 or more component proteins in complex models
 
- -s 75%$ (at least 75% of the components in the network are modelled)
+ -s 75% (at least 75% of the components in the network are modelled)
 
 
 =head1 SEE ALSO
@@ -93,8 +93,6 @@ foreach my $file (@files) {
     my $donefile = "${basename}.done";
     $ops{'f'} ||= "assemble-${basename}.log";
     SBG::U::Log::init($ops{'l'}, $ops{'f'}) if $ops{'l'};
-    
-
     
     # Already finished?
     if (-s $donefile) {
@@ -167,11 +165,11 @@ sub _one_net {
     # -test is the function to call when trying to place an interaction
     # -partial is the function to call when one complex solution is complete
     my $t = new SBG::Traversal(graph=>$net, 
-                               assembler=>new SBG::CA::Assembler,
+                               assembler=>SBG::CA::Assembler->new(),
                                minsize=>$minsize,
         );
     # Each result is a complex, this is a placeholder for the aglorithm's state
-    my $state = new SBG::Complex(id=>$name);
+    my $state = new SBG::Complex(id=>$name,overlap_thresh=>0.75);
 
     # Go!
     $t->traverse($state);

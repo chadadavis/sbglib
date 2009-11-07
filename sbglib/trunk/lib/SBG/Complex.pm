@@ -1015,6 +1015,7 @@ with any of the L<SBG::Domain>s in this complex.
 sub check_clash {
     my ($self, $newdom) = @_;
     my $thresh = $self->overlap_thresh;
+    log()->debug("fractional overlap thresh:$thresh");
     my $overlaps = [];
 
     log()->trace("$newdom vs " . $self->models->values->join(','));
