@@ -339,7 +339,7 @@ sub irmsd {
     
     # RMSD between two sets of 14 points (two crosshairs) each
     my $irmsd = SBG::U::RMSD::rmsd($coordsa, $coordsb);
-
+    return $irmsd;
 } # irmsd
 
 
