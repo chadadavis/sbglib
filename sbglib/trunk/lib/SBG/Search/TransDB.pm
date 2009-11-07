@@ -91,11 +91,19 @@ sub search {
 
     # Cluster contacts, based on iRMSD distance matrix
     my ($distmat, $unique) = _distmat(\@contacts);
-    # Cluster the distance matrix. ArrayRef contains cluster ID membership
-    my $clusters = _cluster($distmat, $unique);
+    # If clustering doesn't work, use all contacts
+    my @repcontacts = @contacts;
+    # Cluster if a distance matrix produced
+    if ($distmat) {
+        log()->trace("Yep");
+        # Cluster the distance matrix. ArrayRef contains cluster ID membership
+        my $clusters = _cluster($distmat, $unique);
+        # Representative contact for each cluster of contacts, arbitrary
+        @repcontacts = _representative($clusters, \@contacts);
 
-    # Representative contact for each cluster of contacts, arbitrary
-    my @repcontacts = _representative($clusters, \@contacts);
+    } else {
+        log()->trace("Nope");
+    }
 
     # Convert contact to SBG::Interaction, including original Blast hits
     my @interactions = map {_contact2interaction($_,\%entity2hit)} @repcontacts;
@@ -146,9 +154,11 @@ sub _cluster {
 sub _distmat {
     my ($contacts) = @_;
 
+    my $distmat = [];
     my $nqueries = @$contacts * (@$contacts-1) / 2;
     log()->trace("$nqueries queries on irmsd table ...");
-    my $distmat = [];
+    return unless $nqueries > 0;
+
     # Count of measurable iRMSDs, by contact
     my @similarities = (0) x @$contacts; 
 
