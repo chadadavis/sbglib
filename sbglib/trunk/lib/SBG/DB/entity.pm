@@ -175,7 +175,7 @@ WHERE id=?
         return;
     }
 
-    my $dom = SBG::Domain->(
+    my $dom = SBG::Domain->new(
         pdbid=>$row->{'idcode'},
         descriptor=>$row->{'dom'},
         entity=>$row->{'id'},
