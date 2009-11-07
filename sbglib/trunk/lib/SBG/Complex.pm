@@ -549,143 +549,10 @@ sub superposition_weighted {
 # To be called as $target->superposition_frame($model)
 use SBG::Run::cofm qw/cofm/;
 
-sub superposition_frame_cofm {
-   my ($self,$other) = @_;
-   # Only consider common components
-   my @cnames = $self->coverage($other);
-
-   # Pairwise Superpositions
-   my $sups = [];
-   my $rmsds = [];
-   my $scs = [];
-
-   foreach my $key (@cnames) {
-       my $selfdom = $self->get($key)->subject;
-       my $otherdom = $other->get($key)->subject;
-       my $othernativedom = new SBG::Domain(pdbid=>$otherdom->pdbid,
-                                            descriptor=>$otherdom->descriptor);
-       $othernativedom = cofm($othernativedom);
-       my $nativesup = SBG::STAMP::superposition($selfdom, $othernativedom);
-       
-       next unless $nativesup;
-
-       # TODO All of this can be in another method: $c->setframe($othercomplex)
-
-       # Set crosshairs
-       $selfdom = cofm($selfdom);
-       # Transform
-       $nativesup->apply($selfdom);
-       # Rebuild crosshairs over there
-       $selfdom->_build_coords;
-       # Reverse transform
-       $nativesup->inverse->apply($selfdom);
-
-       # After this, superpositioning $selfdom onto $otherdom should align
-       # crosshairs
-
-       # need to do this still? Should be identity anyway, nearly
-       $selfdom->transformation->clear_matrix;
-       # TODO Test here:
-
-
-       # Now get the real superposition of $selfdom onto current location of
-       # $otherdom
-       my $sup = SBG::STAMP::superposition($selfdom, $otherdom);
-
-       $sups->push($sup);
-       $rmsds->push($sup->scores->at('RMS'));
-       $scs->push($sup->scores->at('Sc'));
-   }
-
-   my $scsum = sum($scs);
-
-   my $mats = $sups->map(sub{$_->transformation->matrix});
-
-   my $summat = zeroes(4,4);
-
-   for (my $i = 0; $i < @$mats; $i++) {
-       $summat += $mats->[$i] * ($scs->[$i] / $scsum);
-   }
-
-   my $avgmat = $summat;
-
-   my $rmsd = mean($rmsds);
-   my $sc = mean($scs);
-
-   return wantarray ? ($avgmat, $rmsd, $sc, $sups) : $avgmat;
-
-} # superposition_frame_cofm
-
-
-# Don't use the native orientation, just go right to where the model dom is
-sub superposition_frame_cofm2 {
-   my ($self,$other) = @_;
-   # Only consider common components
-   my @cnames = $self->coverage($other);
-
-   # Pairwise Superpositions
-   my $sups = [];
-   my $rmsds = [];
-   my $scs = [];
-
-   foreach my $key (@cnames) {
-       my $selfdom = $self->get($key)->subject;
-       my $otherdom = $other->get($key)->subject;
-
-       # Now get the real superposition of $selfdom onto current location of
-       # $otherdom
-       my $sup = SBG::STAMP::superposition($selfdom, $otherdom);
-       
-       next unless $sup;
-
-       # TODO All of this can be in another method: $c->setframe($othercomplex)
-
-       # Set crosshairs
-       $selfdom = cofm($selfdom);
-       # Transform
-       $sup->apply($selfdom);
-       # Rebuild crosshairs over there
-       $selfdom->_build_coords;
-       # Reverse transform
-       $sup->inverse->apply($selfdom);
-
-       # After this, superpositioning $selfdom onto $otherdom should align
-       # crosshairs
-
-       # need to do this still? Should be identity anyway, nearly
-       $selfdom->transformation->clear_matrix;
-       # TODO Test here:
-
-
-
-       $sups->push($sup);
-       $rmsds->push($sup->scores->at('RMS'));
-       $scs->push($sup->scores->at('Sc'));
-   }
-
-   my $scsum = sum($scs);
-
-   my $mats = $sups->map(sub{$_->transformation->matrix});
-
-   my $summat = zeroes(4,4);
-
-   for (my $i = 0; $i < @$mats; $i++) {
-       $summat += $mats->[$i] * ($scs->[$i] / $scsum);
-   }
-
-   my $avgmat = $summat;
-
-   my $rmsd = mean($rmsds);
-   my $sc = mean($scs);
-
-   return wantarray ? ($avgmat, $rmsd, $sc, $sups) : $avgmat;
-
-} # superposition_frame_cofm2
-
 
 # Don't use the native orientation, just go right to where the model dom is
 # Requires resetting frame of ref of $self first
-sub superposition_frame_cofm3 {
+sub superposition_frame_cofm {
    my ($self,$other) = @_;
    # Only consider common components
    my @cnames = $self->coverage($other);
@@ -748,7 +615,7 @@ sub superposition_frame_cofm3 {
 
    return wantarray ? ($avgmat, $rmsd, $sc, $sups) : $avgmat;
 
-} # superposition_frame_cofm3
+} # superposition_frame_cofm
 
 
 # Try using (fixed) RMSD::superposition
@@ -946,6 +813,7 @@ sub add_interaction {
     my $srcdom = $iaction->get($srckey)->subject;
     # For domain being placed, make a copy that has a concrete representation
     my $destmodel = $self->_mkmodel($iaction, $destkey);
+    return 0 unless defined $destmodel;
     my $destdom = $destmodel->subject;
 
     my $linker_superposition = SBG::STAMP::superposition($srcdom, $refdom);
@@ -991,7 +859,9 @@ sub _mkmodel {
 
     # NB it is not sufficient to just do $type->new(%$clone) because cofm is
     # required to setup the radius.
-    my $cdom = cofm($clone);
+    my $cdom = 
+        blessed($clone) eq 'SBG::Domain::Sphere' ? $clone : cofm($clone);
+    return unless defined $cdom;
 
     my $model = new SBG::Model(
         query=>$vmodel->query, subject=>$cdom, scores=>$vmodel->scores);

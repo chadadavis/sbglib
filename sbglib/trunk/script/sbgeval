@@ -398,7 +398,7 @@ sub modelrmsd {
     my ($model, $target) = @_;
 
 # TODO which superposition
-#     my $transmat = $model->superposition_frame_cofm3($target);
+#     my $transmat = $model->superposition_frame_cofm($target);
     my ($transmat, $rmsd) = $model->superposition_points($target);
     return unless $rmsd;
     # Now crosshairs have the proper orientation
@@ -536,7 +536,7 @@ sub _eval_one {
     # And it's not multiplied correctly.
     # So we have to transform target onto model
 
-    my ($avgmat, $urmsd, $usc ) = $target->superposition_frame_cofm3($model);
+    my ($avgmat, $urmsd, $usc ) = $target->superposition_frame_cofm($model);
 
     $target->transform($avgmat);
 
