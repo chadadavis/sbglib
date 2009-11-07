@@ -25,12 +25,15 @@ package SBG::DB::entity;
 use base qw/Exporter/;
 our @EXPORT_OK = qw/query/;
 
+use PDL::Core qw/pdl zeroes/;
+
 use DBI;
 use Data::Dump qw/dump/;
 use SBG::U::DB;
 use SBG::U::Log qw/log/;
 use SBG::U::List qw/interval_overlap/;
 use SBG::Domain;
+use SBG::Domain::Sphere;
 
 
 # TODO DES OO
@@ -95,11 +98,12 @@ SELECT
 id, idcode, chain, dom, start, end, len
 FROM entity
 WHERE 
-    bad=0 
-AND (type='chain' OR type='fragment')
-AND source='pdb'
-AND idcode=?
-AND chain=?
+    bad != 1 
+AND Rg != 0
+AND (type = 'chain' OR type = 'fragment')
+AND source = 'pdb'
+AND idcode = ?
+AND chain = ?
 ");
 
     unless ($querysth) {
@@ -155,9 +159,12 @@ sub id2dom {
     our $id2domsth;
     $id2domsth ||= $dbh->prepare("
 SELECT 
-idcode,dom,id
+idcode,dom,id,Cx,Cy,Cz,Rg,Rmax
 FROM entity
-WHERE id=?
+WHERE 
+    bad != 1
+AND Rg != 0
+AND id = ?
 ");
 
     unless ($id2domsth) {
@@ -175,11 +182,18 @@ WHERE id=?
         return;
     }
 
-    my $dom = SBG::Domain->new(
+    # Append 1 for homogenous coordinates
+    my $center = pdl($row->{Cx}, $row->{Cy}, $row->{Cz}, 1);
+
+    my $dom = SBG::Domain::Sphere->new(
         pdbid=>$row->{'idcode'},
         descriptor=>$row->{'dom'},
         entity=>$row->{'id'},
+        center=>$center,
+        radius=>$row->{'Rg'},
+#         length=>$row->{'nres'}, # Not in DB
         );
+
     return $dom;
 
 } # id2dom
