@@ -95,14 +95,11 @@ sub search {
     my @repcontacts = @contacts;
     # Cluster if a distance matrix produced
     if ($distmat) {
-        log()->trace("Yep");
         # Cluster the distance matrix. ArrayRef contains cluster ID membership
         my $clusters = _cluster($distmat, $unique);
         # Representative contact for each cluster of contacts, arbitrary
         @repcontacts = _representative($clusters, \@contacts);
 
-    } else {
-        log()->trace("Nope");
     }
 
     # Convert contact to SBG::Interaction, including original Blast hits

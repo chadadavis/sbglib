@@ -231,7 +231,13 @@ sub build {
     }
 
     # For all pairs
-    foreach my $pair (pairs(sort $self->nodes)) {
+    my @pairs = pairs(sort $self->nodes);
+    my $npairs = @pairs;
+    my $ipair = 0;
+    log()->debug(scalar(@pairs), ' potential edges in interaction network');
+    foreach my $pair (@pairs) {
+        log()->trace("Edge $ipair of $npairs");
+        $ipair++;
         my ($node1, $node2) = @$pair;
         my ($p1) = $node1->proteins;
         my ($p2) = $node2->proteins;
