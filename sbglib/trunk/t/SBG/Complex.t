@@ -208,20 +208,9 @@ $iocofm->write(@mdoms, @tdoms);
 # `ras $file`;
 
 
-
-# Uses average transformation matrix
-# Transforming model doesn't work
-# $transmat = $complex->superposition_weighted($true_complex);
-# Transforming target does work
-# $transmat = $true_complex->superposition_weighted($complex);
-# Try setting frame of reference (orientation) of crosshairs
-# $transmat = $true_complex->superposition_frame($complex);
-# $transmat = $true_complex->superposition_frame_cofm($complex);
-# $transmat = $true_complex->superposition_frame_cofm2($complex);
-
 # Looks like this is commutative too!
-# $transmat = $true_complex->superposition_frame_cofm3($complex);
-# $transmat = $complex->superposition_frame_cofm3($true_complex);
+# $transmat = $true_complex->superposition_frame_cofm($complex);
+# $transmat = $complex->superposition_frame_cofm($true_complex);
 
 ($transmat, $rmsd) = $complex->superposition_points($true_complex);
 print $transmat if $DEBUG;
