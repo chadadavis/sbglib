@@ -165,7 +165,7 @@ sub superposition_native {
         my $dom = $io->read;
 
         # Create Superposition (the reference domain, $ontodom, hasn't changed)
-        $superpos = new SBG::Superposition(
+        $superpos = SBG::Superposition->new(
             to=>$ontodom, from=>$dom, scores=>{%stats} );
         # Don't need to parse the rest once we have the transformation
         last;
