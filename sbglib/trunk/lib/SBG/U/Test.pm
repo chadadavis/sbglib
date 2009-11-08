@@ -26,7 +26,7 @@ use PDL::Ufunc qw/all/;
 use PDL::Core qw/approx/;
 use Carp qw/carp cluck/;
 
-our @EXPORT_OK = qw(float_is pdl_approx);
+our @EXPORT_OK = qw(float_is pdl_approx pdl_percent);
 
 
 ################################################################################
@@ -68,9 +68,27 @@ sub float_is ($$;$$) {
 sub pdl_approx ($$;$$) {
    my ($mat1, $mat2, $msg, $tol) = @_;
    $tol = 1.0 unless defined $tol;
-   $msg ||= "pdlapprox (+/- $tol)";
+   $msg ||= "pdl approx (+/- $tol)";
 
    if (ok(all(approx($mat1, $mat2, $tol)),$msg)) {
+       return 1;
+   } else {
+       print STDERR "\tExpected:\n${mat2}\n\tGot:\n${mat1}\n";
+       return 0;
+   }
+}
+
+sub pdl_percent ($$;$$) {
+   my ($mat1, $mat2, $msg, $tol) = @_;
+   $tol = '10%' unless defined $tol;
+
+   if ($tol =~ /(\d+)\%$/) {
+       $tol = $1 / 100.0;
+   }
+
+   $msg ||= "pdl percent (+/- $tol\%)";
+
+   if (ok(all(abs($mat1-$mat2)/$mat1 < $tol), $msg)) {
        return 1;
    } else {
        print STDERR "\tExpected:\n${mat2}\n\tGot:\n${mat1}\n";
