@@ -10,7 +10,7 @@ use Data::Dump qw/dump/;
 
 use Moose::Autobox;
 
-$d = new_ok('SBG::Domain');
+my $d = new_ok('SBG::Domain');
 
 # NB You need to split off ChainID, cannot be in PDB ID
 ok(! eval { $d->pdbid('3didA') }, "Catching invalid PDB ID");
@@ -26,13 +26,13 @@ is($d->descriptor, 'ALL', "Default descriptor 'ALL'");
 
 
 # Setting descriptor cleans it up, even from constructor
-$desc = 'CHAIN     A';
+my $desc = 'CHAIN     A';
 $d = new SBG::Domain(descriptor=>$desc);
 is($d->descriptor, 'CHAIN A', 'Constructor cleans up descriptor');
 
 
 # Basic checks
-$dom = new SBG::Domain(pdbid=>'2nn6', descriptor=>'CHAIN A');
+my $dom = new SBG::Domain(pdbid=>'2nn6', descriptor=>'CHAIN A');
 is($dom->pdbid, '2nn6', 'pdbid');
 is($dom->descriptor, 'CHAIN A', 'descriptor()');
 is($dom->wholechain, 'A', 'wholechain()');
@@ -41,7 +41,7 @@ ok(! $dom->wholechain, '! wholechain()');
 
 
 # Equality
-$equiv = new SBG::Domain(pdbid=>'2nn6', descriptor=>'A 10 _ to A 233 _');
+my $equiv = new SBG::Domain(pdbid=>'2nn6', descriptor=>'A 10 _ to A 233 _');
 ok($equiv == $dom, 'equals');
 
 
