@@ -319,7 +319,7 @@ sub _do_nodes {
     my @unseen = $self->_new_neighbors($current, $uf, $d);
     for my $neighbor (@unseen) {
         # push edges onto stack
-        _d $d, "push'ing edge: $current,$neighbor";
+        _d $d, "pushing edge: $current--$neighbor";
         $self->_edgeq->push([$current, $neighbor]);
     }
     # Continue processing all outstanding nodes before moving to edges
@@ -456,7 +456,7 @@ sub _new_neighbors {
     # Only adjacent vertices not already in same traversal set (i.e. the unseen)
     my @unseen = grep { ! $uf->same($node, $_) } @adj;
 
-    _d $d, "adj: @adj; unseen: @unseen";
+    _d $d, "adjacent @adj; unseen: @unseen";
     return @unseen;
 }
 
