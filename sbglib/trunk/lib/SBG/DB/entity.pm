@@ -23,7 +23,7 @@
 
 package SBG::DB::entity;
 use base qw/Exporter/;
-our @EXPORT_OK = qw/query/;
+our @EXPORT_OK = qw/query id2dom/;
 
 use PDL::Core qw/pdl zeroes/;
 

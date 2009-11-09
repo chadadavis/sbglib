@@ -12,8 +12,8 @@ $SIG{__DIE__} = \&confess;
 use Moose::Autobox;
 use PDL;
 
-use SBG::DB::trans;
-use SBG::DB::entity;
+use SBG::DB::trans qw/superposition/;
+use SBG::DB::entity qw/id2dom/;
 
 use SBG::Domain;
 use SBG::DomainIO::pdb;
@@ -36,13 +36,13 @@ my $toler = '15%';
 # One hexameric ring of 2br2: CHAINS ADCFEB 
 # (only unique interfaces: A/B and A/D) (B/D homologs, A/C homologs, etc)
 
-my $doma = SBG::DB::entity::id2dom(125751);
-my $domb = SBG::DB::entity::id2dom(125752);
-my $domc = SBG::DB::entity::id2dom(125753);
-my $domd = SBG::DB::entity::id2dom(125754);
+my $doma = id2dom(125751);
+my $domb = id2dom(125752);
+my $domc = id2dom(125753);
+my $domd = id2dom(125754);
 
 # A simple superposition, homologous whole chains
-my $atod_sup = SBG::DB::trans::query($doma, $domd);
+my $atod_sup = superposition($doma, $domd);
 # The value computed externally by STAMP, the reference values
 my $atod_expect = pdl
  [ -0.55482 ,  0.24558 , -0.79490 ,     -52.48704 ],
@@ -52,36 +52,36 @@ my $atod_expect = pdl
 # Verify approximate equality
 pdl_percent($atod_sup->transformation->matrix->slice(',0:2'),
            $atod_expect->slice(',0:2'),
-           "SBG::DB::trans::query($doma, $domd)",
+           "superposition($doma, $domd)",
            $toler);
 
 
 # The opposite superposition should have the inverse transformation matrix
-my $dtoa_sup = SBG::DB::trans::query($domd, $doma);
+my $dtoa_sup = superposition($domd, $doma);
 my $dtoa_expect = $atod_expect->inv;
 pdl_percent($dtoa_sup->transformation->matrix->slice(',0:2'),
            $dtoa_expect->slice(',0:2'),
-           "SBG::DB::trans::query($domd, $doma)",
+           "superposition($domd, $doma)",
            $toler);
 
 # Also achievable by using inverse() from the Transformation
 pdl_percent($atod_sup->transformation->inverse->matrix->slice(',0:2'),
            $dtoa_expect->slice(',0:2'),
-           "SBG::DB::trans::query($doma, $domd)->transformation->inverse",
+           "superposition($doma, $domd)->transformation->inverse",
            $toler);
 
 
 # Test chaining of superpositions
 # get domains for whole chains 
-my $ca = SBG::DB::entity::id2dom(125751);
-my $cb = SBG::DB::entity::id2dom(125752);
-my $cc = SBG::DB::entity::id2dom(125753);
-my $cd = SBG::DB::entity::id2dom(125754);
-my $ce = SBG::DB::entity::id2dom(125755);
-my $cf = SBG::DB::entity::id2dom(125756);
+my $ca = id2dom(125751);
+my $cb = id2dom(125752);
+my $cc = id2dom(125753);
+my $cd = id2dom(125754);
+my $ce = id2dom(125755);
+my $cf = id2dom(125756);
 
-my $supcacc = SBG::DB::trans::query($ca, $cc);
-my $supcccd = SBG::DB::trans::query($cc, $cd);
+my $supcacc = superposition($ca, $cc);
+my $supcccd = superposition($cc, $cd);
 $supcacc->apply($ca);
 $supcccd->apply($ca);
 # How to verify non-visually?
@@ -89,36 +89,36 @@ rasmol [$ca, $cd] if $DEBUG;
 
 
 # Now change up the order
-$ca = SBG::DB::entity::id2dom(125751);
-$cb = SBG::DB::entity::id2dom(125752);
-$cc = SBG::DB::entity::id2dom(125753);
-$cd = SBG::DB::entity::id2dom(125754);
+$ca = id2dom(125751);
+$cb = id2dom(125752);
+$cc = id2dom(125753);
+$cd = id2dom(125754);
 
-$supcacc = SBG::DB::trans::query($ca, $cc);
+$supcacc = superposition($ca, $cc);
 $supcacc->apply($ca);
 # Now we're doing the superposition of a domain that already has a transform
-$supcccd = SBG::DB::trans::query($ca, $cd);
+$supcccd = superposition($ca, $cd);
 $supcccd->apply($ca);
 # How to verify non-visually?
 rasmol [$ca, $cd] if $DEBUG;
 
 
 # Finally, do it on both sides, parallel superpositions
-$ca = SBG::DB::entity::id2dom(125751);
-$cb = SBG::DB::entity::id2dom(125752);
-$cc = SBG::DB::entity::id2dom(125753);
-$cd = SBG::DB::entity::id2dom(125754);
+$ca = id2dom(125751);
+$cb = id2dom(125752);
+$cc = id2dom(125753);
+$cd = id2dom(125754);
 
 
 # Put A onto C
-$supcacc = SBG::DB::trans::query($ca, $cc);
+$supcacc = superposition($ca, $cc);
 $supcacc->apply($ca);
 # Put B onto D
-my $supcbcd = SBG::DB::trans::query($cb, $cd);
+my $supcbcd = superposition($cb, $cd);
 $supcbcd->apply($cb);
 
 # Put moved A onto moved B (ie C onto D)
-my $supcacb = SBG::DB::trans::query($ca, $cb);
+my $supcacb = superposition($ca, $cb);
 $supcacb->apply($ca);
 
 # How to verify non-visually?
@@ -136,28 +136,28 @@ rasmol [$ca, $cd] if $DEBUG;
 # 2xApply:     DA
 # Finally: DADADA = Homohexamer homologous to DABEFC
 
-my $d2br2d = SBG::DB::entity::id2dom(125754);
-my $d2br2b = SBG::DB::entity::id2dom(125752);
+my $d2br2d = id2dom(125754);
+my $d2br2b = id2dom(125752);
 # The basic transformation
-my $superp = SBG::DB::trans::query($d2br2d, $d2br2b);
+my $superp = superposition($d2br2d, $d2br2b);
 my $transf = $superp->transformation;
 
 # Now get the native dimer: (round 0)
-my $d2br2d0 = SBG::DB::entity::id2dom(125754);
-my $d2br2a0 = SBG::DB::entity::id2dom(125751);
+my $d2br2d0 = id2dom(125754);
+my $d2br2a0 = id2dom(125751);
 # Dont' do transforms in 1st round, those are already in the frame of reference
 
 # 2nd round (round 1)
-my $d2br2d1 = SBG::DB::entity::id2dom(125754);
-my $d2br2a1 = SBG::DB::entity::id2dom(125751);
+my $d2br2d1 = id2dom(125754);
+my $d2br2a1 = id2dom(125751);
 # Apply
 $transf->apply($d2br2d1);
 $transf->apply($d2br2a1);
 
 # Apply product (round 2)
 my $double = $transf x $transf;
-my $d2br2d2 = SBG::DB::entity::id2dom(125754);
-my $d2br2a2 = SBG::DB::entity::id2dom(125751);
+my $d2br2d2 = id2dom(125754);
+my $d2br2a2 = id2dom(125751);
 $double->apply($d2br2d2);
 $double->apply($d2br2a2);
 
@@ -166,13 +166,13 @@ my @doms = ($d2br2d0,$d2br2a0,$d2br2d1,$d2br2a1,$d2br2d2,$d2br2a2);
 rasmol \@doms if $DEBUG;
 
 
-my $movingb = SBG::DB::entity::id2dom(125752);
-my $staticd = SBG::DB::entity::id2dom(125754);
-my $staticf = SBG::DB::entity::id2dom(125756);
+my $movingb = id2dom(125752);
+my $staticd = id2dom(125754);
+my $staticf = id2dom(125756);
 
-my $sup1 = SBG::DB::trans::query($movingb, $staticd);
+my $sup1 = superposition($movingb, $staticd);
 $sup1->apply($movingb);
-my $sup2 = SBG::DB::trans::query($movingb, $staticf);
+my $sup2 = superposition($movingb, $staticf);
 $sup2->apply($movingb);
 
 # Now check RMSD between b and f
@@ -183,9 +183,9 @@ float_is($rmsd, 6.55, "RMSD after transformation", $toler);
 # Test iRMSD
 
 # 1VOR K/R 153203 153210
-my $doms1 = [SBG::DB::entity::id2dom(153203),SBG::DB::entity::id2dom(153210)];
+my $doms1 = [id2dom(153203),id2dom(153210)];
 # 1VP0 K/R 174395 174402
-my $doms2 = [SBG::DB::entity::id2dom(174395),SBG::DB::entity::id2dom(174402)];
+my $doms2 = [id2dom(174395),id2dom(174402)];
 
 my $irmsd;
 $irmsd = SBG::STAMP::irmsd($doms1, $doms2);

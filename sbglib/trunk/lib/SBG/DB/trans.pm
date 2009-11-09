@@ -22,7 +22,7 @@
 
 package SBG::DB::trans;
 use base qw/Exporter/;
-our @EXPORT_OK = qw/query/;
+our @EXPORT_OK = qw/superposition/;
 
 use Moose::Autobox;
 
@@ -50,7 +50,7 @@ our $host = "wilee";
            
 
 =cut
-sub query {
+sub superposition {
     my ($dom1, $dom2) = @_;
     return unless $dom1->entity && $dom2->entity;
     our $database;

@@ -50,7 +50,8 @@ use PDL::Core qw/pdl squeeze zeroes sclr/;
 use SBG::U::List qw/intersection mean sum flatten/;
 use SBG::U::Log qw/log/;
 use SBG::U::RMSD;
-use SBG::STAMP;
+use SBG::STAMP; # qw/superposition/
+use SBG::DB::trans; # qw/superposition/;
 
 
 # Complex stores these data structures
@@ -503,51 +504,6 @@ sub superposition {
    return wantarray ? ($avgmat, $rmsd, $sc, $sups) : $avgmat;
 
 } # superposition
-
-
-# weighted averages of Sc scores
-sub superposition_weighted {
-   my ($self,$other) = @_;
-   # Only consider common components
-   my @cnames = $self->coverage($other);
-
-   # Pairwise Superpositions
-   my $sups = [];
-   my $rmsds = [];
-   my $scs = [];
-   foreach my $key (@cnames) {
-       my $selfdom = $self->get($key)->subject;
-       my $otherdom = $other->get($key)->subject;
-       my $sup = SBG::STAMP::superposition($selfdom, $otherdom);
-       next unless $sup;
-
-       $sups->push($sup);
-       $rmsds->push($sup->scores->at('RMS'));
-       $scs->push($sup->scores->at('Sc'));
-   }
-
-   my $scsum = sum($scs);
-
-   my $mats = $sups->map(sub{$_->transformation->matrix});
-
-   my $summat = zeroes(4,4);
-
-   for (my $i = 0; $i < @$mats; $i++) {
-       $summat += $mats->[$i] * ($scs->[$i] / $scsum);
-   }
-
-   my $avgmat = $summat;
-
-   my $rmsd = mean($rmsds);
-   my $sc = mean($scs);
-
-   return wantarray ? ($avgmat, $rmsd, $sc, $sups) : $avgmat;
-
-} # superposition_weighted
-
-
-# To be called as $target->superposition_frame($model)
-use SBG::Run::cofm qw/cofm/;
 
 
 # Don't use the native orientation, just go right to where the model dom is

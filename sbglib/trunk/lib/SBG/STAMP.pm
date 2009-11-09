@@ -42,9 +42,8 @@ use strict;
 use warnings;
 use base qw/Exporter/;
 
-our @EXPORT_OK = qw/
-superposition
-/;
+our @EXPORT_OK = qw/superposition/;
+
 
 use Moose::Autobox;
 use File::Temp;
