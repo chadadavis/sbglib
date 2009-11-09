@@ -57,6 +57,7 @@ sub cache {
     $cache_hash{$name} = Cache::File->new(
         cache_root => $cachedir,
         lock_level => Cache::File::LOCK_NFS(),
+        default_expires => '2 w',
         );
     return $cache_hash{$name};
 }

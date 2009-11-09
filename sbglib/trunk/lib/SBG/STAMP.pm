@@ -243,9 +243,9 @@ sub _cache_get {
         # Cache::Entry dies when cache corruption, so eval it first
         my $data = eval { $entry->thaw };
         if ($@) {
-            log()->error("key: $key: $@");
-            $entry->remove;
-            log()->debug("key still exists? $key:", $entry->exists);
+            log()->error("entry error:$key:$@");
+            eval { $entry->remove; };
+            log()->error("entry removed:$key:$@");
             return;
         }
 
@@ -256,9 +256,6 @@ sub _cache_get {
             log()->debug("Cache hit (positive) ", $key);
             return $data;
         }
-
-
-
     } 
     log()->debug("Cache miss ", $key);
     return;
