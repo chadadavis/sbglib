@@ -135,8 +135,9 @@ sub superposition_native {
     my $fh;
     unless (-s $scanfile && open($fh, $scanfile)) {
         log()->error("Error running stamp:\n$fullcmd");
-        # Negative cache
+        # Negative cache (both directions)
         _cache_set($fromdom, $ontodom, []) unless $nocache;
+        _cache_set($ontodom, $fromdom, []) unless $nocache;
         return;
     }
 
@@ -156,6 +157,7 @@ sub superposition_native {
         # Skip if thresh too low
         if ($stats{Sc} < $scancut || $stats{nfit} < $minfit) {
             _cache_set($fromdom, $ontodom, []) unless $nocache;
+            _cache_set($ontodom, $fromdom, []) unless $nocache;
             last;
         }
 
@@ -175,9 +177,11 @@ sub superposition_native {
 
     if (defined $superpos) {
         _cache_set($fromdom, $ontodom, $superpos) unless $nocache;
+        _cache_set($ontodom, $fromdom, $superpos) unless $nocache;
         return $superpos;
     } else {
         _cache_set($fromdom, $ontodom, []) unless $nocache;
+        _cache_set($ontodom, $fromdom, []) unless $nocache;
         return;
     }
 
@@ -275,6 +279,32 @@ Cache claims to even work between concurrent processes!
 =cut
 sub _cache_set {
     my ($from, $to, $data) = @_;
+    my $cache = SBG::U::Cache::cache('sbgsuperposition');
+    my $key = "${from}--${to}";
+    my $entry = $cache->entry($key);
+    my $status;
+
+    # (NB [] means negative cache)
+    if (ref($data) eq 'ARRAY') {
+        $status = 'negative';
+    } else {
+        $status = 'positive';
+    }
+
+    log()->debug("Cache write ($status) $key");
+    log()->trace(ref($data), "\n", $data);
+    $entry->freeze($data);
+
+    log()->debug("$key now exists?:",$entry->exists);
+
+    # Verification;
+    return $entry->exists;
+
+} # _cache_set
+
+
+sub _cache_set_bak {
+    my ($from, $to, $data) = @_;
 
     my $cache = SBG::U::Cache::cache('sbgsuperposition');
 
@@ -311,7 +341,7 @@ sub _cache_set {
     # Verification;
     return $entry->exists && $ientry->exists;
 
-} # _cache_set
+} # _cache_set_bak
 
 
 ################################################################################
