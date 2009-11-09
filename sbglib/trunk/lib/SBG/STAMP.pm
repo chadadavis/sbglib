@@ -112,7 +112,8 @@ sub superposition_native {
     our $minfit;
     our $scancut;
 
-    if ($fromdom == $ontodom) {
+    if ($fromdom->pdbid eq $ontodom->pdbid &&
+        $fromdom->descriptor eq $ontodom->descriptor) {
         log()->trace("Identity: $fromdom");
         return SBG::Superposition::identity($fromdom);
     }
@@ -242,9 +243,9 @@ sub _cache_get {
         # Cache::Entry dies when cache corruption, so eval it first
         my $data = eval { $entry->thaw };
         if ($@) {
-            log()->error("$key: $@");
+            log()->error("key: $key: $@");
             $entry->remove;
-            log()->debug("still exists $key:", $entry->exists);
+            log()->debug("key still exists? $key:", $entry->exists);
             return;
         }
 
@@ -280,27 +281,31 @@ sub _cache_set {
 
     my $cache = SBG::U::Cache::cache('sbgsuperposition');
 
-    # Also cache the inverse superposition
     my $key = "${from}--${to}";
-    my $ikey = "${to}--${from}";
-
     my $entry = $cache->entry($key);
-    my $ientry = $cache->entry($ikey);
+    my $status;
 
+    # Inverse superposition
     my $idata;
+
     # (NB [] means negative cache)
     if (ref($data) eq 'ARRAY') {
+        $status = 'negative';
         $idata = $data;
-        log()->trace("Cache write (negative) $key and $ikey");
     } else {
+        $status = 'positive';
         $idata = $data->inverse;
-        log()->debug("Cache write (positive) $key (forward)");
-        log()->trace(ref($data), "\n", $data);
-        log()->debug("Cache write (positive) $ikey (reverse)");
-        log()->trace(ref($idata), "\n", $idata);
     }
 
+    log()->debug("Cache write ($status) $key (forward)");
+    log()->trace(ref($data), "\n", $data);
     $entry->freeze($data);
+
+    # Also cache the inverse superposition
+    my $ikey = "${to}--${from}";
+    my $ientry = $cache->entry($ikey);
+    log()->debug("Cache write ($status) $ikey (reverse)");
+    log()->trace(ref($idata), "\n", $idata);
     $ientry->freeze($idata);
 
     log()->debug("$key exists:",$entry->exists,
