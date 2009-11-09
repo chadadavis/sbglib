@@ -353,7 +353,7 @@ sub _do_edges {
     my $current = $self->_edgeq->shift;
     return $self->_no_edges($uf, $state, $d) unless $current;
     my ($src, $dest) = @$current;
-    _d $d, "Edge: $src--$dest (", _array2D($self->_edgeq), ")";
+    _d $d, "Edge:$src--$dest Edge queue:" . $self->_edgeq->length . " edges";
 
     # ID of next alternative to try on this edge, if any
     my $alt_id = $self->_next_alt($src, $dest, $d);
