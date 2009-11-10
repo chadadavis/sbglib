@@ -184,7 +184,7 @@ Returns true/false == success/failure to use/add interaction template
 
 sub test {
     my ($self, $complex, $graph, $src, $dest, $iaction_id) = @_;
-    log()->trace(join('|',$src,$dest,$iaction_id));
+    log()->trace($iaction_id);
 
     # Interaction object, from ID, Network hashes these
     my $ix = $graph->get_interaction_by_id($iaction_id);
