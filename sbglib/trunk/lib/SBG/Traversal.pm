@@ -353,7 +353,7 @@ sub _do_edges {
     my $current = $self->_edgeq->shift;
     return $self->_no_edges($uf, $state, $d) unless $current;
     my ($src, $dest) = @$current;
-    _d $d, "Edge:$src--$dest Edge queue:" . $self->_edgeq->length . " edges";
+    _d $d, "Edge:$src--$dest Queue:" . $self->_edgeq->length . " edges";
 
     # ID of next alternative to try on this edge, if any
     my $alt_id = $self->_next_alt($src, $dest, $d);
@@ -468,7 +468,7 @@ sub _next_alt {
     # IDs of edge attributes (the alternatives on this edge)
     # Sort, to make indexes unique between invocations of this method
     my @alt_ids = sort $self->graph->get_edge_attribute_names($u, $v);
-    _d $d, join ", ", @alt_ids;
+#     _d $d, "Alternatives on edge: ", scalar(@alt_ids);
 
     # A label for the current edge, regardless of alternative
     my $edge_id = "$u--$v";
