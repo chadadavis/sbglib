@@ -26,6 +26,7 @@ requires 'File::Temp' => '0';
 requires 'Getopt::Complete' => '0';
 requires 'Graph' => '0.86';
 requires 'Graph::Writer::GraphViz' => '0';
+requires 'Log::Dispatch::File' => '0';
 requires 'Log::Log4perl' => '0';
 requires 'Math::Round' => '0';
 requires 'Math::Trig' => '1.19';
