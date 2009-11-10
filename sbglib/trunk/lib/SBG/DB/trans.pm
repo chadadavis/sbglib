@@ -51,6 +51,30 @@ our $host = "wilee";
 
 =cut
 sub superposition {
+    my ($fromdom, $ontodom) = @_;
+
+    my $superpos = superposition_native($fromdom, $ontodom);
+    return unless defined $superpos;
+
+    return $superpos unless ($fromdom->transformation->has_matrix || 
+                             $ontodom->transformation->has_matrix);
+
+    # Right-to-left application of transformations to get fromdom=>ontodom
+    # First, inverse $fromdom back to it's native transform
+    # Then, apply the transform between the native domains
+    # Last, apply the transform stored in $ontodom, if any
+    my $prod = 
+        $ontodom->transformation x 
+        $superpos->transformation x 
+        $fromdom->transformation->inverse;
+
+    $superpos->transformation($prod);
+    return $superpos;
+
+} # superposition
+
+
+sub superposition_native {
     my ($dom1, $dom2) = @_;
     return unless $dom1->entity && $dom2->entity;
     our $database;
@@ -59,7 +83,7 @@ sub superposition {
     # Static handle, prepare it only once
     our $sth;
 
-    log()->trace("$dom1 onto $dom2");
+    log()->trace("$dom1(",$dom1->entity,")=>$dom2(", $dom2->entity, ")");
 
     $sth ||= $dbh->prepare("
 SELECT
@@ -79,7 +103,13 @@ WHERE (id_entity1=? AND id_entity2=?)
         log()->error($sth->errstr);
         return;
     }
-    my $row = $sth->fetchrow_hashref() or return;
+    my $row = $sth->fetchrow_hashref();
+    if (defined $row) {
+        log()->trace("Cache hit (positive) $dom1=>$dom2");
+    } else {
+        log()->trace("Cache miss $dom1=>$dom2");
+        return;
+    }
 
     my $mat = [ 
         $row->slice([qw/r11 r12 r13 v1/]),
@@ -87,16 +117,13 @@ WHERE (id_entity1=? AND id_entity2=?)
         $row->slice([qw/r31 r32 r33 v3/]),
         [ 0, 0, 0, 1 ],
         ];
+    # Create Transform object
     my $trans = SBG::Transform::Affine->new(matrix=>pdl($mat));
-    # Right-to-left order of operations for matrix mult. 
-    my $prod = 
-        $dom2->transformation x 
-        $trans x 
-        $dom1->transformation->inverse;
-
+    
+    # Dont' modify original Domain, make a copy
     # Update transformation required to get dom1 onto dom2
     $dom1 = $dom1->clone;
-    $dom1->transformation($prod);
+    $dom1->transformation($trans);
 
     my $sup = SBG::Superposition->new(
         from=>$dom1,
@@ -111,7 +138,8 @@ WHERE (id_entity1=? AND id_entity2=?)
 
     return $sup;
 
-} # query
+} # superposition_native
+
 
 
 ################################################################################

@@ -52,7 +52,7 @@ use SBG::U::Log qw/log/;
 use SBG::U::RMSD;
 use SBG::STAMP; # qw/superposition/
 use SBG::DB::trans; # qw/superposition/;
-
+use SBG::Superposition::Cache; # qw/superposition/;
 
 # Complex stores these data structures
 use SBG::Superposition;
@@ -772,7 +772,8 @@ sub add_interaction {
     return 0 unless defined $destmodel;
     my $destdom = $destmodel->subject;
 
-    my $linker_superposition = SBG::STAMP::superposition($srcdom, $refdom);
+#     my $linker_superposition = SBG::STAMP::superposition($srcdom, $refdom);
+    my $linker_superposition = SBG::Superposition::Cache::superposition($srcdom, $refdom);
     return 0 unless defined $linker_superposition;
 
 

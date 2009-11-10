@@ -108,7 +108,7 @@ ignored. For that, see L<SBG::STAMP::superposition>.
 
 =cut
 sub superposition_native {
-    my ($fromdom, $ontodom, $ops, $nocache) = @_;
+    my ($fromdom, $ontodom, $ops) = @_;
     our $minfit;
     our $scancut;
 
@@ -118,30 +118,18 @@ sub superposition_native {
         return SBG::Superposition::identity($fromdom);
     }
 
-    # Check cache
-    my $superpos = $nocache ? undef : _cache_get($fromdom, $ontodom);
-    if (defined $superpos) {
-        # Negative cache? (i.e. superpostion previously found not possible)
-        return if ref($superpos) eq 'ARRAY';
-        # Cache hit
-        return $superpos;
-    }
-
     my ($fullcmd, $prefix) = _setup_input($cmd, $ontodom, $fromdom);
     my $scanfile = "${prefix}.scan";
-    $fullcmd .= " $ops" if $ops;
+#     $fullcmd .= " $ops" if $ops;
     log()->trace("\n$fullcmd");
     system("$fullcmd > /dev/null 2>/dev/null");
     my $fh;
     unless (-s $scanfile && open($fh, $scanfile)) {
         log()->error("Error running stamp:\n$fullcmd");
-        # Negative cache (both directions)
-        _cache_set($fromdom, $ontodom, []) unless $nocache;
-        _cache_set($ontodom, $fromdom, []) unless $nocache;
         return;
     }
 
-    
+    my $superpos;
     while (my $read = <$fh>) {
         # Save only the fields, all separated by spaces
         next unless $read =~ /^\# (Sc.*?)fit_pos/;
@@ -156,8 +144,6 @@ sub superposition_native {
 
         # Skip if thresh too low
         if ($stats{Sc} < $scancut || $stats{nfit} < $minfit) {
-            _cache_set($fromdom, $ontodom, []) unless $nocache;
-            _cache_set($ontodom, $fromdom, []) unless $nocache;
             last;
         }
 
@@ -175,18 +161,43 @@ sub superposition_native {
 
     unlink $scanfile unless $File::Temp::KEEP_ALL;
 
-    if (defined $superpos) {
-        _cache_set($fromdom, $ontodom, $superpos) unless $nocache;
-        _cache_set($ontodom, $fromdom, $superpos) unless $nocache;
-        return $superpos;
-    } else {
-        _cache_set($fromdom, $ontodom, []) unless $nocache;
-        _cache_set($ontodom, $fromdom, []) unless $nocache;
-        return;
-    }
+    return $superpos;
 
 } # superposition_native
 
+
+# Just wraps superposition_native
+sub superposition_cache {
+    my ($fromdom, $ontodom, $ops) = @_;
+
+    if ($fromdom->pdbid eq $ontodom->pdbid &&
+        $fromdom->descriptor eq $ontodom->descriptor) {
+        log()->trace("Identity: $fromdom");
+        return SBG::Superposition::identity($fromdom);
+    }
+
+    # Check cache
+    my $superpos = _cache_get($fromdom, $ontodom);
+    if (defined $superpos) {
+        # Negative cache? (i.e. superpostion previously found not possible)
+        return if ref($superpos) eq 'ARRAY';
+        # Cache hit
+        return $superpos;
+    }
+
+    $superpos = superposition_native($fromdom, $ontodom, $ops);
+
+    if (defined $superpos) {
+        _cache_set($fromdom, $ontodom, $superpos);
+        _cache_set($ontodom, $fromdom, $superpos->inverse);
+        return $superpos;
+    } else {
+        _cache_set($fromdom, $ontodom, []);
+        _cache_set($ontodom, $fromdom, []);
+        return;
+    }
+
+} # superposition_cache
 
 
 ################################################################################
@@ -203,8 +214,10 @@ the given domains.
 =cut
 sub superposition {
     my ($fromdom, $ontodom, $ops) = @_;
-    log()->trace("$fromdom onto $ontodom");
-    my $superpos = superposition_native($fromdom, $ontodom, $ops);
+    log()->trace("$fromdom=>$ontodom");
+    my $superpos = $ops->{cache} ?
+        superposition_cache($fromdom, $ontodom, $ops) : 
+        superposition_native($fromdom, $ontodom, $ops);
     return unless defined $superpos;
 
     return $superpos unless ($fromdom->transformation->has_matrix || 
@@ -239,8 +252,8 @@ Cache claims to even work between concurrent processes!
 sub _cache_get {
     my ($from, $to) = @_;
 
-    my $cache = SBG::U::Cache::cache('sbgsuperposition');
-    my $key = "${from}--${to}";
+    my ($cache,$lock) = SBG::U::Cache::cache('sbgsuperposition');
+    my $key = "${from}=>${to}";
     my $entry = $cache->entry($key);
 
     if ($entry->exists) {
@@ -279,8 +292,8 @@ Cache claims to even work between concurrent processes!
 =cut
 sub _cache_set {
     my ($from, $to, $data) = @_;
-    my $cache = SBG::U::Cache::cache('sbgsuperposition');
-    my $key = "${from}--${to}";
+    my ($cache,$lock) = SBG::U::Cache::cache('sbgsuperposition');
+    my $key = "${from}=>${to}";
     my $entry = $cache->entry($key);
     my $status;
 
@@ -301,47 +314,6 @@ sub _cache_set {
     return $entry->exists;
 
 } # _cache_set
-
-
-sub _cache_set_bak {
-    my ($from, $to, $data) = @_;
-
-    my $cache = SBG::U::Cache::cache('sbgsuperposition');
-
-    my $key = "${from}--${to}";
-    my $entry = $cache->entry($key);
-    my $status;
-
-    # Inverse superposition
-    my $idata;
-
-    # (NB [] means negative cache)
-    if (ref($data) eq 'ARRAY') {
-        $status = 'negative';
-        $idata = $data;
-    } else {
-        $status = 'positive';
-        $idata = $data->inverse;
-    }
-
-    log()->debug("Cache write ($status) $key (forward)");
-    log()->trace(ref($data), "\n", $data);
-    $entry->freeze($data);
-
-    # Also cache the inverse superposition
-    my $ikey = "${to}--${from}";
-    my $ientry = $cache->entry($ikey);
-    log()->debug("Cache write ($status) $ikey (reverse)");
-    log()->trace(ref($idata), "\n", $idata);
-    $ientry->freeze($idata);
-
-    log()->debug("$key exists:",$entry->exists,
-                 ",$ikey exists:",$ientry->exists);
-
-    # Verification;
-    return $entry->exists && $ientry->exists;
-
-} # _cache_set_bak
 
 
 ################################################################################
