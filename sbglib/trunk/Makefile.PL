@@ -12,6 +12,8 @@ use inc::Module::Install;
 all_from => 'lib/SBG.pm';
 
 requires 'Algorithm::Cluster' => '0';
+requires 'B::Utils' => '0'; # required by B::Hooks::OP::Check
+requires 'B::Hooks::OP::Check' => '0'; # required by Sub::Call::Recur
 requires 'Bio::Network::Node' => '0';
 requires 'Bio::Network::Interaction' => '0';
 requires 'Bio::Tools::Run::StandAloneBlast' => '0';
@@ -39,6 +41,7 @@ requires 'Moose::Util::TypeConstraints' => '0';
 requires 'MooseX::Role::Parameterized' => '0';
 requires 'PDL' => '2.4.4';
 requires 'PDL::LinearAlgebra' => '0';
+requires 'Sub::Call::Recur' => '0';
 requires 'Test::More' => '0';
 requires 'Text::ParseWords' => '0';
 
