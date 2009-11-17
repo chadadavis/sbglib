@@ -57,7 +57,6 @@ use SBG::Superposition;
 use SBG::Domain::Sphere;
 use SBG::Run::cofm qw/cofm/;
 use SBG::U::Log qw/log/;
-use SBG::U::Cache qw/cache/;
 
 
 # TODO DES need to be set in a Run object
@@ -166,38 +165,6 @@ sub superposition_native {
 } # superposition_native
 
 
-# Just wraps superposition_native
-sub superposition_cache {
-    my ($fromdom, $ontodom, $ops) = @_;
-
-    if ($fromdom->pdbid eq $ontodom->pdbid &&
-        $fromdom->descriptor eq $ontodom->descriptor) {
-        log()->trace("Identity: $fromdom");
-        return SBG::Superposition::identity($fromdom);
-    }
-
-    # Check cache
-    my $superpos = _cache_get($fromdom, $ontodom);
-    if (defined $superpos) {
-        # Negative cache? (i.e. superpostion previously found not possible)
-        return if ref($superpos) eq 'ARRAY';
-        # Cache hit
-        return $superpos;
-    }
-
-    $superpos = superposition_native($fromdom, $ontodom, $ops);
-
-    if (defined $superpos) {
-        _cache_set($fromdom, $ontodom, $superpos);
-        _cache_set($ontodom, $fromdom, $superpos->inverse);
-        return $superpos;
-    } else {
-        _cache_set($fromdom, $ontodom, []);
-        _cache_set($ontodom, $fromdom, []);
-        return;
-    }
-
-} # superposition_cache
 
 
 ################################################################################
@@ -215,9 +182,7 @@ the given domains.
 sub superposition {
     my ($fromdom, $ontodom, $ops) = @_;
     log()->trace("$fromdom=>$ontodom");
-    my $superpos = $ops->{cache} ?
-        superposition_cache($fromdom, $ontodom, $ops) : 
-        superposition_native($fromdom, $ontodom, $ops);
+    my $superpos = superposition_native($fromdom, $ontodom, $ops);
     return unless defined $superpos;
 
     return $superpos unless ($fromdom->transformation->has_matrix || 
@@ -236,84 +201,6 @@ sub superposition {
     return $superpos;
 
 } # superposition
-
-
-################################################################################
-=head2 _cache_get
-
- Function: 
- Example : 
- Returns : Re-retrieved object from cache
- Args    : [] implies negative caching
-
-Cache claims to even work between concurrent processes!
-
-=cut
-sub _cache_get {
-    my ($from, $to) = @_;
-
-    my ($cache,$lock) = SBG::U::Cache::cache('sbgsuperposition');
-    my $key = "${from}=>${to}";
-    my $entry = $cache->entry($key);
-
-    if ($entry->exists) {
-        # Cache::Entry dies when cache corruption, so eval it first
-        my $data = eval { $entry->thaw };
-        if ($@) {
-            log()->error("entry error:$key:$@");
-            eval { $entry->remove; };
-            log()->error("entry removed:$key:$@");
-            return;
-        }
-
-        if (ref($data) eq 'ARRAY') {
-            log()->debug("Cache hit (negative) ", $key);
-            return [];
-        } else {
-            log()->debug("Cache hit (positive) ", $key);
-            return $data;
-        }
-    } 
-    log()->debug("Cache miss ", $key);
-    return;
-
-} # _cache_get
-
-
-=head2 _cache_set
-
- Function: 
- Example : 
- Returns : Re-retrieved object from cache
- Args    : [] implies negative caching
-
-Cache claims to even work between concurrent processes!
-
-=cut
-sub _cache_set {
-    my ($from, $to, $data) = @_;
-    my ($cache,$lock) = SBG::U::Cache::cache('sbgsuperposition');
-    my $key = "${from}=>${to}";
-    my $entry = $cache->entry($key);
-    my $status;
-
-    # (NB [] means negative cache)
-    if (ref($data) eq 'ARRAY') {
-        $status = 'negative';
-    } else {
-        $status = 'positive';
-    }
-
-    log()->debug("Cache write ($status) $key");
-    log()->trace(ref($data), "\n", $data);
-    $entry->freeze($data);
-
-    log()->debug("$key now exists?:",$entry->exists);
-
-    # Verification;
-    return $entry->exists;
-
-} # _cache_set
 
 
 ################################################################################
