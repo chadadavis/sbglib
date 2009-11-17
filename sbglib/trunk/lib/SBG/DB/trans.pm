@@ -121,13 +121,10 @@ WHERE (id_entity1=? AND id_entity2=?)
     my $trans = SBG::Transform::Affine->new(matrix=>pdl($mat));
     
     # Dont' modify original Domain, make a copy
-    # Update transformation required to get dom1 onto dom2
-    $dom1 = $dom1->clone;
-    $dom1->transformation($trans);
-
     my $sup = SBG::Superposition->new(
-        from=>$dom1,
-        to=>$dom2,
+        from=>$dom1->clone,
+        to=>$dom2->clone,
+        transformation=>$trans,
         scores=>{
             Sc=>$row->{sc},
             RMS=>$row->{rmsd},

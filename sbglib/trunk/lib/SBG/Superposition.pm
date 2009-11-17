@@ -36,7 +36,7 @@ use overload (
     '""' => 'stringify',
     );
 
-use Scalar::Util qw/refaddr/;
+use Scalar::Util qw/blessed refaddr/;
 use Moose::Autobox;
 
 
@@ -67,13 +67,19 @@ has 'to' => (
 The domain superpositioned onto the reference domain, containing a
 transformation.
 
-Also handles B<transformation> via L<SBG::DomainI>
-
 =cut
 has 'from' => (
     is => 'rw',
     does => 'SBG::DomainI',
-    handles => [ qw/transformation/ ],
+    );
+
+
+has 'transformation' => (
+    is => 'rw',
+    does => 'SBG::TransformI',
+    required => 1,
+    clearer => 'clear_transformation',
+    default => sub { new SBG::Transform::Affine },
     );
 
 
@@ -81,7 +87,7 @@ has 'from' => (
 =head2 identity
 
  Function: Represents the transformation of a domain onto itself
- Example : my $id = SBG::Superposition::identity($some_domain);
+ Example : my $id = SBG::Superposition->identity($some_domain);
  Returns : new L<SBG::Superposition>
  Args    : L<SBG::DomainI>
 
@@ -94,8 +100,8 @@ default and sets no scores on the transform.
 
 =cut
 sub identity {
-    my ($dom) = @_;
-    my $self = __PACKAGE__->new(
+    my ($pkg, $dom) = @_;
+    my $self = $pkg->new(
         to => $dom,
         from => $dom,
         scores => {
@@ -125,9 +131,13 @@ See also: L<SBG::DomainI>
 =cut
 sub transform {
     my ($self,$matrix) = @_;
-    # Transform the underlying 'from' domain's transformation. The 'to' domain
-    # is the reference domain, it remains unchanged.
+
+    # Transform the underlying transformation.
+    $self->transformation()->transform($matrix);
+    # And the domains
     $self->from()->transform($matrix);
+    $self->to()->transform($matrix);
+
     return $self;
 } # transform
 
@@ -162,22 +172,21 @@ sub apply {
 =cut
 sub inverse {
     my ($self,) = @_;
-    my $class = ref $self;
-    my $copy = $class->new(%$self);
-
-    # If it's just the identity, don't change anything
-    return $copy if $self->isid;
-
-    my $from = $copy->from->clone;
-    my $to = $copy->to->clone;
-    # The Transforms are the inverse of one another
-    $to->transformation($from->transformation->inverse);
-    # Swap
-    $copy->to($from);
-    $copy->from($to);
-    # And update alignment lengths
-    $copy->scores->put('q_len', $self->scores->at('d_len'));
-    $copy->scores->put('d_len', $self->scores->at('q_len'));
+    my $class = blessed $self;
+    my $copy;
+    if ($self->isid) {
+        # Use clone to keep separate copies of domain objects
+        $copy = $class->identity($self->dom->clone);
+    } else {
+        # Swap the from domain with the to domain, as we're reversing
+        $copy = $class->new(from=>$self->to->clone,
+                              to=>$self->from->clone,
+                              transformation=>$self->transformation->inverse,
+            );
+        # And update alignment lengths
+        $copy->scores->put('q_len', $self->scores->at('d_len'));
+        $copy->scores->put('d_len', $self->scores->at('q_len'));
+    }
 
     return $copy;
 

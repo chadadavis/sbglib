@@ -114,7 +114,7 @@ sub superposition_native {
     if ($fromdom->pdbid eq $ontodom->pdbid &&
         $fromdom->descriptor eq $ontodom->descriptor) {
         log()->trace("Identity: $fromdom");
-        return SBG::Superposition::identity($fromdom);
+        return SBG::Superposition->identity($fromdom);
     }
 
     my ($fullcmd, $prefix) = _setup_input($cmd, $ontodom, $fromdom);
@@ -153,7 +153,11 @@ sub superposition_native {
 
         # Create Superposition (the reference domain, $ontodom, hasn't changed)
         $superpos = SBG::Superposition->new(
-            to=>$ontodom, from=>$dom, scores=>{%stats} );
+            from=>$fromdom->clone,
+            to=>$ontodom->clone,
+            transformation=>$dom->transformation,
+            scores=>{%stats},
+            );
         # Don't need to parse the rest once we have the transformation
         last;
     }
@@ -181,7 +185,7 @@ the given domains.
 =cut
 sub superposition {
     my ($fromdom, $ontodom, $ops) = @_;
-    log()->trace("$fromdom=>$ontodom");
+    log()->trace($fromdom->uniqueid, '=>', $ontodom->uniqueid);
     my $superpos = superposition_native($fromdom, $ontodom, $ops);
     return unless defined $superpos;
 

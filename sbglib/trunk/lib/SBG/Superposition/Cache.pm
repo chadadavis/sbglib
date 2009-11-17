@@ -41,7 +41,7 @@ sub superposition_native {
     if ($fromdom->pdbid eq $ontodom->pdbid &&
         $fromdom->descriptor eq $ontodom->descriptor) {
         log()->trace("Identity: $fromdom");
-        return SBG::Superposition::identity($fromdom);
+        return SBG::Superposition->identity($fromdom);
     }
 
     my $superpos;
