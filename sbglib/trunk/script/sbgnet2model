@@ -57,6 +57,8 @@ use List::MoreUtils qw/each_arrayref/;
 use POSIX;
 use Carp;
 
+use Hash::MoreUtils qw/slice_def/;
+
 use File::NFSLock;
 use Fcntl qw/LOCK_EX LOCK_NB/;
 
@@ -74,9 +76,10 @@ use SBG::U::Log;
 
 my %ops;
 my $result = GetOptions(\%ops,
+                        'complete|c',
+                        'overlap_thresh|o=f',
+                        'minsize|s=s',
                         'h|help',
-                        'c|complete',
-                        's|size=s',
                         'l|log=s',
                         'f|file=s', 
                         'd|debug',
@@ -112,10 +115,14 @@ foreach my $file (@files) {
     my $net = retrieve($file) or
         pod2usage(-exitval=>1, -verbose=>1, -message=>"$file is not an object");
     _print_net($basename, $net);
-    my $minsize = _minsize($net, %ops);
+
+    $ops{minsize} = 3 unless defined $ops{minsize};
+    # Only full-size (complete coverage) models?
+    $ops{minsize} = '100%' if $ops{complete};
+    $ops{minsize} = ceil(_frac_of($ops{minsize}, $net->nodes));
 
     # Traverse the network
-    _one_net($net, $basename, $minsize);
+    _one_net($net, $basename, \%ops);
     print "\n";
 
     my @done = <${basename}*.stor>;
@@ -128,17 +135,18 @@ exit;
 
 
 ################################################################################
-# Parse the -s command line option (minsize of complex predictions)
-sub _minsize {
-    my ($net, %ops) = @_;
-    # Min components in complex (e.g. 4 or '75%' )
-    my $minsize = $ops{'s'} || 3;
-    # Only full-size (complete coverage) models?
-    $minsize = '100%' if $ops{'c'};
-    if ($minsize =~ /(\d+)\%$/) {
-        $minsize = ceil($net->nodes() * $1 / 100.0);
+
+
+# Convert percentage to literal amount
+# Dont' forget to ceil() or int() the result, if you want a whole number
+sub _frac_of {
+    my ($frac, $of) = @_;
+    $of ||= 100;
+    my $abs = $frac;
+    if ($frac =~ /^([.0-9])+\%$/) {
+        $abs = $of * $1 / 100.0;
     }
-    return $minsize;
+    return $abs;
 }
 
 
@@ -159,17 +167,19 @@ sub _print_net {
 ################################################################################
 # Assemble network
 sub _one_net {
-    my ($net,$name, $minsize) = @_;
+    my ($net,$name, $ops) = @_;
 
     # Traversal algorithm, on the network
     # -test is the function to call when trying to place an interaction
     # -partial is the function to call when one complex solution is complete
+    my %tops = slice_def($ops, 'minsize');
     my $t = new SBG::Traversal(graph=>$net, 
                                assembler=>SBG::CA::Assembler->new(),
-                               minsize=>$minsize,
+                               %tops,
         );
     # Each result is a complex, this is a placeholder for the aglorithm's state
-    my $state = new SBG::Complex(id=>$name,overlap_thresh=>0.75);
+    my %cops = slice_def($ops, 'overlap_thresh');
+    my $state = new SBG::Complex(id=>$name,%cops);
 
     # Go!
     $t->traverse($state);
