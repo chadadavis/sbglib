@@ -28,7 +28,7 @@ L<SBG::Traversal> , L<SBG::Complex>
 package SBG::CA::Assembler;
 use Moose;
 
-use File::Spec qw/catfile/;
+use File::Spec::Functions;
 use Moose::Autobox;
 
 use SBG::U::Log qw/log/;
