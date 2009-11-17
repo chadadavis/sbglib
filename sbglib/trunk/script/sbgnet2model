@@ -59,7 +59,7 @@ use Carp;
 
 use Hash::MoreUtils qw/slice_def/;
 
-use File::Spec qw/catfile/;
+use File::Spec::Functions;
 use File::NFSLock;
 use Fcntl qw/LOCK_EX LOCK_NB/;
 
