@@ -316,7 +316,7 @@ sub _objs2points {
 
 sub _one_basis {
     my ($self,$modelid, $model, $i, $j, $k, $labels) = @_;
-    log()->trace(join(' ', $modelid, $i, $j, $k));
+#     log()->trace(join(' ', $modelid, $i, $j, $k));
     # Determine a basis transformation, to put model in a common frame of ref
     my $t = _basis($model, $i, $j, $k) or return;
     # Transform all points using this basis
@@ -437,7 +437,7 @@ http://en.wikipedia.org/wiki/Atan2
 =cut
 sub _basis {
     my ($model, $i, $j, $k) = @_;
-    log()->trace("$i $j $k");
+#     log()->trace("$i $j $k");
 
     # $model_$i is the new origin
     my $translation = zeroes(3) - $model(,$i);
@@ -459,7 +459,7 @@ sub _basis {
     # Angle between line (0,0)->(x,y) and the x-axis, which is the angle to
     # rotate by, from the y-axis, toward the x-axis, about the z-axis
     my $ry2x = rad2deg atan2 $y, $x;
-    log()->trace("y=>x $ry2x deg ($x,$y,$z)");
+#     log()->trace("y=>x $ry2x deg ($x,$y,$z)");
     my $t_ry2x = t_rot([0,0,$ry2x],dims=>3);
     $b1 = $t_ry2x->apply($b1);
     $b2 = $t_ry2x->apply($b2);
@@ -479,7 +479,7 @@ sub _basis {
     # (0,0)->(x,z) and the X-axis (not Z-axis). Since PDL::Transform rotates
     # from X-axis, toward Z-axis, sign is negative
     my $rx2z = - rad2deg atan2 $z, $x;
-    log()->trace("x=>z $rx2z deg ($x,$y,$z)");
+#     log()->trace("x=>z $rx2z deg ($x,$y,$z)");
     my $t_rx2z = t_rot([0,$rx2z,0],dims=>3);
     $b1 = $t_rx2z->apply($b1);
     $b2 = $t_rx2z->apply($b2);
@@ -496,12 +496,12 @@ sub _basis {
     # Angle between line (0,0)->(y,z) and the y-axis, which is the angle to
     # rotate by, from the z-axis, toward the y-axis, about the x-axis
     my $rz2y = rad2deg atan2 $z, $y;
-    log()->trace("z=>y $rz2y deg ($x,$y,$z)");
+#     log()->trace("z=>y $rz2y deg ($x,$y,$z)");
     my $t_rz2y = t_rot([$rz2y,0,0],dims=>3);
 
     # Composite transform:
     my $rot = [ $rz2y, $rx2z, $ry2x ];
-    log()->trace("Rot @$rot");
+#     log()->trace("Rot @$rot");
     # Right-to-left composition of transformation matrices
     my $t = $t_rz2y x $t_rx2z x $t_ry2x x $t_o;
     return $t;
