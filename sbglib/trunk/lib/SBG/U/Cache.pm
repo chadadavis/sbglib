@@ -56,13 +56,14 @@ sub cache {
 
     unless (defined $cache_hash{$name}) {
         $cache_hash{$name} = CHI->new(
-#             namespace => "${name}_${arch}",
-            namespace => $name,
-#             driver=>'File', 
-            driver=>'Null', 
+            namespace => "${name}_${arch}",
+#             namespace => $name,
+            driver=>'File', 
+#             driver=>'Null', 
+            root_dir   => $base,
 #             root_dir   => $cachedir,
-#             expires_in => '2 weeks',
-#             l1_cache => { driver=>'Memory', global=>1, cache_size=>'50m' }
+            expires_in => '2 weeks',
+            l1_cache => { driver=>'Memory', global=>1, cache_size=>'50m' }
             );
     }
 
