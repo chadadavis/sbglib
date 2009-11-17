@@ -201,9 +201,6 @@ has 'overlap_thresh' => (
     is => 'rw',
     isa => 'Num',
     default => 0.5,
-# TODO DEL testing max paths:
-#     default => 0.0,
-#     default => 2,
     );
 
 
