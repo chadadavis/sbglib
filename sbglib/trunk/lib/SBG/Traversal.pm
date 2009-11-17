@@ -47,6 +47,9 @@ use Clone qw(clone);
 use Graph;
 use Graph::UnionFind;
 
+# Manual tail call optimization
+use Sub::Call::Recur; # qw/recur/;
+
 
 ################################################################################
 
@@ -324,7 +327,7 @@ sub _do_nodes {
     }
     # Continue processing all outstanding nodes before moving to edges
     # TODO DES eliminate tail recursion
-    $self->_do_nodes($uf, $state, $d);
+    recur($self, $uf, $state, $d);
     _d $d, "<= Node: $current";
 } # _do_nodes
 
@@ -362,7 +365,7 @@ sub _do_edges {
         _d $d, "No more alternative edges for $src $dest";
         # Try any other outstanding edges at this depth first, though
         # TODO DES eliminate tail recursion
-        $self->_do_edges($uf, $state, $d);
+        recur($self,$uf, $state, $d);
         return;
     }
 
@@ -381,7 +384,7 @@ sub _do_edges {
     $self->_edgeq->push($current);
     # Go back to using the original $state that we had before this alternative
     # TODO DES eliminate tail recursion
-    $self->_do_edges($uf, $state, $d);
+    recur($self, $uf, $state, $d);
 } # _do_edges
 
 
