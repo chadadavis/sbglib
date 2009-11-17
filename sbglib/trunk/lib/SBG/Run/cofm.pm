@@ -57,9 +57,10 @@ our $cofm = 'cofm';
 
  Function: 
  Example : 
- Returns : L<SBG::Domain::Sphere>
+ Returns : a new L<SBG::Domain::Sphere>
  Args    : L<SBG::DomainI>
 
+Original Domain is not modified
 
 B<cofm> must be in your PATH, or defined in a B<config.ini> file
 
