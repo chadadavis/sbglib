@@ -105,9 +105,9 @@ WHERE (id_entity1=? AND id_entity2=?)
     }
     my $row = $sth->fetchrow_hashref();
     if (defined $row) {
-        log()->trace("Cache hit (positive) $dom1=>$dom2");
+        log()->trace("DB hit (positive) $dom1=>$dom2");
     } else {
-        log()->trace("Cache miss $dom1=>$dom2");
+        log()->trace("DB miss $dom1=>$dom2");
         return;
     }
 
