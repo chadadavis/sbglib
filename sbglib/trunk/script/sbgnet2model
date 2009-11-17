@@ -59,6 +59,7 @@ use Carp;
 
 use Hash::MoreUtils qw/slice_def/;
 
+use File::Spec qw/catfile/;
 use File::NFSLock;
 use Fcntl qw/LOCK_EX LOCK_NB/;
 
@@ -93,13 +94,15 @@ my @files = @ARGV;
 foreach my $file (@files) {
 
     my $basename = basename($file,'.stor');
-    my $donefile = "${basename}.done";
-    $ops{'f'} ||= "net2model-${basename}.log";
+    my $outdir = $basename;
+    mkdir $outdir;
+    my $donefile = catfile($outdir, $basename . '.done');
+    $ops{'f'} ||= catfile($outdir, $basename . '.log');
     SBG::U::Log::init($ops{'l'}, $ops{'f'}) if $ops{'l'};
     
     # Already finished?
     if (-s $donefile) {
-        my $d = `cat ${basename}.done`;
+        my $d = `cat $donefile`;
         chomp $d;
         printf "$basename : %5d already done\n", $d;
         next;
@@ -125,9 +128,10 @@ foreach my $file (@files) {
     _one_net($net, $basename, \%ops);
     print "\n";
 
-    my @done = <${basename}*.stor>;
+    my $root = catfile($outdir, $basename);
+    my @done = <${root}*.stor>;
     my $done = scalar(@done);
-    `echo $done > ${basename}.done`;
+    `echo $done > $donefile`;
 
 }
 
@@ -174,7 +178,8 @@ sub _one_net {
     # -partial is the function to call when one complex solution is complete
     my %tops = slice_def($ops, 'minsize');
     my $t = new SBG::Traversal(graph=>$net, 
-                               assembler=>SBG::CA::Assembler->new(),
+                               assembler=>
+                               SBG::CA::Assembler->new(dir=>$name),
                                %tops,
         );
     # Each result is a complex, this is a placeholder for the aglorithm's state

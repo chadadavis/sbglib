@@ -28,6 +28,7 @@ L<SBG::Traversal> , L<SBG::Complex>
 package SBG::CA::Assembler;
 use Moose;
 
+use File::Spec qw/catfile/;
 use Moose::Autobox;
 
 use SBG::U::Log qw/log/;
@@ -77,6 +78,13 @@ has 'pattern' => (
     is => 'ro',
     isa => 'Str',
     default => '%smodel-%05d',
+    );
+
+
+has 'dir' => (
+    is => 'ro',
+    isa => 'Str',
+    default => '.',
     );
 
 
@@ -139,6 +147,8 @@ sub solution {
                            $class, 
             );
         $file .= '.stor';
+        mkdir $self->dir;
+        $file = catfile($self->dir, $file) if -d $self->dir;
         $complex->store($file);
         return $file;
     }
