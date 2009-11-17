@@ -24,12 +24,9 @@ our @EXPORT_OK = qw(cache);
 
 use strict;
 use warnings;
-use Cache::File;
 use File::Spec;
 
-# Trying to avoid cach corruption with additional locking ...
-use File::NFSLock;
-use Fcntl qw/LOCK_EX LOCK_NB/;
+use CHI;
 
 use SBG::U::Log qw/log/;
 
@@ -57,21 +54,18 @@ sub cache {
     chomp $arch;
     my $cachedir = "${base}/${name}_${arch}";
 
-    my $lock;
-    if (wantarray) {
-        $lock = File::NFSLock->new("${cachedir}.lock",LOCK_EX,60,5*60);
-        log()->trace("Locked: $cachedir");
-    }
-
     unless (defined $cache_hash{$name}) {
-        $cache_hash{$name} = Cache::File->new(
-            cache_root => $cachedir,
-            lock_level => Cache::File::LOCK_NFS(),
-            default_expires => '2 w',
+        $cache_hash{$name} = CHI->new(
+#             namespace => "${name}_${arch}",
+            namespace => $name,
+            driver=>'File', 
+            root_dir   => $cachedir,
+            expires_in => '2 weeks',
+            l1_cache => { driver=>'Memory', global=>1, cache_size=>'50m' }
             );
     }
 
-    return wantarray ? ($cache_hash{$name}, $lock) : $cache_hash{$name};
+    return $cache_hash{$name};
 
 }
 

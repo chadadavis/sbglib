@@ -126,20 +126,10 @@ Cache claims to even work between concurrent processes!
 =cut
 sub _cache_get {
     my ($from, $to) = @_;
-
     my ($cache,$lock) = SBG::U::Cache::cache('sbgsuperposition');
     my $key = "${from}=>${to}";
-    my $entry = $cache->entry($key);
 
-    if ($entry->exists) {
-        # Cache::Entry dies when cache corruption, so eval it first
-        my $data = eval { $entry->thaw };
-        if ($@) {
-            log()->error("entry error:$key:$@");
-            eval { $entry->remove; };
-            log()->error("entry removed:$key:$@");
-            return;
-        }
+    if (my $data = $cache->get($key)) {
 
         if (ref($data) eq 'ARRAY') {
             log()->debug("Cache hit (negative) ", $key);
@@ -169,7 +159,7 @@ sub _cache_set {
     my ($from, $to, $data) = @_;
     my ($cache,$lock) = SBG::U::Cache::cache('sbgsuperposition');
     my $key = "${from}=>${to}";
-    my $entry = $cache->entry($key);
+
     my $status;
 
     # (NB [] means negative cache)
@@ -181,15 +171,13 @@ sub _cache_set {
 
     log()->debug("Cache write ($status) $key");
     log()->trace(ref($data), "\n", $data);
-    $entry->freeze($data);
-
-    log()->debug("$key now exists?:",$entry->exists);
+    
+    $cache->set($key, $data);
 
     # Verification;
-    return $entry->exists;
+    return $cache->is_valid($key);
 
 } # _cache_set
-
 
 
 ################################################################################
