@@ -6,6 +6,14 @@ use Carp;
 use Data::Dumper;
 use FindBin qw/$Bin/;
 
+use SBG::U::Log qw/log/;
+$SIG{__DIE__} = \&confess;
+my $DEBUG;
+# $DEBUG = 1;
+log()->init('TRACE') if $DEBUG;
+$File::Temp::KEEP_ALL = $DEBUG;
+
+
 use SBG::Traversal;
 use SBG::NetworkIO::csv;
 

@@ -244,6 +244,14 @@ has 'asolutions' => (
     default => 0,
 );
 
+# Total duplicated solutions (determined without callback function)
+has 'dsolutions' => (
+    is => 'rw',
+    isa => 'Int',
+    default => 0,
+);
+
+
 # Count solutions rejected by the callback function
 has 'rsolutions' => (
     is => 'rw',
@@ -399,7 +407,7 @@ sub _test_alt {
     if (! $success) {
         # Current edge was rejected, but alternative multiedges may remain
         $self->rejects($self->rejects + 1);
-        _d $d, "Aborted path " . $self->rejects;
+        _d $d, "Pruned path (" . $self->rejects . ")";
         # Continue using the same state, in case the failure must be remembered
         # TODO DES possible to eliminate indirect  tail recursion here?
         $self->_do_edges($uf, $stateclone, $d);
@@ -500,7 +508,7 @@ sub _next_alt {
 
 # Partial solution.  
 # Assumes that the edges alternatives can be strinigified and
-# that the strinfications are unique.
+# that the stringifications are unique.
 
 sub _do_solution {
     my ($self, $state, $d) = @_;
@@ -511,23 +519,30 @@ sub _do_solution {
     return unless $alts->length;
     return if $self->minsize > $nodes->length;
 
-# TODO DES resolve uniqueness of edge alternatives
-#     my $solution_label = $alts->join(',');
-#     if ($self->_solved->at($solution_label)) {
-#         _d $d, "Duplicate";
-#     } else {
-#         $self->_solved->put($solution_label, 1);
 
-    log()->debug("Solution: ", join(' ', @{$self->_nodecover->keys}));
+# TODO DES resolve uniqueness of edge alternatives
+    my $solution_label = $alts->sort->join(',');
+    my $nidentical = $self->_solved->at($solution_label);
+    if ($nidentical) {
+        _d $d, "Duplicate solution: $solution_label";
+        $self->_solved->put($solution_label, ++$nidentical);
+        $self->dsolutions($self->dsolutions+1);
+        return;
+    } else {
+        $self->_solved->put($solution_label, 1);
+    }
+
+
+    log()->debug("Potential solution: $solution_label");
     if ($self->assembler->solution(
             $state, $self->graph, $nodes, $alts, $self->rejects)) {
         $self->asolutions($self->asolutions+1);
-        log()->trace("Accepted solution");
+        log()->trace("Accepted solution: $solution_label");
     } else {
         $self->rsolutions($self->rsolutions+1);
-        log()->trace("Rejected solution");
+        log()->trace("Rejected solution: $solution_label");
     }
-#     }
+
 
 } # _do_solution
 
@@ -556,6 +571,7 @@ sub DEMOLISH {
 
     _d0 "Traversal done: rejected paths: " . $self->rejects;
     _d0 "Traversal done: rejected solutions: " . $self->rsolutions;
+    _d0 "Traversal done: duplicate solutions: " . $self->dsolutions;
     _d0 "Traversal done: accepted solutions: " . $self->asolutions;
 }
 
