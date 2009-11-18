@@ -25,22 +25,23 @@ my $seq2 = $io->next_seq;
 
 # Get pairs of hits from common PDB structure
 # my $blast = SBG::Run::PairedBlast->new();
-my $blast = SBG::Run::PairedBlast->new(verbose=>$DEBUG);
+my $blast;
+$blast =SBG::Run::PairedBlast->new(verbose=>$DEBUG, 
+                                   method=>'remoteblast');
 
 my @hitpairs = $blast->search($seq1, $seq2);
-is(scalar(@hitpairs), 210, 'PairedBlast::search()');
+# is(scalar(@hitpairs), 210, 'PairedBlast::search()');
+is(scalar(@hitpairs), 40, 'PairedBlast::search()');
 
 # Test limit
 # NB this does not imply that always 10 pairs are returned
 # Only that each monomer has 10 hits, max
 # Pairing them generally results in more than 10 hits
 @hitpairs = $blast->search($seq1, $seq2, limit=>10);
-is(scalar(@hitpairs), 10, 'limit=10 monomeric hits each');
+# is(scalar(@hitpairs), 10, 'limit=10 monomeric hits each');
+is(scalar(@hitpairs), 18, 'limit=10 monomeric hits each');
 
 
-$TODO = "Test caching";
-@hitpairs = $blast->search($seq1, $seq2);
-ok(0);
 
 
 

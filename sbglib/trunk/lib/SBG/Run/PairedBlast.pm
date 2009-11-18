@@ -58,6 +58,7 @@ sub stringify { (shift)->name }
 package SBG::Run::PairedBlast;
 use Moose;
 use Bio::Tools::Run::StandAloneBlast;
+use Bio::Tools::Run::RemoteBlast;
 
 use Moose::Autobox;
 
@@ -105,13 +106,37 @@ has 'verbose' => (
     isa => 'Bool',
     );
 
-has 'blast' => (
+# 'standaloneblast or remoteblast
+has 'method' => (
+    is => 'rw',
+    isa => 'Str',
+    default => 'remoteblast',
+    );
+
+# Handle to Bio::Tools::Run::StandAloneBlast
+has 'standalonefactory' => (
     is => 'ro',
     lazy_build => 1,
     handles => [ qw/blastpgp/ ],
     );
 
-sub _build_blast {
+
+# Handle to Bio::Tools::Run::RemoteBlast
+has 'remotefactory' => (
+    is => 'ro',
+    lazy_build => 1,
+    );
+
+# Polling frequency (seconds) for remoteblast
+has 'wait' => (
+    is => 'rw',
+    isa => 'Int',
+    default => 5,
+    );
+
+
+
+sub _build_standalonefactory {
     my ($self) = @_;
     my $factory = Bio::Tools::Run::StandAloneBlast->new();
 
@@ -123,8 +148,53 @@ sub _build_blast {
     $factory->e($self->e) if $self->e;
     $factory->b($self->b) if $self->b;
     return $factory;
-
 }
+
+
+# $factory->submit_blast($seqobj);
+
+sub _build_remotefactory {
+    my ($self) = @_;
+    my $factory = Bio::Tools::Run::RemoteBlast->new(
+        -readmethod => 'SearchIO',
+        -database => $self->database,
+        );
+
+    $factory->expect($self->e) if $self->e;
+
+    return $factory;
+}
+
+
+# Returns Bio::SearchIO
+sub standaloneblast {
+    my ($self, $seq) = @_;
+    my $factory = $self->standalonefactory;
+    return $factory->blastpgp($seq);
+}
+
+
+# Returns Bio::SearchIO
+sub remoteblast {
+    my ($self, $seq) = @_;
+
+    my $factory = $self->remotefactory;
+    $factory->submit_blast($seq);
+
+    my ($rid) = $factory->each_rid;
+    log()->debug("RID: $rid");
+    while (sleep $self->wait) {
+        my $rc = $factory->retrieve_blast($rid);
+        return $rc if ref $rc;
+        # Abort if error
+        if ($rc < 0) {
+            $factory->remove_rid($rid);
+            log()->error("Failed on RID: $rid");
+            return;
+        }
+    }
+
+} # remoteblast
 
 
 ################################################################################
@@ -173,7 +243,9 @@ sub _blast1 {
     if ($ops{cache} && $hits) {
         log()->debug($seq->primary_id, ': ', $hits->length," hits (cached)");
     } else {
-        my $res = $self->blastpgp($seq)->next_result;
+        my $method = $self->method;
+        my $res = $self->$method($seq)->next_result;
+
         $res->sort_hits;
         $hits = [ $res->hits ];
         log()->debug($seq->primary_id, ': ', $hits->length," hits (raw)");
