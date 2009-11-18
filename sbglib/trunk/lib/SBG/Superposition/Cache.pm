@@ -45,32 +45,34 @@ sub superposition_native {
     }
 
     my $superpos;
-
-    # Try DB
-    $superpos = SBG::DB::trans::superposition_native($fromdom, $ontodom);
     
-    # Try Cache::File
+    # Try cache
     unless (defined $superpos) {
         $superpos = _cache_get($fromdom, $ontodom);
-        # Negative cache? (i.e. superpostion previously found not possible)
+        # Negative cache? (i.e. superpostion previously found to be impossible)
         return if ref($superpos) eq 'ARRAY';
+    }
+
+    # Try DB
+    unless (defined $superpos) {
+        $superpos = SBG::DB::trans::superposition_native($fromdom, $ontodom);
     }
 
     # Try STAMP
     unless (defined $superpos) {
         $superpos = SBG::STAMP::superposition_native($fromdom, $ontodom);
-        if (defined $superpos) {
-            _cache_set($fromdom, $ontodom, $superpos);
-            _cache_set($ontodom, $fromdom, $superpos->inverse);
-            return $superpos;
-        } else {
-            _cache_set($fromdom, $ontodom, []);
-            _cache_set($ontodom, $fromdom, []);
-            return;
-        }
     }
 
-    return $superpos;
+
+    if (defined $superpos) {
+        _cache_set($fromdom, $ontodom, $superpos);
+        _cache_set($ontodom, $fromdom, $superpos->inverse);
+        return $superpos;
+    } else {
+        _cache_set($fromdom, $ontodom, []);
+        _cache_set($ontodom, $fromdom, []);
+        return;
+    }
 
 } # superposition_native
 
