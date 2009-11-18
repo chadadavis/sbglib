@@ -51,16 +51,19 @@ sub superposition_native {
         $superpos = _cache_get($fromdom, $ontodom);
         # Negative cache? (i.e. superpostion previously found to be impossible)
         return if ref($superpos) eq 'ARRAY';
+        return $superpos if defined $superpos;
     }
 
     # Try DB
     unless (defined $superpos) {
         $superpos = SBG::DB::trans::superposition_native($fromdom, $ontodom);
+        # But dont' return, wait to cache it
     }
 
     # Try STAMP
     unless (defined $superpos) {
         $superpos = SBG::STAMP::superposition_native($fromdom, $ontodom);
+        # But dont' return, wait to cache it
     }
 
 
