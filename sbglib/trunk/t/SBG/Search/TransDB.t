@@ -37,15 +37,20 @@ my $net = new SBG::Network;
 # Each node contains one sequence object
 $net->add_node($_) for @nodes;
 # Searcher tries to find interaction templates (edges) to connect nodes
-$net = $net->build(new SBG::Search::TransDB,cache=>0);
+# my $blast = SBG::Run::PairedBlast->new(method=>'standaloneblast');
+my $blast = SBG::Run::PairedBlast->new(method=>'remoteblast');
+my $searcher = SBG::Search::TransDB->new(blast=>$blast);
+$net = $net->build($searcher, cache=>0);
 
 # Potential interactions, between pairs of proteins
 my @edges = $net->edges;
-is(scalar(@edges), 10, 'edges()');
+# is(scalar(@edges), 10, 'edges()'); # standaloneblast
+is(scalar(@edges), 9, 'edges()'); # remoteblast
 
 # Potential *types* of interactions, between all interacting pairs
 # An edge may have multiple interactions
-is($net->interactions, 644, 'Network::interactions');
+# is($net->interactions, 644, 'Network::interactions'); # standaloneblast
+is($net->interactions, 184, 'Network::interactions'); # remoteblast
 
 # Interaction network is not necessarily connected, if templates scarce
 my @subnets = $net->partition;

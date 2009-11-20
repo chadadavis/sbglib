@@ -185,9 +185,11 @@ sub remoteblast {
     log()->debug("RID: $rid");
     while (sleep $self->wait) {
         my $rc = $factory->retrieve_blast($rid);
-        return $rc if ref $rc;
-        # Abort if error
-        if ($rc < 0) {
+        if (ref $rc) {
+            $factory->remove_rid($rid);
+            return $rc;
+        } elsif ($rc < 0) {
+            # Abort if error
             $factory->remove_rid($rid);
             log()->error("Failed on RID: $rid");
             return;
@@ -213,6 +215,9 @@ hits. Pairing them generally results in more than 10 hits.
 =cut
 sub search {
     my ($self, $seq1, $seq2, %ops) = @_;
+    
+    # Enable Hit caching when RemoteBlast
+    $ops{cache} = 1 if $self->method eq 'remoteblast';
 
     # List of Blast Hits, indexed by PDB ID
     my $hits1 = $self->_blast1($seq1, %ops);
@@ -245,24 +250,31 @@ sub _blast1 {
     } else {
         my $method = $self->method;
         my $res = $self->$method($seq)->next_result;
-
-        $res->sort_hits;
         $hits = [ $res->hits ];
-        log()->debug($seq->primary_id, ': ', $hits->length," hits (raw)");
+        # Only take the Hits that have > 0 HSPs
+        $hits = $hits->grep(sub{$_->hsps});
+        log()->debug($seq->primary_id, ': ', $hits->length," Hits (raw)");
+        # Sort them descending by the Blast bit score of the best HSP of the Hit
+        $hits = [ sort { $b->hsp->score <=> $a->hsp->score } @$hits ];
         $self->cache->put($seq, $hits) if $ops{cache};
     }
+
     if ($ops{maxid}) {
         $ops{maxid} /= 100.0 if $ops{maxid} > 1;
         log()->debug("Maxium sequence identity fraction:", $ops{maxid});
         $hits = $hits->grep(sub{$_->hsp->frac_identical<=$ops{maxid}});
     }
+
     if ($ops{minid}) {
         $ops{minid} /= 100.0 if $ops{minid} > 1;
         log()->debug("Minimum sequence identity fraction:", $ops{minid});
         $hits = $hits->grep(sub{$_->hsp->frac_identical>=$ops{minid}});
     }
-    $hits = $hits->slice([0..$limit-1]) if $limit && $limit < @$hits;
-    log()->debug($seq->primary_id, ': ', $hits->length," hits (filtered)");
+
+    if ($limit && $limit < @$hits) {
+        $hits = $hits->slice([0..$limit-1]);
+        log()->debug($seq->primary_id, ': ', $hits->length," Hits (filtered)");
+    }
 
     # Index by pdbid
     my $hitsbyid = _hitsbyid($hits);

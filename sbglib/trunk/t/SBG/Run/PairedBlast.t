@@ -27,20 +27,20 @@ my $seq2 = $io->next_seq;
 # my $blast = SBG::Run::PairedBlast->new();
 my $blast;
 $blast =SBG::Run::PairedBlast->new(verbose=>$DEBUG, 
+#                                    method=>'standaloneblast');
                                    method=>'remoteblast');
 
 my @hitpairs = $blast->search($seq1, $seq2);
-# is(scalar(@hitpairs), 210, 'PairedBlast::search()');
-is(scalar(@hitpairs), 40, 'PairedBlast::search()');
+# is(scalar(@hitpairs), 210, 'PairedBlast::search()'); # standaloneblast
+is(scalar(@hitpairs), 42, 'PairedBlast::search()'); # remoteblast
 
 # Test limit
 # NB this does not imply that always 10 pairs are returned
 # Only that each monomer has 10 hits, max
 # Pairing them generally results in more than 10 hits
 @hitpairs = $blast->search($seq1, $seq2, limit=>10);
-# is(scalar(@hitpairs), 10, 'limit=10 monomeric hits each');
-is(scalar(@hitpairs), 18, 'limit=10 monomeric hits each');
-
+# is(scalar(@hitpairs), 10, 'limit=10 monomeric hits each'); # standaloneblast
+is(scalar(@hitpairs), 10, 'limit=10 monomeric hits each'); # remoteblast
 
 
 
