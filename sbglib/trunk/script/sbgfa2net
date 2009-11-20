@@ -13,6 +13,8 @@ sbgfa2net <fasta-sequences.fa>
 
 =head1 OPTIONS
 
+=head2 -m|ethod B<standaloneblast> or B<remoteblast>
+
 =head2 -h|elp Print this help page
 
 =head2 -l|og Set logging level
@@ -60,6 +62,7 @@ my $result = GetOptions(\%ops,
                         'minid|n=i',
                         'output|o=s',
                         'cache|c=i',
+                        'method|m=s',
     );                  
 if ($ops{'h'}) { pod2usage(-exitval=>1, -verbose=>2); }
 $SIG{__DIE__} = \&confes if $ops{'d'};
@@ -79,8 +82,11 @@ foreach my $file (@fastafiles) {
     }
 
     # Searcher tries to find interaction templates (edges) to connect seq nodes
+    my $blast = SBG::Run::PairedBlast->new;
+    $blast->method($ops{method}) if $ops{method};
+    my $searcher = SBG::Search::TransDB->new(blast=>$blast);
     my $buildops = {%ops}->hslice([qw/maxid minid cache/]);
-    $net = $net->build(new SBG::Search::TransDB,%$buildops);
+    $net = $net->build($searcher,%$buildops);
     
     my $base = $ops{output} || $basename;
     my @subnets = $net->partition(minsize=>3);
