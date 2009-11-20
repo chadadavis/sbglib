@@ -225,7 +225,7 @@ sub build {
     log()->trace('cacheid:',$cacheid);
     if ($ops{cache}) {
         my $cache = SBG::U::Cache::cache('sbgnetwork');
-        my $cached = $cache->thaw($cacheid);
+        my $cached = $cache->get($cacheid);
         log()->trace('cached:', defined($cached) || 0);
         return $cached if defined $cached;
     }
@@ -255,7 +255,7 @@ sub build {
     }
     if ($ops{cache}) {
         my $cache = SBG::U::Cache::cache('sbgnetwork');
-        $cache->freeze($cacheid, $self);
+        $cache->set($cacheid, $self);
     }
 
     log()->debug(scalar($self->nodes), ' nodes');
