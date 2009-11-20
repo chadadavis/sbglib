@@ -175,6 +175,7 @@ sub standaloneblast {
 
 
 # Returns Bio::SearchIO
+# Seems to be limited to 100 Hits
 sub remoteblast {
     my ($self, $seq) = @_;
 
