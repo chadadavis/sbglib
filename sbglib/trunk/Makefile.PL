@@ -6,8 +6,7 @@
 
 
 use inc::Module::Install;
-# use Module::Install::AutoInstall
-# use Module::AutoInstall;
+use Module::AutoInstall;
 
 all_from => 'lib/SBG.pm';
 
@@ -48,15 +47,14 @@ requires 'Text::ParseWords' => '0';
 
 # These STAMP binaries need to be found in the PATH
 # STAMP also requires STAMPDIR to be set to the location of pdb.directories
-requires_external_bin 'cofm';
-# requires_external_bin 'dot';
 requires_external_bin 'pdbc';
 requires_external_bin 'pdbseq';
 requires_external_bin 'stamp';
 requires_external_bin 'transform';
-
+requires_external_bin 'cofm';
 
 requires_external_bin 'rasmol';
+# requires_external_bin 'dot'; # graphviz
 
 # Automagically install above deps from CPAN
 #auto_install(force=>1); # Not compat with CPANPLUS
