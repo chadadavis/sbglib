@@ -70,7 +70,10 @@ use SBG::CA::Assembler;
 use SBG::Complex;
 
 use SBG::U::Log;
+use Log::Any qw/$log/;
+use Log::Any::Adapter;
 
+use PBS::ARGV qw/qsub/;
 
 ################################################################################
 
@@ -81,36 +84,50 @@ my $result = GetOptions(\%ops,
                         'overlap_thresh|o=f',
                         'minsize|s=s',
                         'h|help',
-                        'l|log=s',
+                        'l|loglevel=s',
                         'f|file=s', 
                         'd|debug',
     );                  
 if ($ops{'h'}) { pod2usage(-exitval=>1, -verbose=>2); }
 $SIG{__DIE__} = \&confes if $ops{'d'};
 
+if ($ops{'l'}) {
+    my $logfile = $ops{'f'} || basename($0) . '.log';
+    SBG::U::Log::init($ops{'l'}, $logfile);
+    Log::Any::Adapter->set('+SBG::U::Log');
+}
 
-my @files = @ARGV;
+# Recreate command line options;
+my @dashops = map { '-' . $_ => $ops{$_} } keys %ops;
+my @jobids = qsub("$0 @dashops");
+print join("\n", @jobids), "\n", if @jobids;
 
-foreach my $file (@files) {
+foreach my $file (@ARGV) {
 
     my $basename = basename($file,'.stor');
     my $outdir = $basename;
     mkdir $outdir;
     my $donefile = catfile($outdir, $basename . '.done');
-    $ops{'f'} ||= catfile($outdir, $basename . '.log');
-    SBG::U::Log::init($ops{'l'}, $ops{'f'}) if $ops{'l'};
-    
+
+    # Setup new log file specific to given input file
+    if ($ops{'l'}) {
+        my $logfile = $ops{'f'} || catfile($outdir, $basename . '.log');
+        SBG::U::Log::init($ops{'l'}, $logfile);
+        Log::Any::Adapter->set('+SBG::U::Log');
+    }
+    $log->debug("$0 $file @dashops");
+
     # Already finished?
     if (-s $donefile) {
         my $d = `cat $donefile`;
         chomp $d;
-        printf "$basename : %5d already done\n", $d;
+        $log->info("$basename : %5d already done\n", $d);
         next;
     }
 
     # Being computed by another process?
     unless (my $lock = File::NFSLock->new($donefile,LOCK_EX|LOCK_NB)) {
-        print "$basename : locked\n"; # By?
+        $log->info("$basename : locked"); # By host?
         next;
     }
 
