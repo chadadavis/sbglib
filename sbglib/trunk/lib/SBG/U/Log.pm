@@ -75,6 +75,25 @@ sub log {
 
 
 ################################################################################
+=head2 new
+
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
+
+Alias to L<log()>
+
+Added for compatability with L<Log::Any::Adapter>
+
+=cut
+sub new {
+    my ($self) = @_;
+    return $self->log();
+}
+
+
+################################################################################
 =head2 init
 
  Function: 

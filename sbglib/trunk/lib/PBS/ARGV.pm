@@ -49,7 +49,7 @@ sub qsub {
     my ($cmd, @directives) = @_;
 
     # Already running in a PBS job, don't recurse
-    unless (defined $ENV{'PBS_ENVIRONMENT'}) {
+    if (defined $ENV{'PBS_ENVIRONMENT'}) {
         $log->debug('Running in PBS job');
         return;
     }
@@ -82,7 +82,7 @@ sub _findqsub {
         $_qsubpath = $f if(-e $f && -x $f );
     }
     $_qsubpath ||= '';
-    $log->debug("_qsubpath:$_qsubpath");
+    $log->debug("_qsubpath: $_qsubpath");
     return $_qsubpath;
 
 }
@@ -105,7 +105,7 @@ sub _submit {
     print $tmpfh "$cmdline\n";
     close $tmpfh;
 
-    $log->debug("jobscript:$jobscript");
+    $log->debug("jobscript: $jobscript");
     my $jobid = `qsub $jobscript`;
     unless ($jobid) {
         my $msg = "Failed to qsub: $jobscript";
