@@ -127,6 +127,8 @@ sub init {
 
     my $h = `hostname --short`;
     chomp $h;
+    $h = sprintf "%-15s", $h;
+
     # Define log format for appender
     my $layout = Log::Log4perl::Layout::PatternLayout->new("%5p $h %-50M %m%n");
     # Set the layout of the appender

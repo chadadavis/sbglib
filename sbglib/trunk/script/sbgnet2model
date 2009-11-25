@@ -121,13 +121,13 @@ foreach my $file (@ARGV) {
     if (-s $donefile) {
         my $d = `cat $donefile`;
         chomp $d;
-        $log->info("$basename : %5d already done\n", $d);
+        $log->info(sprintf "$basename : %5d already done\n", $d);
         next;
     }
 
     # Being computed by another process?
     unless (my $lock = File::NFSLock->new($donefile,LOCK_EX|LOCK_NB)) {
-        $log->info("$basename : locked"); # By host?
+        $log->info("$basename : locked by: ", `cat ${donefile}*`);
         next;
     }
 
@@ -177,11 +177,12 @@ sub _print_net {
     my ($basename, $net, $i, $n) = @_;
     $i ||= 1;
     $n ||= 1;
-    printf 
+    my $str = sprintf
         "%-20s %4d nodes, %4d edges, %4d interactions \n",
         $basename,
         scalar($net->vertices), scalar($net->edges), 
         scalar($net->interactions);
+    $log->info($str);
 }
 
 

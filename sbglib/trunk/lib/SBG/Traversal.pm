@@ -56,6 +56,7 @@ use Sub::Call::Recur; # qw/recur/;
 # Debug printing (to trace recursion and it's unwinding)
 # TODO del
 use SBG::U::Log qw/log/;
+use Log::Any qw/$log/;
 sub _d {
     my $d = shift;
     log()->trace("  " x $d, @_);
@@ -566,13 +567,13 @@ sub _array2D {
 sub DEMOLISH {
     my ($self) = @_;
     
-    # TODO Shouldn't need thisx
+    # TODO Shouldn't need this
     $self->assembler->solution();
 
-    _d0 "Traversal done: rejected paths: " . $self->rejects;
-    _d0 "Traversal done: rejected solutions: " . $self->rsolutions;
-    _d0 "Traversal done: duplicate solutions: " . $self->dsolutions;
-    _d0 "Traversal done: accepted solutions: " . $self->asolutions;
+    $log->info("Traversal done: rejected paths: " . $self->rejects);
+    $log->info("Traversal done: rejected solutions: " . $self->rsolutions);
+    $log->info("Traversal done: duplicate solutions: " . $self->dsolutions);
+    $log->info("Traversal done: accepted solutions: " . $self->asolutions);
 }
 
 
