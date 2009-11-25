@@ -86,6 +86,7 @@ $VERSION = 0.01;
 
 use Carp;
 use File::Spec;
+use File::Basename;
 use File::Temp qw(tempfile);
 use Log::Any qw/$log/;
 use Getopt::Long;
@@ -96,13 +97,16 @@ use Getopt::Long;
 
  Function: 
  Example : 
- Returns : 
- Args    : 
+ Returns : Array of job IDs submitted. A job ID will return -1 on failure.
+ Args    : $cmd the program/script/command(s) to be run
+           @directives PBS directives, as described the PBS manual
 
 Submits one job to pbs, via B<qsub>, for each argument in B<@ARGV>.
 
 Sets the current working directory of the executing job to the current
 workign directory from when the job was submitted.
+
+ qsub($0, '-N myjobname', '-J 0-15', '-M ae');
 
 =cut
 sub qsub {
@@ -114,7 +118,7 @@ sub qsub {
         return;
     }
     
-    return unless _findqsub();
+    return unless has_qsub();
 
     # Default: rerun same script
     # NB: this can be a relative path, because we 'cd' to $ENV{PWD} in the job
@@ -130,7 +134,7 @@ sub qsub {
 
 
 # Do we have qsub on this system in the $PATH
-sub _findqsub {
+sub has_qsub {
     our $_qsubpath;
     return $_qsubpath if defined $_qsubpath;
     foreach my $dir (File::Spec->path()) {
@@ -151,10 +155,16 @@ sub _submit {
     $cmdline .= " $filearg";
     # Array? if -J option given, append \$PBS_ARRAY_INDEX to cmd
     if (grep { /^-J/ } @directives) {
-        $cmdline .= ' $PBS_ARRAY_INDEX';
+        $cmdline .= ' -J $PBS_ARRAY_INDEX';
     }
+
     # Add name, unless given
-    push @directives, "-N $filearg" unless grep { /^-N/ } @directives;
+    unless (grep { /^-N/ } @directives) {
+        my $base = basename $filearg;
+        # Should begin with alphabetic char
+        $base = 'job' . $base unless $base =~ /^[A-Za-z]/;
+        push @directives, "-N $base";
+    }
 
     my ($tmpfh, $jobscript) = tempfile("pbs_XXXXX", TMPDIR=>1);
     print $tmpfh "#!/usr/bin/env sh\n";
@@ -169,9 +179,10 @@ sub _submit {
         my $msg = "Failed: qsub $jobscript";
         $log->error($msg);
         $File::Temp::KEEP_ALL = 1;
-        return;
+        return -1;
     } else {
         chomp $jobid;
+        $log->info("$jobid $filearg");
         return $jobid;
     }
 
