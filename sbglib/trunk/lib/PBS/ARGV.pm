@@ -66,6 +66,10 @@ determines it is already running under PBS. This is defined as the existance of
 B<$ENV{PBS_ENVIRONMENT}>.
 
 
+=head1 JOB ARRAYS
+
+
+
 =head1 SEE ALSO
 
 This module makes few assumptions about the particular kind of PBS system you
@@ -162,7 +166,9 @@ sub _submit {
     unless (grep { /^-N/ } @directives) {
         my $base = basename $filearg;
         # Should begin with alphabetic char
-        $base = 'job' . $base unless $base =~ /^[A-Za-z]/;
+        $base = 'j' . $base unless $base =~ /^[A-Za-z]/;
+        # First 15 characters limit
+        ($base) = $base =~ /^(.{15})/;
         push @directives, "-N $base";
     }
 
