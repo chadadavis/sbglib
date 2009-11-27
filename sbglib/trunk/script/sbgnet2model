@@ -49,126 +49,69 @@ L<SBG::CA::Assembler> , L<SBG::Network> , L<SBG::SearchI>
 
 use strict;
 use warnings;
-use Pod::Usage;
-use Getopt::Long;
-use Moose::Autobox;
+
+use POSIX qw/ceil/;
 use File::Basename;
-use List::MoreUtils qw/each_arrayref/;
-use POSIX;
-use Carp;
-
 use Hash::MoreUtils qw/slice_def/;
-
 use File::Spec::Functions;
-use File::NFSLock;
-use Fcntl qw/LOCK_EX LOCK_NB/;
+use Log::Any qw/$log/;
 
-use SBG::Role::Storable;
-use SBG::Network;
+use SBG::Role::Storable qw/retrieve/;
+use SBG::U::Run qw/frac_of getoptions start_lock end_lock start_log/;
+
 use SBG::Traversal;
 use SBG::CA::Assembler;
 use SBG::Complex;
 
-use SBG::U::Log;
-use Log::Any qw/$log/;
-use Log::Any::Adapter;
-
 use PBS::ARGV qw/qsub/;
+
 
 ################################################################################
 
 
-my %ops;
-my $result = GetOptions(\%ops,
-                        'complete|c',
-                        'overlap_thresh|o=f',
-                        'minsize|s=s',
-                        'h|help',
-                        'l|loglevel=s',
-                        'f|file=s', 
-                        'd|debug',
-    );                  
-if ($ops{'h'}) { pod2usage(-exitval=>1, -verbose=>2); }
-$SIG{__DIE__} = \&confes if $ops{'d'};
+my %ops = getoptions('complete|c','overlap_thresh|o=f','minsize|s=s');
 
-if ($ops{'l'}) {
-    my $logfile = $ops{'f'} || basename($0) . '.log';
-    SBG::U::Log::init($ops{'l'}, $logfile);
-    Log::Any::Adapter->set('+SBG::U::Log');
-}
-
+# Try to submit to PBS, for each argument in @ARGV
 # Recreate command line options;
 my @dashops = map { '-' . $_ => $ops{$_} } keys %ops;
 my @jobids = qsub("$0 @dashops");
 print join("\n", @jobids), "\n", if @jobids;
+# @ARGV is empty if all jobs could be submitted
+
 
 foreach my $file (@ARGV) {
 
     my $basename = basename($file,'.stor');
     my $outdir = $basename;
+    my $basepath = catfile($outdir, $basename);
     mkdir $outdir;
-    my $donefile = catfile($outdir, $basename . '.done');
+    my $lock = start_lock($basepath) or next;
 
     # Setup new log file specific to given input file
-    if ($ops{'l'}) {
-        my $logfile = $ops{'f'} || catfile($outdir, $basename . '.log');
-        SBG::U::Log::init($ops{'l'}, $logfile);
-        Log::Any::Adapter->set('+SBG::U::Log');
-    }
-    $log->debug("$0 $file @dashops");
-
-    # Already finished?
-    if (-s $donefile) {
-        my $d = `cat $donefile`;
-        chomp $d;
-        $log->info(sprintf "$basename : %5d already done\n", $d);
-        next;
-    }
-
-    # Being computed by another process?
-    unless (my $lock = File::NFSLock->new($donefile,LOCK_EX|LOCK_NB)) {
-        $log->info("$basename : locked by: ", `cat ${donefile}*`);
-        next;
-    }
+    start_log($basepath, %ops);
 
     # Load the Network object
-    my $net = retrieve($file) or
-        pod2usage(-exitval=>1, -verbose=>1, -message=>"$file is not an object");
+    my $net;
+    unless ($net = retrieve($file)) {
+        $log->error("$file is not an object");
+        next;
+    }
     _print_net($basename, $net);
 
     $ops{minsize} = 3 unless defined $ops{minsize};
     # Only full-size (complete coverage) models?
     $ops{minsize} = '100%' if $ops{complete};
-    $ops{minsize} = ceil(_frac_of($ops{minsize}, $net->nodes));
+    $ops{minsize} = ceil frac_of($ops{minsize}, $net->nodes);
 
     # Traverse the network
     _one_net($net, $basename, \%ops);
-    print "\n";
 
-    my $root = catfile($outdir, $basename);
-    my @done = <${root}*.stor>;
-    my $done = scalar(@done);
-    `echo $done > $donefile`;
+    my @files = <${basepath}*.stor>;
+    end_lock($lock, scalar @files);
 
 }
 
 exit;
-
-
-################################################################################
-
-
-# Convert percentage to literal amount
-# Dont' forget to ceil() or int() the result, if you want a whole number
-sub _frac_of {
-    my ($frac, $of) = @_;
-    $of ||= 100;
-    my $abs = $frac;
-    if ($frac =~ /^([.0-9])+\%$/) {
-        $abs = $of * $1 / 100.0;
-    }
-    return $abs;
-}
 
 
 ################################################################################
@@ -178,7 +121,7 @@ sub _print_net {
     $i ||= 1;
     $n ||= 1;
     my $str = sprintf
-        "%-20s %4d nodes, %4d edges, %4d interactions \n",
+        "\n%-20s %4d nodes, %4d edges, %4d interactions \n",
         $basename,
         scalar($net->vertices), scalar($net->edges), 
         scalar($net->interactions);
@@ -195,14 +138,13 @@ sub _one_net {
     # -test is the function to call when trying to place an interaction
     # -partial is the function to call when one complex solution is complete
     my %tops = slice_def($ops, 'minsize');
-    my $t = new SBG::Traversal(graph=>$net, 
-                               assembler=>
-                               SBG::CA::Assembler->new(dir=>$name),
-                               %tops,
+    my $t = SBG::Traversal->new(graph=>$net, 
+                                assembler=>SBG::CA::Assembler->new(dir=>$name),
+                                %tops,
         );
     # Each result is a complex, this is a placeholder for the aglorithm's state
     my %cops = slice_def($ops, 'overlap_thresh');
-    my $state = new SBG::Complex(id=>$name,%cops);
+    my $state = SBG::Complex->new(id=>$name,%cops);
 
     # Go!
     $t->traverse($state);

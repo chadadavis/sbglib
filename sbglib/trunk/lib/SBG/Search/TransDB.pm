@@ -105,6 +105,16 @@ sub search {
     # Convert contact to SBG::Interaction, including original Blast hits
     my @interactions = map {_contact2interaction($_,\%entity2hit)} @repcontacts;
 
+    if (my $topn = $ops{'top'}) {
+        # Take top N interactions
+        # avg_frac_convserved * avg_n_res : measures total conservation at iface
+        @interactions = sort {
+            $b->scores->at('interface_conserved') <=> 
+                $a->scores->at('interface_conserved')
+        } @interactions;
+        # Delete rest
+        delete $interactions[$_] for $topn..$#interactions;
+    }
     log()->trace(scalar(@interactions), " interactions ($seq1,$seq2)");
     return @interactions;
 
@@ -189,30 +199,50 @@ sub _contact2interaction {
     my $id2 = $contact->{id_entity2};
     my $epairid = "$id1--$id2";
     my ($hit1, $hit2) = @{$entity2hit->{$epairid}};
-    my $hsp1 = $hit1->hsp;
-    my $hsp2 = $hit2->hsp;
-    my $seq1 = $hsp1->seq;
-    my $seq2 = $hsp2->seq;
 
-    my $scores1 = _hspscores($hsp1);
-    my $scores2 = _hspscores($hsp2);
-
-    my $dom1 = SBG::DB::entity::id2dom($id1);
-    my $dom2 = SBG::DB::entity::id2dom($id2);
-
-    my $model1 = SBG::Model->new(query=>$seq1,subject=>$dom1,scores=>$scores1);
-    my $model2 = SBG::Model->new(query=>$seq2,subject=>$dom2,scores=>$scores2);
+    # Add length of interface to each model: n_res
+    my $model1 = _model($id1, $hit1, $contact->at('n_res1'));
+    my $model2 = _model($id2, $hit2, $contact->at('n_res2'));
 
     # Save interaction-specific scores in the interaction template
+    my $ia_scores = _avgscores($model1->scores, $model2->scores);
+    # Measure conservation along interface
+    $ia_scores->put(
+        'interface_conserved', 
+        $ia_scores->at('avg_frac_conserved') * $ia_scores->at('avg_n_res'));
+
     my $iaction = SBG::Interaction->new(
-        models=>{$seq1=>$model1, $seq2=>$model2},
-        # Get these two scores from $contact HashRef as new HashRef
-        scores=>$contact->hslice([qw/n_res1 n_res2/]),
+        models=>{$model1->query => $model1, $model2->query => $model2},
+        scores=>$ia_scores,
         );
     return unless $iaction;
     return $iaction;
 
 } # _contact2interaction
+
+
+sub _model {
+    my ($id, $hit, $n_res) = @_;
+    my $hsp = $hit->hsp;
+    my $seq = $hsp->seq;
+    my $scores = _hspscores($hsp);
+    # Add length of interface to each model
+    $scores->put('n_res', $n_res);
+    my $dom = SBG::DB::entity::id2dom($id);
+    my $model = SBG::Model->new(query=>$seq,subject=>$dom,scores=>$scores);
+    return $model;
+}
+
+
+sub _avgscores {
+    my ($s1, $s2) = @_;
+    my $avg = {};
+    foreach (qw/evalue frac_identical frac_conserved seqid gaps length n_res/) {
+        $avg->put("avg_$_", ($s1->at($_) + $s2->at($_)) / 2.0);
+    }
+
+    return $avg;
+}
 
 
 sub _hspscores {
