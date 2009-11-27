@@ -158,7 +158,7 @@ sub frac_of {
     my ($frac, $of) = @_;
     $of ||= 100;
     my $abs = $frac;
-    if ($frac =~ /^([.0-9])+\%$/) {
+    if ($frac =~ /^([.0-9]+)\%$/) {
         $abs = $of * $1 / 100.0;
     }
     return $abs;
