@@ -35,67 +35,44 @@ L<SBG::Network> , L<SBG::SearchI>
 
 =cut
 
+################################################################################
+
+
 use strict;
 use warnings;
-use Pod::Usage;
-use Getopt::Long;
-use Carp;
+
 use File::Basename;
-use FindBin qw/$Bin/;
-
 use Moose::Autobox;
-
 use Bio::SeqIO;
+
+use SBG::U::Run qw/frac_of getoptions start_lock end_lock start_log/;
 
 use SBG::Network;
 use SBG::Search::TransDB;
-use SBG::GeometricHash;
 
-use SBG::U::Log;
-use Log::Any qw/$log/;
-use Log::Any::Adapter;
 
 use PBS::ARGV qw/qsub/;
 
-my %ops;
-my $result = GetOptions(\%ops,
-                        'h|help',
-                        'l|loglevel=s',
-                        'f|logfile=s', 
-                        'd|debug',
-                        'maxid|x=i',
-                        'minid|n=i',
-                        'output|o=s',
-                        'cache|c=i',
-                        'method|m=s',
-    );                  
+my %ops = getoptions 
+    qw/maxid|x=i minid|n=i output|o=s cache|c=i top|t=i method|m=s/;
 
-if ($ops{'h'}) { pod2usage(-exitval=>1, -verbose=>2); }
-$SIG{__DIE__} = \&confes if $ops{'d'};
-if ($ops{'l'}) {
-    my $logfile = $ops{'f'} || basename($0) . '.log';
-    SBG::U::Log::init($ops{'l'}, $logfile);
-    Log::Any::Adapter->set('+SBG::U::Log');
-}
 
-# Recreate command line options;
+# Recreate command line options; (seems to work even ith long option names)
 my @dashops = map { '-' . $_ => $ops{$_} } keys %ops;
 my @jobids = qsub("$0 @dashops");
 print join("\n", @jobids), "\n", if @jobids;
+
 
 foreach my $file (@ARGV) {
 
     # Setup new log file specific to given input file
     my $basename = basename($file,'.fa');
-    if ($ops{'l'}) {
-        my $logfile = $ops{'f'} || "${basename}.log";
-        SBG::U::Log::init($ops{'l'}, $logfile);
-        Log::Any::Adapter->set('+SBG::U::Log');
-    }
-    $log->debug("$0 $file @dashops");
+    my $lock = start_lock($basename) or next;
+    start_log($basename, %ops);
 
+    # Add each sequence as a node to new network
     my $net = SBG::Network->new;
-    my $seqio = new Bio::SeqIO(-file=>$file);
+    my $seqio = Bio::SeqIO->new(-file=>$file);
     while (my $seq = $seqio->next_seq) {
         $net->add_seq($seq);
     }
@@ -104,14 +81,22 @@ foreach my $file (@ARGV) {
     my $blast = SBG::Run::PairedBlast->new;
     $blast->method($ops{method}) if $ops{method};
     my $searcher = SBG::Search::TransDB->new(blast=>$blast);
-    my $buildops = {%ops}->hslice([qw/maxid minid cache/]);
+    my $buildops = {%ops}->hslice([qw/maxid minid cache top/]);
+    # Create interaction templates on the edges of the network
     $net = $net->build($searcher,%$buildops);
     
     my $base = $ops{output} || $basename;
     my @subnets = $net->partition(minsize=>3);
     _write_partitions($base, @subnets);
 
+    end_lock($lock, scalar $net->interactions);
+
 }
+
+
+exit;
+
+################################################################################
 
 
 sub _write_partitions {
