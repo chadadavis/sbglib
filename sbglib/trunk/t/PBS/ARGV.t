@@ -8,7 +8,13 @@ use Log::Any qw/$log/;
 use Log::Any::Adapter;
 use Getopt::Long;
 
+# TODO TEST get tests from module docs
 
+# TODO TEST getopt
+
+# TODO TEST distinguish between qsub not present and qsub error
+
+# TODO TEST job array -J option
 
 my %ops;
 my $result = GetOptions(\%ops,
