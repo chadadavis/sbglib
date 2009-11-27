@@ -421,290 +421,34 @@ sub coverage {
 
 
 ################################################################################
-=head2 rmsd
-
- Function:
- Example :
- Returns : 
- Args    :
-
-RMSD between common domains between this and another complex.
-
-Models are associated by name. Models present in one complex but not the other
-are not considered. Undefined when no common models.
-
-NB only works when complexes have same number of points
-
-TODO belongs in a ModelSet role
-
-=cut
-sub rmsd {
-   my ($self,$other) = @_;
-   # Only consider common components
-   my @cnames = $self->coverage($other);
-
-   # make a copy before superposition
-   my $selfcoords = $self->coords->copy;
-   my $othercoords = $other->coords->copy;
-
-   # NB only works if same number of points in both complexes
-   my $transmatrix = SBG::U::RMSD::superpose($selfcoords, $othercoords);
-   my $rmsd = SBG::U::RMSD::rmsd($selfcoords, $othercoords);
-
-   return wantarray? ($rmsd, $transmatrix) : $rmsd;
-
-} # rmsd
-
-
-################################################################################
-=head2 superposition
+=head2 globularity
 
  Function: 
  Example : 
- Returns : 
+ Returns : [0,1]
  Args    : 
 
-# TODO needs to be in some DomainSetI
-# use $self->keys and $self->domains
+Estimates the extent of globularity of a complex as a whole as the ratio of the
+rradius of gyration to the maximum radius, over all of the coordinates in the
+complex.
+
+This provides some measure of how compact, non-linear, the components in a
+complex are arranged. E.g. high for an exosome, low for actin fibers
 
 =cut
-sub superposition {
-   my ($self,$other) = @_;
-   # Only consider common components
-   my @cnames = $self->coverage($other);
+sub globularity {
+    my ($self,) = @_;
 
-   # Pairwise Superpositions
-   my $sups = [];
-   my $rmsds = [];
-   my $scs = [];
-   foreach my $key (@cnames) {
-       my $selfdom = $self->get($key)->subject;
-       my $otherdom = $other->get($key)->subject;
-       my $sup = SBG::STAMP::superposition($selfdom, $otherdom);
-       next unless $sup;
+    my $pdl = $self->coords;
+    my $centroid = SBG::U::RMSD::centroid($pdl);
 
-       $sups->push($sup);
-       $rmsds->push($sup->scores->at('RMS'));
-       $scs->push($sup->scores->at('Sc'));
-   }
+    my $radgy = SBG::U::RMSD::radius_gyr($pdl, $centroid);
+    my $radmax = SBG::U::RMSD::radius_max($pdl, $centroid);
 
-   my $mats = $sups->map(sub{$_->transformation->matrix});
-   my $summat = List::Util::reduce { our($a,$b); $a + $b } @$mats;
+    # Convert PDL to scalar
+    return ($radgy / $radmax);
 
-   # TODO BUG this causes a scaling as well
-   my $avgmat = $summat / @$mats;
-
-   my $rmsd = mean($rmsds);
-   my $sc = mean($scs);
-
-   return wantarray ? ($avgmat, $rmsd, $sc, $sups) : $avgmat;
-
-} # superposition
-
-
-# Don't use the native orientation, just go right to where the model dom is
-# Requires resetting frame of ref of $self first
-sub superposition_frame_cofm {
-   my ($self,$other) = @_;
-   # Only consider common components
-   my @cnames = $self->coverage($other);
-
-   # Pairwise Superpositions
-   my $sups = [];
-   my $rmsds = [];
-   my $scs = [];
-
-   foreach my $key (@cnames) {
-       my $selfdom = $self->get($key)->subject;
-       my $otherdom = $other->get($key)->subject;
-
-       # Now get the real superposition of $selfdom onto current location of
-       # $otherdom
-       my $sup = SBG::STAMP::superposition($selfdom, $otherdom);
-       
-       next unless $sup;
-
-       # TODO All of this can be in another method: $c->setframe($othercomplex)
-
-       # Set crosshairs
-       $selfdom = cofm($selfdom);
-       # Transform
-       $sup->apply($selfdom);
-       # Rebuild crosshairs over there
-       $otherdom->_build_coords;
-       $selfdom->_build_coords;
-       # Reverse transform
-       $sup->inverse->apply($selfdom);
-
-       # After this, superpositioning $selfdom onto $otherdom should align
-       # crosshairs
-
-       # need to do this still? Should be identity anyway, nearly
-       $selfdom->transformation->clear_matrix;
-       # TODO Test here:
-
-
-
-       $sups->push($sup);
-       $rmsds->push($sup->scores->at('RMS'));
-       $scs->push($sup->scores->at('Sc'));
-   }
-
-   my $scsum = sum($scs);
-
-   my $mats = $sups->map(sub{$_->transformation->matrix});
-
-   my $summat = zeroes(4,4);
-
-   for (my $i = 0; $i < @$mats; $i++) {
-       $summat += $mats->[$i] * ($scs->[$i] / $scsum);
-   }
-
-   my $avgmat = $summat;
-
-   my $rmsd = mean($rmsds);
-   my $sc = mean($scs);
-
-   return wantarray ? ($avgmat, $rmsd, $sc, $sups) : $avgmat;
-
-} # superposition_frame_cofm
-
-
-# Try using (fixed) RMSD::superposition
-# Still based on putting cofm in right frame of reference
-sub superposition_points {
-   my ($self,$other) = @_;
-   # Only consider common components
-   my @cnames = $self->coverage($other);
-   unless (@cnames) {
-       log()->error("No common components between complexes");
-       return;
-   }
-   log()->trace(scalar(@cnames), " common components");
-
-   my $selfcofms = [];
-   my $othercofms = [];
-
-   foreach my $key (@cnames) {
-       my $selfdom = $self->get($key)->subject;
-       my $otherdom = $other->get($key)->subject;
-       $selfdom = _setcrosshairs($selfdom, $otherdom) or next;
-
-       $selfcofms->push($selfdom);
-       $othercofms->push(cofm($otherdom));
-   }
-
-   unless ($selfcofms->length > 1) {
-       log->warn("Too few component-wise superpositions to superpose complex");
-       return;
-   }
-
-   my $selfcoords = pdl($selfcofms->map(sub{ $_->coords }));
-   my $othercoords = pdl($othercofms->map(sub{ $_->coords }));
-   $selfcoords = $selfcoords->clump(1,2) if $selfcoords->dims == 3;
-   $othercoords = $othercoords->clump(1,2) if $othercoords->dims == 3;
-
-   my $trans = SBG::U::RMSD::superpose($selfcoords, $othercoords);
-   log()->trace($trans);
-   # Now it has been transformed already. Can measure RMSD of new coords
-   my $rmsd = SBG::U::RMSD::rmsd($selfcoords, $othercoords);
-   log()->debug("rmsd:", $rmsd);
-   return wantarray ? ($trans, $rmsd) : $trans;
-
-} # superposition_points
-
-
-# set crosshairs of one domain, based on second
-sub _setcrosshairs {
-    my ($selfdom, $otherdom) = @_;
-
-       # Now get the superposition from current $selfdom onto current $otherdom
-       my $sup = SBG::STAMP::superposition($selfdom, $otherdom);
-       return unless $sup;
-
-       # Set crosshairs
-       $selfdom = cofm($selfdom);
-       # Transform
-       $sup->apply($selfdom);
-       # Rebuild crosshairs over there
-       $selfdom->_build_coords;
-# Why is $otherdom doing this? Esp. since otherdom isn't a new object!
-#        $otherdom->_build_coords; 
-
-    
-       # Reverse transform. After this, superpositioning $selfdom onto $otherdom
-       # should align crosshairs
-       $sup->inverse->apply($selfdom);
-
-       # need to do this still? Should be identity anyway, nearly
-       $selfdom->transformation->clear_matrix;
-       # TODO Test here:
-
-    return $selfdom;
-} # _setcrosshairs
-
-
-sub superposition_frame {
-   my ($self,$other) = @_;
-   # Only consider common components
-   my @cnames = $self->coverage($other);
-
-   # Pairwise Superpositions
-   my $sups = [];
-   my $rmsds = [];
-   my $scs = [];
-
-   foreach my $key (@cnames) {
-       my $selfdom = $self->get($key)->subject;
-       my $otherdom = $other->get($key)->subject;
-       my $othernativedom = new SBG::Domain(pdbid=>$otherdom->pdbid,
-                                            descriptor=>$otherdom->descriptor);
-       my $nativesup = SBG::STAMP::superposition($selfdom, $othernativedom);
-
-       next unless $nativesup;
-
-       # TODO All of this can be in another method: $c->setframe($othercomplex)
-
-
-       # Inverse of the rotation matrix (no translation)
-       # Will define the orientation of the crosshairs, relative to $nativedom
-       my $invrotmat = $nativesup->transformation->rotation->inverse;
-
-       # After this, superpositioning $selfdom onto $otherdom should align
-       # crosshairs
-       $invrotmat->apply($selfdom);
-       # Now pretend we were never transformed
-       $selfdom->transformation->clear_matrix;
-       # TODO Test here:
-
-
-       # Now get the real superposition of $selfdom onto current $otherdom
-       my $sup = SBG::STAMP::superposition($selfdom, $otherdom);
-
-       $sups->push($sup);
-       $rmsds->push($sup->scores->at('RMS'));
-       $scs->push($sup->scores->at('Sc'));
-   }
-
-   my $scsum = sum($scs);
-
-   my $mats = $sups->map(sub{$_->transformation->matrix});
-
-   my $summat = zeroes(4,4);
-
-   for (my $i = 0; $i < @$mats; $i++) {
-       $summat += $mats->[$i] * ($scs->[$i] / $scsum);
-   }
-
-   my $avgmat = $summat;
-
-   my $rmsd = mean($rmsds);
-   my $sc = mean($scs);
-
-   return wantarray ? ($avgmat, $rmsd, $sc, $sups) : $avgmat;
-
-} # superposition_frame
-
+} # globularity
 
 
 ################################################################################
@@ -892,35 +636,248 @@ sub overlap {
 } # overlap
 
 
+
 ################################################################################
-=head2 globularity
+=head2 rmsd
 
- Function: 
- Example : 
- Returns : [0,1]
- Args    : 
+ Function:
+ Example :
+ Returns : 
+ Args    :
 
-Estimates the extent of globularity of a complex as a whole as the ratio of the
-rradius of gyration to the maximum radius, over all of the coordinates in the
-complex.
+RMSD between common domains between this and another complex.
 
-This provides some measure of how compact, non-linear, the components in a
-complex are arranged. E.g. high for an exosome, low for actin fibers
+Models are associated by name. Models present in one complex but not the other
+are not considered. Undefined when no common models.
 
+NB only works when complexes have same number of points
+
+TODO belongs in a ModelSet role
+
+TODO DEL
 =cut
-sub globularity {
-    my ($self,) = @_;
+sub rmsd {
+   my ($self,$other) = @_;
+   # Only consider common components
+   my @cnames = $self->coverage($other);
 
-    my $pdl = $self->coords;
-    my $centroid = SBG::U::RMSD::centroid($pdl);
+   # make a copy before superposition
+   my $selfcoords = $self->coords->copy;
+   my $othercoords = $other->coords->copy;
 
-    my $radgy = SBG::U::RMSD::radius_gyr($pdl, $centroid);
-    my $radmax = SBG::U::RMSD::radius_max($pdl, $centroid);
+   # NB only works if same number of points in both complexes
+   my $transmatrix = SBG::U::RMSD::superpose($selfcoords, $othercoords);
+   my $rmsd = SBG::U::RMSD::rmsd($selfcoords, $othercoords);
 
-    # Convert PDL to scalar
-    return ($radgy / $radmax);
+   return wantarray? ($rmsd, $transmatrix) : $rmsd;
 
-} # globularity
+} # rmsd
+
+
+# TODO DEL
+sub superposition_frame {
+   my ($self,$other) = @_;
+   # Only consider common components
+   my @cnames = $self->coverage($other);
+
+   # Pairwise Superpositions
+   my $sups = [];
+   my $rmsds = [];
+   my $scs = [];
+
+   foreach my $key (@cnames) {
+       my $selfdom = $self->get($key)->subject;
+       my $otherdom = $other->get($key)->subject;
+       my $othernativedom = new SBG::Domain(pdbid=>$otherdom->pdbid,
+                                            descriptor=>$otherdom->descriptor);
+       my $nativesup = SBG::STAMP::superposition($selfdom, $othernativedom);
+
+       next unless $nativesup;
+
+       # TODO All of this can be in another method: $c->setframe($othercomplex)
+
+
+       # Inverse of the rotation matrix (no translation)
+       # Will define the orientation of the crosshairs, relative to $nativedom
+       my $invrotmat = $nativesup->transformation->rotation->inverse;
+
+       # After this, superpositioning $selfdom onto $otherdom should align
+       # crosshairs
+       $invrotmat->apply($selfdom);
+       # Now pretend we were never transformed
+       $selfdom->transformation->clear_matrix;
+       # TODO Test here:
+
+
+       # Now get the real superposition of $selfdom onto current $otherdom
+       my $sup = SBG::STAMP::superposition($selfdom, $otherdom);
+
+       $sups->push($sup);
+       $rmsds->push($sup->scores->at('RMS'));
+       $scs->push($sup->scores->at('Sc'));
+   }
+
+   my $scsum = sum($scs);
+
+   my $mats = $sups->map(sub{$_->transformation->matrix});
+
+   my $summat = zeroes(4,4);
+
+   for (my $i = 0; $i < @$mats; $i++) {
+       $summat += $mats->[$i] * ($scs->[$i] / $scsum);
+   }
+
+   my $avgmat = $summat;
+
+   my $rmsd = mean($rmsds);
+   my $sc = mean($scs);
+
+   return wantarray ? ($avgmat, $rmsd, $sc, $sups) : $avgmat;
+
+} # superposition_frame
+
+
+# TODO DEL
+# Don't use the native orientation, just go right to where the model dom is
+# Requires resetting frame of ref of $self first
+sub superposition_frame_cofm {
+   my ($self,$other) = @_;
+   # Only consider common components
+   my @cnames = $self->coverage($other);
+
+   # Pairwise Superpositions
+   my $sups = [];
+   my $rmsds = [];
+   my $scs = [];
+
+   foreach my $key (@cnames) {
+       my $selfdom = $self->get($key)->subject;
+       my $otherdom = $other->get($key)->subject;
+
+       # Now get the real superposition of $selfdom onto current location of
+       # $otherdom
+       my $sup = SBG::STAMP::superposition($selfdom, $otherdom);
+       
+       next unless $sup;
+
+       # TODO All of this can be in another method: $c->setframe($othercomplex)
+
+       # Set crosshairs
+       $selfdom = cofm($selfdom);
+       # Transform
+       $sup->apply($selfdom);
+       # Rebuild crosshairs over there
+       $otherdom->_build_coords;
+       $selfdom->_build_coords;
+       # Reverse transform
+       $sup->inverse->apply($selfdom);
+
+       # After this, superpositioning $selfdom onto $otherdom should align
+       # crosshairs
+
+       # need to do this still? Should be identity anyway, nearly
+       $selfdom->transformation->clear_matrix;
+       # TODO Test here:
+
+
+
+       $sups->push($sup);
+       $rmsds->push($sup->scores->at('RMS'));
+       $scs->push($sup->scores->at('Sc'));
+   }
+
+   my $scsum = sum($scs);
+
+   my $mats = $sups->map(sub{$_->transformation->matrix});
+
+   my $summat = zeroes(4,4);
+
+   for (my $i = 0; $i < @$mats; $i++) {
+       $summat += $mats->[$i] * ($scs->[$i] / $scsum);
+   }
+
+   my $avgmat = $summat;
+
+   my $rmsd = mean($rmsds);
+   my $sc = mean($scs);
+
+   return wantarray ? ($avgmat, $rmsd, $sc, $sups) : $avgmat;
+
+} # superposition_frame_cofm
+
+
+# Try using (fixed) RMSD::superposition
+# Still based on putting cofm in right frame of reference
+sub superposition_points {
+   my ($self,$other) = @_;
+   # Only consider common components
+   my @cnames = $self->coverage($other);
+   unless (@cnames) {
+       log()->error("No common components between complexes");
+       return;
+   }
+   log()->trace(scalar(@cnames), " common components");
+
+   my $selfcofms = [];
+   my $othercofms = [];
+
+   foreach my $key (@cnames) {
+       my $selfdom = $self->get($key)->subject;
+       my $otherdom = $other->get($key)->subject;
+       $selfdom = _setcrosshairs($selfdom, $otherdom) or next;
+
+       $selfcofms->push($selfdom);
+       $othercofms->push(cofm($otherdom));
+   }
+
+   unless ($selfcofms->length > 1) {
+       log->warn("Too few component-wise superpositions to superpose complex");
+       return;
+   }
+
+   my $selfcoords = pdl($selfcofms->map(sub{ $_->coords }));
+   my $othercoords = pdl($othercofms->map(sub{ $_->coords }));
+   $selfcoords = $selfcoords->clump(1,2) if $selfcoords->dims == 3;
+   $othercoords = $othercoords->clump(1,2) if $othercoords->dims == 3;
+
+   my $trans = SBG::U::RMSD::superpose($selfcoords, $othercoords);
+   log()->trace($trans);
+   # Now it has been transformed already. Can measure RMSD of new coords
+   my $rmsd = SBG::U::RMSD::rmsd($selfcoords, $othercoords);
+   log()->debug("rmsd:", $rmsd);
+   return wantarray ? ($trans, $rmsd) : $trans;
+
+} # superposition_points
+
+
+# set crosshairs of one domain, based on second
+sub _setcrosshairs {
+    my ($selfdom, $otherdom) = @_;
+
+       # Now get the superposition from current $selfdom onto current $otherdom
+       my $sup = SBG::STAMP::superposition($selfdom, $otherdom);
+       return unless $sup;
+
+       # Set crosshairs
+       $selfdom = cofm($selfdom);
+       # Transform
+       $sup->apply($selfdom);
+       # Rebuild crosshairs over there
+       $selfdom->_build_coords;
+# Why is $otherdom doing this? Esp. since otherdom isn't a new object!
+#        $otherdom->_build_coords; 
+
+    
+       # Reverse transform. After this, superpositioning $selfdom onto $otherdom
+       # should align crosshairs
+       $sup->inverse->apply($selfdom);
+
+       # need to do this still? Should be identity anyway, nearly
+       $selfdom->transformation->clear_matrix;
+       # TODO Test here:
+
+    return $selfdom;
+} # _setcrosshairs
 
 
 ################################################################################
