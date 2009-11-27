@@ -35,6 +35,7 @@ with 'SBG::Role::Dumpable';
 with 'SBG::Role::Writable';
 with 'SBG::Role::Versionable';
 
+use Digest::MD5 qw/md5_base64/;
 
 use SBG::Node;
 use SBG::U::List qw/pairs/;
@@ -217,18 +218,6 @@ sub size {
 =cut
 sub build {
     my ($self, $searcher, %ops) = @_;
-    # Check cache
-    $ops{cache} = 1 unless defined $ops{cache};
-
-    log()->trace('cache:', $ops{cache});
-    my $cacheid = "$self";
-    log()->trace('cacheid:',$cacheid);
-    if ($ops{cache}) {
-        my $cache = SBG::U::Cache::cache('sbgnetwork');
-        my $cached = $cache->get($cacheid);
-        log()->trace('cached:', defined($cached) || 0);
-        return $cached if defined $cached;
-    }
 
     # For all pairs
     my @pairs = pairs(sort $self->nodes);
@@ -241,7 +230,11 @@ sub build {
         my ($node1, $node2) = @$pair;
         my ($p1) = $node1->proteins;
         my ($p2) = $node2->proteins;
+
+        # Disable cache until ID mapping in place
+#         my @interactions = _interactions($searcher, $p1, $p2, %ops);
         my @interactions = $searcher->search($p1, $p2, %ops);
+
         next unless @interactions;
         $self->add_edge($node1, $node2);
 
@@ -253,10 +246,6 @@ sub build {
             $self->add_id_to_interaction("$iaction", $iaction);
         }
     }
-    if ($ops{cache}) {
-        my $cache = SBG::U::Cache::cache('sbgnetwork');
-        $cache->set($cacheid, $self);
-    }
 
     log()->debug(scalar($self->nodes), ' nodes');
     log()->debug(scalar($self->edges), ' edges');
@@ -264,6 +253,36 @@ sub build {
 
     return $self;
 }
+
+
+# Cache wrapper
+# TODO Need to map IDs of query sequences to those in the cached interactions
+sub _interactions {
+    my ($searcher, $p1, $p2, %ops) = @_;
+
+    log()->trace('cache:', $ops{cache});
+
+    my $cache;
+    my $key;
+    if ($ops{cache}) {
+        # Sorted hashes of lower-cases sequences, a bidirectional, unique ID
+        $key = join '--', sort map { md5_base64 lc $_->seq } ($p1, $p2);
+        $cache = SBG::U::Cache::cache('sbginteractions');
+        my $cached = $cache->get($key);
+        return @$cached if defined $cached;
+    }
+
+    my @interactions = $searcher->search($p1, $p2, %ops);
+
+    if ($ops{cache}) {
+        $cache->set($key, \@interactions);
+    }
+
+    return @interactions;
+
+}
+
+
 
 
 ###############################################################################
