@@ -218,6 +218,7 @@ sub search {
     my ($self, $seq1, $seq2, %ops) = @_;
     
     # Enable Hit caching when RemoteBlast
+    $ops{cache} = 1 unless defined $ops{cache};
     $ops{cache} = 1 if $self->method eq 'remoteblast';
 
     # List of Blast Hits, indexed by PDB ID
@@ -247,7 +248,7 @@ sub _blast1 {
     $ops{cache} = 1 unless defined $ops{cache};
     my $hits = $self->cache->at($seq);
     if ($ops{cache} && $hits) {
-        log()->debug($seq->primary_id, ': ', $hits->length," hits (cached)");
+        log()->debug($seq->primary_id, ': ', $hits->length," Hits (cached)");
     } else {
         my $method = $self->method;
         my $res = $self->$method($seq)->next_result;
@@ -262,13 +263,13 @@ sub _blast1 {
 
     if ($ops{maxid}) {
         $ops{maxid} /= 100.0 if $ops{maxid} > 1;
-        log()->debug("Maxium sequence identity fraction:", $ops{maxid});
+        log()->debug("Maxium sequence identity fraction: ", $ops{maxid});
         $hits = $hits->grep(sub{$_->hsp->frac_identical<=$ops{maxid}});
     }
 
     if ($ops{minid}) {
         $ops{minid} /= 100.0 if $ops{minid} > 1;
-        log()->debug("Minimum sequence identity fraction:", $ops{minid});
+        log()->debug("Minimum sequence identity fraction: ", $ops{minid});
         $hits = $hits->grep(sub{$_->hsp->frac_identical>=$ops{minid}});
     }
 
