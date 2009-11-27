@@ -130,7 +130,10 @@ sub qsub {
 
     my @jobids;
     while (my $param = shift @::ARGV) {
-        push @jobids, _submit($cmd, $param, @directives);
+        my $jobid = _submit($cmd, $param, @directives);
+        push @jobids, $jobid;
+        # But don't consume it, if it failed to submit
+        unshift @::ARGV, $param if $jobid eq '-1';
     }
     return @jobids;
 
@@ -168,7 +171,7 @@ sub _submit {
         # Should begin with alphabetic char
         $base = 'j' . $base unless $base =~ /^[A-Za-z]/;
         # First 15 characters limit
-        ($base) = $base =~ /^(.{15})/;
+        ($base) = $base =~ /^(.{1,15})/;
         push @directives, "-N $base";
     }
 
