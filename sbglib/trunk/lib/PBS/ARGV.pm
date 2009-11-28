@@ -114,7 +114,7 @@ workign directory from when the job was submitted.
 
 =cut
 sub qsub {
-    my ($cmd, @directives) = @_;
+    my (%ops) = @_;
 
     # Already running in a PBS job, don't recurse
     if (defined $ENV{'PBS_ENVIRONMENT'}) {
@@ -124,13 +124,9 @@ sub qsub {
     
     return unless has_qsub();
 
-    # Default: rerun same script
-    # NB: this can be a relative path, because we 'cd' to $ENV{PWD} in the job
-    $cmd ||= $0;
-
     my @jobids;
     while (my $param = shift @::ARGV) {
-        my $jobid = _submit($cmd, $param, @directives);
+        my $jobid = _submit($param, %ops);
         push @jobids, $jobid;
         # But don't consume it, if it failed to submit
         unshift @::ARGV, $param if $jobid eq '-1';
@@ -157,10 +153,22 @@ sub has_qsub {
 
 # Write and submit one PBS job script
 sub _submit {
-    my ($cmdline, $filearg, @directives) = @_;
+    my ($filearg, %ops) = @_;
 
+    # Default: rerun same script
+    # NB: this can be a relative path, because we 'cd' to $ENV{PWD} in the job
+    my $cmdline = $ops{'cmd'} || $0;
     $cmdline .= " $filearg";
-    # Array? if -J option given, append \$PBS_ARRAY_INDEX to cmd
+
+    # Command line options to pass on
+    my %cmdops = $ops{'options'} ? %{$ops{'options'}} : ();
+    # Add a dash to precede each argument name
+    my @cmdops = map { '-' . $_ => $cmdops{$_} } keys %cmdops;
+    $cmdline .= " @cmdops";
+
+    # PBS directives
+    my @directives = $ops{'directives'} ? @{$ops{'directives'}} : ();
+    # Array? if -J directive given, also append \$PBS_ARRAY_INDEX to cmdline
     if (grep { /^-J/ } @directives) {
         $cmdline .= ' -J $PBS_ARRAY_INDEX';
     }

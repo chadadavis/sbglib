@@ -58,8 +58,7 @@ my %ops = getoptions
 
 
 # Recreate command line options; (seems to work even ith long option names)
-my @dashops = map { '-' . $_ => $ops{$_} } keys %ops;
-my @jobids = qsub("$0 @dashops");
+my @jobids = qsub(options=>\%ops);
 print join("\n", @jobids), "\n", if @jobids;
 
 
@@ -86,8 +85,7 @@ foreach my $file (@ARGV) {
     $net = $net->build($searcher,%$buildops);
     
     my $base = $ops{output} || $basename;
-    my @subnets = $net->partition(minsize=>3);
-    _write_partitions($base, @subnets);
+    $net->store($base . '-net.stor');
 
     end_lock($lock, scalar $net->interactions);
 
@@ -99,19 +97,4 @@ exit;
 ################################################################################
 
 
-sub _write_partitions {
-    my ($label, @subnets) = @_;
-    $label ||= '';
-    my @files;
-    for (my $i = 0; $i < @subnets; $i++) {
-        # 1-based counting
-        my $filename = sprintf "%s-net-%04d.stor", $label, $i+1;
-        if (-f $filename) {
-            print STDERR "$filename already exists. Skipping.\n";
-        } else {
-            $subnets[$i]->store($filename);
-        }
-        push @files, $filename;
-    }
-    return @files;
-}
+

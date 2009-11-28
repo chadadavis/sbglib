@@ -69,12 +69,13 @@ use PBS::ARGV qw/qsub/;
 ################################################################################
 
 
-my %ops = getoptions('complete|c','overlap_thresh|o=f','minsize|s=s');
+my %ops = getoptions(
+    'complete|c','overlap_thresh|o=f','minsize|s=s', 'binsize|b=f'
+    );
 
 # Try to submit to PBS, for each argument in @ARGV
 # Recreate command line options;
-my @dashops = map { '-' . $_ => $ops{$_} } keys %ops;
-my @jobids = qsub("$0 @dashops");
+my @jobids = qsub(options=>\%ops);
 print join("\n", @jobids), "\n", if @jobids;
 # @ARGV is empty if all jobs could be submitted
 
@@ -101,7 +102,7 @@ foreach my $file (@ARGV) {
     $ops{minsize} = 3 unless defined $ops{minsize};
     # Only full-size (complete coverage) models?
     $ops{minsize} = '100%' if $ops{complete};
-    $ops{minsize} = ceil frac_of($ops{minsize}, $net->nodes);
+    $ops{minsize} = ceil frac_of($ops{minsize}, scalar $net->nodes);
 
     # Traverse the network
     _one_net($net, $basename, \%ops);
@@ -137,7 +138,7 @@ sub _one_net {
     # Traversal algorithm, on the network
     # -test is the function to call when trying to place an interaction
     # -partial is the function to call when one complex solution is complete
-    my %tops = slice_def($ops, 'minsize');
+    my %tops = slice_def($ops, 'minsize', 'binsize');
     my $t = SBG::Traversal->new(graph=>$net, 
                                 assembler=>SBG::CA::Assembler->new(dir=>$name),
                                 %tops,
@@ -145,7 +146,6 @@ sub _one_net {
     # Each result is a complex, this is a placeholder for the aglorithm's state
     my %cops = slice_def($ops, 'overlap_thresh');
     my $state = SBG::Complex->new(id=>$name,%cops);
-
     # Go!
     $t->traverse($state);
 
