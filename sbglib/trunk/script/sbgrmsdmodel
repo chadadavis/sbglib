@@ -66,7 +66,7 @@ foreach my $targetfile (@ARGV) {
     my $tbase = basename $targetfile, '.stor';
     my ($pdbid) = $tbase =~ /(.{4})/;
 
-    print "$targetfile\t$pdbid\n";
+#    print "$targetfile\t$pdbid\n";
 
     foreach my $modelfile (<$pdbid*/*stor>) {
         my $model = retrieve $modelfile;
@@ -76,7 +76,7 @@ foreach my $targetfile (@ARGV) {
         next if exists $model->scores->{'rmsd'};
         my ($matrix, $rmsd) = $model->rmsd($target);
         
-        print "$modelfile $rmsd\n" if defined $rmsd;
+#        print "$modelfile $rmsd\n" if defined $rmsd;
 
         $model->scores->put('matrix', $matrix);
         $model->scores->put('rmsd', $rmsd);
