@@ -120,7 +120,7 @@ my @allkeys = qw/target model msize rmsd medsc seqids superpos/;
 my $targetfile = shift or pod2usage(-exitval=>1);
 
 my $basename = basename($targetfile,'.stor');
-$ops{'logfile'} ||= "log/eval/${basename}.log";
+$ops{'logfile'} ||= "eval/log/${basename}.log";
 SBG::U::Log::init($ops{'log'}, $ops{'logfile'}) if $ops{'log'};
 
 
@@ -128,7 +128,7 @@ SBG::U::Log::init($ops{'log'}, $ops{'logfile'}) if $ops{'log'};
 my ($best, $all) = evaltarget(\%ops, $targetfile, @ARGV);
 
 my $tbase = basename($targetfile, '.stor');
-my ($pdb, $tid) = split '-', $tbase;
+my ($pdb) = $tbase =~ /^(.{4})/;
 $best->{'target'} = a({-href=>"${tbase}.html"},$tbase);
 
 my $idxrow = td([map { $best->{$_} } @idxkeys ]);
@@ -256,7 +256,7 @@ sub evaltarget {
         my $row = td([map { $ev{$_} } @keys ]);
         print $fh Tr($row);
 
-        my ($pdb, $tid) = split '-', $tbase;
+        my ($pdb) = $tbase =~ /^(.{4})/;
         $ev{'target'} = a({-href=>"${tbase}.html"},$pdb);
         $evmodels->push({%ev});
 
@@ -314,7 +314,7 @@ sub evalmodel {
 
     my %ev = (base=>$mbase);
     my ($tlabel, $mid) = $mbase =~ /(.*?)-model-(.*?)/;
-    my ($tpdb, $tid) = split '-', $tlabel;
+    my ($tpdb) = $tlabel =~ /^(.{4})/;
     $ev{'target'} = a({-href=>"${tlabel}.html"},$tlabel);
 
     return unless defined($model);
@@ -397,7 +397,10 @@ sub modelstats {
 sub modelrmsd {
     my ($model, $target) = @_;
 
-    my ($transmat, $rmsd) = $model->rmsd($target);
+#     my ($transmat, $rmsd) = $model->rmsd($target);
+    my $rmsd = $model->scores->at('rmsd');
+    my $transmat = $model->scores->at('matrix');
+
     return unless $rmsd;
     # Now crosshairs have the proper orientation
 #     $model->transform($transmat);
