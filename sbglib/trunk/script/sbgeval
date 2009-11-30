@@ -222,11 +222,11 @@ sub evaltarget {
 
 # TODO DEL
 # Hack to compensate for STAMP lowercasing chain IDs
-    foreach my $k ($target->keys->flatten) {
-        my $lck = lc $k;
-        $target->set($lck, $target->get($k));
-        $target->models->delete($k);
-    }
+#     foreach my $k ($target->keys->flatten) {
+#         my $lck = lc $k;
+#         $target->set($lck, $target->get($k));
+#         $target->models->delete($k);
+#     }
 
 
     # How much of the target complex do the models need to cover
@@ -360,7 +360,6 @@ sub modellinks {
 sub modelstats {
     my ($ev, $target, $model) = @_;
 
-#     my ($rmsd, $trans) = modelrmsd($target, $model);
     my ($rmsd, $trans) = modelrmsd($model, $target);
         
     $ev->{'rmsd'} = $rmsd ? sprintf("%.2f", $rmsd) : 'NaN';
@@ -397,9 +396,12 @@ sub modelstats {
 sub modelrmsd {
     my ($model, $target) = @_;
 
-#     my ($transmat, $rmsd) = $model->rmsd($target);
-    my $rmsd = $model->scores->at('rmsd');
-    my $transmat = $model->scores->at('matrix');
+    my ($transmat, $rmsd) = $model->rmsd($target);
+#     my ($transmat, $rmsd) = $target->rmsd($model);
+
+# Use precomputed
+#     my $rmsd = $model->scores->at('rmsd');
+#     my $transmat = $model->scores->at('matrix');
 
     return unless defined $rmsd;
     # Now crosshairs have the proper orientation
@@ -484,94 +486,6 @@ sub _print_html {
     print end_html;
 } # _print_html
 
-
-sub _load_eval {
-    my ($evalfile, $modelfile, $minsize) = @_;
-    return unless -s $modelfile;
-    my $ev;
-    if (-s $evalfile) {
-        $ev = retrieve $evalfile;
-        return $ev;
-    }
-
-    # Being computed by another process?
-    unless (my $lock = File::NFSLock->new($evalfile,LOCK_EX|LOCK_NB)) {
-        warn "$evalfile is already being processed";
-    }
-
-    $ev = _eval_one($modelfile, $minsize);
-    if (! -s $evalfile) {
-        $ev->store($evalfile);
-#         print "evalfile written\n";
-    }
-
-    return $ev;
-} # _load_eval
-
-
-sub _eval_one {
-    my ($modelfile, $minsize) = @_;
-    our $tbase;
-    our $tsize;
-    our $target;
-
-    my $model = retrieve $modelfile;
-    return unless defined($model);
-    my $msize = $model->count;
-    next if $msize < $minsize;
-    my $mbase = basename($modelfile, '.stor');
-    my ($mid) = $mbase =~ /-(\d+)$/;
-
-    my %obs = (
-        target=>$tbase, tsize=>$tsize, model=>$mid, msize=>$msize,
-        glob=>$model->globularity,
-        cover=>1.0 * $msize / $tsize,
-        _domain_scores($model),       # eval seqid
-        _interaction_scores($model),  # irmsd zscore pval
-        _superposition_scores($model),# sc
-        );
-
-
-    # Superpose model onto target
-    # TODO BUG cannot transform model here, as it already has a transform
-    # And it's not multiplied correctly.
-    # So we have to transform target onto model
-
-    my ($avgmat, $urmsd, $usc ) = $target->superposition_frame_cofm($model);
-
-    $target->transform($avgmat);
-
-    $obs{avgmat} = $avgmat;
-
-    # 'sc' field is already reserved for mean linker Sc score
-#     $obs{'sc'} = $usc;
-
-    # RMSD of centroids after superposition 
-#     $obs{'rmsd'} = $model->rmsd($target);
-    # Mean RMSD of componentwise superposition
-#     $obs{rmsd} = $urmsd;
-    # RMSD of crosshairs
-    $obs{rmsd} = $target->rmsd($model);
-
-    # Now that they're in one coordinate frame, get component-wise overlaps
-    # TODO divide by 0 erorr
-#     $obs{olap} = $model->overlap($target);
-    $obs{olap} = 0;
-
-    foreach (qw/cover glob olap/) {
-        $obs{$_} = sprintf("%6.2f", 100.0 * $obs{$_}); 
-    }
-    # NB seqid/); # seqid already a %
-
-    # Put the target back where it came from
-    # TODO wouldnt be necessary if transforming the model would work ...
-    $target->transform($avgmat->inv);
-
-
-#     return new SBG::Eval(%obs);
-
-
-} # _eval_one
 
 
 # STill want to save: mbase tbase targetfile modelfile 
