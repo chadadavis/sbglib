@@ -14,6 +14,8 @@ B<bencheval> - Evaluate a complex against models of it
 
 =head1 OPTIONS
 
+=head2 -l|log=s     log level
+
 =head2 -f|field=s   field name to sort on
 
 =head2 -b|best=s    Best N (or N%) (per size, if -u)
@@ -26,6 +28,19 @@ B<bencheval> - Evaluate a complex against models of it
 
 =head2 -u|unique    unique by size (diff. sizes separately)
 
+=head2 -h Print this help page
+
+=head2 -l|og Set logging level
+
+In increasing order: TRACE DEBUG INFO WARN ERROR FATAL
+
+I.e. setting B<-l WARN> (the default) will log warnings errors and fatal
+messages, but no info or debug messages to the log file (B<log.log>)
+
+=head1 SEE ALSO
+
+
+
 =cut
 
 ################################################################################
@@ -33,52 +48,57 @@ B<bencheval> - Evaluate a complex against models of it
 
 use strict;
 use warnings;
-
+use Pod::Usage;
+use Getopt::Long;
 use File::Basename;
 use File::Spec qw/rel2abs/;
 use POSIX; # qw/ceil/;
+use Carp;
 use CGI qw/:standard *table/;
+use Data::Dump qw/dump/;
+use Moose::Autobox;
+use autobox ARRAY => 'SBG::U::List';
+
 use File::NFSLock;
 use Fcntl qw/LOCK_EX LOCK_NB/;
 
-use Moose::Autobox;
-use autobox ARRAY => 'SBG::U::List';
 use SBG::U::List qw/mean avg median sum min max flatten/;
 
+# use SBG::Eval;
 use SBG::Role::Storable;
-use SBG::U::Run qw/getoptions start_log start_lock end_lock frac_of/;
 use SBG::U::HTML qw/formattd rcsb/;
-use SBG::Run::rasmol qw/pdb2img/;
 
 use SBG::Seq; # required to reinstate overload on SBG::PrimarySeqI
+use SBG::Run::rasmol qw/rasmol pdb2img/;
 use SBG::DomainIO::stamp;
 use SBG::DomainIO::pdb;
 use SBG::InteractionIO::html;
 use SBG::SuperpositionIO::html;
-
-
-my @idxkeys = 
-    qw/target nmodels ngood model msize rmsd medsc nres seqids superpos/;
-my @allkeys = qw/target model msize rmsd medsc seqids superpos/;
-
+use SBG::U::Log;
 
 ################################################################################
 
-
-my @ops = (
-    'output|o',  # html or csv
-    'size|s=s',  # minimum N (or N%) components per model
-    'complete|c',# Only full-coverage models
-    'field|f=s', # field name to sort on
-    'thresh|t=f',# min threshold val for field
-    'best|b=s',  # Best N (or N%) (per size, if -u)
-    'reverse|r', # reverse sort
-    'minseqid|n=f',   # minimum seqid to allow
-    'maxseqid|x=f',   # maximum seqid to allow
+my %ops;
+my $result = GetOptions(\%ops,
+                        'help|h',
+                        'log|l=s',   # log level
+                        'logfile=s',   # log level
+                        'debug|d',   # print stack trace when die
+                        'output|o',  # html or csv
+                        'size|s=s',  # minimum N (or N%) components per model
+                        'complete|c',# Only full-coverage models
+                        'field|f=s', # field name to sort on
+                        'thresh|t=f',# min threshold val for field
+                        'best|b=s',  # Best N (or N%) (per size, if -u)
+                        'reverse|r', # reverse sort
+                        'minseqid|n=f',   # minimum seqid to allow
+                        'maxseqid|x=f',   # maximum seqid to allow
     );                  
-my %ops = getoptions(@ops);
 
-$ops{'size'} = 3 unless defined $ops{'size'};
+
+if ($ops{'help'}) { pod2usage(-exitval=>1, -verbose=>2); }
+
+$SIG{__DIE__} = \&confess if $ops{'debug'};
 $ops{'size'} = '100%' if $ops{'complete'};
 
 # Sort descending on Sc by default
@@ -88,33 +108,38 @@ unless (defined $ops{'field'}) {
     $ops{'thresh'} = 5;
 }
 
+mkdir 'eval';
+mkdir("eval/$_") for qw/pdb dom html/;
+
+my @idxkeys = 
+    qw/target nmodels ngood model msize rmsd medsc nres seqids superpos/;
+my @allkeys = qw/target model msize rmsd medsc seqids superpos/;
+
 
 # First file is the target/benchmark/true complex
 my $targetfile = shift or pod2usage(-exitval=>1);
+
 my $basename = basename($targetfile,'.stor');
-my $outdir = $basename;
-mkdir $outdir;
-my $basepath = catfile($outdir, $basename);
-my $lock = start_lock($basepath) or exit;
-start_log($basepath, %ops);
-mkdir("$outdir/$_") for qw/pdb dom html/;
+$ops{'logfile'} ||= "log/eval/${basename}.log";
+SBG::U::Log::init($ops{'log'}, $ops{'logfile'}) if $ops{'log'};
 
 
 # Evaluate all other files as models, against target
-# TODO DES use subs::parallelize
 my ($best, $all) = evaltarget(\%ops, $targetfile, @ARGV);
-$best->{'target'} = a({-href=>"${basepath}.html"},$basename);
 
+my $tbase = basename($targetfile, '.stor');
+my ($pdb, $tid) = split '-', $tbase;
+$best->{'target'} = a({-href=>"${tbase}.html"},$tbase);
 
 my $idxrow = td([map { $best->{$_} } @idxkeys ]);
-my ($idxfh,$idxlock) = openidxhtml('index.html', 'Top models', @idxkeys);
+my ($idxfh,$idxlock) = openidxhtml(@idxkeys);
 print $idxfh Tr($idxrow);
 close $idxfh;
 $idxlock->unlock;
 
 my @allrows = map { my $m=$_; td([map { $m->{$_} } @allkeys ]) } @$all;
 my $allrow = Tr(\@allrows);
-my ($allfh, $alllock) = openallhtml('all.html', 'All models', @allkeys);
+my ($allfh, $alllock) = openallhtml(@allkeys);
 print $allfh Tr($allrow);
 close $allfh;
 $alllock->unlock;
@@ -124,9 +149,9 @@ exit;
 
 ################################################################################
 
-
-sub lock_html {
-    my ($file, $title, @keys) = @_;
+sub openidxhtml {
+    my (@keys) = @_;
+    my $file = "eval/html/index.html";
     my $lock = File::NFSLock->new($file,LOCK_EX,60,5*60);
     unless ($lock) {
         warn "Could not lock for writing: $file";
@@ -137,8 +162,8 @@ sub lock_html {
         return wantarray ? ($fh, $lock) : $fh;
     } else {
         open my $fh, ">$file";
-        print $fh start_html($title);
-        print $fh h2($title), "\n";
+        print $fh start_html("Top models");
+        print $fh h2("Top models, by target"), "\n";
         print $fh start_table({-border=>'1'});
         print $fh Tr(th([ @keys ]));
         return wantarray ? ($fh, $lock) : $fh;
@@ -146,25 +171,42 @@ sub lock_html {
 }
 
 
-sub lock_csv {
-    my ($csvfile) = @_;
-    $csvfile ||= 'correlations.csv';
-    my $lock;
-    my $fh;
-    if ($lock = File::NFSLock->new($csvfile,LOCK_EX,100,5*60)) {
-        unless (-s $csvfile) {
-            # Print the header if the file doesn't already exist
-            open $fh, ">>$csvfile";
-            printf 
-                $fh join('','#',("%10s")x8,"\n"),
-                qw/target model rmsd avgsc medsc sumsc minsc maxsc/;
-        } else {
-            open $fh, ">>$csvfile";
-        }
-    } else {
-        warn "Cannot lock for writing: $corrfile";
+sub openallhtml {
+    my (@keys) = @_;
+    my $file = "eval/html/all.html";
+    my $lock = File::NFSLock->new($file,LOCK_EX,60,5*60);
+    unless ($lock) {
+        warn "Could not lock for writing: $file";
+        return;
     }
-    return ($lock, $fh);
+    if (-s $file) {
+        open my $fh, ">>$file";
+        return wantarray ? ($fh, $lock) : $fh;
+    } else {
+        open my $fh, ">$file";
+        print $fh start_html("All models");
+        print $fh h2("All models"), "\n";
+        print $fh start_table({-border=>'1'});
+        print $fh Tr(th([ @keys ]));
+        return wantarray ? ($fh, $lock) : $fh;
+    }
+}
+
+
+sub opencorrcsv {
+    my ($corrfile) = @_;
+    $corrfile ||= 'eval/rmsdcorr.csv';
+    if (my $lock = File::NFSLock->new($corrfile,LOCK_EX,100,5*60)) {
+        unless (-s $corrfile) {
+            open my $rmsdfh, ">>$corrfile";
+            printf 
+                $rmsdfh join('','#',("%10s")x8,"\n"),
+                qw/target model rmsd avgsc medsc sumsc minsc maxsc/;
+        }
+        # Otherwise it's already been opened and header was already written
+    } else {
+        warn "Could not lock for writing: $corrfile";
+    }
 }
 
 
@@ -178,32 +220,56 @@ sub evaltarget {
         return;
     }
 
-    # Hack to compensate for STAMP lowercasing chain IDs
-    _lc_target($target);
+# TODO DEL
+# Hack to compensate for STAMP lowercasing chain IDs
+    foreach my $k ($target->keys->flatten) {
+        my $lck = lc $k;
+        $target->set($lck, $target->get($k));
+        $target->models->delete($k);
+    }
+
 
     # How much of the target complex do the models need to cover
     my $tsize = $target->count;
     # Convert possible size% to integer 
-    $ops->{'size'} = frac_of($ops{'size'}, $tsize);
+    $ops->{'size'} = _minsize($tsize, $ops->{'size'});
 
     my $tbase = basename($targetfile, '.stor');
-    my $fh = _target_html($tbase);
+    # Output for all models on this target
+    my $file = "eval/html/${tbase}.html";
+    open my $fh, ">$file";
 
-    lock_csv();
+    print $fh start_html($tbase);
+    print $fh h2(rcsb("Target $tbase")), "\n";
+    print $fh start_table({-border=>'1'});
+#     my @keys = qw/model msize nres rmsd medsc seqids superpos/;
+    my @keys = qw/model msize rmsd medsc seqids superpos/;
+    print $fh Tr(th([ @keys ]));
+
     my $evmodels = [];
+
+    my $corrfile = 'eval/rmsdcorr.csv';
+    opencorrcsv($corrfile);
 
     foreach my $modelfile (@modelfiles) { 
         my %ev = evalmodel($ops, $target, $modelfile) or next;
         my $row = td([map { $ev{$_} } @keys ]);
         print $fh Tr($row);
-        $ev{'target'} = a({-href=>"${tbase}.html"},$tbase);
+
+        my ($pdb, $tid) = split '-', $tbase;
+        $ev{'target'} = a({-href=>"${tbase}.html"},$pdb);
         $evmodels->push({%ev});
 
         my @fields = map { $ev{$_} } qw/rmsd avgsc medsc sumsc minsc maxsc/;
         
-        if (my ($lock, $csvfh) = lock_csv()) {
+        if (my $lock = File::NFSLock->new($corrfile,LOCK_EX,100,5*60)) {
+            open my $rmsdfh, ">>$corrfile";
+            my ($mid) = $modelfile =~ /model-(.*?).stor$/;
             printf 
-                $csvfh join('',("%10s")x8, "\n"), $tbase,$mid, @fields;
+                $rmsdfh join('',("%10s")x8, "\n"),
+                $tbase,$mid, @fields;
+        } else {
+            warn "Cannot lock for writing: $corrfile";
         }
     } # foreach $modelfile
 
@@ -227,32 +293,6 @@ sub evaltarget {
     return $best, $evmodels;
 
 } # evaltarget
-
-
-sub _target_html {
-    my ($tbase) = @_;
-    # Output for all models on this target
-    my $file = catfile($tbase, $tbase . '.html');
-    open my $fh, ">$file";
-    print $fh start_html($tbase);
-    print $fh h2(rcsb("Target $tbase")), "\n";
-    print $fh start_table({-border=>'1'});
-#     my @keys = qw/model msize nres rmsd medsc seqids superpos/;
-    my @keys = qw/model msize rmsd medsc seqids superpos/;
-    print $fh Tr(th([ @keys ]));
-    return $fh;
-}
-
-
-# Hack to compensate for STAMP lowercasing chain IDs
-sub _lc_target {
-    my ($target) = @_;
-    foreach my $k ($target->keys->flatten) {
-        my $lck = lc $k;
-        $target->set($lck, $target->get($k));
-        $target->models->delete($k);
-    }
-}
 
 
 ################################################################################
@@ -295,9 +335,9 @@ sub evalmodel {
     print $fh Tr($row);
     print $fh end_table();
 
-    my $iactionio = SBG::InteractionIO::html->new(fh=>$fh);
+    my $iactionio = new SBG::InteractionIO::html(fh=>$fh);
     $iactionio->write($model->interactions->values);
-    my $supio = SBG::SuperpositionIO::html->new(fh=>$fh);
+    my $supio = new SBG::SuperpositionIO::html(fh=>$fh);
     $supio->write($model->superpositions->values);
 
     close $fh;
@@ -525,6 +565,9 @@ sub _eval_one {
     $target->transform($avgmat->inv);
 
 
+#     return new SBG::Eval(%obs);
+
+
 } # _eval_one
 
 
@@ -605,7 +648,7 @@ sub _domfile {
     my $lock = File::NFSLock->new($domfile,LOCK_EX|LOCK_NB) or return;
 
     # Rewrite model file in target's frame of reference, for convenience later
-    my $domio = SBG::DomainIO::stamp->new(file=>">$domfile");
+    my $domio = new SBG::DomainIO::stamp(file=>">$domfile");
     $domio->write(@{$target->domains}, @{$model->domains});
 #     print "$domfile written\n";
 }
@@ -624,7 +667,7 @@ sub _pdbfile {
     my $modelasdom = $model->merge;
 
     # Rewrite model file in target's frame of reference, for convenience later
-    my $pdbio = SBG::DomainIO::pdb->new(file=>">$pdbfile");
+    my $pdbio = new SBG::DomainIO::pdb(file=>">$pdbfile");
     $pdbio->write($targetasdom, $modelasdom);
 #     print "$pdbfile written\n";
 
@@ -645,6 +688,21 @@ sub _ppmfile {
 
     pdb2img(pdb=>$pdbfile, img=>$ppmfile);
 #     print "$ppmfile written\n";
+}
+
+
+################################################################################
+sub _minsize {
+    my ($totalsize, $minsize, $complete) = @_;
+    # Min components in complex (e.g. 4 or '75%' )
+    $minsize = 3 unless defined $minsize;
+
+    # Only full-size (complete coverage) models?
+    $minsize = '100%' if $complete;
+    if ($minsize =~ /(\d+)\%$/) {
+        $minsize = ceil($totalsize * $1 / 100.0);
+    }
+    return $minsize;
 }
 
 
