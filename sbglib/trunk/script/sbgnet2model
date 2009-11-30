@@ -55,6 +55,7 @@ use File::Basename;
 use Hash::MoreUtils qw/slice_def/;
 use File::Spec::Functions;
 use Log::Any qw/$log/;
+use Carp;
 
 use SBG::Role::Storable qw/retrieve/;
 use SBG::U::Run qw/frac_of getoptions start_lock end_lock start_log/;
@@ -72,6 +73,8 @@ use PBS::ARGV qw/qsub/;
 my %ops = getoptions(
     'complete|c','overlap_thresh|o=f','minsize|s=s', 'binsize|b=f'
     );
+
+$SIG{__DIE__} = \&confess if $ops{'debug'};
 
 # Try to submit to PBS, for each argument in @ARGV
 # Recreate command line options;
