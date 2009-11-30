@@ -364,7 +364,7 @@ sub modelstats {
     my ($rmsd, $trans) = modelrmsd($model, $target);
         
     $ev->{'rmsd'} = $rmsd ? sprintf("%.2f", $rmsd) : 'NaN';
-    $ev->{'trans'} = $trans if $trans;
+    $ev->{'trans'} = $trans if defined $trans;
     $ev->{'cover'} = sprintf "%6.2f", 100.0 * $model->count / $target->count;
     $ev->{'msize'} = $model->count;
     $ev->{'tsize'} = $target->count;
@@ -401,7 +401,7 @@ sub modelrmsd {
     my $rmsd = $model->scores->at('rmsd');
     my $transmat = $model->scores->at('matrix');
 
-    return unless $rmsd;
+    return unless defined $rmsd;
     # Now crosshairs have the proper orientation
 #     $model->transform($transmat);
 
