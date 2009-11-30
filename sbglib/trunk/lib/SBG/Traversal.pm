@@ -335,7 +335,7 @@ sub _do_nodes {
         $self->_edgeq->push([$current, $neighbor]);
     }
     # Continue processing all outstanding nodes before moving to edges
-    # TODO DES eliminate tail recursion
+    # Tail recursion is flattened here
     recur($self, $uf, $state, $d);
     _d $d, "<= Node: $current";
 } # _do_nodes
@@ -359,7 +359,6 @@ sub _no_nodes {
 # For each, gets the next alternative
 # Try to validate the alternative based on the provided callback function
 # Recurses to exhaust all possibilities
-# TODO break this down
 sub _do_edges {
     my ($self, $uf, $state, $d) = @_;
     my $current = $self->_edgeq->shift;
@@ -373,7 +372,7 @@ sub _do_edges {
         # No more unprocessed multiedges remain between these nodes: $src,$dest
         _d $d, "No more alternative edges for $src $dest";
         # Try any other outstanding edges at this depth first, though
-        # TODO DES eliminate tail recursion
+        # Tail recursion is flattened here
         recur($self,$uf, $state, $d);
         return;
     }
@@ -392,7 +391,7 @@ sub _do_edges {
     # we wait until now to re-push them.
     $self->_edgeq->push($current);
     # Go back to using the original $state that we had before this alternative
-    # TODO DES eliminate tail recursion
+    # Tail recursion is flattened here
     recur($self, $uf, $state, $d);
 } # _do_edges
 
