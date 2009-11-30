@@ -357,9 +357,7 @@ sub modelstats {
 sub modelrmsd {
     my ($model, $target) = @_;
 
-# TODO which superposition
-#     my $transmat = $model->superposition_frame_cofm($target);
-    my ($transmat, $rmsd) = $model->superposition_points($target);
+    my ($transmat, $rmsd) = $model->rmsd($target);
     return unless $rmsd;
     # Now crosshairs have the proper orientation
 #     $model->transform($transmat);
