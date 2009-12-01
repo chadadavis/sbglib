@@ -86,7 +86,7 @@ sub query {
     if (defined $ops{'resseq'}) {
         warn "Converting coordinates";
     }
-    $ops{'overlap'} = 0.75 unless defined $ops{'overlap'};
+    $ops{'overlap'} = 0.50 unless defined $ops{'overlap'};
 
     $pdbid = uc $pdbid;
     my $dbh = SBG::U::DB::connect($database, $host);
@@ -125,12 +125,12 @@ AND chain = ?
             push @hits, $row;
             next;
         }
-        # Skip unless 75% of DB entity is covered by Blast hit
+        # Skip unless $ops{overlap} of DB entity is covered by Blast hit
         my $overlap = interval_overlap(
             $row->{'start'},$row->{'end'},
             $start, $end,
             );
-
+        log()->trace("overlap:$overlap");
         next unless $overlap >= $ops{'overlap'};
         push @hits, $row;
     }
