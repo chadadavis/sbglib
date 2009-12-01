@@ -9,7 +9,7 @@ use FindBin qw/$Bin/;
 use SBG::U::Log qw/log/;
 $SIG{__DIE__} = \&confess;
 my $DEBUG;
-# $DEBUG = 1;
+$DEBUG = 1;
 log()->init('TRACE') if $DEBUG;
 $File::Temp::KEEP_ALL = $DEBUG;
 
@@ -78,11 +78,12 @@ my %expected = (
 # Create a traversal
 my $trav = new SBG::Traversal(graph=>$net, 
                               assembler=>new TestAssembler,
+                              minsize=>2
     );
 
 $trav->traverse;
 
-is(11, scalar(keys %answers), "11 Covering solutions from traversal");
+is(scalar(keys %answers), 11, "11 Covering solutions from traversal");
 
 foreach (sort keys %answers) {
     ok($expected{$_}, "Solution was expected: $_");
@@ -119,6 +120,12 @@ sub solution {
 
     $state->{solutions} = [];
     $answers{"@$nodecover @ids"} = 1;
+}
+
+
+sub score {
+    my ($self, $graph, $altid) = @_;
+    return 1;
 }
 
 
