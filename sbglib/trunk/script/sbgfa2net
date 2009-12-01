@@ -54,7 +54,7 @@ use SBG::Search::TransDB;
 use PBS::ARGV qw/qsub/;
 
 my %ops = getoptions 
-    qw/maxid|x=i minid|n=i output|o=s cache|c=i top|t=i method|m=s/;
+    qw/maxid|x=i minid|n=i output|o=s cache|c=i top|t=i method|m=s overlap|v=f/;
 
 
 # Recreate command line options; (seems to work even ith long option names)
@@ -80,12 +80,12 @@ foreach my $file (@ARGV) {
     my $blast = SBG::Run::PairedBlast->new;
     $blast->method($ops{method}) if $ops{method};
     my $searcher = SBG::Search::TransDB->new(blast=>$blast);
-    my $buildops = {%ops}->hslice([qw/maxid minid cache top/]);
+    my $buildops = {%ops}->hslice([qw/maxid minid cache top overlap/]);
     # Create interaction templates on the edges of the network
     $net = $net->build($searcher,%$buildops);
     
     my $base = $ops{output} || $basename;
-    $net->store($base . '-net.stor');
+    $net->store($base . '.network');
 
     end_lock($lock, scalar $net->interactions);
 

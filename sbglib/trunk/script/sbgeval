@@ -62,7 +62,7 @@ use autobox ARRAY => 'SBG::U::List';
 use File::NFSLock;
 use Fcntl qw/LOCK_EX LOCK_NB/;
 
-use SBG::U::List qw/mean avg median sum min max flatten/;
+use SBG::U::List qw/mean avg median sum min max flatten argmax argmin/;
 
 # use SBG::Eval;
 use SBG::Role::Storable;
@@ -104,30 +104,30 @@ $ops{'size'} = '100%' if $ops{'complete'};
 # Sort descending on Sc by default
 unless (defined $ops{'field'}) {
     $ops{'field'} ||= 'medsc';
-    $ops{'reverse'} = 1;
-    $ops{'thresh'} = 5;
+    $ops{'reverse'} = 1; # Descending
+    $ops{'thresh'} = 5.0;
 }
 
 mkdir 'eval';
-mkdir("eval/$_") for qw/pdb dom html/;
+mkdir("eval/$_") for qw/log pdb dom html/;
 
 my @idxkeys = 
-    qw/target nmodels ngood model msize rmsd medsc nres seqids superpos/;
-my @allkeys = qw/target model msize rmsd medsc seqids superpos/;
+    qw/target nmodels ngood model msize rmsd medsc iface seqids superpos/;
+my @allkeys = qw/target model msize rmsd medsc iface seqids superpos/;
 
 
 # First file is the target/benchmark/true complex
 my $targetfile = shift or pod2usage(-exitval=>1);
 
-my $basename = basename($targetfile,'.stor');
+my $basename = basename($targetfile,'.target');
 $ops{'logfile'} ||= "eval/log/${basename}.log";
 SBG::U::Log::init($ops{'log'}, $ops{'logfile'}) if $ops{'log'};
 
 
 # Evaluate all other files as models, against target
-my ($best, $all) = evaltarget(\%ops, $targetfile, @ARGV);
+my ($best, $all) = evaltarget(\%ops, $targetfile, @ARGV) or exit;
 
-my $tbase = basename($targetfile, '.stor');
+my $tbase = basename($targetfile, '.target');
 my ($pdb) = $tbase =~ /^(.{4})/;
 $best->{'target'} = a({-href=>"${tbase}.html"},$tbase);
 
@@ -137,12 +137,14 @@ print $idxfh Tr($idxrow);
 close $idxfh;
 $idxlock->unlock;
 
+if (0) {
 my @allrows = map { my $m=$_; td([map { $m->{$_} } @allkeys ]) } @$all;
 my $allrow = Tr(\@allrows);
 my ($allfh, $alllock) = openallhtml(@allkeys);
 print $allfh Tr($allrow);
 close $allfh;
 $alllock->unlock;
+}
 
 exit;
 
@@ -200,8 +202,8 @@ sub opencorrcsv {
         unless (-s $corrfile) {
             open my $rmsdfh, ">>$corrfile";
             printf 
-                $rmsdfh join('','#',("%10s")x8,"\n"),
-                qw/target model rmsd avgsc medsc sumsc minsc maxsc/;
+                $rmsdfh join('','#',("%10s")x5,"\n"),
+                qw/target model rmsd medsc iface/;
         }
         # Otherwise it's already been opened and header was already written
     } else {
@@ -214,6 +216,10 @@ sub evaltarget {
     my $ops = {};
     $ops = shift(@_) if ref($_[0]) eq 'HASH';
     my ($targetfile, @modelfiles) = @_;
+
+    # Needed because this might just be a file glob when no files present
+    return unless -f $modelfiles[0];
+
     my $target = retrieve($targetfile);
     unless (defined $target) {
         warn "No target in: $targetfile\n";
@@ -234,7 +240,7 @@ sub evaltarget {
     # Convert possible size% to integer 
     $ops->{'size'} = _minsize($tsize, $ops->{'size'});
 
-    my $tbase = basename($targetfile, '.stor');
+    my $tbase = basename($targetfile, '.target');
     # Output for all models on this target
     my $file = "eval/html/${tbase}.html";
     open my $fh, ">$file";
@@ -242,8 +248,7 @@ sub evaltarget {
     print $fh start_html($tbase);
     print $fh h2(rcsb("Target $tbase")), "\n";
     print $fh start_table({-border=>'1'});
-#     my @keys = qw/model msize nres rmsd medsc seqids superpos/;
-    my @keys = qw/model msize rmsd medsc seqids superpos/;
+    my @keys = qw/model msize rmsd medsc iface seqids superpos/;
     print $fh Tr(th([ @keys ]));
 
     my $evmodels = [];
@@ -260,13 +265,13 @@ sub evaltarget {
         $ev{'target'} = a({-href=>"${tbase}.html"},$pdb);
         $evmodels->push({%ev});
 
-        my @fields = map { $ev{$_} } qw/rmsd avgsc medsc sumsc minsc maxsc/;
+        my @fields = map { $ev{$_} } qw/rmsd medsc iface/;
         
         if (my $lock = File::NFSLock->new($corrfile,LOCK_EX,100,5*60)) {
             open my $rmsdfh, ">>$corrfile";
-            my ($mid) = $modelfile =~ /model-(.*?).stor$/;
+            my ($mid) = $modelfile =~ /model-(.*?).model$/;
             printf 
-                $rmsdfh join('',("%10s")x8, "\n"),
+                $rmsdfh join('',("%10s")x5, "\n"),
                 $tbase,$mid, @fields;
         } else {
             warn "Cannot lock for writing: $corrfile";
@@ -276,18 +281,15 @@ sub evaltarget {
     print $fh end_table();
     close $fh;
 
-    # TODO Sort ... TODO command line option
-    # TODO also honor reverse sort option
     my $field = $ops->{'field'};
-    my @sorted = sort { $a->{$field} <=> $b->{$field} } @$evmodels;
-    @sorted = reverse(@sorted) if $ops->{'reverse'};
-    my $best = $sorted[0];
+    my $best = $ops->{'reverse'} ? 
+        argmax { $_->{$field} } @$evmodels : # Descending, i.e. want max
+        argmin { $_->{$field} } @$evmodels;  # Ascending, i.e. want min
 
     # Addtl stats (over all models)
-
-    $best->{'nmodels'} = scalar(@sorted);
+    $best->{'nmodels'} = $evmodels->length;
     my $subgood = sub{!($_->{$field}<$ops->{'thresh'})&&$_->{'cover'}>=50};
-    my @good = grep { $subgood->($_) } @sorted;
+    my @good = grep { $subgood->($_) } @$evmodels;
     $best->{'ngood'} = scalar(@good);
 
     return $best, $evmodels;
@@ -300,16 +302,16 @@ sub evalmodel {
     my $ops = {};
     $ops = shift(@_) if ref($_[0]) eq 'HASH';
     my ($target, $modelfile) = @_;
-
+    return unless -f $modelfile;
     my $model = retrieve $modelfile;
 
-    my $mbase = basename($modelfile, '.stor');
+    my $mbase = basename($modelfile, '.model');
     my $file = "eval/html/${mbase}.html";
     open my $fh, ">$file";
     print $fh start_html($mbase);
     print $fh h2("Model $mbase"), "\n";
     print $fh start_table({-border=>'1'});
-    my @keys = qw/target superpos dom rmsd cover msize tsize glob nres medsc avgsc seqids/;
+    my @keys = qw/target superpos dom rmsd cover msize tsize glob nres medsc iface seqids/;
     print $fh Tr(th([ @keys ]));
 
     my %ev = (base=>$mbase);
@@ -341,6 +343,9 @@ sub evalmodel {
     $supio->write($model->superpositions->values);
 
     close $fh;
+
+    # Save any changes
+    $model->store($modelfile);    
     return %ev;
 }
 
@@ -352,7 +357,7 @@ sub modellinks {
     my ($targetlabel, $mid) = $base =~ /^(.*?)-model-(.*?)$/;
     $ev->{'model'} = a({-href=>"${base}.html"}, $mid);
     $ev->{'dom'} = a({-href=>"../dom/${base}.dom"}, 'dom');
-    $ev->{'superpos'} = a({-href=>"../pdb/${base}.pdb"}, 'superpos');
+    $ev->{'superpos'} = a({-href=>"../pdb/${base}.pdb.gz"}, 'superpos');
 }
 
 
@@ -371,12 +376,7 @@ sub modelstats {
     $ev->{'nres'} = $model->domains->map(sub {$_->length})->sum;
 
     my $scs = $model->superpositions->values->map(sub{$_->scores->at('Sc')});
-
     $ev->{'medsc'} = sprintf "%.2f", $scs->median;
-    $ev->{'avgsc'} = sprintf "%.2f", $scs->avg;
-    $ev->{'sumsc'} = sprintf "%.2f", $scs->sum;
-    $ev->{'minsc'} = sprintf "%.2f", $scs->min;
-    $ev->{'maxsc'} = sprintf "%.2f", $scs->max;
 
     my $iactions = $model->interactions->values;
     my $models = $iactions->map(sub{ flatten $_->models->values });
@@ -384,6 +384,10 @@ sub modelstats {
     $seqids = $seqids->map(sub{ isalpha($_) ? 0 : sprintf("%d",$_) });
     my @seqids = sort { $a <=> $b } @$seqids;
     $ev->{'seqids'} = [ shift(@seqids), pop(@seqids) ];
+
+    my $iface_cons = $iactions->map(sub{
+        $_->scores->at('interface_conserved')});
+    $ev->{'iface'} = sprintf "%.2f", $iface_cons->median;
 
 # TODO
 #     * avg clash %
@@ -396,20 +400,19 @@ sub modelstats {
 sub modelrmsd {
     my ($model, $target) = @_;
 
-    my ($transmat, $rmsd) = $model->rmsd($target);
-#     my ($transmat, $rmsd) = $target->rmsd($model);
-
-# Use precomputed
-#     my $rmsd = $model->scores->at('rmsd');
-#     my $transmat = $model->scores->at('matrix');
-
-    return unless defined $rmsd;
-    # Now crosshairs have the proper orientation
-#     $model->transform($transmat);
-
-    # TODO BUG this doesn't give the same answer as the above $rmsd
-#     my $rmsd = $model->rmsd($target);
-    return wantarray ? ($rmsd, $transmat) : $rmsd;
+    my $benchrmsd;
+    my $benchmatrix;
+    if ($model->scores->exists('benchrmsd')) {
+        $benchrmsd = $model->scores->at('benchrmsd');
+        $benchmatrix = $model->scores->at('benchmatrix');
+    } else {
+        ($benchmatrix, $benchrmsd) = $model->rmsd($target);
+        $model->transform($benchmatrix) if defined $benchmatrix;
+        $benchrmsd = 'NaN' unless defined $benchrmsd;
+        $model->scores->put('benchrmsd', $benchrmsd);
+        $model->scores->put('benchmatrix', $benchmatrix);
+    }
+    return wantarray ? ($benchrmsd, $benchmatrix) : $benchrmsd;
 }
 
 
@@ -450,7 +453,7 @@ sub _print_html {
     print start_html($tbase);
     print start_table({-border=>'1'}, $tbase);
 
-    my @htmlfields = (@fields, qw/pdb dom ppm/);
+    my @htmlfields = (@fields, qw/pdb dom/);
     print th([@htmlfields]);
 
     foreach my $row (@$table) {
@@ -476,9 +479,8 @@ sub _print_html {
 
        push 
            @tdrow, 
-            td(a({-href=>"../pdb/$mbase.pdb"}, 'pdb')), 
+            td(a({-href=>"../pdb/$mbase.pdb.gz"}, 'pdb')), 
             td(a({-href=>"../dom/$mbase.dom"}, 'dom')),
-            td(({-href=>"../ppm/$mbase.ppm"}, 'ppm')),
             ;
         print Tr({-align=>'right'}, "@tdrow"), "\n";
     }
@@ -487,50 +489,13 @@ sub _print_html {
 } # _print_html
 
 
-
-# STill want to save: mbase tbase targetfile modelfile 
-sub _outputs {
-    my ($evalfile, $modelfile, $target) = @_;
-
-    my $mbase = basename($modelfile, '.stor');
-    my $pdbfile = "eval/pdb/${mbase}.pdb";
-    my $domfile = "eval/dom/${mbase}.dom";
-    my $ppmfile = "eval/ppm/${mbase}.ppm";
-    my @files = ($pdbfile, $domfile, $ppmfile);
-    my @locks = map { "$_.NFSlock" } @files;
-    my $alldone = 1;
-    foreach (@files) {
-        unless (-e $_ || -e "$_.NFSLock") { $alldone = 0 }
-    }
-    return if $alldone;
-
-    my $model = retrieve $modelfile;
-    my $ev = retrieve $evalfile;
-    my $avgmat = $ev->avgmat;
-
-    # transform ...
-    $target->transform($avgmat);
-
-    _domfile($domfile, $model, $target);
-    _pdbfile($pdbfile, $model, $target);
-#     _ppmfile($mbase, $model, $target);
-
-# TODO needed here?
-    # Put the target back where it came from
-    # TODO wouldnt be necessary if transforming the model would work ...
-    $target->transform($avgmat->inv);
-
-}
-
-
 sub modeloutputs {
     my ($ev, $target, $model) = @_;
 
     my $mbase = $ev->{base};
-    my $pdbfile = "eval/pdb/${mbase}.pdb";
+    my $pdbfile = "eval/pdb/${mbase}.pdb.gz";
     my $domfile = "eval/dom/${mbase}.dom";
-    my $ppmfile = "eval/ppm/${mbase}.ppm";
-    my @files = ($pdbfile, $domfile, $ppmfile);
+    my @files = ($pdbfile, $domfile);
     my @locks = map { "$_.NFSLock" } @files;
     my $alldone = 1;
     foreach (@files) {
@@ -538,19 +503,8 @@ sub modeloutputs {
     }
     return if $alldone;
 
-    my $transmat = $ev->{trans};
-
-    # transform ...
-    $model->transform($transmat);
-
     _domfile($domfile, $model, $target);
     _pdbfile($pdbfile, $model, $target);
-#     _ppmfile($mbase, $model, $target);
-
-# TODO needed here?
-    # Put the target back where it came from
-    # TODO wouldnt be necessary if transforming the model would work ...
-#     $target->transform($avgmat->inv);
 
 } # modeloutput
 
@@ -564,47 +518,39 @@ sub _domfile {
     }
     my $lock = File::NFSLock->new($domfile,LOCK_EX|LOCK_NB) or return;
 
-    # Rewrite model file in target's frame of reference, for convenience later
     my $domio = new SBG::DomainIO::stamp(file=>">$domfile");
-    $domio->write(@{$target->domains}, @{$model->domains});
-#     print "$domfile written\n";
+    $domio->write(@{$model->domains});
+    if ($model->scores->at('benchrmsd') > 0) {
+        my $keys = $model->coverage($target);
+        $domio->write(@{$target->domains($keys)});
+    }
 }
 
 
 sub _pdbfile {
     my ($pdbfile, $model, $target) = @_;
 
-    if (-s $pdbfile) {
-#         print STDERR "$pdbfile already done\n";
-        return;
-    }
     my $lock = File::NFSLock->new($pdbfile,LOCK_EX|LOCK_NB) or return;
 
-    my $targetasdom = $target->merge;
-    my $modelasdom = $model->merge;
+    my @doms;
+    # If there was a superposition onto the target, show it as well
+    if ($model->scores->at('benchrmsd') > 0) {
 
-    # Rewrite model file in target's frame of reference, for convenience later
-    my $pdbio = new SBG::DomainIO::pdb(file=>">$pdbfile");
-    $pdbio->write($targetasdom, $modelasdom);
-#     print "$pdbfile written\n";
+        # Treat model complex as single domain
+        my $modelasdom = $model->merge;
+        push @doms, $modelasdom;
 
-}
-
-
-sub _ppmfile {
-    my ($mbase, $model, $target) = @_;
-
-    my $pdbfile = "eval/pdb/${mbase}.pdb";
-    my $ppmfile = "eval/ppm/${mbase}.ppm";
-
-    if (-s $ppmfile) {
-#         print STDERR "$ppmfile already done\n";
-        return;
+        # Only show common components
+        my $keys = $model->coverage($target);
+        # Get target complex as single domain
+        push @doms, $target->merge(keys=>$keys);
+    } else {
+        push @doms, $model->domains->flatten;
     }
-    my $lock = File::NFSLock->new($ppmfile,LOCK_EX|LOCK_NB) or return;
 
-    pdb2img(pdb=>$pdbfile, img=>$ppmfile);
-#     print "$ppmfile written\n";
+    my $pdbio = new SBG::DomainIO::pdb(file=>">${pdbfile}", compressed=>1);
+    $pdbio->write(@doms);
+
 }
 
 

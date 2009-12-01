@@ -78,14 +78,14 @@ $SIG{__DIE__} = \&confess if $ops{'debug'};
 
 # Try to submit to PBS, for each argument in @ARGV
 # Recreate command line options;
-my @jobids = qsub(options=>\%ops);
-print join("\n", @jobids), "\n", if @jobids;
+ my @jobids = qsub(options=>\%ops);
+ print join("\n", @jobids), "\n", if @jobids;
 # @ARGV is empty if all jobs could be submitted
 
 
 foreach my $file (@ARGV) {
 
-    my $basename = basename($file,'.stor');
+    my $basename = basename($file,'.network');
     my $outdir = $basename;
     my $basepath = catfile($outdir, $basename);
     mkdir $outdir;
@@ -110,7 +110,7 @@ foreach my $file (@ARGV) {
     # Traverse the network
     _one_net($net, $basename, \%ops);
 
-    my @files = <${basepath}*.stor>;
+    my @files = <${basepath}*.model>;
     end_lock($lock, scalar @files);
 
 }
