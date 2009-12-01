@@ -264,6 +264,7 @@ sub _file {
     } else {
         $self->fh(IO::File->new($file));
     }
+
     unless ($self->fh) {
         log()->error("Cannot open: $file");
         return;
@@ -284,7 +285,7 @@ sub _file {
 =cut
 sub _string { 
     my ($self) = @_;
-    $self->fh(new IO::String($self->string));
+    $self->fh(IO::String->new($self->string));
     return $self;
 }
 
