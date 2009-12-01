@@ -217,10 +217,6 @@ hits. Pairing them generally results in more than 10 hits.
 sub search {
     my ($self, $seq1, $seq2, %ops) = @_;
     
-    # Enable Hit caching when RemoteBlast
-    $ops{cache} = 1 unless defined $ops{cache};
-    $ops{cache} = 1 if $self->method eq 'remoteblast';
-
     # List of Blast Hits, indexed by PDB ID
     my $hits1 = $self->_blast1($seq1, %ops);
     my $hits2 = $self->_blast1($seq2, %ops);
@@ -245,7 +241,11 @@ sub search {
 sub _blast1 {
     my ($self, $seq, %ops) = @_;
     my $limit = $ops{limit};
+
+    # Enable Hit caching when RemoteBlast
     $ops{cache} = 1 unless defined $ops{cache};
+    $ops{cache} = 1 if $self->method eq 'remoteblast';
+
     my $hits = $self->cache->at($seq);
     if ($ops{cache} && $hits) {
         log()->debug($seq->primary_id, ': ', $hits->length," Hits (cached)");
