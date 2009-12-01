@@ -205,39 +205,29 @@ $file = $iocofm->file;
 @mdoms = map { $complex->get($_)->subject } @names;
 @tdoms = map { $true_complex->get($_)->subject } @names;
 $iocofm->write(@mdoms, @tdoms);
-# `ras $file`;
 
 
 # Looks like this is commutative too!
-# $transmat = $true_complex->superposition_frame_cofm($complex);
-# $transmat = $complex->superposition_frame_cofm($true_complex);
-
-($transmat, $rmsd) = $complex->superposition_points($true_complex);
-print $transmat if $DEBUG;
-print "RMSD: $rmsd\n" if $DEBUG;
-
-# rasmol($complex->domains, $true_complex->domains) if $DEBUG;
-
-# Now crosshairs have the proper orientation
-
-# Uses RMSD on crosshairs (neither of these work)
-# This will never work, because crosshairs have to have reference frame 1st
-# ($rmsd, $transmat) = $complex->rmsd($true_complex);
-# ($rmsd) = $complex->rmsd($true_complex);
-# ($rmsd, $transmat) = $true_complex->rmsd($complex);
-
-# Make sure to transform the right one, based on computed superposition
-# $true_complex->transform($transmat);
-$complex->transform($transmat);
-
-# Wow, there's one function that's actually commutative. Both work!
-# $rmsd = $true_complex->rmsd($complex);
-# $rmsd = $complex->rmsd($true_complex);
-# print "RMSD: $rmsd\n";
-# float_is($rmsd, 0, "RMSD of complex crosshairs", 0.1);
-
+# ($transmat, $rmsd) = $complex->rmsd($true_complex);
+my ($transmat1, $rmsd1) = $true_complex->rmsd($complex);
+$true_complex->transform($transmat1);
 rasmol($complex->domains, $true_complex->domains) if $DEBUG;
+# Revert
+$true_complex->transform($transmat1->inv);
 
+my ($transmat2, $rmsd2) = $complex->rmsd($true_complex);
+$complex->transform($transmat2);
+rasmol($complex->domains, $true_complex->domains) if $DEBUG;
+# Revert
+$complex->transform($transmat2->inv);
+
+float_is($rmsd1, $rmsd2, "rmsd() is commutative");
+
+
+$TODO = "Verify cofm result";
+ok(0);
+
+__END__
 
 $iocofm = new SBG::DomainIO::cofm(tempfile=>1);
 $file = $iocofm->file;
@@ -245,8 +235,6 @@ $file = $iocofm->file;
 @tdoms = map { $true_complex->get($_)->subject } @names;
 $iocofm->write(@mdoms, @tdoms);
 
-$TODO = "Verify cofm result";
-ok(0);
 
 
 
