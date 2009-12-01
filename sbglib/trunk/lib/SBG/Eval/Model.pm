@@ -2,56 +2,128 @@
 
 =head1 NAME
 
-SBG::Eval - Evaluation routine to test accuracy of assembly of test complexes
 
 =head1 SYNOPSIS
 
- use SBG::Eval;
 
 =head1 DESCRIPTION
 
 
+# Distinguish: complex, interaction, superposition, component model scores
+# Also distinguish scalar vs array score (median/mean these)
+
+# Complex scores: 
+## clashes (ArrayRef) globularity (scalar)
+
+# interactions: HashRef
+## interface_conserved 
+## avg_frac_identical avg_gaps avg_n_res avg_seqid 
+## avg_length avg_evalue avg_frac_conserved
+
+# superpositions: HashRef
+## Sc len sec_id seq_id q_len n_equiv nfit n_sec d_len RMS 
+
+# models: HashRef
+## evalue frac_identical frac_conserved seqid gaps length n_res
+
+# Evaluation scores, ie. only measureable given the true target complex:
+## coverage rmsd 
+
 =head1 SEE ALSO
 
-L<SBG::NetworkIO> , L<SBG::ComplexIO>
+
 
 =cut
 
 ################################################################################
 
-package SBG::Eval;
+package SBG::Eval::Model;
 use Moose;
-
+with 'SBG::Role::Writable';
 with 'SBG::Role::Storable';
 with 'SBG::Role::Clonable';
+with 'SBG::Role::Scorable';
+
+use SBG::Role::Scorable qw/group_scores/;
 
 use Moose::Autobox;
-use autobox ARRAY => 'SBG::U::List';
 use SBG::U::List qw/mean sum median/;
+use SBG::Complex;
 
 
-my @extrinsic = qw/target tsize model msize cover rmsd olap irmsd/;
-my @intrinsic = qw/pval seqid eval sc glob/;
-my @fields = (@extrinsic, @intrinsic);
-
-has \@fields => (
+# The whole name, e.g. 3EXE-net-0001-model-2355
+has 'label' => (
     is => 'rw',
+    isa => 'Str',
     );
 
-has 'tobject' => (
+# Just the model identifier, e.g. 2355
+has 'id' => (
+    is => 'rw',
+    isa => 'Str',
+    );
+
+has 'complex' => (
     is => 'rw',
     isa => 'SBG::Complex',
+    handles => [
+        qw/size count superpositions clashes models interactions/
+    ],
     );
 
-has 'mobject' => (
+has 'target' => (
     is => 'rw',
-    isa => 'SBG::Complex',
+    isa => 'SBG::Eval::Target',
     );
 
-has 'avgmat' => (
-    is => 'rw',
-    );
 
+sub _build_scores {
+    my ($self) = @_;
+
+    # Extrinsic scores (given the true target complex for comparison)
+    my ($matrix, $rmsd) = 
+        $self->complex->rmsd($self->target->complex);
+    my $cscores = {
+        rmsd => [ $rmsd ],
+        coverage => [ 1.0 * $self->size / $self->target->size ],
+        globularity => [ $self->complex->globularity, ],
+    };
+
+
+    # TODO DES belongs in Complex
+    # Put Clashes with the models they belong to
+    foreach my $key ($self->clashes->keys->flatten) {
+        my $model = $self->models->at($key);
+        my $clash = $self->clashes->at($key);
+        $model->scores->put('clash', $clash);
+    }
+
+    # Extract arrays of scores from the superpositions, interactions, models
+    # And convert Array of Hashes into Hash of Arrays
+    my $sscores = group_scores(
+        $self->superpositions->values->map(sub{$_->scores}),
+        );
+    my $iscores = group_scores(
+        $self->interactions->values->map(sub{$_->scores}),
+        );
+    my $mscores = group_scores(
+        $self->models->values->map(sub{$_->scores}),
+        );
+    
+    return $cscores->merge($sscores)->merge($iscores)->merge($mscores);
+
+}
+
+
+################################################################################
+__PACKAGE__->meta->make_immutable;
+no Moose;
+1;
+
+
+__END__
+
+# Formats for CSV files:
 
 has 'target' => (
     is => 'rw',
@@ -178,13 +250,6 @@ has 'glob' => (
             range=>[0,100],label=>'glob',flabel=>'%5s%%',fvalue=>'%6.f') }
     );
 
-
-
-sub BUILD {
-    my ($self) = @_;
-
-
-}
 
 
 
