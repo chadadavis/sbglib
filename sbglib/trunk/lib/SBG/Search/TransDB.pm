@@ -56,20 +56,21 @@ has 'blast' => (
  Args    : Two L<Bio::Seq>s
            
 
-
 =cut
 sub search {
     my ($self, $seq1, $seq2, %ops) = @_;
 
     my @hitpairs = $self->blast->search($seq1, $seq2, %ops);
-
+    $ops{overlap} ||= 0.50;
+    my $entityops = {%ops}->hslice([qw/overlap/]);
     # Foreach hit pair, lookup matching structures in entity table, 1-to-many
     my %allentitypairs;
     my %entity2hit;
     foreach my $hitpair (@hitpairs) {
         my ($hit1, $hit2) = @$hitpair;
-        my @entities1 = SBG::DB::entity::query_hit($hit1,overlap=>0,);
-        my @entities2 = SBG::DB::entity::query_hit($hit2,overlap=>0,);
+
+        my @entities1 = SBG::DB::entity::query_hit($hit1,%$entityops);
+        my @entities2 = SBG::DB::entity::query_hit($hit2,%$entityops);
         my @entitypairs = SBG::U::List::pairs2(\@entities1, \@entities2);
         # Make unique (s.t. no entity interacting with itself)
         @entitypairs = grep {my($a,$b)=@$_;$a->{id}!=$b->{id}} @entitypairs;
@@ -171,10 +172,12 @@ sub _distmat {
 
     for (my $i = 0; $i < @$contacts; $i++) {
         $distmat->[$i] ||= [];
+
         for (my $j = $i+1; $j < @$contacts; $j++) {
-            my $irmsd = SBG::DB::irmsd::query($contacts->[$i],$contacts->[$j]);
             # Column-major order, to produce a lower-diagonal distance matrix
+            my $irmsd = SBG::DB::irmsd::query($contacts->[$i],$contacts->[$j]);
             $distmat->[$j][$i] = $irmsd || 'Inf';
+
             if (defined $irmsd) {
                 $similarities[$i]++;
                 $similarities[$j]++;
@@ -214,6 +217,8 @@ sub _contact2interaction {
     my $iaction = SBG::Interaction->new(
         models=>{$model1->query => $model1, $model2->query => $model2},
         scores=>$ia_scores,
+        # Preferred score for weighting interations
+        -weight=>$ia_scores->at('interface_conserved'),
         );
     return unless $iaction;
     return $iaction;
