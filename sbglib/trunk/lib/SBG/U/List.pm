@@ -131,25 +131,25 @@ sub permute {
 sub argmax(&@) {
   return() unless @_ > 1;
   my $block = shift;
-  my $index = shift;
-  my $max = $block->($index);
+  my $elem = shift;
+  my $max = $block->($elem);
   for (@_) {
     my $val = $block->($_);
-    ($max, $index) = ($val, $_) if $val > $max;
+    ($max, $elem) = ($val, $_) if $val > $max;
   }
-  return wantarray ? ($index, $max) : $index;
+  return wantarray ? ($elem, $max) : $elem;
 }
 
 sub argmin(&@) {
   return() unless @_ > 1;
   my $block = shift;
-  my $index = shift;
-  my $min = $block->($index);
+  my $elem = shift;
+  my $min = $block->($elem);
   for (@_) {
     my $val = $block->($_);
-    ($min, $index) = ($val, $_) if $val < $min;
+    ($min, $elem) = ($val, $_) if $val < $min;
   }
-  return wantarray ? ($index, $min) : $index;
+  return wantarray ? ($elem, $min) : $elem;
 }
 
 # Average of a list
