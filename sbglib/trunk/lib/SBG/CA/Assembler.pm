@@ -64,13 +64,23 @@ has 'sizes' => (
     default => sub { {} },
     );
 
+has 'binsize' => (
+    is => 'ro',
+    isa => 'Num',
+    default => 2,
+    );
+
+
 # 3D geometric hash
 has 'gh' => (
     is => 'ro',
     isa => 'SBG::GeometricHash',
-#     default => sub { new SBG::GeometricHash(binsize=>1.5) },
-    default => sub { new SBG::GeometricHash(binsize=>2) },
+    lazy_build => 1,
     );
+sub _build_gh {
+    my ($self) = @_;
+    return SBG::GeometricHash->new(binsize=>$self->binsize);
+}
 
 
 # File name pattern for saving assemblies
