@@ -28,6 +28,8 @@ use Moose::Util::TypeConstraints;
 use File::Temp qw/tempfile/;
 use IO::String;
 use IO::File;
+use IO::Compress::Gzip;
+
 use Module::Load;
 
 use SBG::U::Log qw/log/;
@@ -53,6 +55,22 @@ has 'fh' => (
     # Cannot delegate, as we might just have a GLOB sometimes
 #     handles => [qw/flush close/],
     default => sub { \*STDOUT },
+    );
+
+
+################################################################################
+=head2 compressed
+
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
+
+
+=cut
+has 'compressed' => (
+    is => 'rw',
+    isa => 'Bool',
     );
 
 
@@ -240,7 +258,12 @@ sub _file {
     my ($self, $file) = @_;
     # $file contains mode characters here still
     
-    $self->fh(new IO::File($file));
+    if ($self->compressed) {
+        $file =~ s/^[+<>]*//g;
+        $self->fh(IO::Compress::Gzip->new($file));
+    } else {
+        $self->fh(IO::File->new($file));
+    }
     unless ($self->fh) {
         log()->error("Cannot open: $file");
         return;
