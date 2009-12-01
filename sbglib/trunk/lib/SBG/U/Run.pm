@@ -35,7 +35,7 @@ use Getopt::Long;
 use File::NFSLock;
 use Fcntl qw/LOCK_EX LOCK_NB/;
 
-use SBG::IOI qw/slurp/;
+use File::Slurp qw/slurp/;
 
 use SBG::U::Log;
 use Log::Any qw/$log/;

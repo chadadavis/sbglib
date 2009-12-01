@@ -4,6 +4,7 @@ use strict;
 use warnings;
 use Test::More 'no_plan';
 use Data::Dump qw/dump/;
+use SBG::U::Test qw/float_is/;
 
 use SBG::U::Log qw/log/;
 
@@ -11,7 +12,8 @@ my $DEBUG;
 $DEBUG = 1;
 log()->init('TRACE') if $DEBUG;
 
-use SBG::U::Run qw/start_lock end_lock start_log frac_of slurp getoptions/;
+use SBG::U::Run qw/start_lock end_lock start_log frac_of getoptions/;
+use File::Slurp qw/slurp/;
 
 my $lock = start_lock('lockname');
 ok($lock, "Job locking");
@@ -30,3 +32,7 @@ unlink 'lockname.done';
 my $lock3 = start_lock('lockname');
 ok($lock3, "Redoing lock");
 
+
+my $percent = '52%';
+my $total = 33;
+float_is(frac_of($percent, $total), 17.16, 'frac_of')
