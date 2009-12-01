@@ -63,7 +63,7 @@ use Moose::Autobox;
 use SBG::Domain;
 use SBG::TransformIO::stamp;
 use SBG::Types qw/$re_pdb $re_descriptor/;
-
+use SBG::U::Log qw/log/;
 
 
 ################################################################################
@@ -126,7 +126,9 @@ sub write {
     return unless @doms;
     my $fh = $self->fh or return;
 
+
     foreach my $dom (@doms) {
+        log()->trace($dom);
         my $str = 
             join(" ",
                  $dom->file  || '',
