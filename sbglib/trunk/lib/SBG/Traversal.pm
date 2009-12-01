@@ -319,7 +319,6 @@ sub traverse {
         # Starting node for this iteraction
         $self->_nodeq->add($node);
         _d0 "=" x 80, "\nStart node: $node";
-
         # A new disjoint set data structure, to track which nodes in same sets
         my $uf = new Graph::UnionFind;
         # Each node is in its own set first
@@ -351,7 +350,7 @@ sub _init_edge_indices {
                 $self->assembler->score($self->graph, $b) <=>
                     $self->assembler->score($self->graph, $a)
             } $self->graph->get_edge_attribute_names($u, $v);  
-            log()->trace("$u $v : ", scalar @alt_ids);
+            log()->trace("$u $v : @alt_ids");
             $self->_altlist->put("$u--$v", \@alt_ids);
             $self->_altlist->put("$v--$u", \@alt_ids);
         }
@@ -362,7 +361,10 @@ sub _init_edge_indices {
 sub _init_nodes {
     my ($self) = @_;
     my %max;
-    foreach my $u ($self->graph->vertices) {
+    my @nodes = $self->graph->vertices;
+    # Map stringification to object
+    my %nodes = map { $_ => $_ } @nodes;
+    foreach my $u (@nodes) {
         foreach my $v ($self->graph->vertices) {
             my $max = $self->_edge_max($u,$v) or next;
             $max{$u} ||= $max;
@@ -371,7 +373,10 @@ sub _init_nodes {
             $max{$v} = $max if $max > $max{$v};
         }
     }
-    my @nodes = sort { $max{$b} <=> $max{$a} } keys %max;
+    my @maxes = sort { $max{$b} <=> $max{$a} } keys %max;
+    log()->trace("nodes ordered by _edge_max:@maxes");
+    # Map string names back to objects
+    @nodes = map { $nodes{$_} } @maxes;
     return @nodes;
 }
 
@@ -381,17 +386,17 @@ sub _edge_max {
     my ($self, $u, $v) = @_;
     # Name of edge
     my $edge_id = "$u--$v";
-    log()->trace("edge_id:$edge_id");
+#     log()->trace("edge_id:$edge_id");
     # Index of next alternative on this edge, or begin at 0
     my $altidx = $self->_altidx->at($edge_id) || 0;
-    log()->trace("altidx:$altidx");
+#     log()->trace("altidx:$altidx");
     # The identify of that index in this edge's list of alternatives:
     my $altlist = $self->_altlist->at($edge_id) or return;
-    log()->trace("altlist:@$altlist");
+#     log()->trace("altlist:@$altlist");
     my $altid = $altlist->[$altidx] or return;
-    log()->trace("altid:$altid");
+#     log()->trace("altid:$altid");
     my $score = $self->assembler->score($self->graph, $altid);
-    log()->trace("score:$score");
+    log()->trace("edge:$edge_id alt:$altid score:$score");
     return $score;
 }
 
