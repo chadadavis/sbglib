@@ -180,8 +180,10 @@ sub inverse {
     } else {
         # Swap the from domain with the to domain, as we're reversing
         $copy = $class->new(from=>$self->to->clone,
-                              to=>$self->from->clone,
-                              transformation=>$self->transformation->inverse,
+                            to=>$self->from->clone,
+                            transformation=>$self->transformation->inverse,
+                            # Make a copy of the ref
+                            scores=>{ %{$self->scores} }
             );
         # And update alignment lengths
         $copy->scores->put('q_len', $self->scores->at('d_len'));
