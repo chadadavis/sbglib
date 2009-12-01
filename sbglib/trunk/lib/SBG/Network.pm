@@ -226,7 +226,7 @@ sub build {
     log()->debug(scalar(@pairs), ' potential edges in interaction network');
     foreach my $pair (@pairs) {
         $ipair++;
-        log()->trace("Edge $ipair of $npairs");
+        log()->info("Edge $ipair of $npairs");
         my ($node1, $node2) = @$pair;
         my ($p1) = $node1->proteins;
         my ($p2) = $node2->proteins;
