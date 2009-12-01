@@ -1,43 +1,26 @@
 #!/usr/bin/env perl
 
+use strict;
+use warnings;
+
+use Test::More 'no_plan';
+
 use PBS::ARGV qw/qsub/;
 
-use File::Temp;
-use SBG::U::Log qw/log/;
-use Log::Any qw/$log/;
-use Log::Any::Adapter;
-use Getopt::Long;
-
 # TODO TEST get tests from module docs
-
-# TODO TEST getopt
 
 # TODO TEST distinguish between qsub not present and qsub error
 
 # TODO TEST job array -J option
 
-my %ops;
-my $result = GetOptions(\%ops,
-                        'help|h',
-                        'loglevel|l=s',
-                        'logfile|f=s', 
-                        'debug|d:i',
-    );                  
+if (PBS::ARGV::has_qsub) {
 
-$ops{debug} = 1 if defined $ops{debug};
-$ops{loglevel} = 'TRACE' if ($ops{debug} && ! $ops{loglevel});
-SBG::U::Log::init($ops{loglevel}) if $ops{loglevel};
-$File::Temp::KEEP_ALL = $ops{debug};
-Log::Any::Adapter->set('+SBG::U::Log');
+    @ARGV = 1..5;
+    my @jobids = qsub();
+    if (! defined $ENV{'PBS_ENVIRONMENT'}) {
+        is(scalar(@ARGV), 0, "All arguments submitted as PBS jobs");
+    } 
 
-# Recreate command line options;
-my @dashops = map { '-' . $_ => $ops{$_} } keys %ops;
-$log->debug("dashops:@dashops");
-my @jobids = qsub("$0 @dashops", '-M ae');
-print STDOUT "Submitted jobs: \n", join("\n",@jobids), "\n";
-
-$log->debug("ARGV:@ARGV");
-
-foreach (@ARGV) {
-    print "Got '$_' with '", join(' ', %ops), "',with HOME=$ENV{HOME} on ", `hostname`;
+} else {
+    ok(1, "has_qsub() false, skipping");
 }
