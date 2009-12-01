@@ -296,7 +296,7 @@ attribute, which you define by a subroutine that you can pass in.
 
 Takes:
 $objects - an ArrayRef of objects, in any order
-$orderine - an ArrayRef defining the desired order
+$ordering - an ArrayRef defining the desired order
 $code - a subroutine to apply to the objects, to get the attributes to be sorted
 
 Otherwise, standard Perl stringification is used on the objects, i.e. "$obj"
