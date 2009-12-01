@@ -215,10 +215,10 @@ has 'overlap_thresh' => (
 
 =cut
 sub domains {
-    my ($self,) = @_;
+    my ($self, $keys) = @_;
 
     # Order of models attribute
-    my $keys = $self->keys;
+    $keys ||= $self->keys;
     return unless @$keys;
 
     my $models = $keys->map(sub{ $self->get($_) });
@@ -484,10 +484,13 @@ TODO put in a DomainSetI
 use SBG::DomainIO::pdb;
 use Module::Load;
 sub merge {
-    my ($self,$file) = @_;
-    my $doms = $self->domains or return;
-    my $io = $file ?
-        new SBG::DomainIO::pdb(file=>">$file") :
+    my ($self,%ops) = @_;
+    $ops{keys} ||= $self->keys;
+    my $doms = $self->domains($ops{keys});
+    return unless $doms->length > 0;
+
+    my $io = $ops{file} ?
+        new SBG::DomainIO::pdb(file=>">$ops{file}") :
         new SBG::DomainIO::pdb(tempfile=>1);
     $io->write(@$doms);
     my $type = ref $doms->[0];
@@ -521,19 +524,20 @@ sub add_interaction {
         my $models = $keys->map(sub{$self->_mkmodel($iaction, $_)});
         $self->add_model(@$models);
         $self->interactions->put($iaction, $iaction);
-        return 1;
+        # Poor approach to get the maximum score
+        return 10.0;
     }
 
     # Get domain models for components of interaction
     my $srcdom = $iaction->get($srckey)->subject;
     # For domain being placed, make a copy that has a concrete representation
     my $destmodel = $self->_mkmodel($iaction, $destkey);
-    return 0 unless defined $destmodel;
+    return unless defined $destmodel;
     my $destdom = $destmodel->subject;
 
     my $linker_superposition = 
         SBG::Superposition::Cache::superposition($srcdom, $refdom);
-    return 0 unless defined $linker_superposition;
+    return unless defined $linker_superposition;
 
 
     # Then apply that transformation to the interaction partner $destdom.
@@ -544,7 +548,7 @@ sub add_interaction {
 
     # Now test steric clashes of potential domain against existing domains
     my $clashfrac = $self->check_clash($destdom);
-    return 0 unless $clashfrac < 1.0;
+    return unless $clashfrac < 1.0;
 
 
     # Domain does not clash after being oriented, can be saved in complex now.
@@ -558,7 +562,7 @@ sub add_interaction {
     # Cache by destnode, as there may be many for any given refdom
     $self->superpositions->put($destkey, $linker_superposition);
     $self->interactions->put($iaction, $iaction);
-    return 1;
+    return $linker_superposition->scores->at('Sc');
 
 } # add_interaction
 
@@ -724,7 +728,7 @@ sub _setcrosshairs {
     my ($selfdom, $otherdom) = @_;
 
        # Now get the superposition from current $selfdom onto current $otherdom
-       my $sup = SBG::STAMP::superposition($selfdom, $otherdom);
+       my $sup = SBG::Superposition::Cache::superposition($selfdom, $otherdom);
        return unless $sup;
 
        # Set crosshairs

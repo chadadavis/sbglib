@@ -50,12 +50,18 @@ use Graph::UnionFind;
 # Manual tail call optimization
 use Sub::Call::Recur; # qw/recur/;
 
+# Another variant (for general tail calls, not only recursive ones)
+use Sub::Call::Tail qw/tail/;
+
+use Heap::Priority;
+
 
 ################################################################################
 
 # Debug printing (to trace recursion and it's unwinding)
 # TODO del
 use SBG::U::Log qw/log/;
+
 use Log::Any qw/$log/;
 sub _d {
     my $d = shift;
@@ -180,17 +186,20 @@ has 'minsize' => (
 # Queues that note the edges/nodes to be processed, in a breadth-first fashion
 has '_edgeq' => (
     is => 'rw',
-    isa => 'ArrayRef[ArrayRef]',
+#     isa => 'ArrayRef[ArrayRef]',
+    isa => 'Heap::Priority',
     required => 1,
-    default => sub { [] },
+    default => sub { Heap::Priority->new },
     );
 
 has '_nodeq' => (
     is => 'rw',
-    isa => 'ArrayRef',
+#     isa => 'ArrayRef',
+    isa => 'Heap::Priority',
     required => 1,
-    default => sub { [] },
+    default => sub { Heap::Priority->new },
     );
+
 
 # Keep track of what's in the partial solution at every moment. Edges and nodes.
 # Reset for each different starting node
@@ -201,7 +210,7 @@ has '_nodecover' => (
     default => sub { {} },
     );
 
-# Cover of edge alternatives
+# Cover of edge alternatives for the current solution
 has '_altcover' => (
     is => 'rw',
     isa => 'HashRef',
@@ -211,9 +220,17 @@ has '_altcover' => (
 
 # Keeps tracks of indexes on alternatives for edges, indexed by an interaction
 # ID.  Resets itself when appropriate.
-has '_altcount' => (
+has '_altidx' => (
     is => 'rw',
     isa => 'HashRef[Int]',
+    required => 1,
+    default => sub { {} },
+    );
+
+# Sorted lits of alternatives for each of NxN possible edges
+has '_altlist' => (
+    is => 'rw',
+    isa => 'HashRef[ArrayRef[Str]]',
     required => 1,
     default => sub { {} },
     );
@@ -290,17 +307,17 @@ sub traverse {
     my ($self, $state) = @_;
     # If no state object provide, use an empty hashref, Clone'able
     $state = bless({}, 'Clone') unless defined $state;
-
-    my @nodes = $self->graph->vertices();
+    
+    $self->_init_edge_indices;
 
     # NB cannot use all nodes together in one run, as they may have different
     # 'frames of reference'. I.e. don't do this:
 #     $self->_nodeq->push($self->graph->vertices);
 
     # Using one different starting node in each iteration
-    foreach my $node ($self->graph->vertices) {
+    foreach my $node ($self->_init_nodes) {
         # Starting node for this iteraction
-        $self->_nodeq->push($node);
+        $self->_nodeq->add($node);
         _d0 "=" x 80, "\nStart node: $node";
 
         # A new disjoint set data structure, to track which nodes in same sets
@@ -320,19 +337,80 @@ sub traverse {
 } # traverse
 
 
+
+# Sort the alternatives available to each possible edge initially
+# Later, we'll just index into these lists, w/o having to re-sort
+sub _init_edge_indices {
+    my ($self) = @_;
+    my @nodes = $self->graph->vertices;
+    for (my $i = 0; $i < @nodes; $i++) {
+        my $u = $nodes[$i];
+        for (my $j = $i+1; $j < @nodes; $j++) {
+            my $v = $nodes[$j];
+            my @alt_ids = sort {
+                $self->assembler->score($self->graph, $b) <=>
+                    $self->assembler->score($self->graph, $a)
+            } $self->graph->get_edge_attribute_names($u, $v);  
+            log()->trace("$u $v : ", scalar @alt_ids);
+            $self->_altlist->put("$u--$v", \@alt_ids);
+            $self->_altlist->put("$v--$u", \@alt_ids);
+        }
+    }
+}
+
+
+sub _init_nodes {
+    my ($self) = @_;
+    my %max;
+    foreach my $u ($self->graph->vertices) {
+        foreach my $v ($self->graph->vertices) {
+            my $max = $self->_edge_max($u,$v) or next;
+            $max{$u} ||= $max;
+            $max{$u} = $max if $max > $max{$u};
+            $max{$v} ||= $max;
+            $max{$v} = $max if $max > $max{$v};
+        }
+    }
+    my @nodes = sort { $max{$b} <=> $max{$a} } keys %max;
+    return @nodes;
+}
+
+
+# The score of the next alternative that would be tried on the given edge
+sub _edge_max {
+    my ($self, $u, $v) = @_;
+    # Name of edge
+    my $edge_id = "$u--$v";
+    log()->trace("edge_id:$edge_id");
+    # Index of next alternative on this edge, or begin at 0
+    my $altidx = $self->_altidx->at($edge_id) || 0;
+    log()->trace("altidx:$altidx");
+    # The identify of that index in this edge's list of alternatives:
+    my $altlist = $self->_altlist->at($edge_id) or return;
+    log()->trace("altlist:@$altlist");
+    my $altid = $altlist->[$altidx] or return;
+    log()->trace("altid:$altid");
+    my $score = $self->assembler->score($self->graph, $altid);
+    log()->trace("score:$score");
+    return $score;
+}
+
+
 # Looks for any edges on any outstanding nodes
 sub _do_nodes {
     my ($self, $uf, $state, $d) = @_;
-    my $current = $self->_nodeq->shift;
+    my $current = $self->_nodeq->pop;
     return $self->_no_nodes($uf, $state, $d) unless $current;
 
     # Which adjacent nodes have not yet been visited
-    _d $d, "Node: $current (@{$self->_nodeq})";
+    _d $d, "Node: $current";
     my @unseen = $self->_new_neighbors($current, $uf, $d);
     for my $neighbor (@unseen) {
         # push edges onto stack
         _d $d, "pushing edge: $current--$neighbor";
-        $self->_edgeq->push([$current, $neighbor]);
+        # priority queue, based on average alternative score of edge
+        my $edge_max = $self->_edge_max($current, $neighbor);
+        $self->_edgeq->add([$current, $neighbor], $edge_max);
     }
     # Continue processing all outstanding nodes before moving to edges
     # Tail recursion is flattened here
@@ -345,8 +423,9 @@ sub _do_nodes {
 sub _no_nodes {
     my ($self, $uf, $state, $d) = @_;
     _d $d, "No more nodes";
-    if ($self->_edgeq->length) {
-        _d $d, "Edges: ", _array2D($self->_edgeq);
+    my $nedges = scalar $self->_edgeq->get_heap;
+    if ($nedges) {
+        _d $d, "Edges: $nedges";
         $self->_do_edges($uf, $state, $d+1);
     } else {
         $self->_do_solution($state, $d);
@@ -361,10 +440,10 @@ sub _no_nodes {
 # Recurses to exhaust all possibilities
 sub _do_edges {
     my ($self, $uf, $state, $d) = @_;
-    my $current = $self->_edgeq->shift;
+    my $current = $self->_edgeq->pop;
     return $self->_no_edges($uf, $state, $d) unless $current;
     my ($src, $dest) = @$current;
-    _d $d, "Edge:$src--$dest Queue:" . $self->_edgeq->length . " edges";
+    _d $d, "Edge:$src--$dest";
 
     # ID of next alternative to try on this edge, if any
     my $alt_id = $self->_next_alt($src, $dest, $d);
@@ -377,7 +456,7 @@ sub _do_edges {
         return;
     }
 
-    # As child nodes in traversal may change partial solutions, clone these
+    # As child nodes in traversal may change partial solutions, clone these.
     # This implicitly allows us to backtrack later if $test() fails, etc
     my $stateclone = $state->clone();
 
@@ -389,7 +468,8 @@ sub _do_edges {
     # finish, with all of it's chosen edges, before retrying alternatives on any
     # of the edges. Assumption is that multi-edges are incompatible. That's why
     # we wait until now to re-push them.
-    $self->_edgeq->push($current);
+    # Back onto priority queue
+    $self->_edgeq->add($current, $self->_edge_max(@$current));
     # Go back to using the original $state that we had before this alternative
     # Tail recursion is flattened here
     recur($self, $uf, $state, $d);
@@ -401,16 +481,17 @@ sub _test_alt {
     my ($self, $uf, $stateclone, $src, $dest, $alt_id, $d) = @_;
 
     # Do we want to go ahead and traverse this edge?
-    my $success = $self->assembler->test(
+    my $score = $self->assembler->test(
         $stateclone, $self->graph, $src, $dest, $alt_id);
 
-    if (! $success) {
+    if (! defined $score) {
         # Current edge was rejected, but alternative multiedges may remain
         $self->rejects($self->rejects + 1);
         _d $d, "Pruned path (" . $self->rejects . ")";
         # Continue using the same state, in case the failure must be remembered
-        # TODO DES possible to eliminate indirect  tail recursion here?
-        $self->_do_edges($uf, $stateclone, $d);
+        # Flatten the indirect recursion by turning a tail call into a goto
+        @_ = ($self, $uf, $stateclone, $d);
+        goto \&_do_edges;
     } else {
         # Edge alternative succeeded. 
         _d $d, "Succeeded. Node $dest reachable";
@@ -419,7 +500,9 @@ sub _test_alt {
             $self->_nodecover->put($src, $src);
         }
         $self->_nodecover->put($dest, $dest);
-        $self->_nodeq->push($dest);
+
+        # priority queue: Node has a placement score here,
+        $self->_nodeq->add($dest, $score);
 
         # $src and $dest are now in the same connected component. 
         # But clone this first, to be able to undo/backtrack afterward
@@ -445,9 +528,9 @@ sub _no_edges {
     _d $d, "No more edges";
     # When no edges left on stack, go to next level down in BFS traversal tree
     # I.e. process outstanding nodes
-
-    if ($self->_nodeq->length) {
-        _d $d, "Nodes: " . $self->_nodeq->join(' ');
+    my $nnodes = scalar $self->_nodeq->get_heap;
+    if ($nnodes) {
+        _d $d, "Nodes: $nnodes";
         # Also give the progressive solution to peripheral nodes
         $self->_do_nodes($uf, $state, $d+1);
     } else {
@@ -476,32 +559,29 @@ sub _new_neighbors {
 sub _next_alt {
     my ($self, $u, $v, $d) = @_;
 
-    # IDs of edge attributes (the alternatives on this edge)
-    # Sort, to make indexes unique between invocations of this method
-    my @alt_ids = sort $self->graph->get_edge_attribute_names($u, $v);
-#     _d $d, "Alternatives on edge: ", scalar(@alt_ids);
-
     # A label for the current edge, regardless of alternative
     my $edge_id = "$u--$v";
     # Tells us the index of which alternative to try next on this edge
-    my $alt_idx = $self->_altcount->at($edge_id) || 0;
-
+    my $altidx = $self->_altidx->at($edge_id) || 0;
+    
     # If no alternatives (left) to try, cannot use this edge
-    unless ($alt_idx < @alt_ids) {
+    unless ($altidx < $self->_altlist->at($edge_id)->length) {
         _d $d, "No more templates";
         # Now reset, for any subsequent, independent attempts on this edge
-        $self->_altcount->put($edge_id, 0);
+        $self->_altidx->put($edge_id, 0);
         return;
     }
 
+    _d $d,  
+    "Alternative: ", 1+$altidx, "/" . $self->_altlist->at($edge_id)->length;
+
     # The ID of the chosen alternative
-    my $alt_id = $alt_ids[$alt_idx];
-    _d $d,  "Alternative: ", 1+$alt_idx, "/" . scalar(@alt_ids);
+    my $altid = $self->_altlist->at($edge_id)->[$altidx];
 
     # Next time, take the next one;
-    $self->_altcount->put($edge_id, $alt_idx+1);
+    $self->_altidx->put($edge_id, $altidx+1);
 
-    return $alt_id;
+    return $altid;
 
 } # _next_alt
 
@@ -519,8 +599,6 @@ sub _do_solution {
     return unless $alts->length;
     return if $self->minsize > $nodes->length;
 
-
-# TODO DES resolve uniqueness of edge alternatives
     my $solution_label = $alts->sort->join(',');
     my $nidentical = $self->_solved->at($solution_label);
     if ($nidentical) {
@@ -562,17 +640,16 @@ sub _array2D {
 }
 
 
-# TODO del
 sub DEMOLISH {
     my ($self) = @_;
     
     # TODO Shouldn't need this
     $self->assembler->solution();
 
-    $log->info("Traversal done: rejected paths: " . $self->rejects);
-    $log->info("Traversal done: rejected solutions: " . $self->rsolutions);
-    $log->info("Traversal done: duplicate solutions: " . $self->dsolutions);
-    $log->info("Traversal done: accepted solutions: " . $self->asolutions);
+    $log->info("rejected paths: " . $self->rejects);
+    $log->info("rejected solutions: " . $self->rsolutions);
+    $log->info("duplicate solutions: " . $self->dsolutions);
+    $log->info("accepted solutions: " . $self->asolutions);
 }
 
 

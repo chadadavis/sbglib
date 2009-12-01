@@ -146,7 +146,7 @@ sub solution {
                            $complex->id ? $complex->id . '-' : '',
                            $class, 
             );
-        $file .= '.stor';
+        $file .= '.model';
         mkdir $self->dir;
         $file = catfile($self->dir, $file) if -d $self->dir;
         $complex->store($file);
@@ -200,13 +200,25 @@ sub test {
     my $ix = $graph->get_interaction_by_id($iaction_id);
 
     # Try to add the interaction
-    $complex->add_interaction($ix, $src, $dest) or return;
+    my $score = $complex->add_interaction($ix, $src, $dest) or return;
     # Success
-    return 1;
+    return $score;
 
 } # test
 
 
+sub score {
+    my ($self, $net, $alt_id) = @_;
+
+#     my $score = $net->get_interaction_by_id($alt_id)->weight;
+    my $score = 
+        $net->get_interaction_by_id($alt_id)->scores->at('interface_conserved');
+
+    return $score;
+
+}
+
+    
 
 ################################################################################
 __PACKAGE__->meta->make_immutable;
