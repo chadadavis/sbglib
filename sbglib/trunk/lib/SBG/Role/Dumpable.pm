@@ -35,6 +35,8 @@ $Data::Dumper::Purity = 1;
 # but probably not via Dumper and Dump, which probably don't even work with PDL
 use PDL::IO::Storable;
 
+use File::Slurp qw/slurp/;
+
 
 ################################################################################
 =head2 dump
@@ -65,7 +67,7 @@ sub dumper {
 
 sub undump {
     my ($path) = @_;
-    my $str = `cat $path`;
+    my $str = slurp($path);
     my $obj;
     $obj = eval $str;
     return if $@;

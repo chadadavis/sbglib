@@ -23,7 +23,7 @@
 
 package SBG::U::Run;
 use base qw/Exporter/;
-our @EXPORT_OK = qw/start_lock end_lock start_log frac_of slurp getoptions/;
+our @EXPORT_OK = qw/start_lock end_lock start_log frac_of getoptions/;
 
 
 use strict;
@@ -34,6 +34,8 @@ use Getopt::Long;
 
 use File::NFSLock;
 use Fcntl qw/LOCK_EX LOCK_NB/;
+
+use SBG::IOI qw/slurp/;
 
 use SBG::U::Log;
 use Log::Any qw/$log/;
@@ -121,23 +123,6 @@ sub start_log {
     Log::Any::Adapter->set('+SBG::U::Log');
     $log->debug("$0 $name " . join ' ', %ops);
 }
-
-
-################################################################################
-=head2 slurp
-
- Function: 
- Example : 
- Returns : 
- Args    : 
-
-
-=cut
-sub slurp { 
-    local( $/, @ARGV ) = ( wantarray ? $/ : undef, @_ ); 
-    return <ARGV>;
-}
-
 
 
 ################################################################################

@@ -34,6 +34,8 @@ use PDL::IO::Misc qw/rcols/;
 # Write PDB file by writing a STAMP Dom file and having 'transform' create PDB
 use SBG::DomainIO::stamp;
 
+use File::Slurp qw/slurp/;
+
 
 =head2 objtype
 
@@ -112,7 +114,7 @@ sub write {
     }
     $tmp->flush;
     my $fh = $self->fh;
-    print $fh `cat $tmppath`;
+    print $fh slurp($tmppath);
 
     return $self;
 } # write
