@@ -128,29 +128,37 @@ sub permute {
 }
 
 
+# http://www.perlmonks.org/?node_id=453733
+# http://docstore.mik.ua/orelly/perl/prog3/ch06_04.htm
 sub argmax(&@) {
   return() unless @_ > 1;
-  my $block = shift;
+  my $codeblock = shift;
   my $elem = shift;
-  my $max = $block->($elem);
+  $_ = $elem;
+  my $max = &$codeblock;
   for (@_) {
-    my $val = $block->($_);
-    ($max, $elem) = ($val, $_) if $val > $max;
+      my $val = &$codeblock;
+      ($max, $elem) = ($val, $_) if $val > $max;
   }
   return wantarray ? ($elem, $max) : $elem;
 }
 
+
+# http://www.perlmonks.org/?node_id=453733
+# http://docstore.mik.ua/orelly/perl/prog3/ch06_04.htm
 sub argmin(&@) {
   return() unless @_ > 1;
-  my $block = shift;
+  my $codeblock = shift;
   my $elem = shift;
-  my $min = $block->($elem);
+  $_ = $elem;
+  my $min = &$codeblock;
   for (@_) {
-    my $val = $block->($_);
-    ($min, $elem) = ($val, $_) if $val < $min;
+      my $val = &$codeblock;
+      ($min, $elem) = ($val, $_) if $val < $min;
   }
   return wantarray ? ($elem, $min) : $elem;
 }
+
 
 # Average of a list
 sub mean {
