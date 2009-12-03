@@ -50,9 +50,6 @@ use Graph::UnionFind;
 # Manual tail call optimization
 use Sub::Call::Recur; # qw/recur/;
 
-# Another variant (for general tail calls, not only recursive ones)
-use Sub::Call::Tail qw/tail/;
-
 use Heap::Priority;
 
 
@@ -318,7 +315,7 @@ sub traverse {
     foreach my $node ($self->_init_nodes) {
         # Starting node for this iteraction
         $self->_nodeq->add($node);
-        _d0 "=" x 80, "\nStart node: $node";
+        _d0 "\n", ("=" x 80), "\nStart node: $node";
         # A new disjoint set data structure, to track which nodes in same sets
         my $uf = new Graph::UnionFind;
         # Each node is in its own set first
@@ -419,7 +416,8 @@ sub _do_nodes {
     }
     # Continue processing all outstanding nodes before moving to edges
     # Tail recursion is flattened here
-    recur($self, $uf, $state, $d);
+    defined($DB::sub) ? 
+        $self->_do_nodes($uf, $state, $d) : recur($self, $uf, $state, $d);
     _d $d, "<= Node: $current";
 } # _do_nodes
 
@@ -457,7 +455,8 @@ sub _do_edges {
         _d $d, "No more alternative edges for $src $dest";
         # Try any other outstanding edges at this depth first, though
         # Tail recursion is flattened here
-        recur($self,$uf, $state, $d);
+        defined($DB::sub) ? 
+            $self->_do_edges($uf, $state, $d) : recur($self,$uf, $state, $d);
         return;
     }
 
@@ -477,7 +476,9 @@ sub _do_edges {
     $self->_edgeq->add($current, $self->_edge_max(@$current));
     # Go back to using the original $state that we had before this alternative
     # Tail recursion is flattened here
-    recur($self, $uf, $state, $d);
+    defined($DB::sub) ? 
+        $self->_do_edges($uf, $state, $d) : recur($self, $uf, $state, $d);
+    
 } # _do_edges
 
 
@@ -495,8 +496,12 @@ sub _test_alt {
         _d $d, "Pruned path (" . $self->rejects . ")";
         # Continue using the same state, in case the failure must be remembered
         # Flatten the indirect recursion by turning a tail call into a goto
-        @_ = ($self, $uf, $stateclone, $d);
-        goto \&_do_edges;
+        if (defined($DB::sub)) {
+            $self->_do_edges($uf, $stateclone, $d);
+        } else {
+            @_ = ($self, $uf, $stateclone, $d);
+            goto \&_do_edges;
+        }
     } else {
         # Edge alternative succeeded. 
         _d $d, "Succeeded. Node $dest reachable";
@@ -563,26 +568,25 @@ sub _new_neighbors {
 # Get ID of next alternative for a given edge $u,$v
 sub _next_alt {
     my ($self, $u, $v, $d) = @_;
-
     # A label for the current edge, regardless of alternative
     my $edge_id = "$u--$v";
+    # List of names of alternatives on this edge
+    my $altlist = $self->_altlist->at($edge_id) or return;
     # Tells us the index of which alternative to try next on this edge
     my $altidx = $self->_altidx->at($edge_id) || 0;
-    
+
     # If no alternatives (left) to try, cannot use this edge
-    unless ($altidx < $self->_altlist->at($edge_id)->length) {
+    unless ($altidx < $altlist->length) {
         _d $d, "No more templates";
         # Now reset, for any subsequent, independent attempts on this edge
         $self->_altidx->put($edge_id, 0);
         return;
     }
 
-    _d $d,  
-    "Alternative: ", 1+$altidx, "/" . $self->_altlist->at($edge_id)->length;
+    _d $d, "Alternative: ", 1+$altidx, "/" . $altlist->length;
 
     # The ID of the chosen alternative
-    my $altid = $self->_altlist->at($edge_id)->[$altidx];
-
+    my $altid = $altlist->[$altidx];
     # Next time, take the next one;
     $self->_altidx->put($edge_id, $altidx+1);
 
