@@ -315,6 +315,8 @@ sub traverse {
     # 'frames of reference'. I.e. don't do this:
 #     $self->_nodeq->push($self->graph->vertices);
 
+# TODO these can be done in parallel, see Graph::Traversal::Power
+
     # Using one different starting node in each iteration
     foreach my $node ($self->_init_nodes) {
         # Starting node for this iteraction
@@ -657,7 +659,7 @@ sub _array2D {
 sub DEMOLISH {
     my ($self) = @_;
     
-    # TODO Shouldn't need this
+    # TODO Shouldn't need this, send a finished() message instead
     $self->assembler->solution();
 
     $log->info("rejected paths: " . $self->rejects);
