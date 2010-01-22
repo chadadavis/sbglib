@@ -64,21 +64,28 @@ my %answers;
 my %expected = (
     "A B 1" => 1,
     "A B 2" => 1,
+    "A C 3" => 1,
     "A B C 1 3" => 1,
     "A B C 2 3" => 1,
     "A B C 3 5" => 1,
+    "A B C 3 6" => 1,
     "A B D 1 4" => 1,
     "A B D 2 4" => 1,
     "B C 5" => 1,
     "B C 6" => 1,
+    "B C D 4 5" => 1,
     "B C D 4 6" => 1,
+# TODO part of the test or not?
+#     "B C D 5 7" => 1, 
+#     "B C D 5 8" => 1,
+#     "B C D 6 7" => 1,
+#     "B C D 6 8" => 1,
     "B D 4" => 1,
     );
 
 # Create a traversal
 my $trav = new SBG::Traversal(graph=>$net, 
                               assembler=>new TestAssembler,
-                              minsize=>2
     );
 
 $trav->traverse;
@@ -89,9 +96,8 @@ foreach (sort keys %answers) {
     ok($expected{$_}, "Solution was expected: $_");
     delete $expected{$_};
 }
-is(0, scalar(keys %expected), 
-   "(No) missing solutions: " . join(' ', keys %expected));
-
+is(scalar(keys %expected), 0,
+   "Missing solutions? " . join(',', keys %expected));
 
 exit;
 
@@ -113,12 +119,10 @@ sub solution {
     }
     @$nodecover = sort @$nodecover;
     @ids = sort @ids;
-    @$templates = sort @$templates;
-#     print STDERR 
-#         "Solution: ",
-#         "Nodes @$nodecover, Templates: @ids : \n@$templates\n";
 
+    # Reset running list of altids used in the current solution
     $state->{solutions} = [];
+    # Append this solution to total answers
     $answers{"@$nodecover @ids"} = 1;
 }
 
@@ -130,31 +134,23 @@ sub score {
 
 
 sub test {
-    my ($self, $state, $graph, $u, $v, $alt_id) = @_;
+    my ($self, $state, $graph, $u, $v, $altid) = @_;
     # Our test index of this template
-    my $templ_id = ex_id($alt_id);
 
-    # Fetch the actual Interaction object, given the ID
-#     my $ix = $graph->get_interaction_by_id($alt_id);
-
-    my $success = 0;
     # What other templates already being used
     foreach my $other (@{$state->{'solutions'}}) {
-        my $other_id = ex_id($other);
-#         print STDERR "== $templ_id vs $other_id\n";
-        if ($uf->same($templ[$templ_id], $templ[$other_id])) {
-#             print STDERR "== Incompatible with $other_id\n";
-            return $success = 0;
+        if ($uf->same($altid, $other)) {
+            # Incompatible with $other
+            return;
         }
     }
-    $success = 1;
-    if ($success) {
-        # Add this template to progressive solution (list of templates used)
-        push @{$state->{'solutions'}}, $alt_id;
-    }
-    return $success;
+    # Add this template to progressive solution (list of templates used)
+    push @{$state->{'solutions'}}, $altid;
+    # Arbitrary placement score
+    return 1;
 }
 
+# Extract ID from label
 sub ex_id {
     my $name = shift;
     $name =~ /(\d+)/;
