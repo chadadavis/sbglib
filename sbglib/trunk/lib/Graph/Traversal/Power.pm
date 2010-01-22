@@ -1,35 +1,56 @@
 #!/usr/bin/env perl
 
 
-package Trav1;
+=head1 NAME
+
+Graph::Traversal::Power - Traversal based interdependent edges
+
+=head1 SYNOPSIS
+
+
+=head1 DESCRIPTION
+
+Similar to L<Graph::Traversal::BFS> (breadth-first search), but specifically for multigraphs, in which
+
+each of the many edges between two nodes represent different alteratives for reach one destination node from a source node. Graphs may also contain other restrictions 
+
+
+For a given source node, considers the powerset of outgoing edges and uses a
+callback object to determine which of those are viable. As soon as a viable
+subset of outbound edges to the next depth of nodes is found, those nodes at the
+next dept are processed, in a depth first fashion.
+
+
+Multi-edges are defined by edge attributes on a L<Graph>. The name of the attribute is a label for the multi-edge; the value of the attribute 
+
+
+Works on L<Graph>, but assumes that multiple edges are stored as attributes of a
+single edge between unique nodes. This is also the pattern used by
+L<Bio::Network::ProteinNet>.
+
+
+=head1 SEE ALSO
+
+L<Graph::Traversal> 
+
+=cut
+
+package Graph::Traversal::Power;
 use Moose;
 use Moose::Autobox;
-
 use subs::parallel;
-
 use Graph;
 use Graph::UnionFind;
-
-use Heap::Priority;
-
-
-################################################################################
-
-# Debug printing (to trace recursion and it's unwinding)
-# TODO del
-use SBG::U::Log qw/log/;
-
+use Bit::Vector::Overload;
+Bit::Vector->Configuration("in=enum,out=bin");
 use Log::Any qw/$log/;
-sub _d {
-    my $d = shift;
-    log()->trace("  " x $d, @_);
-}
-sub _d0 { _d(0,@_); }
 
 
 ################################################################################
-# Accessors
 
+=head1 Attributes
+
+=cut 
 
 =head2 graph
 
@@ -45,15 +66,18 @@ has 'graph' => (
 
 =head2 assembler
 
+Call back object
+
 =cut
 has 'assembler' => (
     is => 'ro',
-#     isa => 'SBG::AssemblerI',
+# TODO enforce role
+#     does => 'SBG::AssemblerI',
     required => 1,
     );
 
 
-
+################################################################################
 =head2 minsize
 
 The solution callback function is only called on solutions this size or
@@ -67,75 +91,136 @@ has 'minsize' => (
     );
 
 
-sub _init_nodes {
-    my ($self) = @_;
-    my @nodes = sort $self->graph->vertices;
-    return @nodes;
-}
+
+################################################################################
+=head1 Methods
+
+=cut
+
+=head2 traverse
+
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
 
 
+=cut
 sub traverse {
     my ($self) = @_;
 
-    my @nodes = $self->_init_nodes;
-
-    foreach my $start (@nodes) {
-        $self->_start_node($start);
-    }
-
+    my $nodes = $self->_init_nodes;
+    my $results = $nodes->map(sub{$self->_start_one($_)});
+    # Wait on results, if done in parallel.
+    my $finished = $results->grep(sub{defined $_});
+    return $self->assembler->finished($finished);
 }
 
 
-sub _neighbors {
-    my ($self, $node, $uf) = @_;
-
-    my @adjacent = $self->graph->neighbors($node);
-    # Nodes not yet seen 
-    my @down;
-    # Nodes already seen (cycles), except parent
-    my @cross;
-
-    foreach my $adjacent ($self->graph->neighbors($node)) {
-
-        # Unseen neighbor
-        if (! $uf->same($node, $adjacent)) {
-            push @down, [$node, $adjacent];
-            next;
-        }
-
-        # Previously seen neighbor
-        push @cross, [$node,$adjacent];
-    }
-    # TODO add cross edges to detect cycles, optionally
-#     return \@down, \@cross;
-    return \@down;
+# Get the list of start nodes, in order of priority
+sub _init_nodes {
+    my ($self) = @_;
+    my $nodes = [ $self->graph->vertices ];
+    $nodes = $nodes->sort;
+    return $nodes;
 }
 
 
-use PowerCounter;
-sub _start {
+sub _start_one {
     my ($self, $startnode) = @_;
-
-    my $edgeq = [];
     my $nodeq = [$startnode];
-    my $net = $self->graph;
+    my $sedges = $self->_expand_nodes([$startnode]);
 
-  do_nodes:
+    $sedges = $sedges->sort;
 
-    # TODO Solution here if no nodes?
+    return $self->_do_level($sedges);
+}
 
+# TODO parallelize this after verifying locking semantics on solution cache
+# parallelize('_start_one') unless defined $DB::sub;
+
+
+# Given Array of nodes, returns Array of sedges
+sub _expand_nodes {
+    my ($self, nodes) = @_;
+    my $edges = $nodes->map(sub{$self->_node2edges});
+    my $sedges = $edges->map(sub{$self->_edge2sedges});
+    return $sedges;
+}
+
+
+sub _node2edges {
+}
+
+
+sub _edge2sedges {
+}
+
+
+sub _edge2sedges {
+    my ($self, $src, $dests) = @_;
+    my $sedges_a = [];
+    foreach my $dest (@$dests) {
+        my $sedges_h = { $self->graph->get_edge_attributes($src, $dest) };
+        
+        # TODO If edge has no attributes, add one for the single edge
+        # Required for this to work on simple graphs
+
+        # Create an array of objects from the hash
+        $sedges_a->push( $sedges_h->hslice([$_])) for $sedges_h->keys;
+        $sedges_a->map(sub{ $_->{src}=$src; $_->{dest}=$dest });
+        $sedges_a->map(sub{ $_->{score}= });
+    }
+}
+
+
+# Consume the entire node queue, get all down edges, then subedges
+# Sorts and indexes sedges
+sub _nodes2sedges {
+    my ($self, $nodeq) = @_;
+    # Set of sedges expanding out from this level
     my $sedges_level = [];
     # For all reachable nodes, collect all possible edges to get there,
     while (my $node = $nodeq->pop) {
+        my $dests = $self->_neighbors($node);
+        my $sedgeids = $self->_edge2sedges($node, $dests);
 
-        my $edges = $self->_neighbors($node);
-        my $sedges = $edges->map(sub{$net->get_edge_attribute_names(@$_)});
+
+                                 });
         $sedges_level->push($edges->flatten);
-    }
-    # An object on the stack, first elem is counter, second is the sedge list
-    # Sort sedges by priority/score/etc
-    # Will be a power set, start counting at 2**n - 1
-    my $powerset = PowerCounter->new($sedges_level);
+    }    
+
+    # TODO Sort sedges ascending by score, i.e. best last
+    # ...
+    my $sedge_index = { map { $sedges[$_] => $_ } (0..$#sedges) };
+
+    return $sedges_level, $sedge_index;
+
+}
+
+
+sub _do_level {
+    my ($sedges) = @_;
+
+    # The level stack, whereby a level is depth from the start node
+    my $edgeq = [];
+
+  do_nodes:
+    # TODO Solution here if no nodes?
+    my $edges = $nodeq->map(sub{node2edges($_)});
+    my $sedges = $edges->map(sub{edge2sedges($_)});
+
+    
+    # TODO BUG if we put the bitvector on the stack, still need to track what the indexes index into, assuming we only have a local index for sedges at the current level. That has to go on the stack too. Unravelling recursion is recursive ...
+
+
+    my $bitvector = Bit::Vector->new(scalar @sedges);
+# Set all to enabled, and count down to empty set
+    $bitvector->Fill;
+
+    # Get the powerset of all the sedges (set min=>1 to skip the empty set)
+    my $powerset = Data::PowerSet->new({min=>1}, @$sedges_level);
+    # Add push it onto the edge stack
     $edgeq->push($powerset);
 
     # TODO Solution here when nodes all processed?
@@ -144,40 +229,101 @@ sub _start {
 
     # TODO solution here when no edges?
 
-    while (my $poweredge = $edgeq->pop) {
+    # As long as there are levels to process
+    while (my $bitvector = $edgeq->pop) {
         
-        # Will not process the null set
-        while (my $index = --$poweredge) {
-            # Stop when one works
-            my $sedge_set = $poweredge->subset;
+        # As long as a level still has set of sedges to consider
+      sedge_set: for (; $bitvector; $bitvector--) {
+          
+          print "$bitvector : ";
+     
+          foreach (@$eblacklist) {
+              # See if the mask is a subset of the $bitvector (ie if it applies)
+              if ($_ < $bitvector) { 
+                  $log->debug("masked by $_");
+                  print "masked\n"; 
+                  next;
+              }
+          }
 
-            # Try one subset of subedges
-            my ($successes, $conflicts) = $self->try($sedge_set);
+          my $sedge_set = $sedges->slice(bitstr2indices("$bitvector"))->reverse;
 
-            foreach my $conflict (@$conflicts) {
-                # Blacklist , after converting back to bitvector
-                $eblacklist->push($conflict);
-            }
+          # Try one subset of subedges
+          my ($successes, $conflicts) = $self->try($sedge_set);
 
-            next unless $successes && $successes->length > 0;
+          foreach my $conflict (@$conflicts) {
+              # Blacklist , after converting back to bitvector
+              $eblacklist->push(conflict_mask($sedge2idx, $conflict));
+          }
 
-            foreach my $success (@$successes) {
+          next unless $successes && $successes->length > 0;
+
+          foreach my $success (@$successes) {
+              
+              # Map sedges to dest nodes
+              # Add dest nodes to $uf->union($sedge->dest)
                 # Convert to list of sedges
                 # Map to destination nodes
-                my $dest = $success->map(sub{$_->dest});
-                # Push onto node stack
-                $nodeq->push($dest);
-            }
+              my $dest = $success->map(sub{$_->dest});
+              # Push onto node stack
+              $nodeq->push($dest);
+          }
             
-            # Do not continue looking at edge sets.
-            # Rather go to next level of nodes
-            # Push this poweredge back onto the edge stack (index remembered)
-            $edgeq->push($poweredge);
-            goto do_nodes;
-        }
-    }
+          # Do not continue looking at edge sets.
+          # Rather go to next level of nodes
+          # Push this poweredge back onto the edge stack (index remembered)
+          $edgeq->push($bitvector);
+          goto do_nodes;
+
+      } # for each sedge subset
+    } # For each power edge
 }
-parallelize('_start') unless defined $DB::sub;
+
+
+
+
+
+sub _neighbors {
+    my ($self, $node, $uf) = @_;
+    # Nodes not yet seen 
+    my $down = [];
+    my $cross = [];
+    foreach my $adjacent ($self->graph->neighbors($node)) {
+        # Unseen neighbor
+        if (! $uf->same($node, $adjacent)) {
+            $down->push($adjacent);
+            next;
+        }
+        # Previously seen neighbor
+        $cross->push($adjacent);
+    }
+    # TODO add cross edges to detect cycles, optionally
+    # TODO detect the one back sedge?
+    return $down;
+}
+
+
+
+
+
+sub conflict_mask {
+    my ($map, $conflict) = @_;
+    my $indices = $map->slice($conflict);
+    my $mask = Bit::Vector->new($map->keys->length);
+    $mask->from_Enum($indices->join(','));
+    print "mask:$mask:\n";
+    return $mask;
+}
+
+
+sub bitstr2indices {
+    my $str = shift;
+    # Bit str has index 0 on the right, so reverse it
+    my @bits =  split //, reverse $str;
+    my @indices = grep { $bits[$_] } (0..$#bits);
+    return @indices;
+}
+
 
 
 sub _edge_max {
