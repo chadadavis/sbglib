@@ -36,6 +36,10 @@ The descriptors are regular STAMP descriptors, in { braces }.  See:
 The score can be any decimal number. Larger numbers imply stronger
 interactions. The units and meaning of this score are not specified.
 
+
+NB interaction templates need to have unique labels
+
+
 Example:
 
  RRP42 RRP43  2br2b { CHAIN B } 2br2d { CHAIN D } 22.32

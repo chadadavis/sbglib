@@ -142,8 +142,12 @@ sub _one_net {
     # -test is the function to call when trying to place an interaction
     # -partial is the function to call when one complex solution is complete
     my %tops = slice_def($ops, 'minsize', 'binsize');
+
+    # TODO add graph to assembler initilization, don't pass in subsequent calls
+#     my $assembler = SBG::CA::Assembler->new(dir=>$name, graph=>$net);
+    my $assembler = SBG::CA::Assembler->new(dir=>$name);
     my $t = SBG::Traversal->new(graph=>$net, 
-                                assembler=>SBG::CA::Assembler->new(dir=>$name),
+                                assembler=>$assembler,
                                 %tops,
         );
     # Each result is a complex, this is a placeholder for the aglorithm's state
