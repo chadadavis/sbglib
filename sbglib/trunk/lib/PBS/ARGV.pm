@@ -83,6 +83,7 @@ L<PBS::Status>.
 package PBS::ARGV;
 use strict;
 use warnings;
+use 5.010;
 use base qw/Exporter/;
 our @EXPORT_OK = qw/qsub/;
 use vars qw($VERSION);

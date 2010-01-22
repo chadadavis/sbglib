@@ -40,10 +40,14 @@ L<Graph::Traversal>
 ################################################################################
 
 package SBG::Traversal;
+use strict;
+use warnings;
+use 5.010;
+
 use Moose;
 use Moose::Util::TypeConstraints;
 use Moose::Autobox;
-use Clone qw(clone);
+use Clone qw/clone/;
 use Graph;
 use Graph::UnionFind;
 
@@ -355,6 +359,7 @@ sub _init_edge_indices {
 }
 
 
+# Sorts the nodes according to their highest-scoring incident interactions
 sub _init_nodes {
     my ($self) = @_;
     my %max;
