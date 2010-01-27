@@ -154,7 +154,7 @@ sub irmsd {
     return unless $otherdoms->length == $self->doms->length;
 
     my $res = SBG::STAMP::irmsd($selfdoms, $otherdoms);
-
+    return $res;
 
 } # irmsd
 
@@ -171,7 +171,7 @@ sub irmsd {
 =cut
 sub domains {
     my ($self,) = @_;
-    return $self->models->values->map(sub{$_->subject});
+    return $self->keys->map(sub{$self->get($_)->subject});
 
 } # domains
 
