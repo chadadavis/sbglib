@@ -167,6 +167,7 @@ sub mean {
     return sum(@_) / @_;
 }
 sub avg { return mean @_ }
+sub average { return mean @_ }
 
 
 sub median {
