@@ -170,8 +170,9 @@ sub irmsd {
 
 =cut
 sub domains {
-    my ($self,) = @_;
-    return $self->keys->map(sub{$self->get($_)->subject});
+    my ($self,$keys) = @_;
+    $keys ||= $self->keys;
+    return $keys->map(sub{$self->get($_)->subject});
 
 } # domains
 
