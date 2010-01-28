@@ -35,6 +35,8 @@ with 'SBG::Role::Dumpable';
 with 'SBG::Role::Writable';
 with 'SBG::Role::Versionable';
 
+use Moose::Autobox;
+
 use Digest::MD5 qw/md5_base64/;
 
 use SBG::Node;
@@ -252,7 +254,7 @@ sub build {
     log()->debug(scalar($self->interactions), ' interactions');
 
     return $self;
-}
+} # build
 
 
 # Cache wrapper

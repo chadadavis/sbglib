@@ -108,9 +108,9 @@ RRP41 RRP42  2br2 { A 5 _ to A 220 _ } 2br2 { B 1 _ to B 55 _ }
 sub read {
     my ($self) = @_;
     # Delegate to InteractionIO
-    my $iactionio = new SBG::InteractionIO::csv(%$self);
+    my $iactionio = SBG::InteractionIO::csv->new(%$self);
 
-    my $net = new SBG::Network;
+    my $net = SBG::Network->new;
     while (my ($iaction, @nodes) = $iactionio->read) {
 
         # Now put it all into the ProteinNet. 
