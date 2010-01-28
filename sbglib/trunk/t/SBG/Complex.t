@@ -73,8 +73,9 @@ my $mrrp41a = new SBG::Model(query=>'RRP41', subject=>$asphere);
 my $mrrp42d = new SBG::Model(query=>'RRP42', subject=>$dsphere);
 
 my $mrrp42b = new SBG::Model(query=>'RRP42', subject=>$bsphere);
-my $mmtr3a = new SBG::Model(query=>'MTR3', subject=>$asphere);
 
+my $mmtr3a = new SBG::Model(query=>'MTR3', subject=>$asphere);
+my $mrrp43d = new SBG::Model(query=>'RRP43', subject=>$dsphere);
 
 my $complex;
 my $iaction;
@@ -153,6 +154,14 @@ is($complex->count, 6, "Got 6th domain from 5th interaction");
 rasmol($complex->domains) if $DEBUG;
 
 
+# Close cycle
+$iaction = new SBG::Interaction;
+$iaction->set('MTR3', $mmtr3a);
+$iaction->set('RRP43', $mrrp43d);
+my $irmsd = $complex->cycle($iaction);
+ok($irmsd < 2, "iRMSD for ring closure: $irmsd");
+
+
 # Load Complex from a PDB, for benchmarking
 # 2nn6, exosome from Hs.
 my @names =  qw/RRP43 RRP46 RRP45 RRP41 RRP42 MTR3/;
@@ -178,20 +187,68 @@ my $coverage = @cover / $true_complex->count;
 float_is($coverage, 1.00, "coverage: $coverage", 0.01);
 
 
+# Test merging of complexes
+my $complex1 = new SBG::Complex;
+# First interaction of first complex
+$iaction = new SBG::Interaction;
+$iaction->set('RRP43', $mrrp43b);
+$iaction->set('RRP46', $mrrp46a);
+# Order doesn't matter for the first interaction added
+# Generally, the first domain label is the reference domain
+$complex1->add_interaction($iaction, @{$iaction->keys});
+
+# Now place an interaction that will require a superposition of domains
+# Actually, doesn't really require a superposition, since identity transform
+$iaction = new SBG::Interaction;
+$iaction->set('RRP46', $mrrp46a);
+$iaction->set('RRP45', $mrrp45d);
+# Use the existing protein as frame of reference: RRP46 to orient partner RRP45
+ok($complex1->add_interaction($iaction, 'RRP46', 'RRP45'),
+   "2nd Interaction of 1st Complex");
+is($complex1->count, 3, "Got 3rd domain from 2nd interaction");
+rasmol($complex1->domains) if $DEBUG;
+
+# Create second complex (later we will merge them on RRP45, which will be based
+# on superposing 2br2/B and 2br2/D
+my $complex2 = new SBG::Complex;
+$iaction = new SBG::Interaction;
+$iaction->set('RRP41', $mrrp41a);
+$iaction->set('RRP42', $mrrp42d);
+$complex2->add_interaction($iaction, 'RRP41', 'RRP42');
 
 
+$iaction = new SBG::Interaction;
+$iaction->set('RRP42', $mrrp42b);
+$iaction->set('MTR3', $mmtr3a);
+ok($complex2->add_interaction($iaction, 'RRP42', 'MTR3'),
+   "2nd Interaction of 2nd Complex");
+is($complex2->count, 3, "Got 3rd domain from 2nd interaction");
+rasmol($complex2->domains) if $DEBUG;
 
 
+# Merge
+$iaction = new SBG::Interaction;
+$iaction->set('RRP45', $mrrp45b);
+$iaction->set('RRP41', $mrrp41a);
+ok($complex1->merge_interaction($complex2, $iaction),
+   "Merging two trimers");
+is($complex1->count, 6, "Merged complex is a hexamer");
+rasmol($complex1->domains) if $DEBUG;
 
 
-
+# Close cycle, implicitly by adding the last interaction, cycle is detected
+$iaction = new SBG::Interaction;
+$iaction->set('MTR3', $mmtr3a);
+$iaction->set('RRP43', $mrrp43d);
+my $cycle_score = $complex1->merge_interaction($complex1, $iaction);
+ok($cycle_score > 8, 
+   "Merging within a complex to close cycle: $cycle_score");
 
 
 ################################################################################
 
-
 # Test RMSD of crosshairs of (matching) components of complexes
-# TODO BUG assuming Domain::Sphere implementation
+# TODO DES assuming Domain::Sphere implementation
 
 use SBG::DomainIO::cofm;
 use SBG::DomainIO::pdbcofm;

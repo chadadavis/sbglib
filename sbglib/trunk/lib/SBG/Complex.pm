@@ -41,13 +41,13 @@ use overload (
     fallback => 1,
     );
 
-
+use Scalar::Util qw/refaddr/;
 use Moose::Autobox;
 
 use PDL::Lite;
 use PDL::Core qw/pdl squeeze zeroes sclr/;
 
-use SBG::U::List qw/intersection mean sum flatten/;
+use SBG::U::List qw/intersection mean sum flatten swap/;
 use SBG::U::Log qw/log/;
 use SBG::U::RMSD;
 use SBG::STAMP; # qw/superposition/
@@ -483,7 +483,7 @@ TODO put in a DomainSetI
 =cut
 use SBG::DomainIO::pdb;
 use Module::Load;
-sub merge {
+sub combine {
     my ($self,%ops) = @_;
     $ops{keys} ||= $self->keys;
     my $doms = $self->domains($ops{keys});
@@ -497,7 +497,147 @@ sub merge {
     load($type);
     my $dom = $type->new(file=>$io->file, descriptor=>'ALL');
     return $dom;
+} # combine
+
+
+################################################################################
+=head2 merge
+
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
+
+
+=cut
+sub merge_domain {
+    my ($self,$other,$ref) = @_;
+
+    # Where the last reference domain for this component was placed in space
+    my $refmodel = $self->get($ref);
+    my $refdom = $refmodel->subject if defined $refmodel;
+    return unless $refdom;
+
+    my $othermodel = $other->get($ref);
+    my $otherdom = $othermodel->subject if defined $othermodel;
+    return unless $otherdom;
+
+    my $linker_superposition = 
+        SBG::Superposition::Cache::superposition($otherdom, $refdom);
+    return unless defined $linker_superposition;
+
+    # Then apply that transformation to the other complex
+    # Product of relative with absolute transformation.
+    # Order of application of transformations matters
+    log()->trace("Linking:", $linker_superposition->transformation);
+    $linker_superposition->apply($_) for $other->domains->flatten;
+
+    # Now test steric clashes of potential domain against existing domains
+    my $clashfrac = $self->check_clashes($other->domains, $ref);
+    return unless $clashfrac < 1;
+
+    # Domain does not clash after being oriented, can be saved in complex now.
+    # Save all meta data that went into this placement.
+    # I.e. this pulls all domains from $other into $self
+    # NB this appears to replace the pivot domain (on which we merge), but 
+    # that should not matter. All $other domains have been xformed already
+    $self->set($_, $other->get($_)) for $other->keys->flatten;
+    # Pull all interactions
+    $self->interactions->put($_, $other->interactions->at($_)) 
+        for $other->interactions->keys->flatten;
+
+    # TODO save clash values (check_clashes should return ArrayRef)
+
+    # Cache superpositions by reference domain (linking domain)
+    $self->superpositions->put($refdom, $linker_superposition);
+
+    # STAMP superposition score of linking superposition 
+    return $linker_superposition->scores->at('Sc');
+
 } # merge
+
+
+################################################################################
+=head2 merge_interaction
+
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
+
+
+=cut
+sub merge_interaction {
+    my ($self, $other, $iaction) = @_;
+
+    # If this interaction is just to create a cycle in this complex
+    # Difference of iRMSD from 10 is cheap way to get score in [0:10], as STAMP
+    return 10 - $self->cycle($iaction)
+        if refaddr($self) == refaddr($other);
+
+    # Add Interaction to self
+    my ($src, $dest) = $iaction->keys->flatten;
+    # Figure out which end of interaction can be linked to $self complex
+    unless ($self->models->exists($src)) {
+        swap($src, $dest);
+    }
+    unless ($self->models->exists($src)) {
+        log()->error("Neither $src nor $dest present in complex: $self");
+        return;
+    }        
+    my $iaction_score = $self->add_interaction($iaction, $src, $dest);
+    return unless defined $iaction_score;
+
+    # $dest node was added to $src complex, can now merge on $dest
+    return $self->merge_domain($other, $dest);
+
+} # merge_interaction
+
+
+################################################################################
+=head2 cycle
+
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
+
+
+=cut
+sub cycle {
+    my ($self, $iaction) = @_;
+
+    my $keys = $iaction->keys;
+    # Get domains from self and domains from iaction in corresponding order
+    my $irmsd = SBG::STAMP::irmsd($self->domains($keys), 
+                                  $iaction->domains($keys));
+    return $irmsd;
+
+} # cycle
+
+
+################################################################################
+=head2 init
+
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
+
+Initialize a complex with a single interaction, i.e. a dimeric complex
+
+TODO deprecate
+
+=cut
+sub init {
+    my ($self, $iaction) = @_;
+
+    my $keys = $iaction->keys;
+    my $models = $keys->map(sub{$self->_mkmodel($iaction, $_)});
+    $self->add_model(@$models);
+    $self->interactions->put($iaction, $iaction);
+
+} # init
 
 
 ################################################################################
@@ -509,22 +649,24 @@ sub merge {
  Args    : L<SBG::Interaction>
 
 
+NB Adding in interaction is a special case of merging complexes. The interaction
+is a dimeric complex, which is internally consisten by definition (no steric
+clashes, since we trust the interaction template). That dimeric complex is
+linked to this complex via the reference domain.
+
+TODO initialize a complex from an interaction object.
+
 =cut
 sub add_interaction {
     my ($self, $iaction, $srckey, $destkey) = @_;
-
-    my $type = $self->objtype;
 
     # Where the last reference domain for this component was placed in space
     my $refmodel = $self->get($srckey);
     my $refdom = $refmodel->subject if defined $refmodel;
     # Initial interaction, no spacial constraints yet, always accepted
     unless (defined $refdom) {
-        my $keys = $iaction->keys;
-        my $models = $keys->map(sub{$self->_mkmodel($iaction, $_)});
-        $self->add_model(@$models);
-        $self->interactions->put($iaction, $iaction);
-        # Poor approach to get the maximum score
+        $self->init($iaction);
+        # TODO Poor approach to get the maximum score
         return 10.0;
     }
 
@@ -547,9 +689,8 @@ sub add_interaction {
     log()->trace("Linking:", $linker_superposition->transformation);
 
     # Now test steric clashes of potential domain against existing domains
-    my $clashfrac = $self->check_clash($destdom);
-    return unless $clashfrac < 1.0;
-
+    my $clashfrac = $self->check_clashes([$destdom]);
+    return unless $clashfrac < 1;
 
     # Domain does not clash after being oriented, can be saved in complex now.
     # Save all meta data that went into this placement.
@@ -589,7 +730,7 @@ sub _mkmodel {
         query=>$vmodel->query, subject=>$cdom, scores=>$vmodel->scores);
 
     return $model;
-}
+} # _mkmodel
 
 
 ################################################################################
@@ -602,6 +743,8 @@ sub _mkmodel {
 
 Determine whether a given L<SBG::Domain> would create a clash/overlap in space
 with any of the L<SBG::Domain>s in this complex.
+
+TODO Deprecated in favor of L<check_clashes>
 
 =cut
 sub check_clash {
@@ -627,6 +770,51 @@ sub check_clash {
     log()->debug("$newdom fits w/ mean overlap fraction: ", $mean);
     return $mean;
 } # check_clash
+
+
+################################################################################
+=head2 check_clashes
+
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
+
+Clashes between two complexes.
+
+TODO there are algorithms better than O(NxM) for this
+
+$ignore is the pivot used to merge the complex, which doesn't need to be checked
+
+=cut
+sub check_clashes {
+    my ($self, $otherdoms, $ignore ) = @_;
+    my $thresh = $self->overlap_thresh;
+    log()->debug("fractional overlap thresh:$thresh");
+    my $overlaps = [];
+
+    log()->trace($self->size, " vs ", $otherdoms->length);
+
+    # Get all of the objects in this assembly. 
+    # If any of them clashes with the to-be-added objects, then disallow
+    foreach my $key ($self->keys->flatten) {
+        next if $ignore && $key eq $ignore;
+        # Measure the overlap between $thisdom and each $otherdom
+        my $thisdom = $self->get($key)->subject;
+        foreach my $otherdom ($otherdoms->flatten) {
+            log()->trace("$thisdom vs $otherdom");
+            my $overlapfrac = $thisdom->overlap($otherdom);
+            # Nonetheless, if one clashes severely, bail out
+            return 1 if $overlapfrac > $thresh;
+            # Ignore domains that aren't overlapping at all (ie < 0)
+            $overlaps->push($overlapfrac) if $overlapfrac > 0;
+        }
+    }
+    my $mean = mean($overlaps) || 0;
+    log()->debug("mean overlap fraction: ", $mean);
+    return $mean;
+
+} # check_clashes
 
 
 ################################################################################
