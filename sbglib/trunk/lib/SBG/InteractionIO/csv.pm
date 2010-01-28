@@ -147,6 +147,7 @@ sub read {
                  (${re_pdb})\S*\s+\{\s*($re_descriptor)\s*\}
                  \s+
                  (${re_pdb})\S*\s+\{\s*($re_descriptor)\s*\}
+                 \s*(.*)$
                  /x) {
             carp("Cannot parse interaction:\n$line\n");
             return;
@@ -155,12 +156,17 @@ sub read {
         my ($accno1, $accno2) = ($1, $2);
         my ($pdbid1, $pdbid2) = ($3, $13);
         my ($descr1, $descr2) = ($4, $14);
+        my $scorestr = $23;
+        $scorestr = "qw($scorestr)";
+        my $scores = { eval $scorestr };
 
         my ($node1, $model1) = $self->_make_node($accno1, $pdbid1, $descr1);
         my ($node2, $model2) = $self->_make_node($accno2, $pdbid2, $descr2);
 
-        my $interaction = new SBG::Interaction(models=>{
-            $node1 => $model1, $node2 => $model2});
+        my $interaction = SBG::Interaction->new(
+            models=>{$node1 => $model1, $node2 => $model2},
+            scores=>$scores,
+            );
 
         # Return just the interaction, unless nodes also wanted
         return wantarray ? ($interaction, $node1, $node2) : $interaction;
