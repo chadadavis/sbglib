@@ -1,115 +1,11 @@
 #!/usr/bin/env perl
 
 use Test::More 'no_plan';
-
-#NB 
-# Least significant bit on the right
-# To get the better scoring templates to be tried together first, sort desc
-my @sorted_sedges = qw/great good better ok worse worst/;
-
-
-
-
 use Bit::Vector::Overload;
 Bit::Vector->Configuration("in=enum,out=bin");
 
-
 # Finally, the keyword "^enum" causes scalar input to be considered as being a list ("enumeration") of indices and ranges of (contiguous) indices, i.e., "$vector |= '2,3,5,7-13,17-23';" will cause bits #2, #3, #5, #7 through #13 and #17 through #23 to be set.
 
-
-# Like ceil() but finds the next power of 2 rather than just the next integer
-sub ceilpower2 {
-    my $x = shift;
-    return 1 unless $x > 0;
-    # Number is already a power of 2?
-    # Example: 8=>1000, 7=>0111, AND operator sets every bit to 0
-    return $x unless $x & ($x-1);
-    # Otherwise do ceil(log base2)
-    my $r = 1 + int(log($x) / log(2));
-    return 2 ** $r;
-}
-
-
-my $nedges = scalar @sorted_sedges;
-
-# vec() requires number of bits to be a power of 2
-my $vecsize = ceilpower2 $nedges;
-# $vecsize = 32;
-
-# Bit Vector
-my $bitvec;
-# Set all bit to enabled/on
-vec($bitvec, 0, $vecsize) = 2 ** $nedges - 1;
-
-# The following efficiently counts the number of set bits in a bit vector:
-#                    $setbits = unpack("%32b*", $selectmask);
-
-
-sub bitvec_subset {
-    my ($bitvec) = @_;
-    # Make sure to use 'b' rather than 'B' here, we want to index from the left
-    my @bits = split(//, unpack("b*", $bitvec));
-    my @enabled = grep { $bits[$_] } (0..$#bits);
-    return @enabled;
-}
-
-
-print "array: ", unpack("B*", $bitvec), "\n";
-my @names = @sorted_sedges[bitvec_subset($bitvec)];
-print "names : @names\n";
-
-$bitvec = $bitvec - 1;
-# print "array: ", unpack("b*", $bitvec), "\n";
-print "array: $bitvec\n";
-
-
-__END__
-
-while (--$array) {
-    print "array: ", unpack("b*", $array), "\n";
-    @bits = split(//, unpack("b*", $vector));
-}
-
-
-# Create some mask(s)
-my $mask;
-vec($mask, 0, $size) = 0b0101;
-
-print "mask: ", unpack("b*", $mask), "\n";
-
-
-
-__END__
-
-my $vec = Bit::Vector->new(scalar @sorted_sedges);
-# Set all to enabled, and count down to 0 (empty set, no templates)
-$vec->Fill;
-
-do {
-    my $str = "$vec";
-    print "$str : ";
-    my @names = bits2elems($str, @sorted_sedges);
-
-    print "@names\n";
-
-    # Pre-decrement counter, skipping the null set at the end
-} while --$vec;
-
-
-sub bits2elems {
-    my ($vecstr, @array) = @_;
-    my @vec = split '', $vecstr;
-    my @indices = grep { $vec[$_] } (0..$#vec);
-    return @array[@indices];
-}
-
-
-__END__
-
-
-use SBG::U::Test 'float_is';
-use Carp;
-use Data::Dumper;
 use FindBin qw/$Bin/;
 
 use SBG::U::Log qw/log/;
@@ -119,15 +15,13 @@ $DEBUG = 1;
 log()->init('TRACE') if $DEBUG;
 $File::Temp::KEEP_ALL = $DEBUG;
 
-
-use Trav1;
+use Graph::Traversal::Power;
 use SBG::NetworkIO::csv;
 
 # Load up a network
-my $file = "$Bin/data/simple_network-s.csv";
+my $file = "$Bin/data/simple_network.csv";
 my $io = new SBG::NetworkIO::csv(file=>$file);
 my $net = $io->read;
-
 
 # For the sake of testing, define some incompatible sets of templates.  Anything
 # in the same set is all not compatible.  NB alternative templates for a single
@@ -190,8 +84,8 @@ my %expected = (
     );
 
 # Create a traversal
-my $trav = new SBG::Traversal(graph=>$net, 
-                              assembler=>new TestAssembler,
+my $trav = Graph::Traversal::Power->new(graph=>$net, 
+                                        assembler=>TestAssembler->new,
     );
 
 $trav->traverse;
