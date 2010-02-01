@@ -58,11 +58,17 @@ use Log::Any qw/$log/;
 use Carp;
 
 use SBG::Role::Storable qw/retrieve/;
+use SBG::U::Object qw/load_object/;
+
 use SBG::U::Run qw/frac_of getoptions start_lock end_lock start_log/;
 
 use SBG::Traversal;
 use SBG::CA::Assembler;
 use SBG::Complex;
+
+
+use Graph::Traversal::GreedyEdges;
+use SBG::CA::Assembler2;
 
 use PBS::ARGV qw/qsub/;
 
@@ -96,7 +102,7 @@ foreach my $file (@ARGV) {
 
     # Load the Network object
     my $net;
-    unless ($net = retrieve($file)) {
+    unless ($net = load_object($file)) {
         $log->error("$file is not an object");
         next;
     }
@@ -145,11 +151,18 @@ sub _one_net {
 
     # TODO add graph to assembler initilization, don't pass in subsequent calls
 #     my $assembler = SBG::CA::Assembler->new(dir=>$name, graph=>$net);
-    my $assembler = SBG::CA::Assembler->new(dir=>$name);
-    my $t = SBG::Traversal->new(graph=>$net, 
-                                assembler=>$assembler,
-                                %tops,
+#     my $assembler = SBG::CA::Assembler->new(dir=>$name);
+    my $assembler = SBG::CA::Assembler2->new(dir=>$name);
+#     my $t = SBG::Traversal->new(graph=>$net, 
+    my $t = Graph::Traversal::GreedyEdges->new(net=>$net, 
+                                               assembler=>$assembler,
+                                               %tops,
         );
+
+    # Use avg frac convervation between template/model of Interactions for sorting
+    $t->sorter("avg_frac_conserved");
+
+
     # Each result is a complex, this is a placeholder for the aglorithm's state
     my %cops = slice_def($ops, 'overlap_thresh');
     my $state = SBG::Complex->new(id=>$name,%cops);
