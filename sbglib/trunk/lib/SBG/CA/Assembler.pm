@@ -176,7 +176,7 @@ sub _write_solution {
     $complex->store($file);
 
 }
-parallelize('_write_solution') unless defined $DB::sub;
+# parallelize('_write_solution') unless defined $DB::sub;
 
 
 sub _status {
