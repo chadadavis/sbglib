@@ -92,11 +92,23 @@ has 'pattern' => (
     );
 
 
+has 'name' => (
+    is => 'ro',
+    isa => 'Str',
+    );
+
+
 has 'dir' => (
     is => 'ro',
     isa => 'Str',
-    default => '.',
+    lazy_build => 1,
     );
+
+
+sub _build_dir {
+    my ($self) = @_;
+    return $self->name || '.';
+}
 
 
 ################################################################################
@@ -112,12 +124,12 @@ Really? Maybe it just assumes a 'centroid' method.
 
 =cut
 sub solution {
-    my ($self, $complex, $graph, $nodecover, $templates, $rejects) = @_;
+    my ($self, $complex) = @_;
 
     $self->_status();
 
     # Uninteresting unless at least two interfaces in solution
-    return unless defined($templates) && $templates->length > 1;     
+    return unless defined($complex) && $complex->size >= 3;     
 
     # A solution is now complete.
     $self->solutions($self->solutions+1);
@@ -140,6 +152,7 @@ sub solution {
     } else {
         # undef => Don't name the model
         $class = $self->gh->put(undef, $coords, $componentlabels);
+        return unless defined $class;
 
         # Counter for classes created so far
 #         $self->classes($class) unless $class < $self->classes;
@@ -147,7 +160,7 @@ sub solution {
         log()->trace("Class ", $class);
 
         # Count number of occurences of unique complex solution *of this size*
-        my $sizeclass = $nodecover->length;
+        my $sizeclass = $complex->size;
         my $sizeclassn = $self->sizes->at($sizeclass) || 0;
         $self->sizes->put($sizeclass, $sizeclassn+1);
 
@@ -165,11 +178,12 @@ sub _write_solution {
     
     # Write solution to file, append an optional name and model solution
     # counter
-    my $file = sprintf($self->pattern, 
-                       $complex->id ? $complex->id . '-' : '',
+    my $label = sprintf($self->pattern, 
+                        $self->name ? $self->name . '-' : '',
                        $class, 
             );
-    $file .= '.model';
+    $complex->id($label);
+    my $file .= $label . '.model';
     mkdir $self->dir;
     $file = catfile($self->dir, $file) if -d $self->dir;
 

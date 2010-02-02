@@ -116,7 +116,7 @@ foreach my $file (@ARGV) {
     # Traverse the network
     _one_net($net, $basename, \%ops);
 
-    my @files = <${basepath}*.model>;
+    my @files = <${outdir}/*.model>;
     end_lock($lock, scalar @files);
 
 }
@@ -135,6 +135,7 @@ sub _print_net {
         $basename,
         scalar($net->vertices), scalar($net->edges), 
         scalar($net->interactions);
+    print "$str";
     $log->info($str);
 }
 
@@ -152,7 +153,7 @@ sub _one_net {
     # TODO add graph to assembler initilization, don't pass in subsequent calls
 #     my $assembler = SBG::CA::Assembler->new(dir=>$name, graph=>$net);
 #     my $assembler = SBG::CA::Assembler->new(dir=>$name);
-    my $assembler = SBG::CA::Assembler2->new(dir=>$name);
+    my $assembler = SBG::CA::Assembler2->new(name=>$name);
 #     my $t = SBG::Traversal->new(graph=>$net, 
     my $t = Graph::Traversal::GreedyEdges->new(net=>$net, 
                                                assembler=>$assembler,
