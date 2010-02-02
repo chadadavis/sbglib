@@ -114,7 +114,7 @@ I.e. the answer is always a superset, but not exact. For that, see L<exact>
 =cut
 sub exists {
     my ($self,$points,$labels) = @_;
-
+    return unless scalar(@$points) >= 3;
     my %h = $self->at($points, $labels);
     # Get models that cover all points of the query
     my @fullcovers = grep { @$points == $h{$_} } keys %h;
@@ -135,6 +135,7 @@ sub exists {
 =cut
 sub class {
     my ($self,$points, $labels) = @_;
+    return unless scalar(@$points) >= 3;
     my $class = $self->exists($points, $labels);
     return unless $class;
     my @a = split / /, $class;
@@ -157,6 +158,7 @@ i.e. query is a subset of found model, and found model is subset of query
 =cut
 sub exact {
     my ($self,$points, $labels) = @_;
+    return unless scalar(@$points) >= 3;
     # Models that cover the query
     my @covers = $self->exists($points, $labels);
     # Models the same size as the query:
@@ -185,13 +187,14 @@ Returns a hash of votes for specific models.
 =cut
 sub at {
     my ($self,$points,$labels) = @_;
-
+    return unless scalar(@$points) >= 3;
     # Get an array of points into a matrix;
     my $model = _model($points);
     log()->trace($model);
 
     # Determine a basis transformation, to put model in a common frame of ref
     # Arbitrarily use first three points here, but any three would work
+
     my $t = _basis($model, 0, 1, 2) or return;
     # Transform all points using this basis
     $model = $t->apply($model);
@@ -259,7 +262,7 @@ If no model name is provided, generic class ID numbers will be created.
 =cut 
 sub put { 
     my ($self, $modelid, $points, $labels) = @_;
-
+    return unless scalar(@$points) >= 3;
     unless (defined $modelid) {
         $self->{'classid'}++;
         $modelid = $self->{'classid'};
