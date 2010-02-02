@@ -156,7 +156,11 @@ sub traverse {
                $merged_complex = 
                    $self->net->get_vertex_attribute($partition_node,'complex');
                # Difference from 10 to get something in range [0:10]
-               $merged_score = 10 - $merged_complex->cycle($iaction);
+               my $irmsd = $merged_complex->cycle($iaction);
+               next unless defined($irmsd) && $irmsd < 15;
+               # Give this a ring bonus of +10, since it closes a ring
+               # Normally a STAMP score gives no better than 10
+               $merged_score = 20 - $irmsd;
            } else {
                 # Nodes in separate complexes, merge into single frame-of-ref
                 
@@ -185,27 +189,26 @@ sub traverse {
         }
 
         # If merging succeeded
-        if (defined $merged_score) {
-            # Update reference complex of each node: $src and $dest
-            $self->net->set_vertex_attribute($src,'complex',$merged_complex);
-#             $self->net->set_vertex_attribute($merged_complex,'complex',$src);
-            $self->net->set_vertex_attribute($dest,'complex',$merged_complex);
-#             $self->net->set_vertex_attribute($merged_complex,'complex',$dest);
+        next unless defined $merged_score;
 
-            # Copy interaction to solution network
-            $solutions->add_interaction(-nodes=>[$iaction->nodes],
-                                       -interaction=>$iaction);
+        # Note that these nodes are now connected
+        $uf->union($src,$dest);
 
-            # Note that these nodes are now connected
-            $uf->union($src,$dest);
+        # Update reference complex of each node: $src and $dest
+        # NB this must be done after unioning, to maintain the data structure
+        my $src_part = $uf->find($src);
+        my $dest_part = $uf->find($dest);
+        $self->net->set_vertex_attribute($src_part,'complex',$merged_complex);
+        $self->net->set_vertex_attribute($dest_part,'complex',$merged_complex);
 
-            # Every successfully modelled interaction creates a new model
-            # This is the merged complex
-            $self->assembler->solution(
-                $merged_complex, $self->net, 
-                [$solutions->nodes], [$solutions->interactions]);
-        }
-
+        # Copy interaction to solution network
+        $solutions->add_interaction(-nodes=>[$iaction->nodes],
+                                    -interaction=>$iaction);
+        
+        # Every successfully modelled interaction creates a new model
+        # This is the merged complex
+        $self->assembler->solution($merged_complex);
+    
     } # foreach $iaction
 
 } # traverse
