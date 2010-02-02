@@ -119,12 +119,11 @@ sub superposition_native {
 
     my ($fullcmd, $prefix) = _setup_input($cmd, $ontodom, $fromdom);
     my $scanfile = "${prefix}.scan";
-#     $fullcmd .= " $ops" if $ops;
     log()->trace("\n$fullcmd");
     system("$fullcmd > /dev/null 2>/dev/null");
     my $fh;
     unless (-s $scanfile && open($fh, $scanfile)) {
-        log()->error("Error running stamp:\n$fullcmd");
+        log()->error("$fromdom => $ontodom : Can't read: $scanfile:\n$fullcmd");
         return;
     }
 
@@ -226,6 +225,7 @@ sub irmsd {
     # Only difference, relative to A or B component of interaction
     my $supera = superposition($doms1->[0], $doms2->[0]);
     my $superb = superposition($doms1->[1], $doms2->[1]);
+    return unless defined($supera) && defined($superb);
 
     # Define crosshairs, in frame of reference of doms1 only
     my $coordsa = _irmsd_rel($doms1, $supera);
