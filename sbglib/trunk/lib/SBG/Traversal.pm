@@ -42,7 +42,6 @@ L<Graph::Traversal>
 package SBG::Traversal;
 use strict;
 use warnings;
-use 5.010;
 
 use Moose;
 use Moose::Util::TypeConstraints;

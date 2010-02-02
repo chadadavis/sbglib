@@ -49,7 +49,6 @@ package SBG::GeometricHash;
 
 use strict;
 use warnings;
-use 5.010;
 
 use PDL::Lite;
 use PDL::Core qw/pdl zeroes/;
