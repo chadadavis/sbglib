@@ -66,6 +66,9 @@ determines it is already running under PBS. This is defined as the existance of
 B<$ENV{PBS_ENVIRONMENT}>.
 
 
+TODO BUG Fails when given command line switches. I.e. an option that has no argument. To get around this, use options that require a value only.
+
+
 =head1 JOB ARRAYS
 
 
@@ -135,6 +138,7 @@ sub qsub {
             push @jobids, $jobid;
         }
     }
+
     # Restore ARGV with the ones that didn't submit
     @::ARGV = @failures;
     return @jobids;
@@ -196,16 +200,17 @@ sub _submit {
     print $tmpfh "$cmdline\n";
     close $tmpfh;
 
-    $log->debug("jobscript: $jobscript");
     my $jobid = `qsub $jobscript`;
     unless ($jobid) {
         my $msg = "Failed: qsub $jobscript";
         $log->error($msg);
+        print STDERR "$msg\n";
         $File::Temp::KEEP_ALL = 1;
         return -1;
     } else {
         chomp $jobid;
         $log->info("$jobid $filearg");
+        print STDERR "$jobid $filearg $jobscript\n";
         return $jobid;
     }
 
