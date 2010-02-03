@@ -126,12 +126,17 @@ sub qsub {
     return unless has_qsub();
 
     my @jobids;
+    my @failures;
     while (my $param = shift @::ARGV) {
         my $jobid = _submit($param, %ops);
-        push @jobids, $jobid;
-        # But don't consume it, if it failed to submit
-        unshift @::ARGV, $param if $jobid eq '-1';
+        if ($jobid eq '-1') {
+            push @failures, $param;
+        } else {
+            push @jobids, $jobid;
+        }
     }
+    # Restore ARGV with the ones that didn't submit
+    @::ARGV = @failures;
     return @jobids;
 
 } # qsub
