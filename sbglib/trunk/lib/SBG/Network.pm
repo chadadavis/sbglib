@@ -16,6 +16,26 @@ arrayref, rather than a blessed hashref. This means it is not easy to add any
 additional attributes to this object, even if it is extending another class
 
 
+=head1 BUGS
+
+NB Bio::Network::ProteinNet, like Graph, from which it inherits, are not Hashes,
+but rather Arrays. In order to extend these objects with any additional
+attributes, one must peek into the implementation and append the base array,
+e.g. with a HashRef, in which one could store extra object attributes. But we'll
+avoid breaking the API as much as possible and avoid that for now.
+
+Normally the refvertexed=>1 option should be used to store objects at the graph
+nodes.
+
+Due to a bug in Graph::AdjacencyMap::Vertex, we prefer to use
+Graph::AdjacencyMap::Light. This can be achieved by setting revertexed=>0,
+though, intuitively, we would prefer refvertexed=>1, as a Node in the Graph is
+an object, and not just a string.
+
+The bug is that stringification of SGB::Node is ignored, which causes Storable
+to not be able to store/retrieve a SBG::Network correctly.
+
+
 =head1 SEE ALSO
 
 L<Bio::Network::ProteinNet> , L<Bio::Network::Interaction> , L<SBG::Interaction>
@@ -60,23 +80,18 @@ use overload (
 
 NB Need to override new() as Bio::Network::ProteinNet is not of Moose
 
-Normally the refvertexed=>1 option should be used to store objects at the graph
-nodes.
 
-Due to a bug in Graph::AdjacencyMap::Vertex, we prefer to use
-Graph::AdjacencyMap::Light. This can be achieved by setting revertexed=>0,
-though, intuitively, we would prefer refvertexed=>1, as a Node in the Graph is
-an object, and not just a string.
-
-The bug is that stringification of SGB::Node is ignored, which causes Storable
-to not be able to store/retrieve a SBG::Network correctly.
 
 =cut
 override 'new' => sub {
     my ($class, @ops) = @_;
     
     # This creates a Bio::Network::ProteinNet
+    # refvertexed=>0 allows us to work around stringification probs in 
+    # Graph::AdjacencyMap
+    # TODO which?
     my $obj = $class->SUPER::new(refvertexed=>0, @ops);
+#     my $obj = $class->SUPER::new(refvertexed=>1, @ops);
 
     # Normally, we would override a non-Moose base class with: But we don't,
     # since Bio::Network::ProteinNet is an ArrayRef, not a HashRef, like most
