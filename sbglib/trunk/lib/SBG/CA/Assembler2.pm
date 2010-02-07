@@ -122,9 +122,11 @@ sub _build_dir {
 Bugs: assumes L<SBG::Domain::Sphere> implementation in L<SBG::Complex>
 Really? Maybe it just assumes a 'centroid' method.
 
+TODO output network toplogy of solution interaction network used to build model
+
 =cut
 sub solution {
-    my ($self, $complex) = @_;
+    my ($self, $complex, $net) = @_;
 
     $self->_status();
 
