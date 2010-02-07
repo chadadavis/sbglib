@@ -55,6 +55,7 @@ has 'blast' => (
  Returns : Array of <SBG::Interaction>
  Args    : Two L<Bio::Seq>s
            
+TODO options to exclude (list of) PDBIDs
 
 =cut
 sub search {
