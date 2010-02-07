@@ -1,0 +1,199 @@
+#!/usr/bin/env perl
+
+=head1 NAME
+
+B<sbgfa2model> - 
+
+=head1 SYNOPSIS
+
+sbgfa2model <fasta-sequences.fa>
+
+=head1 DESCRIPTION
+
+
+=head1 OPTIONS
+
+=head2 -m|ethod B<standaloneblast> or B<remoteblast>
+
+=head2 -h|elp Print this help page
+
+=head2 -l|og Set logging level
+
+In increasing order: TRACE DEBUG INFO WARN ERROR FATAL
+
+I.e. setting B<-l WARN> (the default) will log warnings errors and fatal
+messages, but no info or debug messages to the log file (B<log.log>)
+
+=head2 -f|ile Log file
+
+Default: <network name>.log in current directory
+
+=head2 -c|omplete
+
+Only produce complex models that contain every component of the network
+
+=head2 -s|ize
+
+Minimum size of a complex model, in number of components, e.g.
+
+ -s 4 (4 or more component proteins in complex models
+
+ -s 75% (at least 75% of the components in the network are modelled)
+
+=head1 SEE ALSO
+
+
+
+=cut
+
+################################################################################
+
+use strict;
+use warnings;
+
+use File::Basename;
+use POSIX qw/ceil/;
+use Hash::MoreUtils qw/slice_def/;
+use File::Spec::Functions;
+use Log::Any qw/$log/;
+use Carp;
+
+use Moose::Autobox;
+use Bio::SeqIO;
+
+use SBG::U::Run qw/frac_of getoptions start_lock end_lock start_log/;
+use SBG::Network;
+use SBG::Search::TransDB;
+use PBS::ARGV qw/qsub/;
+use SBG::Complex;
+
+use SBG::Traversal;
+use SBG::CA::Assembler;
+
+use Graph::Traversal::GreedyEdges;
+use SBG::CA::Assembler2;
+
+
+my %ops = getoptions(
+    'maxid|x=i',
+    'minid|n=i',
+    'output|o=s',
+    'cache|c=i',
+    'top|t=i',
+    'method|m=s',
+    'overlap|v=f',
+    'complete|t',
+    'overlap_thresh|l=f',
+    'minsize|s=s', 
+    'binsize|b=f'
+    );
+
+$SIG{__DIE__} = \&confess if $ops{'debug'};
+
+# Recreate command line options; (seems to work even ith long option names)
+my @jobids = qsub(options=>\%ops);
+print join("\n", @jobids), "\n", if @jobids;
+# @ARGV is empty if all jobs could be submitted
+
+
+
+foreach my $file (@ARGV) {
+
+    # Setup new log file specific to given input file
+    my $basename = basename($file,'.fa');
+    my $outdir = $basename;
+    my $basepath = catfile($outdir, $basename);
+    mkdir $outdir;
+    my $lock = start_lock($basepath) or next;
+
+    # Setup new log file specific to given input file
+    start_log($basepath, %ops);
+
+
+    # Add each sequence as a node to new network
+    my $net = SBG::Network->new;
+    my $seqio = Bio::SeqIO->new(-file=>$file);
+    while (my $seq = $seqio->next_seq) {
+        $net->add_seq($seq);
+    }
+
+    # Searcher tries to find interaction templates (edges) to connect seq nodes
+    my $blast = SBG::Run::PairedBlast->new;
+    $blast->method($ops{method}) if $ops{method};
+    my $searcher = SBG::Search::TransDB->new(blast=>$blast);
+    my $buildops = {%ops}->hslice([qw/maxid minid cache top overlap/]);
+    # Create interaction templates on the edges of the network
+    $net = $net->build($searcher,%$buildops);
+    _print_net($basename, $net);    
+
+
+    # Assemble models
+    $ops{minsize} = 3 unless defined $ops{minsize};
+    # Only full-size (complete coverage) models?
+    $ops{minsize} = '100%' if $ops{complete};
+    $ops{minsize} = ceil frac_of($ops{minsize}, scalar $net->nodes);
+
+    # Traverse the network
+    _one_net($net, $basename, \%ops);
+
+
+    my @files = <${outdir}/*.model>;
+    end_lock($lock, scalar @files);
+
+}
+
+
+exit;
+
+
+################################################################################
+# 
+sub _print_net {
+    my ($basename, $net, $i, $n) = @_;
+    $i ||= 1;
+    $n ||= 1;
+    my $str = sprintf
+        "\n%-20s %4d nodes, %4d edges, %4d interactions \n",
+        $basename,
+        scalar($net->vertices), scalar($net->edges), 
+        scalar($net->interactions);
+    print "$str";
+    $log->info($str);
+}
+
+
+################################################################################
+# Assemble network
+sub _one_net {
+    my ($net,$name, $ops) = @_;
+
+    # Traversal algorithm, on the network
+    # -test is the function to call when trying to place an interaction
+    # -partial is the function to call when one complex solution is complete
+    my %tops = slice_def($ops, 'minsize', 'binsize');
+
+    # TODO add graph to assembler initilization, don't pass in subsequent calls
+#     my $assembler = SBG::CA::Assembler->new(dir=>$name, graph=>$net);
+#     my $assembler = SBG::CA::Assembler->new(dir=>$name);
+    my $assembler = SBG::CA::Assembler2->new(name=>$name);
+#     my $t = SBG::Traversal->new(graph=>$net, 
+    my $t = Graph::Traversal::GreedyEdges->new(net=>$net, 
+                                               assembler=>$assembler,
+                                               %tops,
+        );
+
+    # Use avg frac convervation between template/model of Interactions for sorting
+    $t->sorter("avg_frac_conserved");
+
+
+    # Each result is a complex, this is a placeholder for the aglorithm's state
+    my %cops = slice_def($ops, 'overlap_thresh');
+    my $state = SBG::Complex->new(id=>$name,%cops);
+    # Go!
+    $t->traverse($state);
+
+}
+
+
+
+
