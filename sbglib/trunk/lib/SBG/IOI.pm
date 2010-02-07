@@ -242,7 +242,11 @@ sub rewind {
     return seek($fh, 0, 0);
 
 } # rewind
+sub reset {
+    return rewind(@_);
+}
 
+        
 
 ################################################################################
 =head2 _file
