@@ -86,6 +86,39 @@ has 'id' => (
 
 
 ################################################################################
+=head2 name
+
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
+
+
+=cut
+has 'name' => (
+    is => 'rw',
+    isa => 'Str',
+    );
+
+
+################################################################################
+=head2 description
+
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
+
+
+=cut
+has 'description' => (
+    is => 'rw',
+    isa => 'Str',
+    );
+
+
+
+################################################################################
 =head2 objtype
 
  Function: Type of L<SBG::DomainI> object to use for clash detection
