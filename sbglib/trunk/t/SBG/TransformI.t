@@ -62,3 +62,12 @@ my $sq_inv_prod = $sq_inv x $squared;
 pdl_approx($sq_inv_prod->matrix, $id->matrix, 'inverse() on composition');
 
 
+# NB Not sufficient to use Scalar::Util::refaddr, as the PDL is deep in memory
+# Requies using PDL-specific operators
+my $clone = $t->clone;
+isnt($clone->matrix->get_dataref, $t->matrix->get_dataref, "Cloning: PDLs also copy'ed");
+
+
+
+
+
