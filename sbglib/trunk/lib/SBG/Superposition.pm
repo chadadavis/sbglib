@@ -78,7 +78,6 @@ has 'transformation' => (
     is => 'rw',
     does => 'SBG::TransformI',
     required => 1,
-    clearer => 'clear_transformation',
     default => sub { new SBG::Transform::Affine },
     );
 
