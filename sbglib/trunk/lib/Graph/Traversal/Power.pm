@@ -38,7 +38,6 @@ L<Graph::Traversal>
 package Graph::Traversal::Power;
 use Moose;
 use Moose::Autobox;
-use subs::parallel;
 use Graph;
 use Graph::UnionFind;
 use Bit::Vector::Overload;
@@ -112,7 +111,6 @@ sub traverse {
 
     my $nodes = $self->_init_nodes;
     my $results = $nodes->map(sub{$self->_start_one($_)});
-    # Wait on results, if done in parallel.
     my $finished = $results->grep(sub{defined $_});
     return $self->assembler->finished($finished);
 }
@@ -136,9 +134,6 @@ sub _start_one {
 
     return $self->_do_level($sedges);
 }
-
-# TODO parallelize this after verifying locking semantics on solution cache
-# parallelize('_start_one') unless defined $DB::sub;
 
 
 # Given Array of nodes, returns Array of sedges

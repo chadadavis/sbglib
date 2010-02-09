@@ -46,7 +46,7 @@ use warnings;
 use Moose;
 use Moose::Util::TypeConstraints;
 use Moose::Autobox;
-use Clone qw/clone/;
+use Storable qw/dclone/;
 use Graph;
 use Graph::UnionFind;
 
@@ -151,7 +151,7 @@ It may return whether it used/accepted the solution or not;
 
 =head3 B<$stateclone> 
 
-An optional HashRef that you may pass to L<traverse>. Otehrwise an empty HashRef
+An optional HashRef that you may pass to L<traverse>. Otherwise an empty HashRef
 is used for you to store any state information. This object is cloned as
 necessary during the traversal (i.e. rolling back state is automatic).
 
@@ -295,9 +295,6 @@ has 'rsolutions' => (
 If no B<$state> is provided, an empty HashRef is used. You can later put your
 own data into this, when it is provided to your callback functions.
 
-If B<$state> implements Perl's L<Clone> interface, that will be used to clone
-the object, as needed. Otherwise, the standard B<Clone::clone> method is used.
-
 Each vertex in the graph is used as the starting node one time.  This is because
 different traversals could theoretically produce different results.
 
@@ -305,16 +302,13 @@ different traversals could theoretically produce different results.
 
 sub traverse {
     my ($self, $state) = @_;
-    # If no state object provide, use an empty hashref, Clone'able
-    $state = bless({}, 'Clone') unless defined $state;
+    $state = {} unless defined $state;
     
     $self->_init_edge_indices;
 
     # NB cannot use all nodes together in one run, as they may have different
     # 'frames of reference'. I.e. don't do this:
 #     $self->_nodeq->push($self->graph->vertices);
-
-# TODO these can be done in parallel, see Graph::Traversal::Power
 
     # Using one different starting node in each iteration
     foreach my $node ($self->_init_nodes) {
@@ -329,7 +323,7 @@ sub traverse {
         $self->_altcover({});
         $self->_nodecover({});
         # Start with a fresh state object, not defiled from previous rounds
-        my $clone = $state->clone();
+        my $clone = dclone($state);
         # Go!
         $self->_do_nodes($uf, $clone, 0);
     }
@@ -468,7 +462,7 @@ sub _do_edges {
 
     # As child nodes in traversal may change partial solutions, clone these.
     # This implicitly allows us to backtrack later if $test() fails, etc
-    my $stateclone = $state->clone();
+    my $stateclone = dclone($state);
 
     # Do we want to go ahead and traverse this edge?
     $self->_test_alt($uf, $stateclone, $src, $dest, $alt_id, $d);
@@ -522,7 +516,7 @@ sub _test_alt {
 
         # $src and $dest are now in the same connected component. 
         # But clone this first, to be able to undo/backtrack afterward
-        my $ufclone = clone($uf);
+        my $ufclone = dclone($uf);
         $ufclone->union($src, $dest);
         # Recursive call to traverse rest of graph, beyond this edge
         # Continue using the same state, in case the success must be remembered

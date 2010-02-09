@@ -30,7 +30,6 @@ use Moose;
 
 use File::Spec::Functions;
 use Moose::Autobox;
-use subs::parallel;
 
 use SBG::U::Log qw/log/;
 use SBG::STAMP qw/superposition/;
@@ -151,7 +150,6 @@ sub solution {
         my $sizeclassn = $self->sizes->at($sizeclass) || 0;
         $self->sizes->put($sizeclass, $sizeclassn+1);
 
-        # Do in parallel, so that wen can return in the meantime
         $self->_write_solution($complex, $class);
 
         return 1;
@@ -176,7 +174,6 @@ sub _write_solution {
     $complex->store($file);
 
 }
-# parallelize('_write_solution') unless defined $DB::sub;
 
 
 sub _status {
