@@ -321,8 +321,10 @@ E.g.:
 where $points in an ArrayRef of objects, on which ->color() can be called,
 returning one of 'red', 'blue', or 'green' in this case.
 
+TODO BUG: will sqaush entries when keys map to non-unique values.
+
 =cut
-sub reorder ($;$&) {
+sub reorder_broken ($;$&) {
     my ($objects, $ordering, $code) = @_;
     # First put the objects into a dictionary, after applying code
     $code ||= sub { "$_" };
