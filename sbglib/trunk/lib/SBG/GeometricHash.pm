@@ -536,6 +536,12 @@ sub _dist {
 }
 
 
+# Implicitly thread-safe: cloning (i.e. threading) is disallowed. 
+# This prevents double free bugs. Spawned thread only has undef references then.
+# See man perlmod
+sub CLONE_SKIP { 1 }
+
+
 ################################################################################
 1;
 
