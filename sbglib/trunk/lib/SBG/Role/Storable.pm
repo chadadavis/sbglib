@@ -15,6 +15,11 @@ with 'SBG::Role::Storable';
 
 If your class uses this role, it will need to define all the methods below.
 
+Note that any data structure containing a L<PDL> cannot be stored in network
+order. Any other data is stored in network order by default, using
+L<Storable::nstore> .
+
+
 =head1 SEE ALSO
 
 L<Moose::Role>
@@ -52,11 +57,15 @@ use PDL::IO::Storable;
 
 Just a wrapper for OO-style store()
 
+Uses network order to be able to share object files between architectures.
+
+Caveat:Any PDL objects will ignore network order and not be network-transparent.
+
 =cut
 
 sub store {
    my ($self,$file,@args) = @_;
-   # Use network order to be able to share object files between architectures
+
    return Storable::nstore($self, $file);
 } # store
 

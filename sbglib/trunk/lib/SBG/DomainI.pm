@@ -38,7 +38,7 @@ package SBG::DomainI;
 use Moose::Role;
 
 
-# with 'SBG::Role::Clonable' => { excludes => [ qw/clone/ ] };
+with 'SBG::Role::Clonable';
 with 'SBG::Role::Dumpable';
 with 'SBG::Role::Scorable';
 with 'SBG::Role::Storable';
@@ -58,7 +58,6 @@ use overload (
 
 # Get address of a reference
 use Scalar::Util qw(refaddr);
-use Clone;
 use Module::Load;
 use File::Basename qw/basename/;
 
@@ -174,7 +173,6 @@ has 'transformation' => (
     is => 'rw',
     does => 'SBG::TransformI',
     required => 1,
-    clearer => 'clear_transformation',
     default => sub { new SBG::Transform::Affine },
     );
 
@@ -225,32 +223,10 @@ requires 'centroid';
 requires 'overlap';
 
 
-
-################################################################################
-=head2 clone
-
- Function: 
- Example : 
- Returns : 
- Args    : 
-
-
-Overriden from Role::Clonable::clone because PDL objects cannot be clone'd
-
-=cut
-sub clone {
-    my ($self,) = @_;
-    my $type = ref $self;
-    load($type);
-    # Copy construction
-    my $basic = $type->new(%$self);
-    # Now make an explicit PDL copy
-    $basic->coords($self->coords->copy) if $self->has_coords;
-    # Transform needs to worry about its own cloning. But we have to know to
-    # call it ...
-    $basic->transformation($self->transformation->clone);
-    return $basic;
-}
+# Implicitly thread-safe: cloning (i.e. threading) is disallowed. 
+# This prevents double free bugs. Spawned thread only has undef references then.
+# See man perlmod
+sub CLONE_SKIP { 1 }
 
 
 ################################################################################

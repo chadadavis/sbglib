@@ -38,7 +38,7 @@ package SBG::TransformI;
 use Moose::Role;
 
 
-# with 'SBG::Role::Clonable' => { excludes => [ qw/clone/ ] };
+with 'SBG::Role::Clonable';
 with 'SBG::Role::Dumpable';
 with 'SBG::Role::Storable';
 with 'SBG::Role::Transformable';
@@ -55,8 +55,6 @@ use overload (
     );
 
 
-# To override Clonable::clone
-use Clone;
 use Module::Load;
 
 
@@ -77,6 +75,8 @@ has 'matrix' => (
     is => 'ro',
     isa => 'PDL',
     lazy_build => 1,
+    # Allows objects to be used as native PDL types, via the 'PDL' hash field
+    trigger => sub { my ($self, $val) = @_; $self->{PDL} = $self->matrix; },
     );
 
 
@@ -162,34 +162,10 @@ requires 'inverse';
 requires 'equals';
 
 
-
-################################################################################
-=head2 clone
-
- Function: 
- Example : 
- Returns : 
- Args    : 
-
-
-Overriden from Role::Clonable::clone because PDL objects cannot be clone'd
-
-=cut
-sub clone {
-    my ($self,) = @_;
-    my $type = ref $self;
-    load($type);
-    # Copy construction
-    my $basic;
-    # And make an explicit PDL copy (matrix will be overriden)
-    if ($self->has_matrix) {
-        $basic = $type->new(%$self, matrix=>$self->matrix->copy);
-    } else {
-        $basic = $type->new(%$self)
-    }
-
-    return $basic;
-}
+# Implicitly thread-safe: cloning (i.e. threading) is disallowed. 
+# This prevents double free bugs. Spawned thread only has undef references then.
+# See man perlmod
+sub CLONE_SKIP { 1 }
 
 
 ################################################################################
@@ -215,6 +191,7 @@ sub relativeto {
     return $self x $other->inverse;
 
 } # relativeto
+
 
 ###############################################################################
 no Moose::Role;

@@ -47,26 +47,6 @@ use PDL::Basic qw/transpose/;
 use PDL::IO::Storable;
 
 
-
-################################################################################
-=head2 BUILD
-
- Function: 
- Example : 
- Returns : 
- Args    : 
-
-Hook (hack) to make 'PDL' hash field alias the 'matrix' field. 
-
-Allows objects to be used as native PDL types
-
-=cut
-sub BUILD {
-    my ($self) = @_;
-    $self->{PDL} = $self->{matrix};
-}
-
-
 ################################################################################
 =head2 _build_matrix
 
@@ -81,7 +61,11 @@ The fourth row is simply [ 0,0,0,1 ] , as required by homogenous coordinates.
 
 =cut
 sub _build_matrix { 
-    return identity(4);
+    my ($self) = @_;
+    my $mat = identity(4);
+    # PDL is an alias to matrix
+    $self->{PDL} = $mat;
+    return $mat;
 }
 
 
