@@ -24,7 +24,15 @@ my $t = new SBG::Transform::Affine(matrix=>$mat);
 # NB Not sufficient to use Scalar::Util::refaddr, as the PDL is deep in memory
 # Requies using PDL-specific operators
 my $clone = $t->clone;
-isnt($clone->matrix->get_dataref, $t->matrix->get_dataref, "Cloning: PDLs also copy'ed");
+isnt($clone->matrix->get_dataref, $t->matrix->get_dataref, 
+     "Role::Clonable: PDLs also copy'ed");
+
+# And dclone also magically hooks in and does the write thing without explicitly
+# delegating to the Role
+use Storable qw/dclone/;
+my $dclone = dclone($t);
+isnt($dclone->matrix->get_dataref, $t->matrix->get_dataref, 
+     "dclone: PDLs also copy'ed");
 
 
 
