@@ -87,20 +87,6 @@ has 'sorter' => (
     );
 
 
-################################################################################
-=head2 minsize
-
-The solution callback function is only called on solutions this size or
-larger. Default 0.
-
-=cut
-has 'minsize' => (
-    is => 'rw',
-    isa => 'Int',
-    default => 0,
-    );
-
-
 =head2 traverse
 
  Function: 

@@ -73,6 +73,19 @@ has 'binsize' => (
     default => 2,
     );
 
+################################################################################
+=head2 minsize
+
+The solution callback function is only called on solutions this size or
+larger. Default 0.
+
+=cut
+has 'minsize' => (
+    is => 'rw',
+    isa => 'Int',
+    default => 3,
+    );
+
 
 # 3D geometric hash
 has 'gh' => (
@@ -282,7 +295,7 @@ sub solution {
     my ($self, $state, $partition,) = @_;
     my $complex = $state->{'models'}->{$partition};
     # Uninteresting unless at least two interfaces in solution
-    return unless defined($complex) && $complex->size >= 3;     
+    return unless defined($complex) && $complex->size >= $self->minsize;     
 
     # A solution is now complete.
     $self->solutions($self->solutions+1);

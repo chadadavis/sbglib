@@ -145,30 +145,18 @@ sub _print_net {
 sub _one_net {
     my ($net,$name, $ops) = @_;
 
-    # Traversal algorithm, on the network
-    # -test is the function to call when trying to place an interaction
-    # -partial is the function to call when one complex solution is complete
-    my %tops = slice_def($ops, 'minsize', 'binsize');
+    my %aops = slice_def($ops, 'minsize', 'binsize');
 
-    # TODO add graph to assembler initilization, don't pass in subsequent calls
-#     my $assembler = SBG::CA::Assembler->new(dir=>$name, graph=>$net);
-#     my $assembler = SBG::CA::Assembler->new(dir=>$name);
-    my $assembler = SBG::CA::Assembler2->new(name=>$name);
-#     my $t = SBG::Traversal->new(graph=>$net, 
+    my $assembler = SBG::CA::Assembler2->new(name=>$name, %aops);
     my $t = Graph::Traversal::GreedyEdges->new(net=>$net, 
                                                assembler=>$assembler,
-                                               %tops,
         );
 
     # Use avg frac convervation between template/model of Interactions for sorting
     $t->sorter("avg_frac_conserved");
 
-
-    # Each result is a complex, this is a placeholder for the aglorithm's state
-    my %cops = slice_def($ops, 'overlap_thresh');
-    my $state = SBG::Complex->new(id=>$name,%cops);
     # Go!
-    $t->traverse($state);
+    $t->traverse();
 
     $assembler->_status;
     print "\n";
