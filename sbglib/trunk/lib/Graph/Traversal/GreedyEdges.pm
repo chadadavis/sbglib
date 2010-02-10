@@ -30,13 +30,7 @@ use Data::Dump qw/dump/;
 use Graph;
 use Graph::UnionFind;
 use Bio::Network::ProteinNet;
-
-# Manual tail call optimization
-use Sub::Call::Recur qw/recur/;
-use subs::parallel;
-use Clone qw/clone/;
-
-use SBG::U::List qw/reorder/;
+use Storable qw/dclone/;
 
 
 ################################################################################
@@ -105,24 +99,6 @@ has 'minsize' => (
     );
 
 
-
-################################################################################
-=head2 _subcomplex
-
- Function: 
- Example : 
- Returns : 
- Args    : 
-
-
-=cut
-has '_subcomplex' => (
-    is => 'ro',
-    isa => 'HashRef',
-    default => sub { {} },
-    );
-
-
 =head2 traverse
 
  Function: 
@@ -137,91 +113,107 @@ sub traverse {
 
     # A new disjoint set data structure, to track which nodes in same sets
     my $uf = Graph::UnionFind->new;
-    # Graph of solution(s) topology
-    my $solution = SBG::Network->new;
-    # All interaction templates, sorted by best score
-    my $iactions = $self->interactions_by_field($self->sorter);
+    # Graph of current solution topology
+    my $net = SBG::Network->new;
+    # Each connected component in the solution interaction network is a complex
+    my $models = {};
+    # Wrap these three things into a single state object
+    my $state = {
+        uf => $uf,
+        net => $net,
+        models => $models,
+    };
 
-    $self->_recurse($iactions, 0, $uf, $solution);
+    # All interaction templates, sorted descending by the field $self->sorter
+    my $iactions = $self->interactions_by_field($self->sorter);
+    $log->debug("interactions: ", $iactions->length);
+
+    # Start recursion at interaction 0
+    $self->_recurse($iactions, 0, $state);
+
+    $log->debug('End');
 
 } # traverse
 
 
 sub _recurse {
-    my ($self, $iactions, $i, $uf, $solution) = @_;
-    my $iaction = $iactions->[$i] or return;
-
-    $log->debug("$i $iaction");
+    my ($self, $iactions, $i, $state) = @_;
+    $log->debug("i:$i");
+    return unless $i < $iactions->length;
+    my $iaction = $iactions->[$i];
+    $log->debug("i:$i $iaction");
 
     # Resulting complex, after (possibly) merging two disconnected complexes
     my ($merged_complex, $merged_score) = 
-        $self->_try_iaction($uf, $solution, $iaction);
+        $self->_try_iaction($state, $iaction);
 
     if (defined $merged_score) {
         # Clone state, add interaction to cloned state, recurse on next iaction
-
-        my $uf_clone = clone($uf);
-        $self->_subcomplex->{refaddr($uf_clone)} = {};
-
-        # TODO DES verify that depth 2 is a sufficient short-cut
-#         my $solution_clone = clone($solution, 2);
-        my $solution_clone = clone($solution);
-
+        my $state_clone = dclone($state);
         # Now update the cloned state with the placed interaction
 
         # Note that these nodes are now connected
         my ($src, $dest) = $iaction->nodes;
-        $uf_clone->union($src,$dest);
+        $state_clone->{'uf'}->union($src,$dest);
 
         # Update reference complex of each node: $src and $dest
-        # After the unioni, $src and $dest are found in the same partition
-        my $partition = $uf_clone->find($src);
-        $self->_subcomplex->{refaddr($uf_clone)}{$partition} = $merged_complex;
+        # After the union, $src and $dest are found in the same partition
+        my $partition = $state_clone->{'uf'}->find($src);
+        $state_clone->{'models'}->{$partition} = $merged_complex;
 
         # Copy interaction to solution network
-        $solution_clone->add_interaction(-nodes=>[$iaction->nodes],
-                                         -interaction=>$iaction);
+        $state_clone->{'net'}->add_interaction(-nodes=>[$iaction->nodes],
+                                               -interaction=>$iaction);
         
         # Every successfully modelled interaction creates a new solution model
-        $self->assembler->solution($merged_complex, $solution_clone);
+        $self->assembler->solution($merged_complex, $state_clone) 
+            if $merged_complex->size > 2;
 
         # Recursive call, only when interaction was successfully added
-        $log->debug("Recursing after iaction placed ...");
-        $self->_recurse($iactions, $i+1, $uf_clone, $solution_clone);
+        # Starts with next interaction in the list: $i+1
+        # NB this isn't tail recursion and cannot be unrolled, we need to return
+        $log->debug("i:$i Recursing, with   : $iaction");
+        $self->_recurse($iactions, $i+1, $state_clone);
         
-        # Cleanup:
-        $self->_subcomplex->delete(refaddr($uf_clone));
-
+        $log->debug("i:$i Returned after placing iaction.");
     } 
 
-    # Whether successful or not, now tail recurse to the next iaction
-    $log->debug("Recursing after iaction not placed ...");
+    # Whether successful or not, now tail recurse to the next iaction,
+    # Here were using the original state, i.e. before any interaction modelled
+    $log->debug("i:$i Recursing, without: $iaction");
     # Tail recursion is flattened here, unless debugger active
-    # TODO TEST
-#     if (defined $DB::sub) {
-    if (1) {
-        return $self->_recurse($iactions, $i+1, $uf, $solution);
+    if (defined $DB::sub) {
+        $self->_recurse($iactions, $i+1, $state);
     } else {
-        recur($self, $iactions, $i+1, $uf, $solution);
+        # Flatten tail recursion with a goto, squashing the call stack
+        @_ = ($self, $iactions, $i+1, $state);
+        goto \&_recurse;
     }
+
+    # Not reached if using tail recursion
+    $log->debug("i:$i Returned after not placing iaction.");
 
 } # _recurse
 
 
-
+# A number of cases might be applicable, depending on network connectivity
 sub _try_iaction {
-    my ($self, $uf, $solution, $iaction) = @_;
+    my ($self, $state, $iaction) = @_;
     # Skip if already covered
-    return if $solution->has_edge($iaction->nodes);
+    if ($state->{'net'}->has_edge($iaction->nodes)) {
+        $log->debug("Edge already covered: $iaction");
+        return;
+    }
 
     # Doesn't matter which we consider to be the source/dest node
     my ($src,$dest) = $iaction->nodes;
+    my $uf = $state->{'uf'};
 
     # Resulting complex, after (possibly) merging two disconnected complexes
     my $merged_complex;
     # Score for placing this interaction into the solutions complex forest
     my $merged_score;
-    
+
     if (! $uf->has($src) && ! $uf->has($dest) ) {
         # Neither node present in solutions forest. Create dimer
         $merged_complex = SBG::Complex->new;
@@ -234,12 +226,12 @@ sub _try_iaction {
         if ($uf->same($src,$dest)) {
             # Nodes in same complex tree already, attempt ring closure
             ($merged_complex, $merged_score) = 
-                $self->_cycle($uf, $solution, $iaction);
+                $self->_cycle($state, $iaction);
             
         } else {
             # Nodes in separate complexes, merge into single frame-of-ref
             ($merged_complex, $merged_score) = 
-                $self->_merge($uf, $solution, $iaction);
+                $self->_merge($state, $iaction);
 
         }
     } else {
@@ -248,12 +240,12 @@ sub _try_iaction {
         if ($uf->has($src)) {
             # Create dimer, then merge on $src
             ($merged_complex, $merged_score) = 
-                $self->_add_monomer($uf, $solution, $iaction,$src);
+                $self->_add_monomer($state, $iaction, $src);
             
         } else {
             # Create dimer, then merge on $dest
             ($merged_complex, $merged_score) = 
-                $self->_add_monomer($uf, $solution, $iaction,$dest);
+                $self->_add_monomer($state, $iaction, $dest);
         }
     }
     
@@ -261,14 +253,18 @@ sub _try_iaction {
 } # _try_iaction
 
 
+# Closes a cycle, using a *known* interaction template
+# (i.e. novel interactions not detected at this stage)
 sub _cycle {
-    my ($self, $uf, $solution, $iaction) = @_;
+    my ($self, $state, $iaction) = @_;
+    $log->debug($iaction);
     # Take either end of the interaction, since they belong to same complex
     my ($src, $dest) = $iaction->nodes;
-    my $partition = $uf->find($src);
-    my $complex = $self->_subcomplex->{refaddr($uf)}{$partition};
+    my $partition = $state->{'uf'}->find($src);
+    my $complex = $state->{'models'}->{$partition};
 
     # Modify a copy
+    # TODO store these thresholds (configurably) elsewhere
     my $merged_complex = $complex->clone;
     # Difference from 10 to get something in range [0:10]
     my $irmsd = $merged_complex->cycle($iaction);
@@ -281,17 +277,17 @@ sub _cycle {
 } # _cycle
 
 
+# Merge two complexes, into a common spacial frame of reference
 sub _merge {
-    my ($self, $uf, $solution, $iaction) = @_;
+    my ($self, $state, $iaction) = @_;
+    $log->debug($iaction);
     # Order irrelevant, as merging is symmetric
     my ($src, $dest) = $iaction->nodes;
 
-    my $src_part = $uf->find($src);
-#     my $src_complex = $solution->get_vertex_attribute($src_part,'complex');
-    my $src_complex = $self->_subcomplex->{refaddr($uf)}{$src_part};
-    my $dest_part = $uf->find($dest);
-#     my $dest_complex = $solution->get_vertex_attribute($dest_part,'complex');
-    my $dest_complex = $self->_subcomplex->{refaddr($uf)}{$dest_part};
+    my $src_part = $state->{'uf'}->find($src);
+    my $src_complex = $state->{'models'}->{$src_part};
+    my $dest_part = $state->{'uf'}->find($dest);
+    my $dest_complex = $state->{'models'}->{$dest_part};
 
     my $merged_complex = $src_complex->clone;
     my $merged_score = $merged_complex->merge_interaction($dest_complex,$iaction);
@@ -308,19 +304,21 @@ sub _merge {
  Returns : 
  Args    : 
 
+Add a single component to an existing complex, using the given interaction.
+
+One component in the interaction is homologous to a component ($ref) in the model
 
 =cut
 sub _add_monomer {
-    my ($self, $uf, $solution, $iaction, $ref) = @_;
-
+    my ($self, $state, $iaction, $ref) = @_;
+    $log->debug($iaction);
     # Create complex out of a single interaction
     my $add_complex = SBG::Complex->new;
     $add_complex->add_interaction($iaction, $iaction->keys);
 
     # Lookup complex to which we want to add the interaction
-    my $ref_partition = $uf->find($ref);
-#     my $ref_complex = $solution->get_vertex_attribute($ref_partition,'complex');
-    my $ref_complex = $self->_subcomplex->{refaddr($uf)}{$ref_partition};
+    my $ref_partition = $state->{'uf'}->find($ref);
+    my $ref_complex = $state->{'models'}->{$ref_partition};
     my $merged_complex = $ref_complex->clone;
     my $merged_score = $merged_complex->merge_domain($add_complex, $ref);
 
@@ -349,14 +347,10 @@ sub interactions_by_field {
     $field ||= $self->sorter;
 
     # Get all interactions in network, over all edges
-    my $iactions = [ $self->interactions ];
+    my @iactions = $self->interactions;
+    my @desc = sort { $b->scores->{$field} <=> $a->scores->{$field} } @iactions;
+    return [ @desc ];
 
-    my $asc = reorder($iactions, 
-                      undef, 
-                      sub { $_->scores->at($field) });
-    # TODO descending or ascending could be an option
-    my $desc = $asc->reverse;
-    return $desc;
 } # interactions_by_field
 
 
