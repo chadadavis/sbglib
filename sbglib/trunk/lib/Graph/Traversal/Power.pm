@@ -132,7 +132,7 @@ sub _start_one {
 
     $sedges = $sedges->sort;
 
-    return $self->_do_level($sedges);
+#     return $self->_do_level($sedges);
 }
 
 
