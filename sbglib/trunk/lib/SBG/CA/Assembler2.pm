@@ -32,8 +32,11 @@ use File::Spec::Functions;
 use Moose::Autobox;
 
 use SBG::U::Log qw/log/;
+use Log::Any qw/$log/;
+
 use SBG::STAMP qw/superposition/;
 use SBG::GeometricHash;
+use SBG::Complex;
 
 
 # Number of solved partial solutions
@@ -110,6 +113,157 @@ sub _build_dir {
 }
 
 
+
+
+################################################################################
+=head2 test
+
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
+
+Callback for attempting to add a new interaction template
+
+A number of cases might be applicable, depending on network connectivity
+
+Uses the hash saved in the interation object (set when templates loaded) to find
+out what templates used by which components on an edge in the interaction graph
+
+Returns true/false == success/failure to use/add interaction template
+
+=cut
+sub test {
+    my ($self, $state, $iaction) = @_;
+    # Skip if already covered
+    if ($state->{'net'}->has_edge($iaction->nodes)) {
+        $log->debug("Edge already covered: $iaction");
+        return;
+    }
+
+    # Doesn't matter which we consider to be the source/dest node
+    my ($src,$dest) = $iaction->nodes;
+    my $uf = $state->{'uf'};
+
+    # Resulting complex, after (possibly) merging two disconnected complexes
+    my $merged_complex;
+    # Score for placing this interaction into the solutions complex forest
+    my $merged_score;
+
+    if (! $uf->has($src) && ! $uf->has($dest) ) {
+        # Neither node present in solutions forest. Create dimer
+        $merged_complex = SBG::Complex->new;
+        $merged_score = 
+            $merged_complex->add_interaction($iaction, $iaction->keys);
+        
+    } elsif ($uf->has($src) && $uf->has($dest)) {
+        # Both nodes present in existing complexes
+        
+        if ($uf->same($src,$dest)) {
+            # Nodes in same complex tree already, attempt ring closure
+            ($merged_complex, $merged_score) = 
+                $self->_cycle($state, $iaction);
+            
+        } else {
+            # Nodes in separate complexes, merge into single frame-of-ref
+            ($merged_complex, $merged_score) = 
+                $self->_merge($state, $iaction);
+
+        }
+    } else {
+        # Only one node in a complex tree, other is new (a monomer)
+        
+        if ($uf->has($src)) {
+            # Create dimer, then merge on $src
+            ($merged_complex, $merged_score) = 
+                $self->_add_monomer($state, $iaction, $src);
+            
+        } else {
+            # Create dimer, then merge on $dest
+            ($merged_complex, $merged_score) = 
+                $self->_add_monomer($state, $iaction, $dest);
+        }
+    }
+    
+    return ($merged_complex, $merged_score);
+} # test
+
+
+# Closes a cycle, using a *known* interaction template
+# (i.e. novel interactions not detected at this stage)
+sub _cycle {
+    my ($self, $state, $iaction) = @_;
+    $log->debug($iaction);
+    # Take either end of the interaction, since they belong to same complex
+    my ($src, $dest) = $iaction->nodes;
+    my $partition = $state->{'uf'}->find($src);
+    my $complex = $state->{'models'}->{$partition};
+
+    # Modify a copy
+    # TODO store these thresholds (configurably) elsewhere
+    my $merged_complex = $complex->clone;
+    # Difference from 10 to get something in range [0:10]
+    my $irmsd = $merged_complex->cycle($iaction);
+    return unless defined($irmsd) && $irmsd < 15;
+    # Give this a ring bonus of +10, since it closes a ring
+    # Normally a STAMP score gives no better than 10
+    my $merged_score = 20 - $irmsd;
+    
+    return ($merged_complex, $merged_score);
+} # _cycle
+
+
+# Merge two complexes, into a common spacial frame of reference
+sub _merge {
+    my ($self, $state, $iaction) = @_;
+    $log->debug($iaction);
+    # Order irrelevant, as merging is symmetric
+    my ($src, $dest) = $iaction->nodes;
+
+    my $src_part = $state->{'uf'}->find($src);
+    my $src_complex = $state->{'models'}->{$src_part};
+    my $dest_part = $state->{'uf'}->find($dest);
+    my $dest_complex = $state->{'models'}->{$dest_part};
+
+    my $merged_complex = $src_complex->clone;
+    my $merged_score = $merged_complex->merge_interaction($dest_complex,$iaction);
+
+    return ($merged_complex, $merged_score);
+} # _merge
+
+
+################################################################################
+=head2 _add_monomer
+
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
+
+Add a single component to an existing complex, using the given interaction.
+
+One component in the interaction is homologous to a component ($ref) in the model
+
+=cut
+sub _add_monomer {
+    my ($self, $state, $iaction, $ref) = @_;
+    $log->debug($iaction);
+    # Create complex out of a single interaction
+    my $add_complex = SBG::Complex->new;
+    $add_complex->add_interaction($iaction, $iaction->keys);
+
+    # Lookup complex to which we want to add the interaction
+    my $ref_partition = $state->{'uf'}->find($ref);
+    my $ref_complex = $state->{'models'}->{$ref_partition};
+    my $merged_complex = $ref_complex->clone;
+    my $merged_score = $merged_complex->merge_domain($add_complex, $ref);
+
+    return ($merged_complex, $merged_score);
+
+} # _add_monomer
+
+
+
 ################################################################################
 =head2 solution
 
@@ -125,8 +279,8 @@ TODO output network toplogy of solution interaction network used to build model
 
 =cut
 sub solution {
-    my ($self, $complex, $net) = @_;
-
+    my ($self, $state, $partition,) = @_;
+    my $complex = $state->{'models'}->{$partition};
     # Uninteresting unless at least two interfaces in solution
     return unless defined($complex) && $complex->size >= 3;     
 
@@ -190,7 +344,7 @@ sub _write_solution {
     $complex->store($file);
 #     $complex->write('pdb', file=>">${file}.pdb");
 
-}
+} # _write_solution
 
 
 sub _status {
@@ -209,49 +363,8 @@ sub _status {
             $keys->map(sub{ $self->sizes->at($_) })->flatten,
             ;
     }
-}
+} # _status
 
-
-################################################################################
-=head2 test
-
- Function: 
- Example : 
- Returns : 
- Args    : 
-
-Callback for attempting to add a new interaction template
-
-Uses the hash saved in the interation object (set when templates loaded) to find
-out what templates used by which components on an edge in the interaction graph
-
-Returns true/false == success/failure to use/add interaction template
-
-=cut
-
-sub test {
-    my ($self, $complex, $graph, $src, $dest, $iaction_id) = @_;
-    log()->trace($iaction_id);
-
-    my $score;
-
-    return $score;
-
-} # test
-
-
-sub score {
-    my ($self, $net, $alt_id) = @_;
-
-#     my $score = $net->get_interaction_by_id($alt_id)->weight;
-    my $score = 
-        $net->get_interaction_by_id($alt_id)->scores->at('interface_conserved');
-
-    return $score;
-
-}
-
-    
 
 ################################################################################
 __PACKAGE__->meta->make_immutable;

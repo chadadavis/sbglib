@@ -32,6 +32,8 @@ use Graph::UnionFind;
 use Bio::Network::ProteinNet;
 use Storable qw/dclone/;
 
+use SBG::Complex;
+
 
 ################################################################################
 
@@ -145,7 +147,7 @@ sub _recurse {
 
     # Resulting complex, after (possibly) merging two disconnected complexes
     my ($merged_complex, $merged_score) = 
-        $self->_try_iaction($state, $iaction);
+        $self->assembler->test($state, $iaction);
 
     if (defined $merged_score) {
         # Clone state, add interaction to cloned state, recurse on next iaction
@@ -166,8 +168,7 @@ sub _recurse {
                                                -interaction=>$iaction);
         
         # Every successfully modelled interaction creates a new solution model
-        $self->assembler->solution($merged_complex, $state_clone) 
-            if $merged_complex->size > 2;
+        $self->assembler->solution($state_clone, $partition);
 
         # Recursive call, only when interaction was successfully added
         # Starts with next interaction in the list: $i+1
@@ -195,136 +196,6 @@ sub _recurse {
 
 } # _recurse
 
-
-# A number of cases might be applicable, depending on network connectivity
-sub _try_iaction {
-    my ($self, $state, $iaction) = @_;
-    # Skip if already covered
-    if ($state->{'net'}->has_edge($iaction->nodes)) {
-        $log->debug("Edge already covered: $iaction");
-        return;
-    }
-
-    # Doesn't matter which we consider to be the source/dest node
-    my ($src,$dest) = $iaction->nodes;
-    my $uf = $state->{'uf'};
-
-    # Resulting complex, after (possibly) merging two disconnected complexes
-    my $merged_complex;
-    # Score for placing this interaction into the solutions complex forest
-    my $merged_score;
-
-    if (! $uf->has($src) && ! $uf->has($dest) ) {
-        # Neither node present in solutions forest. Create dimer
-        $merged_complex = SBG::Complex->new;
-        $merged_score = 
-            $merged_complex->add_interaction($iaction, $iaction->keys);
-        
-    } elsif ($uf->has($src) && $uf->has($dest)) {
-        # Both nodes present in existing complexes
-        
-        if ($uf->same($src,$dest)) {
-            # Nodes in same complex tree already, attempt ring closure
-            ($merged_complex, $merged_score) = 
-                $self->_cycle($state, $iaction);
-            
-        } else {
-            # Nodes in separate complexes, merge into single frame-of-ref
-            ($merged_complex, $merged_score) = 
-                $self->_merge($state, $iaction);
-
-        }
-    } else {
-        # Only one node in a complex tree, other is new (a monomer)
-        
-        if ($uf->has($src)) {
-            # Create dimer, then merge on $src
-            ($merged_complex, $merged_score) = 
-                $self->_add_monomer($state, $iaction, $src);
-            
-        } else {
-            # Create dimer, then merge on $dest
-            ($merged_complex, $merged_score) = 
-                $self->_add_monomer($state, $iaction, $dest);
-        }
-    }
-    
-    return ($merged_complex, $merged_score);
-} # _try_iaction
-
-
-# Closes a cycle, using a *known* interaction template
-# (i.e. novel interactions not detected at this stage)
-sub _cycle {
-    my ($self, $state, $iaction) = @_;
-    $log->debug($iaction);
-    # Take either end of the interaction, since they belong to same complex
-    my ($src, $dest) = $iaction->nodes;
-    my $partition = $state->{'uf'}->find($src);
-    my $complex = $state->{'models'}->{$partition};
-
-    # Modify a copy
-    # TODO store these thresholds (configurably) elsewhere
-    my $merged_complex = $complex->clone;
-    # Difference from 10 to get something in range [0:10]
-    my $irmsd = $merged_complex->cycle($iaction);
-    return unless defined($irmsd) && $irmsd < 15;
-    # Give this a ring bonus of +10, since it closes a ring
-    # Normally a STAMP score gives no better than 10
-    my $merged_score = 20 - $irmsd;
-    
-    return ($merged_complex, $merged_score);
-} # _cycle
-
-
-# Merge two complexes, into a common spacial frame of reference
-sub _merge {
-    my ($self, $state, $iaction) = @_;
-    $log->debug($iaction);
-    # Order irrelevant, as merging is symmetric
-    my ($src, $dest) = $iaction->nodes;
-
-    my $src_part = $state->{'uf'}->find($src);
-    my $src_complex = $state->{'models'}->{$src_part};
-    my $dest_part = $state->{'uf'}->find($dest);
-    my $dest_complex = $state->{'models'}->{$dest_part};
-
-    my $merged_complex = $src_complex->clone;
-    my $merged_score = $merged_complex->merge_interaction($dest_complex,$iaction);
-
-    return ($merged_complex, $merged_score);
-} # _merge
-
-
-################################################################################
-=head2 _add_monomer
-
- Function: 
- Example : 
- Returns : 
- Args    : 
-
-Add a single component to an existing complex, using the given interaction.
-
-One component in the interaction is homologous to a component ($ref) in the model
-
-=cut
-sub _add_monomer {
-    my ($self, $state, $iaction, $ref) = @_;
-    $log->debug($iaction);
-    # Create complex out of a single interaction
-    my $add_complex = SBG::Complex->new;
-    $add_complex->add_interaction($iaction, $iaction->keys);
-
-    # Lookup complex to which we want to add the interaction
-    my $ref_partition = $state->{'uf'}->find($ref);
-    my $ref_complex = $state->{'models'}->{$ref_partition};
-    my $merged_complex = $ref_complex->clone;
-    my $merged_score = $merged_complex->merge_domain($add_complex, $ref);
-
-    return ($merged_complex, $merged_score);
-
-} # _add_monomer
 
 
 ################################################################################
