@@ -85,7 +85,7 @@ foreach my $file (@ARGV) {
     $net = $net->build($searcher,%$buildops);
     
     my $base = $ops{output} || $basename;
-    $net->store($base . '.network');
+    $net->store($base . '.network') if $net->edges > 1;
 
     end_lock($lock, scalar $net->interactions);
 
