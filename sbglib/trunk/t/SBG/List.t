@@ -6,9 +6,34 @@ $,=' ';
 # Autoboxing native types
 use Moose::Autobox;
 # Also: Look for methods of ARRAY objects in SBG::U::List
-use autobox ARRAY => SBG::U::List;
+use autobox ARRAY => 'SBG::U::List';
 # Add this in to test
-use SBG::U::List qw(union intersection nsort flatten lcp pairs mean swap);
+use SBG::U::List 
+    qw/union intersection nsort flatten lcp pairs mean swap argmin argmax/;
+
+
+# Single element
+my ($elem, $max) = argmax { $_ } (5);
+is($elem, 5);
+is($max, 5);
+
+# Multiple
+my ($elem, $max) = argmax { $_ } (5,2,6,3);
+is($elem, 6);
+is($max, 6);
+
+# With objects
+my ($elem, $max) = argmax { $_->{val} } ({val=>5},{val=>2},{val=>6},{val=>3});
+is_deeply($elem,{val=>6});
+is($max,6);
+
+# Scalar context
+my $elem = argmax { $_->{val} } ({val=>5},{val=>2},{val=>6},{val=>3});
+is_deeply($elem,{val=>6});
+
+# Min
+my $elem = argmin { $_->{val} } ({val=>5},{val=>2},{val=>6},{val=>3});
+is_deeply($elem,{val=>2});
 
 
 my @a = 1..10;
@@ -39,7 +64,7 @@ my $arrayref = [ 1..10 ];
 $arrayref->push(4);
 is_deeply($arrayref, [1..10,4]);
 
-@vals = 1..4;
+my @vals = 1..4;
 my $rvals = \@vals;
 is(mean(@vals), mean($rvals));
 is(mean(@vals), @vals->mean);
@@ -47,7 +72,7 @@ is(mean($rvals), $rvals->mean);
 is(@vals->mean, $rvals->mean);
 
 # nsort
-$x = [4..10, 8..15,2..6];
+my $x = [4..10, 8..15,2..6];
 is($x->sum, 161);
 is($x->min, 2);
 is($x->max, 15);
@@ -62,14 +87,14 @@ is($a,2);
 is($b,1);
 
 $x = $x->uniq;
-$xs = $x->sort;
-$perm = $x->permute;
-$perms = $perm->sort;
+my $xs = $x->sort;
+my $perm = $x->permute;
+my $perms = $perm->sort;
 is_deeply($xs, $perms);
 
 
 # Some objects
-$objs = [ { name=>'joe'}, {name=>'alice'}, {name=>'frank'} ];
+my $objs = [ { name=>'joe'}, {name=>'alice'}, {name=>'frank'} ];
 # An accessor
 my $name = sub { (shift)->{name} };
 # Original order of mapped variable
@@ -77,7 +102,7 @@ my $orign = $objs->map($name);
 # Order we will request (a boring example: lexicographic)
 my $sortedn = $orign->sort;
 # Reorder $objs, after applying $name->(), according to $sortedn
-$r = $objs->reorder($sortedn, $name);
+my $r = $objs->reorder($sortedn, $name);
 # Check that the resulting objects are in the right order, by checking the names
-$rnames = $r->map($name);
+my $rnames = $r->map($name);
 is_deeply($rnames, $sortedn);
