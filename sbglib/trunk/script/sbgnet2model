@@ -170,6 +170,9 @@ sub _one_net {
     # Go!
     $t->traverse($state);
 
+    $assembler->_status;
+    print "\n";
+
 }
 
 

@@ -127,8 +127,6 @@ TODO output network toplogy of solution interaction network used to build model
 sub solution {
     my ($self, $complex, $net) = @_;
 
-    $self->_status();
-
     # Uninteresting unless at least two interfaces in solution
     return unless defined($complex) && $complex->size >= 3;     
 
@@ -166,9 +164,11 @@ sub solution {
         $self->sizes->put($sizeclass, $sizeclassn+1);
 
         $self->_write_solution($complex, $class);
-
-        return 1;
     }
+
+    $self->_status();
+    # Let caller know that we accepted solution
+    return 1;
 
 } # solution
 
@@ -196,14 +196,14 @@ sub _write_solution {
 sub _status {
     my ($self) = @_;
     my $keys = $self->sizes->keys->sort;
-    my $sizeheader = $keys->map(sub{ "%3d ${_}mers" })->join(', ');
+    my $sizeheader = $keys->map(sub{ "%3d ${_}mers" })->join("\t");
 
     # Flush console and setup in-line printing, unless redirected
     if (-t STDOUT) {
         local $| = 1;
         printf 
             "\033[1K\r" . # Carriage return, i.e. w/o linefeed
-            "%5d unique, %5d dups, %5d total, distribution: " .
+            "models:\t%5d unique\t%5d dups\t %5d total\t distribution: " .
             "$sizeheader ", 
             $self->classes, $self->dups, $self->solutions,
             $keys->map(sub{ $self->sizes->at($_) })->flatten,
