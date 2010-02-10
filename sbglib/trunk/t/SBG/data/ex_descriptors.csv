@@ -1,75 +1,75 @@
-RRP41 RRP42  2br2 { CHAIN A } 2br2 { CHAIN B } 69.70 
-RRP41 RRP42  2br2 { CHAIN B } 2br2 { CHAIN A } 69.70 
-RRP41 RRP42  2br2 { CHAIN A } 2br2 { CHAIN D } 94.36 
-RRP41 RRP42  2br2 { CHAIN D } 2br2 { CHAIN A } 94.36 
+RRP41 RRP42  2br2 { CHAIN A } 2br2 { CHAIN B } default 69.70 
+RRP41 RRP42  2br2 { CHAIN B } 2br2 { CHAIN A } default 69.70 
+RRP41 RRP42  2br2 { CHAIN A } 2br2 { CHAIN D } default 94.36 
+RRP41 RRP42  2br2 { CHAIN D } 2br2 { CHAIN A } default 94.36 
 
-RRP41 RRP43  2br2 { CHAIN A } 2br2 { CHAIN B }  5.64 
-RRP41 RRP43  2br2 { CHAIN B } 2br2 { CHAIN A }  5.64 
-RRP41 RRP43  2br2 { CHAIN A } 2br2 { CHAIN D } 52.99 
-RRP41 RRP43  2br2 { CHAIN D } 2br2 { CHAIN A } 52.99 
+RRP41 RRP43  2br2 { CHAIN A } 2br2 { CHAIN B } default  5.64 
+RRP41 RRP43  2br2 { CHAIN B } 2br2 { CHAIN A } default  5.64 
+RRP41 RRP43  2br2 { CHAIN A } 2br2 { CHAIN D } default 52.99 
+RRP41 RRP43  2br2 { CHAIN D } 2br2 { CHAIN A } default 52.99 
 
-RRP41 RRP45  2br2 { CHAIN A } 2br2 { CHAIN B } 44.79 
-RRP41 RRP45  2br2 { CHAIN B } 2br2 { CHAIN A } 44.79 
-RRP41 RRP45  2br2 { CHAIN A } 2br2 { CHAIN D }  0.94 
-RRP41 RRP45  2br2 { CHAIN D } 2br2 { CHAIN A }  0.94 
+RRP41 RRP45  2br2 { CHAIN A } 2br2 { CHAIN B } default 44.79 
+RRP41 RRP45  2br2 { CHAIN B } 2br2 { CHAIN A } default 44.79 
+RRP41 RRP45  2br2 { CHAIN A } 2br2 { CHAIN D } default  0.94 
+RRP41 RRP45  2br2 { CHAIN D } 2br2 { CHAIN A } default  0.94 
 
-RRP41 RRP46  2br2 { CHAIN A } 2br2 { CHAIN B } 63.07 
-RRP41 RRP46  2br2 { CHAIN B } 2br2 { CHAIN A } 63.07 
-RRP41 RRP46  2br2 { CHAIN A } 2br2 { CHAIN D } 12.84 
-RRP41 RRP46  2br2 { CHAIN D } 2br2 { CHAIN A } 12.84 
+RRP41 RRP46  2br2 { CHAIN A } 2br2 { CHAIN B } default 63.07 
+RRP41 RRP46  2br2 { CHAIN B } 2br2 { CHAIN A } default 63.07 
+RRP41 RRP46  2br2 { CHAIN A } 2br2 { CHAIN D } default 12.84 
+RRP41 RRP46  2br2 { CHAIN D } 2br2 { CHAIN A } default 12.84 
 
-RRP41 MTR3   2br2 { CHAIN A } 2br2 { CHAIN B } 54.03 
-RRP41 MTR3   2br2 { CHAIN B } 2br2 { CHAIN A } 54.03 
-RRP41 MTR3   2br2 { CHAIN A } 2br2 { CHAIN D } 22.58 
-RRP41 MTR3   2br2 { CHAIN D } 2br2 { CHAIN A } 22.58 
+RRP41 MTR3   2br2 { CHAIN A } 2br2 { CHAIN B } default 54.03 
+RRP41 MTR3   2br2 { CHAIN B } 2br2 { CHAIN A } default 54.03 
+RRP41 MTR3   2br2 { CHAIN A } 2br2 { CHAIN D } default 22.58 
+RRP41 MTR3   2br2 { CHAIN D } 2br2 { CHAIN A } default 22.58 
 
-RRP42 RRP43  2br2 { CHAIN A } 2br2 { CHAIN B }  0.81 
-RRP42 RRP43  2br2 { CHAIN B } 2br2 { CHAIN A }  0.81 
-RRP42 RRP43  2br2 { CHAIN A } 2br2 { CHAIN D } 81.49 
-RRP42 RRP43  2br2 { CHAIN D } 2br2 { CHAIN A } 81.49 
+RRP42 RRP43  2br2 { CHAIN A } 2br2 { CHAIN B } default  0.81 
+RRP42 RRP43  2br2 { CHAIN B } 2br2 { CHAIN A } default  0.81 
+RRP42 RRP43  2br2 { CHAIN A } 2br2 { CHAIN D } default 81.49 
+RRP42 RRP43  2br2 { CHAIN D } 2br2 { CHAIN A } default 81.49 
 
-RRP42 RRP45  2br2 { CHAIN A } 2br2 { CHAIN B } 12.42 
-RRP42 RRP45  2br2 { CHAIN B } 2br2 { CHAIN A } 12.42 
-RRP42 RRP45  2br2 { CHAIN A } 2br2 { CHAIN D } 68.42 
-RRP42 RRP45  2br2 { CHAIN D } 2br2 { CHAIN A } 68.42 
+RRP42 RRP45  2br2 { CHAIN A } 2br2 { CHAIN B } default 12.42 
+RRP42 RRP45  2br2 { CHAIN B } 2br2 { CHAIN A } default 12.42 
+RRP42 RRP45  2br2 { CHAIN A } 2br2 { CHAIN D } default 68.42 
+RRP42 RRP45  2br2 { CHAIN D } 2br2 { CHAIN A } default 68.42 
 
-RRP42 RRP46  2br2 { CHAIN A } 2br2 { CHAIN B } 58.71 
-RRP42 RRP46  2br2 { CHAIN B } 2br2 { CHAIN A } 58.71 
-RRP42 RRP46  2br2 { CHAIN A } 2br2 { CHAIN D } 52.05 
-RRP42 RRP46  2br2 { CHAIN D } 2br2 { CHAIN A } 52.05 
+RRP42 RRP46  2br2 { CHAIN A } 2br2 { CHAIN B } default 58.71 
+RRP42 RRP46  2br2 { CHAIN B } 2br2 { CHAIN A } default 58.71 
+RRP42 RRP46  2br2 { CHAIN A } 2br2 { CHAIN D } default 52.05 
+RRP42 RRP46  2br2 { CHAIN D } 2br2 { CHAIN A } default 52.05 
 
-RRP42 MTR3   2br2 { CHAIN A } 2br2 { CHAIN B } 55.38 
-RRP42 MTR3   2br2 { CHAIN B } 2br2 { CHAIN A } 55.38 
-RRP42 MTR3   2br2 { CHAIN A } 2br2 { CHAIN D } 65.06 
-RRP42 MTR3   2br2 { CHAIN D } 2br2 { CHAIN A } 65.06 
+RRP42 MTR3   2br2 { CHAIN A } 2br2 { CHAIN B } default 55.38 
+RRP42 MTR3   2br2 { CHAIN B } 2br2 { CHAIN A } default 55.38 
+RRP42 MTR3   2br2 { CHAIN A } 2br2 { CHAIN D } default 65.06 
+RRP42 MTR3   2br2 { CHAIN D } 2br2 { CHAIN A } default 65.06 
 
-RRP43 RRP45  2br2 { CHAIN A } 2br2 { CHAIN B } 41.74 
-RRP43 RRP45  2br2 { CHAIN B } 2br2 { CHAIN A } 41.74 
-RRP43 RRP45  2br2 { CHAIN A } 2br2 { CHAIN D } 53.31 
-RRP43 RRP45  2br2 { CHAIN D } 2br2 { CHAIN A } 53.31 
+RRP43 RRP45  2br2 { CHAIN A } 2br2 { CHAIN B } default 41.74 
+RRP43 RRP45  2br2 { CHAIN B } 2br2 { CHAIN A } default 41.74 
+RRP43 RRP45  2br2 { CHAIN A } 2br2 { CHAIN D } default 53.31 
+RRP43 RRP45  2br2 { CHAIN D } 2br2 { CHAIN A } default 53.31 
 
-RRP43 RRP46  2br2 { CHAIN A } 2br2 { CHAIN B } 19.70 
-RRP43 RRP46  2br2 { CHAIN B } 2br2 { CHAIN A } 19.70 
-RRP43 RRP46  2br2 { CHAIN A } 2br2 { CHAIN D } 31.46 
-RRP43 RRP46  2br2 { CHAIN D } 2br2 { CHAIN A } 31.46 
+RRP43 RRP46  2br2 { CHAIN A } 2br2 { CHAIN B } default 19.70 
+RRP43 RRP46  2br2 { CHAIN B } 2br2 { CHAIN A } default 19.70 
+RRP43 RRP46  2br2 { CHAIN A } 2br2 { CHAIN D } default 31.46 
+RRP43 RRP46  2br2 { CHAIN D } 2br2 { CHAIN A } default 31.46 
 
-RRP43 MTR3   2br2 { CHAIN A } 2br2 { CHAIN B } 56.52 
-RRP43 MTR3   2br2 { CHAIN B } 2br2 { CHAIN A } 56.52 
-RRP43 MTR3   2br2 { CHAIN A } 2br2 { CHAIN D } 70.91 
-RRP43 MTR3   2br2 { CHAIN D } 2br2 { CHAIN A } 70.91 
+RRP43 MTR3   2br2 { CHAIN A } 2br2 { CHAIN B } default 56.52 
+RRP43 MTR3   2br2 { CHAIN B } 2br2 { CHAIN A } default 56.52 
+RRP43 MTR3   2br2 { CHAIN A } 2br2 { CHAIN D } default 70.91 
+RRP43 MTR3   2br2 { CHAIN D } 2br2 { CHAIN A } default 70.91 
 
-RRP45 RRP46  2br2 { CHAIN A } 2br2 { CHAIN B } 85.99 
-RRP45 RRP46  2br2 { CHAIN B } 2br2 { CHAIN A } 85.99 
-RRP45 RRP46  2br2 { CHAIN A } 2br2 { CHAIN D } 38.56 
-RRP45 RRP46  2br2 { CHAIN D } 2br2 { CHAIN A } 38.56 
+RRP45 RRP46  2br2 { CHAIN A } 2br2 { CHAIN B } default 85.99 
+RRP45 RRP46  2br2 { CHAIN B } 2br2 { CHAIN A } default 85.99 
+RRP45 RRP46  2br2 { CHAIN A } 2br2 { CHAIN D } default 38.56 
+RRP45 RRP46  2br2 { CHAIN D } 2br2 { CHAIN A } default 38.56 
 
-RRP45 MTR3   2br2 { CHAIN A } 2br2 { CHAIN B } 10.37 
-RRP45 MTR3   2br2 { CHAIN B } 2br2 { CHAIN A } 10.37 
-RRP45 MTR3   2br2 { CHAIN A } 2br2 { CHAIN D } 61.40 
-RRP45 MTR3   2br2 { CHAIN D } 2br2 { CHAIN A } 61.40 
+RRP45 MTR3   2br2 { CHAIN A } 2br2 { CHAIN B } default 10.37 
+RRP45 MTR3   2br2 { CHAIN B } 2br2 { CHAIN A } default 10.37 
+RRP45 MTR3   2br2 { CHAIN A } 2br2 { CHAIN D } default 61.40 
+RRP45 MTR3   2br2 { CHAIN D } 2br2 { CHAIN A } default 61.40 
 
-RRP46 MTR3   2br2 { CHAIN A } 2br2 { CHAIN B } 57.06 
-RRP46 MTR3   2br2 { CHAIN B } 2br2 { CHAIN A } 57.06 
-RRP46 MTR3   2br2 { CHAIN A } 2br2 { CHAIN D } 17.96 
-RRP46 MTR3   2br2 { CHAIN D } 2br2 { CHAIN A } 17.96 
+RRP46 MTR3   2br2 { CHAIN A } 2br2 { CHAIN B } default 57.06 
+RRP46 MTR3   2br2 { CHAIN B } 2br2 { CHAIN A } default 57.06 
+RRP46 MTR3   2br2 { CHAIN A } 2br2 { CHAIN D } default 17.96 
+RRP46 MTR3   2br2 { CHAIN D } 2br2 { CHAIN A } default 17.96 
 
