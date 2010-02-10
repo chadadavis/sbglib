@@ -15,6 +15,13 @@ $DEBUG = 1;
 log()->init('TRACE') if $DEBUG;
 $File::Temp::KEEP_ALL = $DEBUG;
 
+
+$TODO = "...";
+ok(0);
+
+exit;
+
+
 use Graph::Traversal::Power;
 use SBG::NetworkIO::csv;
 
