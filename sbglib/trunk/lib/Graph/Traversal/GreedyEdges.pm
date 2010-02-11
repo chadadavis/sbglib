@@ -114,19 +114,20 @@ sub traverse {
 
     # All interaction templates, sorted descending by the field $self->sorter
     my $iactions = $self->interactions_by_field($self->sorter);
-    $log->debug("interactions: ", $iactions->length);
+    $log->info("interactions: ", $iactions->length);
 
     # Start recursion at interaction 0
     $self->_recurse($iactions, 0, $state);
 
-    $log->debug('End');
+    $log->info('End');
 
 } # traverse
 
 
 sub _recurse {
-    my ($self, $iactions, $i, $state) = @_;
-    $log->debug("i:$i");
+    my ($self, $iactions, $i, $state, $leftmost) = @_;
+
+    $log->debug("left:$leftmost i:$i");
     return unless $i < $iactions->length;
     my $iaction = $iactions->[$i];
     $log->debug("i:$i $iaction");
@@ -136,6 +137,11 @@ sub _recurse {
         $self->assembler->test($state, $iaction);
 
     if (defined $merged_score) {
+        unless (defined $leftmost) {
+            $leftmost = $i;
+            $log->info("leftmost: $leftmost");
+        }
+
         # Clone state, add interaction to cloned state, recurse on next iaction
         my $state_clone = dclone($state);
         # Now update the cloned state with the placed interaction
@@ -160,7 +166,7 @@ sub _recurse {
         # Starts with next interaction in the list: $i+1
         # NB this isn't tail recursion and cannot be unrolled, we need to return
         $log->debug("i:$i Recursing, with   : $iaction");
-        $self->_recurse($iactions, $i+1, $state_clone);
+        $self->_recurse($iactions, $i+1, $state_clone, $leftmost);
         
         $log->debug("i:$i Returned after placing iaction.");
     } 
@@ -168,12 +174,13 @@ sub _recurse {
     # Whether successful or not, now tail recurse to the next iaction,
     # Here were using the original state, i.e. before any interaction modelled
     $log->debug("i:$i Recursing, without: $iaction");
+    $leftmost = undef if $leftmost == $i;
     # Tail recursion is flattened here, unless debugger active
     if (defined $DB::sub) {
-        $self->_recurse($iactions, $i+1, $state);
+        $self->_recurse($iactions, $i+1, $state, $leftmost);
     } else {
         # Flatten tail recursion with a goto, squashing the call stack
-        @_ = ($self, $iactions, $i+1, $state);
+        @_ = ($self, $iactions, $i+1, $state, $leftmost);
         goto \&_recurse;
     }
 

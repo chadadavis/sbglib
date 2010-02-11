@@ -799,7 +799,7 @@ sub check_clash {
         $overlaps->push($overlapfrac) if $overlapfrac > 0;
     }
     my $mean = mean($overlaps) || 0;
-    $log->info("$newdom fits w/ mean overlap fraction: ", $mean);
+    $log->debug("$newdom fits w/ mean overlap fraction: ", $mean);
     return $mean;
 } # check_clash
 
@@ -822,7 +822,7 @@ $ignore is the pivot used to merge the complex, which doesn't need to be checked
 sub check_clashes {
     my ($self, $otherdoms, $ignore ) = @_;
     my $thresh = $self->overlap_thresh;
-    $log->info("fractional overlap thresh:$thresh");
+    $log->debug("fractional overlap thresh:$thresh");
     my $overlaps = [];
 
     $log->debug($self->size, " vs ", $otherdoms->length);
@@ -843,7 +843,7 @@ sub check_clashes {
         }
     }
     my $mean = mean($overlaps) || 0;
-    $log->info("mean overlap fraction: ", $mean);
+    $log->debug("mean overlap fraction: ", $mean);
     return $mean;
 
 } # check_clashes
