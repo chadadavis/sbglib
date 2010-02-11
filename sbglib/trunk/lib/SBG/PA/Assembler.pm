@@ -30,7 +30,7 @@ use File::Temp qw/tempfile/;
 
 use SBG::GeometricHash;
 use PDL::Matrix;
-use SBG::U::Log qw/log/;
+use Log::Any qw/$log/;
 
 use Graph::Undirected;
 
@@ -72,7 +72,7 @@ sub test {
         $state->{'active'}{$src}++;
         $state->{'active'}{$dest}++;
     } else {
-        log()->debug("Clash: $dest on $occupied");
+        $log->debug("Clash: $dest on $occupied");
     }
 
     return ! $occupied;
@@ -130,7 +130,7 @@ sub solution {
     return unless defined $nodecover;
 
     our %paths;
-    log()->trace(join('|', @$nodecover));
+    $log->debug(join('|', @$nodecover));
 
     # Get the subgraph and find the path from one end to other
     my $sg = _subgraph2($graph, @$edges);
@@ -138,7 +138,7 @@ sub solution {
 
     my $pathid = join(' ', @path);
     if ($paths{$pathid}) {
-        log()->trace("Dup path: $pathid");
+        $log->debug("Dup path: $pathid");
         return;
     }
 

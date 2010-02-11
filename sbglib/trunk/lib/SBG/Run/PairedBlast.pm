@@ -57,13 +57,14 @@ sub stringify { (shift)->name }
 
 package SBG::Run::PairedBlast;
 use Moose;
-use Bio::Tools::Run::StandAloneBlast;
-use Bio::Tools::Run::RemoteBlast;
-
 use Moose::Autobox;
 
+use Bio::Tools::Run::StandAloneBlast;
+use Bio::Tools::Run::RemoteBlast;
+use Log::Any qw/$log/;
+
 use SBG::U::List qw/intersection pairs2/;
-use SBG::U::Log qw/log/;
+
 
 
 has 'cache' => (
@@ -183,7 +184,7 @@ sub remoteblast {
     $factory->submit_blast($seq);
 
     my ($rid) = $factory->each_rid;
-    log()->debug("RID: $rid");
+    $log->info("RID: $rid");
     while (sleep $self->wait) {
         my $rc = $factory->retrieve_blast($rid);
         if (ref $rc) {
@@ -192,7 +193,7 @@ sub remoteblast {
         } elsif ($rc < 0) {
             # Abort if error
             $factory->remove_rid($rid);
-            log()->error("Failed on RID: $rid");
+            $log->error("Failed on RID: $rid");
             return;
         }
     }
@@ -232,7 +233,7 @@ sub search {
         my @hitpairs = SBG::U::List::pairs2($hits1->{$id}, $hits2->{$id});
         push @pairs, @hitpairs;
     }
-    log()->debug(scalar(@pairs), ' Blast hit pairs');
+    $log->debug(scalar(@pairs), ' Blast hit pairs');
     return @pairs;
 }
 
@@ -248,14 +249,14 @@ sub _blast1 {
 
     my $hits = $self->cache->at($seq);
     if ($ops{cache} && $hits) {
-        log()->debug($seq->primary_id, ': ', $hits->length," Hits (cached)");
+        $log->debug($seq->primary_id, ': ', $hits->length," Hits (cached)");
     } else {
         my $method = $self->method;
         my $res = $self->$method($seq)->next_result;
         $hits = [ $res->hits ];
         # Only take the Hits that have > 0 HSPs
         $hits = $hits->grep(sub{$_->hsps});
-        log()->debug($seq->primary_id, ': ', $hits->length," Hits (raw)");
+        $log->debug($seq->primary_id, ': ', $hits->length," Hits (raw)");
         # Sort them descending by the Blast bit score of the best HSP of the Hit
         $hits = [ sort { $b->hsp->score <=> $a->hsp->score } @$hits ];
         $self->cache->put($seq, $hits) if $ops{cache};
@@ -263,25 +264,25 @@ sub _blast1 {
 
     if ($ops{maxid}) {
         $ops{maxid} /= 100.0 if $ops{maxid} > 1;
-        log()->debug("Maxium sequence identity fraction: ", $ops{maxid});
+        $log->debug("Maxium sequence identity fraction: ", $ops{maxid});
         $hits = $hits->grep(sub{$_->hsp->frac_identical<=$ops{maxid}});
     }
 
     if ($ops{minid}) {
         $ops{minid} /= 100.0 if $ops{minid} > 1;
-        log()->debug("Minimum sequence identity fraction: ", $ops{minid});
+        $log->debug("Minimum sequence identity fraction: ", $ops{minid});
         $hits = $hits->grep(sub{$_->hsp->frac_identical>=$ops{minid}});
     }
 
     if ($limit && $limit < @$hits) {
         $hits = $hits->slice([0..$limit-1]);
-        log()->debug($seq->primary_id, ': ', $hits->length," Hits (filtered)");
+        $log->debug($seq->primary_id, ': ', $hits->length," Hits (filtered)");
     }
 
     # Index by pdbid
     my $hitsbyid = _hitsbyid($hits);
     return $hitsbyid;
-}
+} # _blast1
 
 
 sub _hitsbyid {

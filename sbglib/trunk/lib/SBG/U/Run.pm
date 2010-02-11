@@ -2,7 +2,7 @@
 
 =head1 NAME
 
-
+SBG::U::Run
 
 =head1 SYNOPSIS
 
@@ -10,9 +10,7 @@
 
 =head1 DESCRIPTION
 
-
-=head1 OPTIONS
-
+Utilities for executables, including file locking, logging, option processing
 
 =head1 SEE ALSO
 
@@ -34,7 +32,6 @@ use Getopt::Long;
 
 use File::NFSLock;
 use Fcntl qw/LOCK_EX LOCK_NB/;
-
 use File::Slurp qw/slurp/;
 
 use SBG::U::Log;
@@ -53,16 +50,16 @@ use Log::Any::Adapter;
 
 =cut
 sub start_lock {
-    my ($basename) = @_;
-    my $donefile = $basename . '.done';
+    my ($basepath) = @_;
+    my $donefile = $basepath . '.done';
 
     # Already finished?
     if (-e $donefile) {
         if (-s $donefile) {
             my $content = slurp($donefile);
-            $log->debug("$basename already done: $content");
+            $log->info("$basepath already done: $content");
         } else {
-            $log->debug("$basename already done");
+            $log->info("$basepath already done");
         }
         return;
     }
@@ -74,7 +71,7 @@ sub start_lock {
     unless (defined $lock && ! $lock->{unlocked}) {
         my $ext = $File::NFSLock::LOCK_EXTENSION;
         my $lockedby = slurp($donefile . $ext);
-        $log->info("$basename : locked by: $lockedby");
+        $log->info("$basepath : locked by: $lockedby");
         return;
     }
 
@@ -113,15 +110,14 @@ sub end_lock {
  Returns : 
  Args    : 
 
+Deprecated
 
 =cut
 sub start_log {
     my ($name, %ops) = @_;
-    return unless $ops{'loglevel'};
-    my $logfile = $ops{'logfile'} || $name . '.log';
-    SBG::U::Log::init($ops{'loglevel'}, $logfile);
+    SBG::U::Log::init($name, %ops);
     Log::Any::Adapter->set('+SBG::U::Log');
-    $log->debug("$0 $name " . join ' ', %ops);
+    $log->info("$0 $name " . join ' ', %ops);
 }
 
 
@@ -163,7 +159,7 @@ sub frac_of {
 sub getoptions {
     my (@ops) = @_;
     # Throw in some standard options
-    push @ops, qw/help|h loglevel|l=s logfile|f=s debug|d/;
+    push @ops, qw/help|h loglevel|l=s logfile|f=s logdir=s debug|d/;
 
     my %ops;
     my $result = GetOptions(\%ops, @ops);

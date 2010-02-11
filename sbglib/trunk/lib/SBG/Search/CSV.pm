@@ -25,6 +25,7 @@ use Moose;
 with 'SBG::SearchI';
 
 use File::Temp qw/tempfile/;
+use Log::Any qw/$log/;
 
 use SBG::InteractionIO;
 use SBG::Interaction;
@@ -34,7 +35,7 @@ use SBG::Seq;
 use SBG::Node;
 
 use SBG::Types;
-use SBG::U::Log qw/log/;
+
 
 
 has 'file' => (
@@ -65,7 +66,7 @@ sub search {
     $fh->close;
 
     unless (-s $tpath) {
-        log->debug("$comp1 $comp2 : 0 hits");
+        $log->debug("$comp1 $comp2 : 0 hits");
         return;
     }
 
@@ -75,7 +76,7 @@ sub search {
         push @interactions, $line;
     }
     
-    log->debug("$comp1 $comp2 : ", scalar(@interactions), " hits");
+    $log->debug("$comp1 $comp2 : ", scalar(@interactions), " hits");
 
     return @interactions;
 

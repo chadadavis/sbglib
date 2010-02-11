@@ -28,12 +28,13 @@ use Moose::Autobox;
 
 use DBI;
 use PDL qw/pdl/;
+use Log::Any qw/$log/;
 
 use SBG::U::DB;
 use SBG::Superposition;
 use SBG::Transform::Affine;
 
-use SBG::U::Log qw/log/;
+
 
 # TODO DES OO
 our $database = "trans_3_0";
@@ -83,7 +84,7 @@ sub superposition_native {
     # Static handle, prepare it only once
     our $sth;
 
-    log()->trace("$dom1(",$dom1->entity,")=>$dom2(", $dom2->entity, ")");
+    $log->debug("$dom1(",$dom1->entity,")=>$dom2(", $dom2->entity, ")");
 
     $sth ||= $dbh->prepare("
 SELECT
@@ -96,18 +97,18 @@ trans
 WHERE (id_entity1=? AND id_entity2=?)
 ");
     unless ($sth) {
-        log()->error($dbh->errstr);
+        $log->error($dbh->errstr);
         return;
     }
     if (! $sth->execute($dom1->entity, $dom2->entity)) {
-        log()->error($sth->errstr);
+        $log->error($sth->errstr);
         return;
     }
     my $row = $sth->fetchrow_hashref();
     if (defined $row) {
-        log()->trace("DB hit (positive) $dom1=>$dom2");
+        $log->debug("DB hit (positive) $dom1=>$dom2");
     } else {
-        log()->trace("DB miss $dom1=>$dom2");
+        $log->debug("DB miss $dom1=>$dom2");
         return;
     }
 

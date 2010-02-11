@@ -40,12 +40,10 @@ our @EXPORT_OK = qw/cofm/;
 use Text::ParseWords qw/quotewords/;
 use PDL::Lite;
 use PDL::Core qw/pdl/;
+use Log::Any qw/$log/;
 
 use SBG::Domain::Sphere;
 use SBG::DomainIO::stamp;
-
-use SBG::U::Log qw/log/;
-
 
 # TODO DES OO
 # cofm binary (should be in PATH)
@@ -150,7 +148,7 @@ sub _run {
     my $cmd = "$cofm -f $path -v |";
     my $cofmfh;
     unless (open $cofmfh, $cmd) {
-        log()->error("Failed:\n\t$cmd\n\t$!");
+        $log->error("Failed:\n\t$cmd\n\t$!");
         return;
     }
 

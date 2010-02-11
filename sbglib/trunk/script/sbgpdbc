@@ -53,7 +53,7 @@ use SBG::ComplexIO::stamp;
 
 $SIG{__DIE__} = \&confess if $ARGS{debug};
 $File::Temp::KEEP_ALL = 1 if $ARGS{keep};
-SBG::U::Log::init($ARGS{log}) if $ARGS{log};
+
 
 # Non-option arguments
 my (@params) = @{$ARGS{'<>'}};
@@ -61,6 +61,7 @@ pod2usage(-verbose=>2) if $ARGS{help};
 
 foreach my $p (@params) {
 
+    SBG::U::Log::init($p, loglevel=>$ARGS{log});
     # Given string, use pdbc to make a complex
     my $complex = SBG::Run::pdbc::complex($p);
     my $file = "$p.dom";

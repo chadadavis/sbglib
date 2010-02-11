@@ -28,8 +28,6 @@ use File::Spec;
 
 use CHI;
 
-use SBG::U::Log qw/log/;
-
 # Cache cache  ;-)
 our %cache_hash;
 

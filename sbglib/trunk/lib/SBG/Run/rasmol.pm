@@ -28,10 +28,10 @@ use strict;
 use warnings;
 
 use File::Temp qw(tempfile tempdir);
+use Log::Any qw/$log/;
 
 use Bio::Root::IO; # exists_exe
 
-use SBG::U::Log qw/log/;
 use SBG::DomainIO::pdb;
 use SBG::U::List qw/flatten/;
 
@@ -61,7 +61,7 @@ sub rasmol {
     $io->write(@doms);
     my $cmd = "$rasmol_gui " . $io->file;
     system("$cmd 2>/dev/null") == 0 or
-        log()->error("Failed: $cmd\n\t$!");
+        $log->error("Failed: $cmd\n\t$!");
 
     return $io->file;
 } # rasmol
@@ -99,13 +99,13 @@ sub pdb2img {
         Bio::Root::IO->exists_exe('rasmol-classic') ||
         Bio::Root::IO->exists_exe('rasmol') or
         return;
-    log()->trace("$rasmol_converter: $o{pdb} => $o{img}");
+    $log->debug("$rasmol_converter: $o{pdb} => $o{img}");
 
     my $fh;
     my $cmd = "$rasmol_converter -nodisplay >/dev/null 2>/dev/null";
-    log()->trace($cmd);
+    $log->debug($cmd);
     unless(open $fh, "| $cmd") {
-        log()->error("Failed: $cmd\n\t$!");
+        $log->error("Failed: $cmd\n\t$!");
         return;
     }
     print $fh "load \"$o{pdb}\"\n";
@@ -124,7 +124,7 @@ HERE
     # Need to explicitly close before checking for output file
     close $fh;
     unless (-s "$o{img}") {
-        log()->error("$rasmol_converter failed to write: $o{img}\n\t$!");
+        $log->error("$rasmol_converter failed to write: $o{img}\n\t$!");
         return;
     }
     return $o{img};

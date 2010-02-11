@@ -25,8 +25,10 @@ use base qw/Exporter/;
 our @EXPORT_OK = qw/query/;
 
 use DBI;
+use Log::Any qw/$log/;
+
 use SBG::U::DB;
-use SBG::U::Log qw/log/;
+
 
 
 # TODO DES OO
@@ -65,15 +67,15 @@ AND id_entity2=?
 ");
 
     unless ($sth) {
-        log()->error($dbh->errstr);
+        $log->error($dbh->errstr);
         return;
     }
 
     if (! $sth->execute($entity1->{id}, $entity2->{id})) {
-        log()->error($sth->errstr);
+        $log->error($sth->errstr);
         return;
     }
-#     log->trace('select: ', $sth->rows(), ' rows');
+#     $log->debug('select: ', $sth->rows(), ' rows');
 
     my @hits;
     while (my $row = $sth->fetchrow_hashref()) {

@@ -27,7 +27,7 @@ use base qw/Exporter/;
 our @EXPORT_OK = qw/scopdomain/;
 
 use File::Basename;
-use SBG::U::Log qw/log/;
+use Log::Any qw/$log/;
 
 use SBG::Domain;
 
@@ -56,7 +56,7 @@ sub scopdomain {
     my ($longid) = @_;
 
     unless ($longid =~ /^(\d.{3})(.*?)\.(.*?)$/) {
-        log()->error("Couldn't parse SCOP ID: $longid");
+        $log->error("Couldn't parse SCOP ID: $longid");
         return;
     }
     # NB $chainid may be more than one character
@@ -66,7 +66,7 @@ sub scopdomain {
     # ("/data/pdb/2hz1.brk","2hz1A.a.1.1.1-1","A 2 _ to A 124 _")
     my $match = `zgrep $longid $scopdb`;
     unless ($match =~ /^(\S+) ($longid) { (.*?) }$/) {
-        log()->error("SCOP ID not found: $longid");
+        $log->error("SCOP ID not found: $longid");
         return;
     }
     my ($file, $descriptor) = ($1, $3);

@@ -25,9 +25,9 @@ use base qw/Exporter/;
 our @EXPORT_OK = qw/query/;
 
 use DBI;
+use Log::Any qw/$log/;
 
 use SBG::U::DB;
-use SBG::U::Log qw/log/;
 
 
 # TODO DES OO
@@ -67,19 +67,19 @@ AND pdbseq=?
 ");
 
     unless ($sth) {
-        log()->error($dbh->errstr);
+        $log->error($dbh->errstr);
         return;
     }
 
     if (! $sth->execute($pdbid, $chainid, $start)) {
-        log()->error($sth->errstr);
+        $log->error($sth->errstr);
         return;
     }
     log->trace('select start: ', $sth->rows() , ' rows');
     my $dstart = $sth->fetchrow_hashref();
 
     if (! $sth->execute($pdbid, $chainid, $end)) {
-        log()->error($sth->errstr);
+        $log->error($sth->errstr);
         return;
     }
     log->trace('select end: ', $sth->rows() , ' rows');

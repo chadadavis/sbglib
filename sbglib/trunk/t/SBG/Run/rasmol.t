@@ -12,7 +12,7 @@ use File::Temp qw/tempfile/;
 use SBG::U::Log qw/log/;
 my $DEBUG;
 # $DEBUG = 1;
-log()->init('TRACE') if $DEBUG;
+SBG::U::Log::init(undef, loglevel=>'DEBUG') if $DEBUG;
 $File::Temp::KEEP_ALL = $DEBUG;
 
 use FindBin qw/$Bin/;

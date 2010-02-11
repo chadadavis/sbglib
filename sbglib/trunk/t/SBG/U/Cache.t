@@ -11,7 +11,7 @@ use SBG::U::Log qw/log/;
 $SIG{__DIE__} = \&confess;
 my $DEBUG;
 # $DEBUG = 1;
-log()->init('TRACE') if $DEBUG;
+SBG::U::Log::init(undef, loglevel=>'DEBUG') if $DEBUG;
 $File::Temp::KEEP_ALL = $DEBUG;
 
 

@@ -47,16 +47,14 @@ our @EXPORT_OK = qw/superposition/;
 
 use Moose::Autobox;
 use File::Temp;
-
-
 use PDL::Lite;
 use PDL::Core qw/pdl/;
+use Log::Any qw/$log/;
 
 use SBG::DomainIO::stamp;
 use SBG::Superposition;
 use SBG::Domain::Sphere;
 use SBG::Run::cofm qw/cofm/;
-use SBG::U::Log qw/log/;
 
 
 # TODO DES need to be set in a Run object
@@ -113,17 +111,17 @@ sub superposition_native {
 
     if ($fromdom->pdbid eq $ontodom->pdbid &&
         $fromdom->descriptor eq $ontodom->descriptor) {
-        log()->trace("Identity: $fromdom");
+        $log->debug("Identity: $fromdom");
         return SBG::Superposition->identity($fromdom);
     }
 
     my ($fullcmd, $prefix) = _setup_input($cmd, $ontodom, $fromdom);
     my $scanfile = "${prefix}.scan";
-    log()->trace("\n$fullcmd");
+    $log->debug("\n$fullcmd");
     system("$fullcmd > /dev/null 2>/dev/null");
     my $fh;
     unless (-s $scanfile && open($fh, $scanfile)) {
-        log()->error("$fromdom => $ontodom : Can't read: $scanfile:\n$fullcmd");
+        $log->error("$fromdom => $ontodom : Can't read: $scanfile:\n$fullcmd");
         return;
     }
 
@@ -184,7 +182,7 @@ the given domains.
 =cut
 sub superposition {
     my ($fromdom, $ontodom, $ops) = @_;
-    log()->trace($fromdom->uniqueid, '=>', $ontodom->uniqueid);
+    $log->debug($fromdom->uniqueid, '=>', $ontodom->uniqueid);
     my $superpos = superposition_native($fromdom, $ontodom, $ops);
     return unless defined $superpos;
 

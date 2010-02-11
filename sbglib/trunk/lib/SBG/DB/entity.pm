@@ -26,11 +26,11 @@ use base qw/Exporter/;
 our @EXPORT_OK = qw/query id2dom/;
 
 use PDL::Core qw/pdl zeroes/;
-
 use DBI;
 use Data::Dump qw/dump/;
+use Log::Any qw/$log/;
+
 use SBG::U::DB;
-use SBG::U::Log qw/log/;
 use SBG::U::List qw/interval_overlap/;
 use SBG::Domain;
 use SBG::Domain::Sphere;
@@ -107,12 +107,12 @@ AND chain = ?
 ");
 
     unless ($querysth) {
-        log()->error($dbh->errstr);
+        $log->error($dbh->errstr);
         return;
     }
 
     if (! $querysth->execute($pdbid, $chain)) {
-        log()->error($querysth->errstr);
+        $log->error($querysth->errstr);
         return;
     }
 
@@ -130,11 +130,11 @@ AND chain = ?
             $row->{'start'},$row->{'end'},
             $start, $end,
             );
-        log()->trace("overlap:$overlap");
+        $log->debug("overlap:$overlap");
         next unless $overlap >= $ops{'overlap'};
         push @hits, $row;
     }
-#     log->trace('rows: ', scalar(@hits));
+#     $log->debug('rows: ', scalar(@hits));
     return @hits;
 
 } # query
@@ -168,17 +168,17 @@ AND id = ?
 ");
 
     unless ($id2domsth) {
-        log()->error($dbh->errstr);
+        $log->error($dbh->errstr);
         return;
     }
     if (! $id2domsth->execute($id)) {
-        log()->error($id2domsth->errstr);
+        $log->error($id2domsth->errstr);
         return;
     }
 
     my $row = $id2domsth->fetchrow_hashref;
     unless (defined $row) {
-        log()->warn("No entity $id found");
+        $log->warn("No entity $id found");
         return;
     }
 

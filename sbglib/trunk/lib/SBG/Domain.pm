@@ -24,7 +24,7 @@ L<SBG::DomainI>
 package SBG::Domain;
 use Moose;
 
-use SBG::U::Log qw/log/;
+use Log::Any qw/$log/;
 
 
 # Defines what must be implemented to represent a 3D structure
@@ -51,7 +51,7 @@ use overload (
 
 =cut
 sub overlap {
-    log()->warn("overlap() not defined by " . __PACKAGE__);
+    $log->warn("overlap() not defined by " . __PACKAGE__);
     return;
 }
 

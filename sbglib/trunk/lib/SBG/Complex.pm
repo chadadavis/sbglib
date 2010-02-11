@@ -43,12 +43,11 @@ use overload (
 
 use Scalar::Util qw/refaddr/;
 use Moose::Autobox;
-
 use PDL::Lite;
 use PDL::Core qw/pdl squeeze zeroes sclr/;
+use Log::Any qw/$log/;
 
 use SBG::U::List qw/intersection mean sum flatten swap/;
-use SBG::U::Log qw/log/;
 use SBG::U::RMSD;
 use SBG::STAMP; # qw/superposition/
 use SBG::Superposition::Cache; # qw/superposition/;
@@ -562,7 +561,7 @@ sub merge_domain {
     # Then apply that transformation to the other complex
     # Product of relative with absolute transformation.
     # Order of application of transformations matters
-    log()->trace("Linking:", $linker_superposition->transformation);
+    $log->debug("Linking:", $linker_superposition->transformation);
     $linker_superposition->apply($_) for $other->domains->flatten;
 
     # Now test steric clashes of potential domain against existing domains
@@ -615,7 +614,7 @@ sub merge_interaction {
         swap($src, $dest);
     }
     unless ($self->models->exists($src)) {
-        log()->error("Neither $src nor $dest present in complex: $self");
+        $log->error("Neither $src nor $dest present in complex: $self");
         return;
     }        
     my $iaction_score = $self->add_interaction($iaction, $src, $dest);
@@ -719,7 +718,7 @@ sub add_interaction {
     # Product of relative with absolute transformation.
     # Order of application of transformations matters
     $linker_superposition->apply($destdom);
-    log()->trace("Linking:", $linker_superposition->transformation);
+    $log->debug("Linking:", $linker_superposition->transformation);
 
     # Now test steric clashes of potential domain against existing domains
     my $clashfrac = $self->check_clashes([$destdom]);
@@ -783,16 +782,16 @@ TODO Deprecated in favor of L<check_clashes>
 sub check_clash {
     my ($self, $newdom) = @_;
     my $thresh = $self->overlap_thresh;
-    log()->debug("fractional overlap thresh:$thresh");
+    $log->debug("fractional overlap thresh:$thresh");
     my $overlaps = [];
 
-    log()->trace("$newdom vs " . $self->models->values->join(','));
+    $log->debug("$newdom vs " . $self->models->values->join(','));
     # Get all of the objects in this assembly. 
     # If any of them clashes with the to-be-added objects, then disallow
     foreach my $key (@{$self->keys}) {
         # Measure the overlap between $newdom and each component
         my $existingdom = $self->get($key)->subject;
-        log()->trace("$newdom vs $existingdom");
+        $log->debug("$newdom vs $existingdom");
         my $overlapfrac = $newdom->overlap($existingdom);
         # Nonetheless, if one clashes severely, bail out
         return 1 if $overlapfrac > $thresh;
@@ -800,7 +799,7 @@ sub check_clash {
         $overlaps->push($overlapfrac) if $overlapfrac > 0;
     }
     my $mean = mean($overlaps) || 0;
-    log()->debug("$newdom fits w/ mean overlap fraction: ", $mean);
+    $log->info("$newdom fits w/ mean overlap fraction: ", $mean);
     return $mean;
 } # check_clash
 
@@ -823,10 +822,10 @@ $ignore is the pivot used to merge the complex, which doesn't need to be checked
 sub check_clashes {
     my ($self, $otherdoms, $ignore ) = @_;
     my $thresh = $self->overlap_thresh;
-    log()->debug("fractional overlap thresh:$thresh");
+    $log->info("fractional overlap thresh:$thresh");
     my $overlaps = [];
 
-    log()->trace($self->size, " vs ", $otherdoms->length);
+    $log->debug($self->size, " vs ", $otherdoms->length);
 
     # Get all of the objects in this assembly. 
     # If any of them clashes with the to-be-added objects, then disallow
@@ -835,7 +834,7 @@ sub check_clashes {
         # Measure the overlap between $thisdom and each $otherdom
         my $thisdom = $self->get($key)->subject;
         foreach my $otherdom ($otherdoms->flatten) {
-            log()->trace("$thisdom vs $otherdom");
+            $log->debug("$thisdom vs $otherdom");
             my $overlapfrac = $thisdom->overlap($otherdom);
             # Nonetheless, if one clashes severely, bail out
             return 1 if $overlapfrac > $thresh;
@@ -844,7 +843,7 @@ sub check_clashes {
         }
     }
     my $mean = mean($overlaps) || 0;
-    log()->debug("mean overlap fraction: ", $mean);
+    $log->info("mean overlap fraction: ", $mean);
     return $mean;
 
 } # check_clashes
@@ -907,10 +906,10 @@ sub rmsd {
    # Only consider common components
    my @cnames = $self->coverage($other);
    unless (@cnames) {
-       log()->error("No common components between complexes");
+       $log->error("No common components between complexes");
        return;
    }
-   log()->trace(scalar(@cnames), " common components");
+   $log->debug(scalar(@cnames), " common components");
 
    my $selfcofms = [];
    my $othercofms = [];
@@ -935,10 +934,10 @@ sub rmsd {
    $othercoords = $othercoords->clump(1,2) if $othercoords->dims == 3;
 
    my $trans = SBG::U::RMSD::superpose($selfcoords, $othercoords);
-   log()->trace($trans);
+   $log->debug($trans);
    # Now it has been transformed already. Can measure RMSD of new coords
    my $rmsd = SBG::U::RMSD::rmsd($selfcoords, $othercoords);
-   log()->debug("rmsd:", $rmsd);
+   $log->info("rmsd:", $rmsd);
    return wantarray ? ($trans, $rmsd) : $rmsd;
 
 } # rmsd

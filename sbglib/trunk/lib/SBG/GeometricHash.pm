@@ -61,8 +61,6 @@ use PDL::NiceSlice;
 use Math::Trig qw/rad2deg/;
 use Math::Round qw/nearest/;
 
-# TODO DEL
-use SBG::U::Log qw/log/;
 use Log::Any qw/$log/;
 
 
@@ -163,7 +161,7 @@ sub exact {
     # Models the same size as the query:
     my @a;
     my ($bijection) = grep { @a=split; $a[1] == @$points } @covers;
-    log()->debug($bijection || '<none>');
+    $log->debug($bijection || '<none>');
     return unless $bijection;
     # Remove end of label, containing basis indices
     my @f = split / /, $bijection;
@@ -189,7 +187,7 @@ sub at {
     return unless scalar(@$points) >= 3;
     # Get an array of points into a matrix;
     my $model = _model($points);
-    log()->trace($model);
+    $log->debug($model);
 
     # Determine a basis transformation, to put model in a common frame of ref
     # Arbitrarily use first three points here, but any three would work
@@ -274,7 +272,7 @@ sub put {
     # Get an array of points into a matrix;
     my $model = _model($points);
 
-    log()->trace($model);
+    $log->debug($model);
 
     # For each triple of points, define one basis,
     # For each basis, transform all points into that basis and hash them
@@ -321,7 +319,7 @@ sub _objs2points {
 
 sub _one_basis {
     my ($self,$modelid, $model, $i, $j, $k, $labels) = @_;
-#     log()->trace(join(' ', $modelid, $i, $j, $k));
+#     $log->debug(join(' ', $modelid, $i, $j, $k));
     # Determine a basis transformation, to put model in a common frame of ref
     my $t = _basis($model, $i, $j, $k) or return;
     # Transform all points using this basis
@@ -442,7 +440,7 @@ http://en.wikipedia.org/wiki/Atan2
 =cut
 sub _basis {
     my ($model, $i, $j, $k) = @_;
-#     log()->trace("$i $j $k");
+#     $log->debug("$i $j $k");
 
     # $model_$i is the new origin
     my $translation = zeroes(3) - $model(,$i);
@@ -457,7 +455,7 @@ sub _basis {
     # This gets b1 into the XZ plane
     my ($x,$y,$z) = $b1->list;
     if (0==$y && 0==$x) {
-        log()->debug("Skipping undefined basis: Y,X both 0");
+        $log->debug("Skipping undefined basis: Y,X both 0");
         return;
     }
 
@@ -474,7 +472,7 @@ sub _basis {
     ($x, $y, $z) = $b1->list;
 
     if (0==$z && 0==$x) {
-        log()->debug("Skipping undefined basis: Z,X both 0");
+        $log->debug("Skipping undefined basis: Z,X both 0");
         return;
     }
 
@@ -492,7 +490,7 @@ sub _basis {
     ($x, $y, $z) = $b2->list;
 
     if (0==$z && 0==$y) {
-        log()->debug("Skipping undefined basis: Z,Y both 0");
+        $log->debug("Skipping undefined basis: Z,Y both 0");
         return;
     }
 

@@ -26,12 +26,13 @@ with 'SBG::SearchI';
 use Moose::Autobox;
 use Algorithm::Cluster qw/treecluster/;
 use List::Util qw/min max sum/;
+use Log::Any qw/$log/;
 
 use SBG::Run::PairedBlast;
 use SBG::Model;
 use SBG::Domain;
 use SBG::Interaction;
-use SBG::U::Log qw/log/;
+
 
 # TransDB lookups
 use SBG::DB::entity;
@@ -84,11 +85,11 @@ sub search {
             $allentitypairs{$epairid} ||= $epair;
         }
     }
-    log()->trace(scalar keys %allentitypairs, ' entity pairs');
+    $log->debug(scalar keys %allentitypairs, ' entity pairs');
 
     # Each pair of entities may find multiple contacts, again 1-to-many
     my @contacts = map { SBG::DB::contact::query(@$_) } values %allentitypairs;
-    log()->trace(scalar(@contacts), ' contacts');
+    $log->debug(scalar(@contacts), ' contacts');
     return unless @contacts;
 
     # Cluster contacts, based on iRMSD distance matrix
@@ -117,7 +118,7 @@ sub search {
         # Delete rest
         delete $interactions[$_] for $topn..$#interactions;
     }
-    log()->trace(scalar(@interactions), " interactions ($seq1,$seq2)");
+    $log->debug(scalar(@interactions), " interactions ($seq1,$seq2)");
     return @interactions;
 
 } # search
@@ -151,7 +152,7 @@ sub _cluster {
     my $rest = $n - $unique;
     my $iclusters = int sqrt ($rest/2);
     my $nclusters = min($n, $iclusters + $unique);
-    log()->debug("$nclusters (min($n,$iclusters+$unique)) clusters");
+    $log->info("$nclusters (min($n,$iclusters+$unique)) clusters");
     # Add clusters back in for the unique objects, but dont't exceed $n
 
     my ($clusters) = $tree->cut($nclusters);
@@ -165,7 +166,7 @@ sub _distmat {
 
     my $distmat = [];
     my $nqueries = @$contacts * (@$contacts-1) / 2;
-    log()->trace("$nqueries queries on irmsd table ...");
+    $log->debug("$nqueries queries on irmsd table ...");
     return unless $nqueries > 0;
 
     # Count of measurable iRMSDs, by contact
@@ -187,7 +188,7 @@ sub _distmat {
     }
     my $similar = grep { $_ } @similarities;
     my $sum = sum @similarities;
-    log()->debug("$similar (of ",scalar(@$contacts), 
+    $log->debug("$similar (of ",scalar(@$contacts), 
                  ") contacts have $sum iRMSDs < Inf");
     # This many contacts have no measurable similarity
     my $unique = @$contacts - $similar;

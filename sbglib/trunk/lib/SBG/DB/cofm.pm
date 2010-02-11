@@ -26,9 +26,9 @@ use base qw/Exporter/;
 our @EXPORT_OK = qw/query/;
 
 use DBI;
+use Log::Any qw/$log/;
 
 use SBG::U::DB;
-use SBG::U::Log qw/log/;
 
 
 # TODO DES OO
@@ -81,12 +81,12 @@ chain=?
 ");
 
     unless ($cofm_sth) {
-        log()->error($dbh->errstr);
+        $log->error($dbh->errstr);
         return;
     }
 
     if (! $cofm_sth->execute($pdbid, $chainid)) {
-        log()->error($cofm_sth->errstr);
+        $log->error($cofm_sth->errstr);
         return;
     }
     # (Cx, Cy, Cz, Rg, Rmax);

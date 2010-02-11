@@ -14,7 +14,9 @@ use FindBin qw/$Bin/;
 use File::Temp qw/tempfile/;
 
 use SBG::U::Log;
-SBG::U::Log::log()->init('TRACE');
+my $DEBUG;
+# $DEBUG = 1;
+SBG::U::Log::init(undef, loglevel=>'DEBUG') if $DEBUG;
 
 ################################################################################
 

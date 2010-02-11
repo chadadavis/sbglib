@@ -18,7 +18,9 @@ use SBG::Search::Bench;
 use SBG::Network;
 
 use SBG::U::Log qw/log/;
-log()->init('TRACE');
+my $DEBUG;
+# $DEBUG = 1;
+SBG::U::Log::init(undef, loglevel=>'DEBUG') if $DEBUG;
 
 my @accnos;
 my @seqs;

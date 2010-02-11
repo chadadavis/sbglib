@@ -12,9 +12,8 @@ SBG::U::Log - Logging setup
  log()->error("cannot open: $file)"; # printed to STDERR
 
  # initialize logging. Default level is 'WARN', default file is './log.log'
- log()->init('DEBUG', '/tmp/somewhere.log');
+ log()->init(loglevel=>'DEBUG', logfile=>'/tmp/somewhere.log');
  log()->debug("x is: $x"); # Appended to /tmp/somewhere.log
- log()->trace("very detailed info"); # Not saved, since TRACE is higher 
  log()->error("bad things"); # Saved to logfile, but no longer to STDERR
 
 =head1 DESCRIPTION
@@ -29,6 +28,16 @@ For a given level, all messages of higher severity are also logged. The list:
 
  TRACE DEBUG INFO WARN ERROR FATAL
 
+The functions are defined as:
+
+ trace debug info warn error fatal
+
+The overlap with L<Log::Any> would be:
+
+ debug info warn error
+
+Sticking to these four will provide more portable code.
+
 E.g. when set to ERROR, only ERROR and FATAL get logged. When set to DEBUG,
 everything but TRACE gets logged. 
 
@@ -40,7 +49,7 @@ set the log level to e.g. B<ERROR> to only log errors.
 
 =head1 SEE ALSO
 
-L<Log::Log4perl>
+L<Log::Log4perl> , L<Log::Any>
 
 =cut
 
@@ -52,6 +61,9 @@ use base qw/Exporter/;
 our @EXPORT_OK = qw(log);
 
 use Log::Log4perl qw(:levels);
+use Log::Any qw/$log/;
+use Log::Any::Adapter;
+use File::Spec::Functions;
 
 
 ################################################################################
@@ -107,10 +119,12 @@ In order of increasing severity: $TRACE $DEBUG $INFO $WARN $ERROR $FATAL
 
 =cut
 sub init {
-    my ($level, $logfile) = @_;
-    $level ||= 'WARN';
+    my ($name, %ops) = @_;
+    my $level = $ops{'loglevel'} || 'WARN';
     $level = uc $level;
-    $logfile ||= 'log.log';
+    my $logfile = $ops{'logfile'} || ($name || 'log') . '.log';
+    my $logpath = File::Spec->rel2abs($logfile, $ops{'logdir'}) ;
+
 
     # Initialize system logger
     our $logger;
@@ -123,18 +137,26 @@ sub init {
     my $appendertype = ("$logfile" eq '-') ? 
         'Log::Log4perl::Appender::Screen' : 'Log::Dispatch::File';
     my $appender = Log::Log4perl::Appender->
-        new($appendertype, filename => $logfile, mode => "append");
+        new($appendertype, filename => $logpath, mode => "append");
 
     my $h = `hostname --short`;
     chomp $h;
     $h = sprintf "%-15s", $h;
+    $name = sprintf "%6s", ($name || '');
 
     # Define log format for appender
-    my $layout = Log::Log4perl::Layout::PatternLayout->new("%5p $h %-50M %m%n");
+    # $h host, %d date %M method %m message %n newline
+    my $layout = Log::Log4perl::Layout::PatternLayout->new(
+        "$name $h %d{yyyy-MM-dd HH:mm:ss} %-50M %m%n");
     # Set the layout of the appender
     $appender->layout($layout);
     # Register the appender with the logger
     $logger->add_appender($appender);
+
+    # Send Log::Any log messages to us
+    Log::Any::Adapter->set('+SBG::U::Log');
+    # Log what you ran
+    $log->info("$0 $name " . join ' ', %ops);
 
     return $logger;
 }

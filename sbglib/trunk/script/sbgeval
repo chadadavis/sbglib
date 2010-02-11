@@ -81,16 +81,16 @@ use SBG::U::Log;
 my %ops;
 my $result = GetOptions(\%ops,
                         'help|h',
-                        'log|l=s',   # log level
-                        'logfile=s',   # log level
-                        'debug|d',   # print stack trace when die
-                        'output|o',  # html or csv
-                        'size|s=s',  # minimum N (or N%) components per model
-                        'complete|c',# Only full-coverage models
-                        'field|f=s', # field name to sort on
-                        'thresh|t=f',# min threshold val for field
-                        'best|b=s',  # Best N (or N%) (per size, if -u)
-                        'reverse|r', # reverse sort
+                        'loglevel|l=s',   # log level
+                        'logfile=s',      # log file
+                        'debug|d',        # print stack trace when die
+                        'output|o',       # html or csv
+                        'size|s=s',       # minimum N (or N%) components/model
+                        'complete|c',     # Only full-coverage models
+                        'field|f=s',      # field name to sort on
+                        'thresh|t=f',     # min threshold val for field
+                        'best|b=s',       # Best N (or N%) (per size, if -u)
+                        'reverse|r',      # reverse sort
                         'minseqid|n=f',   # minimum seqid to allow
                         'maxseqid|x=f',   # maximum seqid to allow
     );                  
@@ -121,7 +121,7 @@ my $targetfile = shift or pod2usage(-exitval=>1);
 
 my $basename = basename($targetfile,'.target');
 $ops{'logfile'} ||= "eval/log/${basename}.log";
-SBG::U::Log::init($ops{'log'}, $ops{'logfile'}) if $ops{'log'};
+SBG::U::Log::init($basename, %ops);
 
 
 # Evaluate all other files as models, against target

@@ -10,7 +10,7 @@ use SBG::U::Log qw/log/;
 
 my $DEBUG;
 $DEBUG = 1;
-log()->init('TRACE') if $DEBUG;
+SBG::U::Log::init(undef, loglevel=>'DEBUG') if $DEBUG;
 
 use SBG::U::Run qw/start_lock end_lock start_log frac_of getoptions/;
 use File::Slurp qw/slurp/;

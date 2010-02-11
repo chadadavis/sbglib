@@ -55,15 +55,15 @@ use Moose;
 
 with 'SBG::IOI';
 
+use Moose::Autobox;
 use Carp qw/carp cluck/;
 use Module::Load qw/load/;
-
-use Moose::Autobox;
+use Log::Any qw/$log/;
 
 use SBG::Domain;
 use SBG::TransformIO::stamp;
 use SBG::Types qw/$re_pdb $re_descriptor/;
-use SBG::U::Log qw/log/;
+
 
 
 ################################################################################
@@ -128,7 +128,7 @@ sub write {
 
 
     foreach my $dom (@doms) {
-        log()->trace($dom);
+        $log->debug($dom);
         my $str = 
             join(" ",
                  $dom->file  || '',

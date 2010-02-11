@@ -30,8 +30,8 @@ use Moose;
 
 use File::Spec::Functions;
 use Moose::Autobox;
+use Log::Any qw/$log/;
 
-use SBG::U::Log qw/log/;
 use SBG::STAMP qw/superposition/;
 use SBG::GeometricHash;
 
@@ -134,7 +134,7 @@ sub solution {
 
     if (defined $class) {
         $self->dups($self->dups+1);
-        log()->debug('Duplicate solution. Total duplicates: ', $self->dups);
+        $log->info('Duplicate solution. Total duplicates: ', $self->dups);
         return;
     } else {
         # undef => Don't name the model
@@ -143,7 +143,7 @@ sub solution {
         # Counter for classes created so far
 #         $self->classes($class) unless $class < $self->classes;
         $self->classes($self->classes+1);
-        log()->trace("Class ", $class);
+        $log->debug("Class ", $class);
 
         # Count number of occurences of unique complex solution *of this size*
         my $sizeclass = $nodecover->length;
@@ -214,7 +214,7 @@ Returns true/false == success/failure to use/add interaction template
 
 sub test {
     my ($self, $complex, $graph, $src, $dest, $iaction_id) = @_;
-    log()->trace($iaction_id);
+    $log->debug($iaction_id);
 
     # Interaction object, from ID, Network hashes these
     my $ix = $graph->get_interaction_by_id($iaction_id);

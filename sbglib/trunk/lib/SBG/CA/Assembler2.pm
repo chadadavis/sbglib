@@ -21,6 +21,15 @@ problem for a give set of proteins.
 
 L<SBG::Traversal> , L<SBG::Complex>
 
+=head1 TODO
+
+Create Complex::NR from code using GeometricHash
+
+Iterator style: $solution = $traversal->next
+
+This will pass from Assembler::solution to Traversal, then back to client
+
+
 =cut
 
 ################################################################################
@@ -30,8 +39,6 @@ use Moose;
 
 use File::Spec::Functions;
 use Moose::Autobox;
-
-use SBG::U::Log qw/log/;
 use Log::Any qw/$log/;
 
 use SBG::STAMP qw/superposition/;
@@ -313,7 +320,7 @@ sub solution {
 
     if (defined $class) {
         $self->dups($self->dups+1);
-        log()->debug('Duplicate solution. Total duplicates: ', $self->dups);
+        $log->debug('Duplicate solution. Total duplicates: ', $self->dups);
         return;
     } else {
         # undef => Don't name the model
@@ -323,7 +330,7 @@ sub solution {
         # Counter for classes created so far
 #         $self->classes($class) unless $class < $self->classes;
         $self->classes($self->classes+1);
-        log()->trace("Class ", $class);
+        $log->debug("Class ", $class);
 
         # Count number of occurences of unique complex solution *of this size*
         my $sizeclass = $complex->size;

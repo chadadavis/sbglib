@@ -60,12 +60,12 @@ use Heap::Priority;
 
 # Debug printing (to trace recursion and it's unwinding)
 # TODO del
-use SBG::U::Log qw/log/;
+use Log::Any qw/$log/;
 
 use Log::Any qw/$log/;
 sub _d {
     my $d = shift;
-    log()->trace("  " x $d, @_);
+    $log->debug("  " x $d, @_);
 }
 sub _d0 { _d(0,@_); }
 
@@ -346,7 +346,7 @@ sub _init_edge_indices {
                 $self->assembler->score($self->graph, $b) <=>
                     $self->assembler->score($self->graph, $a)
             } $self->graph->get_edge_attribute_names($u, $v);  
-            log()->trace("$u $v : @alt_ids");
+            $log->debug("$u $v : @alt_ids");
             $self->_altlist->put("$u--$v", \@alt_ids);
             $self->_altlist->put("$v--$u", \@alt_ids);
         }
@@ -371,7 +371,7 @@ sub _init_nodes {
         }
     }
     my @maxes = sort { $max{$b} <=> $max{$a} } keys %max;
-    log()->trace("nodes ordered by _edge_max:@maxes");
+    $log->debug("nodes ordered by _edge_max:@maxes");
     # Map string names back to objects
     @nodes = map { $nodes{$_} } @maxes;
     return @nodes;
@@ -383,17 +383,17 @@ sub _edge_max {
     my ($self, $u, $v) = @_;
     # Name of edge
     my $edge_id = "$u--$v";
-#     log()->trace("edge_id:$edge_id");
+#     $log->debug("edge_id:$edge_id");
     # Index of next alternative on this edge, or begin at 0
     my $altidx = $self->_altidx->at($edge_id) || 0;
-#     log()->trace("altidx:$altidx");
+#     $log->debug("altidx:$altidx");
     # The identify of that index in this edge's list of alternatives:
     my $altlist = $self->_altlist->at($edge_id) or return;
-#     log()->trace("altlist:@$altlist");
+#     $log->debug("altlist:@$altlist");
     my $altid = $altlist->[$altidx] or return;
-#     log()->trace("altid:$altid");
+#     $log->debug("altid:$altid");
     my $score = $self->assembler->score($self->graph, $altid);
-    log()->trace("edge:$edge_id alt:$altid score:$score");
+    $log->debug("edge:$edge_id alt:$altid score:$score");
     return $score;
 }
 
@@ -620,14 +620,14 @@ sub _do_solution {
     }
 
 
-    log()->debug("Potential solution: $solution_label");
+    $log->debug("Potential solution: $solution_label");
     if ($self->assembler->solution(
             $state, $self->graph, $nodes, $alts, $self->rejects)) {
         $self->asolutions($self->asolutions+1);
-        log()->trace("Accepted solution: $solution_label");
+        $log->info("Accepted solution: $solution_label");
     } else {
         $self->rsolutions($self->rsolutions+1);
-        log()->trace("Rejected solution: $solution_label");
+        $log->debug("Rejected solution: $solution_label");
     }
 
 

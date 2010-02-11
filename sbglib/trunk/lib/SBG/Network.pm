@@ -56,12 +56,11 @@ with 'SBG::Role::Writable';
 with 'SBG::Role::Versionable';
 
 use Moose::Autobox;
-
 use Digest::MD5 qw/md5_base64/;
+use Log::Any qw/$log/;
 
 use SBG::Node;
 use SBG::U::List qw/pairs/;
-use SBG::U::Log qw/log/;
 use SBG::U::Cache qw/cache/;
 
 use overload (
@@ -240,10 +239,10 @@ sub build {
     my @pairs = pairs(sort $self->nodes);
     my $npairs = @pairs;
     my $ipair = 0;
-    log()->debug(scalar(@pairs), ' potential edges in interaction network');
+    $log->debug(scalar(@pairs), ' potential edges in interaction network');
     foreach my $pair (@pairs) {
         $ipair++;
-        log()->info("Edge $ipair of $npairs");
+        $log->info("Edge $ipair of $npairs");
         my ($node1, $node2) = @$pair;
         my ($p1) = $node1->proteins;
         my ($p2) = $node2->proteins;
@@ -264,9 +263,9 @@ sub build {
         }
     }
 
-    log()->debug(scalar($self->nodes), ' nodes');
-    log()->debug(scalar($self->edges), ' edges');
-    log()->debug(scalar($self->interactions), ' interactions');
+    $log->info(scalar($self->nodes), ' nodes');
+    $log->info(scalar($self->edges), ' edges');
+    $log->info(scalar($self->interactions), ' interactions');
 
     return $self;
 } # build
@@ -277,7 +276,7 @@ sub build {
 sub _interactions {
     my ($searcher, $p1, $p2, %ops) = @_;
 
-    log()->trace('cache:', $ops{cache});
+    $log->debug('cache:', $ops{cache});
 
     my $cache;
     my $key;

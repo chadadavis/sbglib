@@ -29,10 +29,8 @@ use File::Temp qw/tempfile/;
 use IO::String;
 use IO::File;
 use IO::Compress::Gzip;
-
 use Module::Load;
-
-use SBG::U::Log qw/log/;
+use Log::Any qw/$log/;
 
 
 ################################################################################
@@ -270,7 +268,7 @@ sub _file {
     }
 
     unless ($self->fh) {
-        log()->error("Cannot open: $file");
+        $log->error("Cannot open: $file");
         return;
     }
     return $self;
@@ -312,7 +310,7 @@ sub _tempfile {
     # Silly to re-open this, but $self->file() opens it anyway
     $tfh->close();
     $self->file('>' . $tpath);
-    log()->trace($self->file);
+    $log->debug($self->file);
     return $self;
 } # _tempfile
 

@@ -26,9 +26,10 @@ use Moose;
 
 with 'SBG::IOI';
 
+use Log::Any qw/$log/;
+
 use SBG::U::List qw/flatten/;
 
-use SBG::U::Log qw/log/;
 
 =head2 objtype
 
@@ -74,7 +75,7 @@ sub write {
         my $domain = $i+1;
         my $chain = chr(ord('A') + $i);
 
-        log()->debug("Domain $domain : ", $dom->id, " chain $chain");
+        $log->debug("Domain $domain : ", $dom->id, " chain $chain");
 
         printf $fh 
             "REMARK Domain %2d Id %4s N = %5d Rg = %7.3f Rmax = %7.3f " . 

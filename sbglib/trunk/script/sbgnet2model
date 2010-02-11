@@ -60,13 +60,10 @@ use Carp;
 use SBG::Role::Storable qw/retrieve/;
 use SBG::U::Object qw/load_object/;
 
-use SBG::U::Run qw/frac_of getoptions start_lock end_lock start_log/;
+use SBG::U::Run qw/frac_of getoptions start_lock end_lock/;
+use SBG::U::Log;
 
-use SBG::Traversal;
-use SBG::CA::Assembler;
 use SBG::Complex;
-
-
 use Graph::Traversal::GreedyEdges;
 use SBG::CA::Assembler2;
 
@@ -93,12 +90,13 @@ foreach my $file (@ARGV) {
 
     my $basename = basename($file,'.network');
     my $outdir = $basename;
+    $ops{'logdir'} = $outdir;
     my $basepath = catfile($outdir, $basename);
     mkdir $outdir;
     my $lock = start_lock($basepath) or next;
 
     # Setup new log file specific to given input file
-    start_log($basepath, %ops);
+    SBG::U::Log::init($basename, %ops);
 
     # Load the Network object
     my $net;

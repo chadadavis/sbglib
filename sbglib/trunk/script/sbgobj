@@ -26,11 +26,11 @@ Uses bash autocomplete:
 
 For debugging
 
-=head2 -l Log level
+=head2 -l loglevel
 
 One of:
 
- TRACE DEBUG INFO WARN ERROR FATAL
+ DEBUG INFO WARN ERROR
 
 =head2 -h Help
 
@@ -51,7 +51,8 @@ use Moose::Autobox;
 use Data::Dump qw/dump/;
 use Carp;
 
-use SBG::U::Log;
+use Log::Any qw/$log/;
+
 use SBG::U::Object qw/load_object methods/;
 
 # NB requires bash cmd: complete  -o default -C scriptname scriptname
@@ -60,7 +61,7 @@ use Getopt::Complete (
     'keep!'      => undef,
     'help!'      => undef,
     'debug!'     => undef,
-    'log=s'      => [ qw/TRACE DEBUG INFO WARN ERROR FATAL/ ],
+    'loglevel=s'      => [ qw/DEBUG INFO WARN ERROR/ ],
     # For everything else that's not a file, try object method name completion
     '<>'         => \&complete_methods,
     );
@@ -68,7 +69,7 @@ use Getopt::Complete (
 
 $SIG{__DIE__} = \&confess if $ARGS{debug};
 $File::Temp::KEEP_ALL = 1 if $ARGS{keep};
-SBG::U::Log::init($ARGS{log}) if $ARGS{log};
+SBG::U::Log::init(undef, loglevel=>$ARGS{log});
 
 # Non-option arguments
 my (@params) = @{$ARGS{'<>'}};

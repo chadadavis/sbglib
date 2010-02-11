@@ -26,9 +26,10 @@ our @EXPORT_OK = qw/query/;
 
 use DBI;
 use List::Util qw/min/;
+use Log::Any qw/$log/;
 
 use SBG::U::DB;
-use SBG::U::Log qw/log/;
+
 
 # TODO DES OO
 our $database = "trans_3_0";
@@ -63,12 +64,12 @@ irmsd_reordered
 WHERE (a1=? AND b1=? AND a2=? AND b2=?)
 ");
     unless ($sth) {
-        log()->error($dbh->errstr);
+        $log->error($dbh->errstr);
         return;
     }
 
     if (! $sth->execute($a1, $b1, $a2, $b2,)) {
-        log()->error($sth->errstr);
+        $log->error($sth->errstr);
         return;
     }
 

@@ -28,6 +28,7 @@ with 'SBG::SearchI';
 
 use Text::ParseWords; # qw/parse_line/;
 use File::Basename;
+use Log::Any qw/$log/;
 
 use SBG::Types qw/$re_pdb/;
 use SBG::Model;
@@ -35,7 +36,7 @@ use SBG::Interaction;
 
 use SBG::DB::scop qw/scopdomain/;
 use SBG::U::List qw/uniq/;
-use SBG::U::Log qw/log/;
+
 
 our $templatedb = dirname(__FILE__) . "/interactions-uniq.gz";
 
@@ -138,7 +139,7 @@ sub search {
         my ($comp1, $comp2) = split ' ', $1;
         my ($templ1, $templ2) = ($6, $7);
         my $scores = $8;
-        log()->trace("$comp1($templ1)--$comp2($templ2)");
+        $log->debug("$comp1($templ1)--$comp2($templ2)");
 
         # Parse score line
         my ($eval1, $sid1, $eval2, $sid2, 

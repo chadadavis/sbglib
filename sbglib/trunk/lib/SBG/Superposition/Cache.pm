@@ -25,11 +25,9 @@ use base qw/Exporter/;
 
 our @EXPORT_OK = qw/superposition/;
 
-# use Moose::Autobox;
+use Log::Any qw/$log/;
 
-use SBG::U::Log qw/log/;
 use SBG::U::Cache qw/cache/;
-
 use SBG::STAMP;
 use SBG::DB::trans;
 
@@ -40,7 +38,7 @@ sub superposition_native {
 
     if ($fromdom->pdbid eq $ontodom->pdbid &&
         $fromdom->descriptor eq $ontodom->descriptor) {
-        log()->trace("Identity: $fromdom");
+        $log->debug("Identity: $fromdom");
         return SBG::Superposition->identity($fromdom);
     }
 
@@ -94,7 +92,7 @@ the given domains.
 =cut
 sub superposition {
     my ($fromdom, $ontodom, $ops) = @_;
-    log()->trace("$fromdom=>$ontodom");
+    $log->debug("$fromdom=>$ontodom");
     
     my $superpos = superposition_native($fromdom, $ontodom);
     return unless defined $superpos;
@@ -137,14 +135,14 @@ sub _cache_get {
     if (my $data = $cache->get($key)) {
 
         if (ref($data) eq 'ARRAY') {
-            log()->debug("Cache hit (negative) ", $key);
+            $log->debug("Cache hit (negative) ", $key);
             return $data;
         } else {
-            log()->debug("Cache hit (positive) ", $key);
+            $log->debug("Cache hit (positive) ", $key);
             return $data;
         }
     } 
-    log()->debug("Cache miss ", $key);
+    $log->info("Cache miss ", $key);
     return;
 
 } # _cache_get
@@ -174,8 +172,8 @@ sub _cache_set {
         $status = 'positive';
     }
 
-    log()->debug("Cache write ($status) $key");
-    log()->trace(ref($data), "\n", $data);
+    $log->debug("Cache write ($status) $key");
+    $log->debug(ref($data), "\n", $data);
     
     $cache->set($key, $data);
 

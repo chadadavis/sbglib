@@ -44,7 +44,7 @@ use overload (
 use PDL::Core qw/pdl zeroes/;
 use Math::Trig qw/:pi acos_real/;
 use List::Util; # qw/min/; # min() clashes with PDL::min
-use SBG::U::Log; # qw/log/ # log() clashes with Math::Trig::log
+use Log::Any qw/$log/;
 
 
 ################################################################################
@@ -212,7 +212,8 @@ sub overlap_lin {
     # Max possible overlap: twice the smaller radius
     my $max = 2 * List::Util::min($self->radius, $other->radius);
     $diff = $max if $diff > $max;
-    SBG::U::Log::log()->debug("overlap: $diff dist: $dist radii: $sum_radii on ($self) vs ($other)");
+    $log->debug(
+        "overlap: $diff dist: $dist radii: $sum_radii on ($self) vs ($other)");
     return $diff;
 } # overlap_lin
 
@@ -251,7 +252,7 @@ sub overlap_lin_frac {
     my $max = 2 * List::Util::min($self->radius, $other->radius);
     my $overlap = $self->overlap_lin($other);
     my $frac = 1.0 * $overlap / $max;
-    SBG::U::Log::log()->debug(sprintf "%0.3f ($self) and ($other)", $frac);
+    $log->debug(sprintf "%0.3f ($self) and ($other)", $frac);
     return $frac;
 
 } # overlap_lin_frac
@@ -363,7 +364,7 @@ sub overlap_vol {
     my $overavol = $self->capvolume($overa);
     # Total overlap volume
     my $sum = $overbvol + $overavol;
-    SBG::U::Log::log()->debug("$sum overlap between ($self) and ($obj)");
+    $log->debug("$sum overlap between ($self) and ($obj)");
     return $sum;
 
 } # overlap_vol
