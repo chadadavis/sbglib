@@ -42,6 +42,11 @@ Minimum size of a complex model, in number of components, e.g.
 
 =head1 SEE ALSO
 
+L<sbgnet2model> , L<sbgfa2net>
+
+=head1 TODO
+
+Factor out commonalities between sbgfa2model, sbgnet2model, sbgfa2net
 
 
 =cut
@@ -124,18 +129,21 @@ foreach my $file (@ARGV) {
     my $buildops = {%ops}->hslice([qw/maxid minid cache top overlap/]);
     # Create interaction templates on the edges of the network
     $net = $net->build($searcher,%$buildops);
+
     _print_net($basename, $net);    
+    
+    if ($net->edges > 1) {
+        $net->store($basename . '.network');
 
+        # Assemble models
+        $ops{minsize} = 3 unless defined $ops{minsize};
+        # Only full-size (complete coverage) models?
+        $ops{minsize} = '100%' if $ops{complete};
+        $ops{minsize} = ceil frac_of($ops{minsize}, scalar $net->nodes);
 
-    # Assemble models
-    $ops{minsize} = 3 unless defined $ops{minsize};
-    # Only full-size (complete coverage) models?
-    $ops{minsize} = '100%' if $ops{complete};
-    $ops{minsize} = ceil frac_of($ops{minsize}, scalar $net->nodes);
-
-    # Traverse the network
-    _one_net($net, $basename, \%ops);
-
+        # Traverse the network
+        _one_net($net, $basename, \%ops);
+    }
 
     my @files = <${outdir}/*.model>;
     end_lock($lock, scalar @files);
