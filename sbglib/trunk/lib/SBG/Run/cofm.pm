@@ -9,10 +9,10 @@ SBG::Run::cofm - Wrapper for running B<cofm> (centre-of-mass)
 
  use SBG::Run::cofm qw/cofm/;
 
- my $dom = new SBG::DomainI(pdbid=>'2nn6', descriptor=>'A 13 _ to A 331 _');
+ my $dom = SBG::DomainI->new(pdbid=>'2nn6', descriptor=>'A 13 _ to A 331 _');
  my $centroid = cofm($dom);
 
- my $dom = new SBG::DomainI(pdbid=>'2nn6', descriptor=>'A 13 _ to A 331 _');
+ my $dom = SBG::DomainI->new(pdbid=>'2nn6', descriptor=>'A 13 _ to A 331 _');
 
  $hashref = cofm('2nn6','A 13 _ to A 331 _');
  $hashref = cofm('2nn6','CHAIN A CHAIN B');
@@ -78,12 +78,12 @@ sub cofm {
     # TODO needs to be contained in Domain::Sphere hook
     my $center = pdl($fields->{Cx}, $fields->{Cy}, $fields->{Cz}, 1);
 
-    my $sphere = new SBG::Domain::Sphere(pdbid=>$dom->pdbid,
-                                         descriptor=>$dom->descriptor,
-                                         file=>$fields->{file},
-                                         center=>$center,
-                                         radius=>$fields->{Rg},
-                                         length=>$fields->{nres},
+    my $sphere = SBG::Domain::Sphere->new(pdbid=>$dom->pdbid,
+                                          descriptor=>$dom->descriptor,
+                                          file=>$fields->{file},
+                                          center=>$center,
+                                          radius=>$fields->{Rg},
+                                          length=>$fields->{nres},
         );
 
 
@@ -138,7 +138,7 @@ sub _run {
     my ($dom) = @_;
 
     # Get dom into a stamp-formatted file
-    my $io = new SBG::DomainIO::stamp(tempfile=>1);
+    my $io = SBG::DomainIO::stamp->new(tempfile=>1);
     $io->write($dom);
     my $path = $io->file;
     $io->close;

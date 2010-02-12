@@ -49,12 +49,12 @@ use SBG::U::Run qw/frac_of getoptions start_lock end_lock start_log/;
 
 use SBG::Network;
 use SBG::Search::TransDB;
-
+use SBG::Search::PairedBlast;
 
 use PBS::ARGV qw/qsub/;
 
 my %ops = getoptions 
-    qw/maxid|x=i minid|n=i output|o=s cache|c=i top|t=i method|m=s overlap|v=f/;
+    qw/maxid|x=i minid|n=i output|o=s cache|c=i top|t=i method|m=s overlap|v=f searcher=s/;
 
 
 # Recreate command line options; (seems to work even ith long option names)
@@ -79,7 +79,12 @@ foreach my $file (@ARGV) {
     # Searcher tries to find interaction templates (edges) to connect seq nodes
     my $blast = SBG::Run::PairedBlast->new;
     $blast->method($ops{method}) if $ops{method};
-    my $searcher = SBG::Search::TransDB->new(blast=>$blast);
+    my $searcher;
+    if ($ops{searcher} =~ /pairedblast/i) {
+        $searcher = SBG::Search::PairedBlast->new(blast=>$blast);
+    } else {
+        $searcher = SBG::Search::TransDB->new(blast=>$blast);
+    }
     my $buildops = {%ops}->hslice([qw/maxid minid cache top overlap/]);
     # Create interaction templates on the edges of the network
     $net = $net->build($searcher,%$buildops);

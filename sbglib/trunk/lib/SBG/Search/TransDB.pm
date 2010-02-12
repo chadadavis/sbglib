@@ -94,7 +94,7 @@ sub search {
 
     # Cluster contacts, based on iRMSD distance matrix
     my ($distmat, $unique) = _distmat(\@contacts);
-    # If clustering doesn't work, use all contacts
+    # If clustering doesn't work, start with all contacts
     my @repcontacts = @contacts;
     # Cluster if a distance matrix produced
     if ($distmat) {

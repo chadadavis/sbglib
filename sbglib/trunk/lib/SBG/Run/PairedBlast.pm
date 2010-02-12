@@ -211,7 +211,7 @@ sub remoteblast {
 
 NB the B<limit> option does not imply that less than that many pairs are
 returned, only that each of the two queries is limited to that many
-hits. Pairing them generally results in more than 10 hits.
+hits. Pairing them generally results in more hits.
 
 
 =cut
