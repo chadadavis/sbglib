@@ -51,6 +51,7 @@ use Moose::Autobox;
 use Data::Dump qw/dump/;
 use Carp;
 
+use SBG::U::Log;
 use Log::Any qw/$log/;
 
 use SBG::U::Object qw/load_object methods/;
