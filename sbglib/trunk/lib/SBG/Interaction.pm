@@ -177,6 +177,32 @@ sub domains {
 } # domains
 
 
+
+################################################################################
+=head2 overlap
+
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
+
+Extent to which two domains in the interaction overlap.
+
+If this is smaller than 0, this might not be an actual interface.
+
+If this is larger than ~50%, this interface might contain clashes
+
+=cut
+sub overlap {
+    my ($self,) = @_;
+
+    my ($dom1, $dom2) = $self->domains;
+    my $overlapfrac = $dom1->overlap($dom2);
+    return $overlapfrac;
+
+} # overlap
+
+
 # TODO DES belongs in DomSetI. 
 
 # NB A Network may contain multiple Interactions that are equal, as long as they
