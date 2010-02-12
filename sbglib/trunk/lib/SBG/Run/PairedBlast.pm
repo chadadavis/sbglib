@@ -63,7 +63,7 @@ use Bio::Tools::Run::StandAloneBlast;
 use Bio::Tools::Run::RemoteBlast;
 use Log::Any qw/$log/;
 
-use SBG::U::List qw/intersection pairs2/;
+use SBG::U::List qw/intersection pairs2 interval_overlap/;
 
 
 
@@ -231,6 +231,25 @@ sub search {
         # other. I.e. all pairs of one hit in 1AD5 for the first sequence and
         # any hits from the second sequence that are also on 1AD5
         my @hitpairs = SBG::U::List::pairs2($hits1->{$id}, $hits2->{$id});
+        # Kick out hits that overlap on the same chain
+        for (my $i = 0; $i < @hitpairs; $i++) {
+            my ($hit1, $hit2) = @{$hitpairs[$i]};
+            # Skip check if they're not on the same chain
+            next unless $hit1->name eq $hit2->name;
+            my ($subject1, $subject2) = ($hit1->hsp->subject, $hit2->hsp->subject);
+            my $frac_overlap = interval_overlap(
+                $subject1->start, $subject1->end,
+                $subject2->start, $subject2->end);
+            if ($frac_overlap > 0.10) {
+                my $msg = 
+                    $hitpairs[$i]->[0] . 
+                    "(" . $subject1->start . '-' . $subject1->end . ") " .
+                    $hitpairs[$i]->[1] . 
+                    "(" . $subject2->start . '-' . $subject2->end . ") ";
+                $log->debug("Deleting overlapping hit ($frac_overlap) : $msg");
+                delete $hitpairs[$i];
+            }
+        }
         push @pairs, @hitpairs;
     }
     $log->debug(scalar(@pairs), ' Blast hit pairs');
