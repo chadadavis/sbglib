@@ -80,6 +80,7 @@ foreach my $file (@ARGV) {
     my $blast = SBG::Run::PairedBlast->new;
     $blast->method($ops{method}) if $ops{method};
     my $searcher;
+    $ops{searcher} ||= 'TransDB';
     if ($ops{searcher} =~ /pairedblast/i) {
         $searcher = SBG::Search::PairedBlast->new(blast=>$blast);
     } else {
@@ -88,7 +89,7 @@ foreach my $file (@ARGV) {
     my $buildops = {%ops}->hslice([qw/maxid minid cache top overlap/]);
     # Create interaction templates on the edges of the network
     $net = $net->build($searcher,%$buildops);
-    
+
     my $base = $ops{output} || $basename;
     $net->store($base . '.network') if $net->edges > 1;
 
