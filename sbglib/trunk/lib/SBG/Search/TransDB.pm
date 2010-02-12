@@ -92,6 +92,11 @@ sub search {
     $log->debug(scalar(@contacts), ' contacts');
     return unless @contacts;
 
+    # TODO want to separate out clustering, so that it can be based on whole network
+    # However, do not want to build domains for unclustered interactions either
+    # Make this 2 steps
+    # Add SearchI::cluster and SearchI::build
+
     # Cluster contacts, based on iRMSD distance matrix
     my ($distmat, $unique) = _distmat(\@contacts);
     # If clustering doesn't work, start with all contacts
@@ -122,6 +127,17 @@ sub search {
     return @interactions;
 
 } # search
+
+
+sub cluster {
+    my ($self, $net) = @_;
+    return $net;
+}
+
+sub build {
+    my ($self, $net) = @_;
+    return $net;
+}
 
 
 # Given an array of memberships, choose a (the first) member for each cluster
