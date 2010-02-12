@@ -177,6 +177,22 @@ sub domains {
 } # domains
 
 
+################################################################################
+=head2 pdbid
+
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
+
+PDB structure entry code from which this interaction template is derived
+
+=cut
+sub pdbid {
+    my ($self,) = @_;
+    return $self->domains->head->pdbid;
+} # pdbid
+
 
 ################################################################################
 =head2 overlap
