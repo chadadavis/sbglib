@@ -206,6 +206,45 @@ sub partition {
 
 
 ################################################################################
+=head2 seeds
+
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
+
+
+=cut
+sub seeds {
+    my ($self,) = @_;
+    
+    # Indexed by PDBID and by edge label
+    my $seeds = {};
+    foreach my $edge ($self->edges) {
+        my @nodes = sort @$edge;
+        my $edgelabel = join('--',@nodes);
+        my %interactions = $self->get_interactions(@nodes);
+        foreach my $iaction_key (keys %interactions) {
+            my $iaction = $interactions{$iaction_key};
+            my $pdbid = $iaction->pdbid;
+            $seeds->{$pdbid} ||= {};
+            $seeds->{$pdbid}{$edgelabel} ||= [];
+            my $domains = join('--', $iaction->domains(\@nodes)->flatten);
+            $seeds->{$pdbid}{$edgelabel}->push($domains);
+        }
+    }
+
+    # Which seeds cover the most edges
+    my @keys = sort { 
+        $seeds->{$b}->keys->length <=> $seeds->{$a}->keys->length
+    } $seeds->keys->flatten;
+    my $sorted_seeds = { map { $_ => $seeds->{$_} } @keys };
+    return $sorted_seeds;
+
+} # seeds
+
+
+################################################################################
 =head2 size
 
  Function: 
