@@ -250,6 +250,7 @@ sub search {
                 delete $hitpairs[$i];
             }
         }
+        @hitpairs = grep { defined $_ } @hitpairs;
         push @pairs, @hitpairs;
     }
     $log->debug(scalar(@pairs), ' Blast hit pairs');
