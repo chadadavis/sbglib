@@ -68,7 +68,7 @@ sub search {
     foreach my $hitpair (@hitpairs) {
         my ($hit1, $hit2) = @$hitpair;
         my $iaction = _contact2interaction($hit1, $hit2);
-        push @interactions, $iaction;
+        push @interactions, $iaction if defined $iaction;
     }
     
     return @interactions;
@@ -110,6 +110,7 @@ sub _contact2interaction {
 
     my $model1 = _model($hit1);
     my $model2 = _model($hit2);
+    return unless defined $model1 && defined $model2;
 
     # TODO Add length of interface to each model
     # TODO determine this from Qcons
@@ -143,8 +144,12 @@ sub _model {
     my $seq = $hsp->seq;
     my $scores = _hspscores($hsp);
 
-    my ($pdb, $chain) = $hit->name =~ /^pdb\|(.{4})\|(.)$/;
-
+    $log->debug("hitname ", $hit->name);
+    my ($pdb, $chain) = $hit->name =~ /pdb\|(.{4})\|(.)$/;
+    unless (defined $pdb && defined $chain) {
+        $log->error("Could not extract PDB ID/Chain ID from: ", $hit->name);
+        return;
+    }
     # TODO map blast coords to residue IDs, for descriptor, 
     # these coords only approx, completely wrong in some cases
     my ($start, $end) = ($hsp->subject->start, $hsp->subject->end);
