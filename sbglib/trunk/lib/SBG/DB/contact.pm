@@ -59,7 +59,7 @@ sub query {
 
     $sth ||= $dbh->prepare("
 SELECT
-*
+id_entity1,id_entity2,n_res1,n_res2
 FROM 
 contact
 WHERE id_entity1=?

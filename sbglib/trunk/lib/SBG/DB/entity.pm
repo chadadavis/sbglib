@@ -77,6 +77,8 @@ query('2ATC', 'A', pdbseq=>[1,234]);
 or (using IDs from PDB residue counter, not necessarily 1-based)
 query('2ATC', 'A', resseq=>[-1,233]);
 
+NB not querying PQS here, just PDB
+
 =cut
 sub query {
     my ($pdbid, $chain, %ops) = @_;

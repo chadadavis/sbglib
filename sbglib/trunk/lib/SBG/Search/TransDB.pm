@@ -146,6 +146,7 @@ sub _representative {
     my %reps;
     for (my $i = 0; $i < @$clusters; $i++) {
         my $cluster = $clusters->[$i];
+        # Arbitrarily chooses the first contact found in each cluster as a rep.
         $reps{$cluster} = $contacts->[$i] unless defined $reps{$cluster};
     }
     return values %reps;
