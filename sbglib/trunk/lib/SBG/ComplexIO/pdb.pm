@@ -68,6 +68,7 @@ sub write {
 =cut
 sub read {
     my ($self) = @_;
+    # TODO consider multi-model files
     warn "Not implemented";
     return;
 }

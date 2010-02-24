@@ -97,7 +97,7 @@ $SIG{__DIE__} = \&confess if $ops{'debug'};
 
 # Recreate command line options; (seems to work even ith long option names)
 my @jobids = qsub(options=>\%ops);
-print join("\n", @jobids), "\n", if @jobids;
+print "Submitted:\n", join("\n", @jobids), "\n", if @jobids;
 # @ARGV is empty if all jobs could be submitted
 
 

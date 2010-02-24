@@ -59,7 +59,7 @@ my %ops = getoptions
 
 # Recreate command line options; (seems to work even ith long option names)
 my @jobids = qsub(options=>\%ops);
-print join("\n", @jobids), "\n", if @jobids;
+print "Submitted:\n", join("\n", @jobids), "\n", if @jobids;
 
 
 foreach my $file (@ARGV) {
