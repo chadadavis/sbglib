@@ -11,6 +11,7 @@ use Data::Dump qw/dump/;
 use File::Temp qw/tempfile/;
 
 use Moose::Autobox;
+use FindBin qw/$Bin/;
 
 use SBG::U::Log qw/log/;
 my $DEBUG;
@@ -18,22 +19,36 @@ my $DEBUG;
 SBG::U::Log::init(undef, loglevel=>'DEBUG') if $DEBUG;
 
 use SBG::Split::Roberto;
-
-my $splitter = SBG::Split::Roberto->new;
-
-my @boundaries;
-@boundaries = $splitter->_smooth(100, 45, 65);
-is_deeply(\@boundaries, [qw/1 55 100/], "One boundary");
-
-@boundaries = $splitter->_smooth(110, 25, 45, 65);
-is_deeply(\@boundaries, [qw/1 35 65 110/], "Two boundaries");
-
-@boundaries = $splitter->_smooth(90, 25, 45, 65);
-is_deeply(\@boundaries, [qw/1 35 90/], "Two boundaries, no end");
-
-@boundaries = $splitter->_smooth(90, 20, 30, 65);
-is_deeply(\@boundaries, [qw/1 90/], "Two boundaries, both squashed");
+use Bio::SeqIO;
 
 
+my $splitter = SBG::Split::Roberto->new(mingap=>30);
+# A fasta file of two sequences, with various domains
+my $file = "$Bin/data/85.fa";
+my $in = Bio::SeqIO->new(-file=>$file);
+my $seq1 = $in->next_seq;
 
+my ($feats, $boundaries);
+
+$feats = $splitter->query($seq1);
+$boundaries = $feats->map(sub{$_->start,$_->end});
+is_deeply($boundaries, [qw/258 487 502 570 575 684/], 
+          "Query to Bio::SeqFeature");
+
+
+$feats = $splitter->_smooth_feats($seq1, $feats);
+$boundaries = $feats->map(sub{$_->start,$_->end});
+is($boundaries->[-1], $seq1->length, 
+   "Stretching first/last domain to end");
+is_deeply($boundaries, [qw/258 494 495 572 573 686/], 
+          "Smoothing feature boundaries");
+
+
+$feats = $splitter->_fill_feats($seq1, $feats);
+$boundaries = $feats->map(sub{$_->start,$_->end});
+is_deeply($boundaries, [qw/1 257 258 494 495 572 573 686/], 
+          "Filling with dummy domains");
+
+my $subseqs = $splitter->split($seq1);
+is($subseqs->length, 4, "split() into subsequence domains");
 
