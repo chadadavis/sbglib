@@ -98,13 +98,13 @@ sub write {
     foreach my $iaction (@interactions) {
         next unless $iaction->nodes;
         my $nodes = [ $iaction->nodes ];
-        my $models = $nodes->map({ $iaction->models->at($_) });
-        my $doms = $models->map({ $_->subject });
-        my $pdbs = $doms->map({ $_->pdbid });
-        my $descrs = $pdbs->map({ $_->descriptor });
+        my $models = $nodes->map(sub{ $iaction->models->at($_) });
+        my $doms = $models->map(sub{ $_->subject });
+        my $pdbs = $doms->map(sub{ $_->pdbid });
+        my $descrs = $doms->map(sub{ $_->descriptor });
 
         printf $fh
-            "%s\t%s\t%s\t{ %s }\t%s\t{ %s }",
+            "%s\t%s\t%s\t{ %s }\t%s\t{ %s }\n",
             @$nodes, $pdbs->[0], $descrs->[0], $pdbs->[1], $descrs->[1];
 
     }
