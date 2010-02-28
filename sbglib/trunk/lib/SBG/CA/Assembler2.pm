@@ -53,12 +53,14 @@ has 'solutions' => (
     default => 0,
     );
 
+
 # Number of duplicate solutions (matching an existing class)
 has 'dups' => (
     is => 'rw',
     isa => 'Int',
     default => 0,
     );
+
 
 # Number of unique solutions, only first solution in a class is unique
 has 'classes' => (
@@ -67,6 +69,7 @@ has 'classes' => (
     default => 0,
     );
 
+
 # Size distribution of unique solutions (i.e. of classes)
 has 'sizes' => (
     is => 'rw',
@@ -74,11 +77,20 @@ has 'sizes' => (
     default => sub { {} },
     );
 
+
 has 'binsize' => (
     is => 'ro',
     isa => 'Num',
     default => 2,
     );
+
+
+has 'maxsolutions' => (
+    is => 'ro',
+    isa => 'Int',
+    default => 100,
+    );
+
 
 ################################################################################
 =head2 minsize
@@ -301,10 +313,13 @@ TODO output network toplogy of solution interaction network used to build model
 sub solution {
     my ($self, $state, $partition,) = @_;
     my $complex = $state->{'models'}->{$partition};
+
+    return unless $self->classes < $self->maxsolutions;
+
     # Uninteresting unless at least two interfaces in solution
     return unless defined($complex) && $complex->size >= $self->minsize;     
 
-    # A solution is now complete.
+    # A new solution
     $self->solutions($self->solutions+1);
 
     # Get domains and their coords out of the complex model

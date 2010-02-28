@@ -658,7 +658,7 @@ sub merge_interaction {
 =cut
 sub cycle {
     my ($self, $iaction) = @_;
-
+    $log->debug($iaction);
     my $keys = $iaction->keys;
     # Get domains from self and domains from iaction in corresponding order
     my $irmsd = SBG::STAMP::irmsd($self->domains($keys), 
