@@ -62,33 +62,6 @@ requires 'search';
 
 
 ################################################################################
-=head2 cluster
-
- Function: 
- Example : 
- Returns : L<SBG::Network>
- Args    : L<SBG::Network>
-
-
-=cut
-requires 'cluster';
-
-
-################################################################################
-=head2 build
-
- Function: 
- Example : 
- Returns : L<SBG::Network>
- Args    : L<SBG::Network>
-
-
-=cut
-requires 'build';
-
-
-
-################################################################################
 no Moose::Role;
 1;
 

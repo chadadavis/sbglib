@@ -129,17 +129,6 @@ sub search {
 } # search
 
 
-sub cluster {
-    my ($self, $net) = @_;
-    return $net;
-}
-
-sub build {
-    my ($self, $net) = @_;
-    return $net;
-}
-
-
 # Given an array of memberships, choose a (the first) member for each cluster
 sub _representative {
     my ($clusters, $contacts) = @_;

@@ -38,7 +38,7 @@ use SBG::Domain::Sphere;
 
 # TODO DES OO
 our $database = "trans_3_0";
-our $host = "wilee";
+our $host = "wilee.embl.de";
 
 
 # Query, given a Blast Hit object

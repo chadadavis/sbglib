@@ -356,6 +356,7 @@ sub norm {
 
 # Overlap extent of two intervals
 # How much of first interval is covered by second interval
+# Given: start1, end1, start2, end2
 sub interval_overlap {
     my ($a0, $an, $b0, $bn) = @_;
     my $alen = $an-$a0;
