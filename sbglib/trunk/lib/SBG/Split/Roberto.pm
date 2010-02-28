@@ -250,6 +250,8 @@ sub _dummy {
 sub _subseq_feat {
     my ($seq, $feat) = @_;
     my $subseq = $feat->seq;
+    # Make display_id of sequence contain coords of feature
+    $subseq->display_id(join('-',$subseq->display_id,$feat->start,$feat->end));
     # Put domain label into sequence description
     $subseq->desc($feat->display_name . ' ' . $seq->desc);
     return $subseq;
