@@ -38,7 +38,7 @@ use SBG::DB::scop qw/scopdomain/;
 use SBG::U::List qw/uniq/;
 
 
-our $templatedb = dirname(__FILE__) . "/interactions-uniq.gz";
+our $templatedb = dirname(__FILE__) . "/Bench.csv.gz";
 
 ################################################################################
 =head2 components
