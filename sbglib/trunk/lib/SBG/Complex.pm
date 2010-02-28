@@ -47,7 +47,7 @@ use PDL::Lite;
 use PDL::Core qw/pdl squeeze zeroes sclr/;
 use Log::Any qw/$log/;
 
-use SBG::U::List qw/intersection mean sum flatten swap/;
+use SBG::U::List qw/interval_overlap intersection mean sum flatten swap/;
 use SBG::U::RMSD;
 use SBG::STAMP; # qw/superposition/
 use SBG::Superposition::Cache; # qw/superposition/;
@@ -554,6 +554,8 @@ sub merge_domain {
     my $otherdom = $othermodel->subject if defined $othermodel;
     return unless $otherdom;
 
+    return unless _model_overlap($refmodel, $othermodel) > 0;
+
     my $linker_superposition = 
         SBG::Superposition::Cache::superposition($otherdom, $refdom);
     return unless defined $linker_superposition;
@@ -587,6 +589,24 @@ sub merge_domain {
     return $linker_superposition->scores->at('Sc');
 
 } # merge
+
+
+# True if the sequences being modelled by two models overlap
+sub _model_overlap {
+    my ($model1, $model2) = @_;
+
+    my ($start1, $end1, $start2, $end2) = 
+        map { $_->query->start, $_->query->end } ($model1, $model2);
+    my $seqoverlap = SBG::U::List::interval_overlap(
+        $start1, $end1, $start2, $end2);
+    $log->debug("start1:$start1:end1:$end1:start2:$start2:end2:$end2");
+    $log->debug("seqoverlap:$seqoverlap");
+
+    unless ($seqoverlap > 0) {
+        $log->info("Sequences modelled do not overlap: ($model1, $model2)");
+    }
+    return $seqoverlap;
+}
 
 
 ################################################################################
@@ -703,11 +723,14 @@ sub add_interaction {
     }
 
     # Get domain models for components of interaction
-    my $srcdom = $iaction->get($srckey)->subject;
+    my $srcmodel = $iaction->get($srckey);
+    my $srcdom = $srcmodel->subject;
     # For domain being placed, make a copy that has a concrete representation
     my $destmodel = $self->_mkmodel($iaction, $destkey);
     return unless defined $destmodel;
     my $destdom = $destmodel->subject;
+
+    return unless _model_overlap($srcmodel, $refmodel) > 0;
 
     my $linker_superposition = 
         SBG::Superposition::Cache::superposition($srcdom, $refdom);
