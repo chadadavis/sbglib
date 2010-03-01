@@ -163,10 +163,10 @@ sub read {
         my ($node1, $model1) = $self->_make_node($accno1, $pdbid1, $descr1);
         my ($node2, $model2) = $self->_make_node($accno2, $pdbid2, $descr2);
 
-        my $interaction = SBG::Interaction->new(
-            models=>{$node1 => $model1, $node2 => $model2},
-            scores=>$scores,
-            );
+        my $interaction = SBG::Interaction->new();
+        $interaction->set($node1 => $model1);
+        $interaction->set($node2 => $model1);
+        $interaction->scores($scores);
 
         # Return just the interaction, unless nodes also wanted
         return wantarray ? ($interaction, $node1, $node2) : $interaction;

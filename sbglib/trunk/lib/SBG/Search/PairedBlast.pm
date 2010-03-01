@@ -119,19 +119,20 @@ sub _contact2interaction {
 
     # Save interaction-specific scores in the interaction template
     my $ia_scores = _avgscores($model1->scores, $model2->scores);
+
+    my $iaction = SBG::Interaction->new();
+    $iaction->set($model1->query => $model1);
+    $iaction->set($model2->query => $model2);
+
     # Measure conservation along interface
     # TODO This is 0, as long as n_res is missing from Interaction
 #     $ia_scores->put(
 #         'interface_conserved', 
 #         $ia_scores->at('avg_frac_conserved') * $ia_scores->at('avg_n_res'));
 
-    my $iaction = SBG::Interaction->new(
-        models=>{$model1->query => $model1, $model2->query => $model2},
-        scores=>$ia_scores,
-        # TODO 
-        # Preferred score for weighting interations
-#         -weight=>$ia_scores->at('interface_conserved'),
-        );
+    $iaction->scores($ia_scores);
+#     $iaction->weight($ia_scores->at('interface_conserved');
+
     return unless $iaction;
     return $iaction;
 
