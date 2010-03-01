@@ -150,9 +150,6 @@ sub _one_net {
                                                assembler=>$assembler,
         );
 
-    # Use avg frac convervation between template/model of Interactions for sorting
-    $t->sorter("avg_frac_conserved");
-
     # Go!
     $t->traverse();
 

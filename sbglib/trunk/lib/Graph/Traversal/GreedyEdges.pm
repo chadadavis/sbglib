@@ -212,7 +212,8 @@ sub interactions_by_field {
 
     # Get all interactions in network, over all edges
     my @iactions = $self->interactions;
-    my @desc = sort { $b->scores->{$field} <=> $a->scores->{$field} } @iactions;
+#     my @desc = sort { $b->scores->{$field} <=> $a->scores->{$field} } @iactions;
+    my @desc = sort { $b->weight <=> $a->weight } @iactions;
     return [ @desc ];
 
 } # interactions_by_field
