@@ -120,7 +120,23 @@ has 'description' => (
     );
 
 
+# Which PDB biounit assembly this domain is contained in
+has 'assembly' => (
+    is => 'rw',
+    isa => 'Int',
+    );
+
+
+# Which PDB biounit model in the assembly
+# NB Has nothing to do with SBG::Model
+has 'model' => (
+    is => 'rw',
+    isa => 'Int',
+    );
+
+
 # entity.id field of TransDB
+# TODO should be a subclass
 has 'entity' => (
     is => 'rw',
     isa => 'Str',
