@@ -107,14 +107,25 @@ sub BUILD {
 
 =cut
 sub search {
-    my ($self, $seq1, $seq2) = @_;
+    my ($self, $seq1, $seq2, %ops) = @_;
     # Need to query in both directions? No, smallest first
     ($seq1, $seq2) = sort { $a->display_id cmp $b->display_id } ($seq1, $seq2);
 
-
     my @interactions;
-    push @interactions, $self->_domains($seq1, $seq2);
     push @interactions, $self->_chains($seq1, $seq2);
+    my $topn = $ops{'top'};
+    # Only use Domain-based templates where there weren't enough chain-based
+    unless ($topn && scalar(@interactions) >= $topn) {
+        push @interactions, $self->_domains($seq1, $seq2);
+    }
+
+    if ($topn) {
+        # Take top N interactions
+        @interactions = sort { $b->weight <=> $a->weight } @interactions;
+        # Delete rest
+        delete $interactions[$_] for $topn..$#interactions;
+    }
+    $log->debug(scalar(@interactions), " interactions ($seq1,$seq2)");
 
     return @interactions;
 } # search
@@ -124,7 +135,6 @@ sub _chains {
     my ($self, $seq1, $seq2) = @_;
 
     my $sth = $self->_sth->at('chain_templates');
-    $log->debug("$seq1 $seq2");
     my $res = $sth->execute($seq1->display_id, $seq2->display_id);
     my @interactions;
     while (my $h = $sth->fetchrow_hashref) {
@@ -148,7 +158,6 @@ sub _chains {
                            contacts=>$h->{TOT_CONTACTS},
                          });
 
-        $log->debug("chain_templates: $iaction ", $iaction->weight);
         push @interactions, $iaction;
     }
     return @interactions;
@@ -160,7 +169,6 @@ sub _domains {
     my ($self, $seq1, $seq2) = @_;
 
     my $sth = $self->_sth->at('domain_templates');
-    $log->debug("$seq1 $seq2");
     my $res = $sth->execute($seq1->display_id, $seq2->display_id); 
     my @interactions;
     while (my $h = $sth->fetchrow_hashref) {
@@ -174,8 +182,7 @@ sub _domains {
         my $iaction = SBG::Interaction->new();
         $iaction->set($seq1, $mod1);
         $iaction->set($seq2, $mod2);
-
-        $log->debug("domain_templates: $iaction ");
+        $iaction->weight(0);
         push @interactions, $iaction;
     }
     return @interactions;

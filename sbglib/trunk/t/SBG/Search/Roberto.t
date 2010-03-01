@@ -33,9 +33,8 @@ while (my $seq = $seqio->next_seq) {
 is(scalar($net->nodes), 11, "nodes");
 
 my $roberto = SBG::Search::Roberto->new;
-
 $net->build($roberto);
-
+# diag join("\n", $net->interactions);
 
 __END__
 

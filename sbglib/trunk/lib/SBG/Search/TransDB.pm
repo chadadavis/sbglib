@@ -115,11 +115,7 @@ sub search {
 
     if (my $topn = $ops{'top'}) {
         # Take top N interactions
-        # avg_frac_convserved * avg_n_res : measures total conservation at iface
-        @interactions = sort {
-            $b->scores->at('interface_conserved') <=> 
-                $a->scores->at('interface_conserved')
-        } @interactions;
+        @interactions = sort { $b->weight <=> $a->weight } @interactions;
         # Delete rest
         delete $interactions[$_] for $topn..$#interactions;
     }

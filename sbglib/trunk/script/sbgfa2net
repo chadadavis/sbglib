@@ -62,6 +62,19 @@ my %ops = getoptions
 my @jobids = qsub(options=>\%ops);
 print "Submitted:\n", join("\n", @jobids), "\n", if @jobids;
 
+# Searcher tries to find interaction templates (edges) to connect seq nodes
+my $blast = SBG::Run::PairedBlast->new;
+$blast->method($ops{method}) if $ops{method};
+
+$ops{searcher} ||= 'TransDB';
+$ops{searcher} = 'SBG::Search::' . $ops{searcher};
+eval { load $ops{searcher}; };
+if ($@) {
+    warn "Could not load search: $ops{searcher} :\n$@\n";
+    exit;
+}
+my $searcher = $ops{searcher}->new(blast=>$blast);
+my $buildops = {%ops}->hslice([qw/maxid minid cache top overlap/]);
 
 foreach my $file (@ARGV) {
 
@@ -77,20 +90,6 @@ foreach my $file (@ARGV) {
         $net->add_seq($seq);
     }
 
-    # Searcher tries to find interaction templates (edges) to connect seq nodes
-    my $blast = SBG::Run::PairedBlast->new;
-    $blast->method($ops{method}) if $ops{method};
-
-    $ops{searcher} ||= 'TransDB';
-    $ops{searcher} = 'SBG::Search::' . $ops{searcher};
-    eval { load $ops{searcher}; };
-    if ($@) {
-        warn "Could not load search: $ops{searcher} :\n$@\n";
-        exit;
-    }
-    my $searcher = $ops{searcher}->new(blast=>$blast);
-
-    my $buildops = {%ops}->hslice([qw/maxid minid cache top overlap/]);
     # Create interaction templates on the edges of the network
     $net = $net->build($searcher,%$buildops);
 
