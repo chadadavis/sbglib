@@ -60,7 +60,7 @@ my %ops = getoptions
 
 # Recreate command line options; (seems to work even ith long option names)
 my @jobids = qsub(options=>\%ops);
-print "Submitted:\n", join("\n", @jobids), "\n", if @jobids;
+# print "Submitted:\n", join("\n", @jobids), "\n", if @jobids;
 
 # Searcher tries to find interaction templates (edges) to connect seq nodes
 my $blast = SBG::Run::PairedBlast->new;
