@@ -554,7 +554,7 @@ sub merge_domain {
     my $otherdom = $othermodel->subject if defined $othermodel;
     return unless $otherdom;
 
-    return unless _model_overlap($refmodel, $othermodel) > 0;
+#     return unless _model_overlap($refmodel, $othermodel) > 0;
 
     my $linker_superposition = 
         SBG::Superposition::Cache::superposition($otherdom, $refdom);
@@ -730,7 +730,7 @@ sub add_interaction {
     return unless defined $destmodel;
     my $destdom = $destmodel->subject;
 
-    return unless _model_overlap($srcmodel, $refmodel) > 0;
+#     return unless _model_overlap($srcmodel, $refmodel) > 0;
 
     my $linker_superposition = 
         SBG::Superposition::Cache::superposition($srcdom, $refdom);
