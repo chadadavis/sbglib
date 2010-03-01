@@ -113,6 +113,10 @@ sub keys {
 
 Delegates to L<Bio::Network::Interaction>
 
+NB it's best not to set any attributes in the construtor, as the parent class
+has different semantics. Rather, create the object with an empty constructor and
+use the setter methods to set attribute values.
+
 =cut
 override 'new' => sub {
     my ($class, @ops) = @_;

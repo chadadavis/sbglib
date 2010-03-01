@@ -222,12 +222,12 @@ sub _contact2interaction {
         'interface_conserved', 
         $ia_scores->at('avg_frac_conserved') * $ia_scores->at('avg_n_res'));
 
-    my $iaction = SBG::Interaction->new(
-        models=>{$model1->query => $model1, $model2->query => $model2},
-        scores=>$ia_scores,
-        # Preferred score for weighting interations
-        -weight=>$ia_scores->at('interface_conserved'),
-        );
+    my $iaction = SBG::Interaction->new;
+    $iaction->set($model1->query => $model1);
+    $iaction->set($model2->query => $model2);
+    $iaction->scores($ia_scores);
+    $iaction->weight($ia_scores->at('interface_conserved'));
+
     return unless $iaction;
     return $iaction;
 
