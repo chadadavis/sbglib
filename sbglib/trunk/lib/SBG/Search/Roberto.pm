@@ -27,6 +27,7 @@ use Log::Any qw/$log/;
 use DBI;
 use File::Basename;
 
+use SBG::Domain;
 use SBG::Model;
 use SBG::Interaction;
 use SBG::U::DB;
@@ -39,9 +40,10 @@ has '_dbh' => (
 
 # Biounit structures
 has '_biounit' => (
-    is => 'ro',
+    is => 'rw',
     isa => 'Str', # Better: MooseX::...Path
     default => '/g/russell2/3dr/data/final_paper/roberto/pdb_bio_units',
+#     default => '/usr/local/data/pdb-biounit-roberto',
     );
 
 
@@ -60,14 +62,14 @@ sub BUILD {
     my ($self) = @_;
 
     my $f_dir = dirname(__FILE__);
-#     my $dbh=DBI->connect("DBI:CSV:f_dir=${f_dir};csv_eol=\n;csv_sep_char=\t");
     my $dbh=SBG::U::DB::connect('davis_3dr', 'speedy.embl.de');
     $self->_dbh($dbh);
 
     my $sth_chain = $dbh->prepare(
         join ' ',
         'SELECT',
-        join(',', qw/PDB_FILE CHAIN1 MODEL1 COV1 CHAIN2 MODEL2 COV2/), 
+        join(',', 
+             qw/PDB ASSEMBLY CHAIN1 MODEL1 COV1 CHAIN2 MODEL2 COV2 TOT_CONTACTS/), 
         'FROM chain_templates ',
         'WHERE PROT1=? AND PROT2=?',
         );
@@ -76,8 +78,8 @@ sub BUILD {
     my $sth_domain = $dbh->prepare(
         join ' ',
         'SELECT',
-        join(',', qw/DOM1 DOM2 PDB_FILE CHAIN1 START1 END1 CHAIN2 START2 END2/),
-        'FROM domain_templates ',
+        join(',', qw/DOM1 DOM2 PDB CHAIN1 START1 END1 CHAIN2 START2 END2/),
+        'FROM domain_templates',
         'WHERE PROT1=? AND PROT2=?',
         );
     $self->_sth->put('domain_templates', $sth_domain);
@@ -106,52 +108,101 @@ sub BUILD {
 =cut
 sub search {
     my ($self, $seq1, $seq2) = @_;
-    my ($accno1, $accno2) = map {$_->display_id} ($seq1, $seq2);
-    return unless $accno1 && $accno2;
     # Need to query in both directions? No, smallest first
-    ($accno1, $accno2) = sort { $a cmp $b } ($accno1, $accno2);
+    ($seq1, $seq2) = sort { $a->display_id cmp $b->display_id } ($seq1, $seq2);
 
-    my @interactions; 
 
-#     $self->_chains($accno1, $accno2); 
-    $self->_domains($accno1, $accno2); 
-
+    my @interactions;
+    push @interactions, $self->_domains($seq1, $seq2);
+    push @interactions, $self->_chains($seq1, $seq2);
 
     return @interactions;
 } # search
 
 
-#TODO DEL
-use Data::Dumper;
-
 sub _chains {
-    my ($self, $accno1, $accno2) = @_;
-
+    my ($self, $seq1, $seq2) = @_;
 
     my $sth = $self->_sth->at('chain_templates');
-    $log->debug("$accno1 $accno2");
-    my $res = $sth->execute($accno1, $accno2); 
+    $log->debug("$seq1 $seq2");
+    my $res = $sth->execute($seq1->display_id, $seq2->display_id);
+    my @interactions;
     while (my $h = $sth->fetchrow_hashref) {
-        print Dumper $h;
+        my $dom1 = $self->_mkchain(
+            $h->{PDB},$h->{CHAIN1},$h->{ASSEMBLY}, $h->{MODEL1});
+        my $dom2 = $self->_mkchain(
+            $h->{PDB},$h->{CHAIN2},$h->{ASSEMBLY}, $h->{MODEL2});
+        my $mod1 = SBG::Model->new(query=>$seq1,subject=>$dom1,
+            scores=>{coverage=>$h->{COV1}});
+        my $mod2 = SBG::Model->new(query=>$seq2,subject=>$dom2,
+            scores=>{coverage=>$h->{COV2}});
+        my $avg_coverage = (
+            $mod1->scores->at('coverage')+$mod2->scores->at('coverage')
+            )/2;
+
+        my $iaction = SBG::Interaction->new;
+        $iaction->set($seq1 => $mod1);
+        $iaction->set($seq2 => $mod2);
+        $iaction->weight($avg_coverage);
+        $iaction->scores({ avg_coverage=>$avg_coverage,
+                           contacts=>$h->{TOT_CONTACTS},
+                         });
+
+        $log->debug("chain_templates: $iaction ", $iaction->weight);
+        push @interactions, $iaction;
     }
+    return @interactions;
 
-
-}
+} # _chains
 
 
 sub _domains {
-    my ($self, $accno1, $accno2) = @_;
+    my ($self, $seq1, $seq2) = @_;
 
     my $sth = $self->_sth->at('domain_templates');
-    $log->debug("$accno1 $accno2");
-    my $res = $sth->execute($accno1, $accno2); 
+    $log->debug("$seq1 $seq2");
+    my $res = $sth->execute($seq1->display_id, $seq2->display_id); 
+    my @interactions;
     while (my $h = $sth->fetchrow_hashref) {
-        print Dumper $h;
+        my $dom1 = $self->_mkdom(
+            $h->{PDB},$h->{CHAIN1},$h->{START1},$h->{END1});
+        my $dom2 = $self->_mkdom(
+            $h->{PDB},$h->{CHAIN2},$h->{START2},$h->{END2});
+        my $mod1 = SBG::Model->new(query=>$seq1,subject=>$dom1);
+        my $mod2 = SBG::Model->new(query=>$seq2,subject=>$dom2);
+            
+        my $iaction = SBG::Interaction->new();
+        $iaction->set($seq1, $mod1);
+        $iaction->set($seq2, $mod2);
+
+        $log->debug("domain_templates: $iaction ");
+        push @interactions, $iaction;
     }
+    return @interactions;
+} # _domains;
 
 
+sub _mkdom { 
+    my ($self, $pdb, $chain, $start, $end, $assem, $model) = @_;
+
+    my $dom = SBG::Domain->new(pdbid=>$pdb,
+                               descriptor=>
+                               join(' ',$chain,$start,'_','to',$chain,$end,'_'));
+    return $dom;
 }
 
+sub _mkchain { 
+    my ($self, $pdb, $chain, $assem, $model) = @_;
+
+    my $dom = SBG::Domain->new(pdbid=>$pdb,
+                               descriptor=>"CHAIN $chain");
+    if ($assem && $model) {
+        my $base = $self->_biounit;
+        my $path = "${base}/${pdb}.pdb${assem}.model${model}.gz";
+        $dom->file($path);
+    }
+    return $dom;
+}
 
 
 ################################################################################
@@ -161,16 +212,3 @@ no Moose;
 
 __END__
 
-
-
-        # Now we can create some domain models
-        my $model1 = new SBG::Model(query=>$seq1,subject=>scopdomain($templ1),
-                                    scores=>{'eval'=>$eval1,'seqid'=>$sid1});
-        my $model2 = new SBG::Model(query=>$seq2,subject=>scopdomain($templ2),
-                                    scores=>{'eval'=>$eval2,'seqid'=>$sid2});
-
-        # Save interaction-specific scores in the interaction template
-        my $iaction = new SBG::Interaction(
-            models=>{$seq1=>$model1, $seq2=>$model2},
-            scores=>{irmsd=>$irmsd, zscore=>$i2z, pval=>$i2p},
-            );
