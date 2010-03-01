@@ -23,14 +23,14 @@ my $DEBUG;
 SBG::U::Log::init(undef, loglevel=>'DEBUG') if $DEBUG;
 
 use FindBin qw/$Bin/;
-my $file = shift || "$Bin/GAV2006-94.fa";
+my $file = shift || "$Bin/030.fa";
 
 my $seqio = Bio::SeqIO->new(-file=>$file);
 my $net = SBG::Network->new;
 while (my $seq = $seqio->next_seq) {
     $net->add_seq($seq);
 }
-is(scalar($net->nodes), 11, "nodes");
+is(scalar($net->nodes), 4, "nodes");
 
 my $roberto = SBG::Search::Roberto->new;
 $net->build($roberto);
