@@ -240,6 +240,32 @@ sub equal {
 }
 
 
+################################################################################
+=head2 avg_scores
+
+ Function: 
+ Example : 
+ Returns : 
+ Args    : @keys the names of the fields to be averaged, e.g. qw/seqid cover/;
+
+Adds scores to the Interaction object of the form: avg_thing for each 'thing' in
+the two models within the Interaction. E.g. if each model in the Interaction has
+a seqid of 40% and 60%, respectively, the there will also be a
+Interaction->scores->at('avg_seqid') with value 50%.
+
+=cut
+sub avg_scores {
+    my ($self, @keys) = @_;
+    return unless @keys
+    my ($s1, $s2) = $self->models->values;
+    foreach my $key (@keys) {
+        my $avg = ( $s1->scores->at($key) + $s2->scores->at($key) ) / 2.0;
+        $self->scores->put($key, $avg);
+    }
+
+} # avg_scores
+
+
 sub stringify {
     my ($self) = @_;
     return $self->primary_id;

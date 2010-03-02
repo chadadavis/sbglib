@@ -69,7 +69,7 @@ sub BUILD {
         join ' ',
         'SELECT',
         join(',', 
-             qw/PDB ASSEMBLY CHAIN1 MODEL1 COV1 CHAIN2 MODEL2 COV2 TOT_CONTACTS/), 
+             qw/PDB ASSEMBLY CHAIN1 MODEL1 ID1 COV1 CHAIN2 MODEL2 ID2 COV2 CONTACTS/), 
         'FROM chain_templates ',
         'WHERE PROT1=? AND PROT2=?',
         );
@@ -78,7 +78,7 @@ sub BUILD {
     my $sth_domain = $dbh->prepare(
         join ' ',
         'SELECT',
-        join(',', qw/DOM1 DOM2 PDB CHAIN1 START1 END1 CHAIN2 START2 END2/),
+        join(',', qw/DOM1 DOM2 PDB CHAIN1 ID1 START1 END1 CHAIN2 ID2 START2 END2/),
         'FROM domain_templates',
         'WHERE PROT1=? AND PROT2=?',
         );
@@ -143,20 +143,16 @@ sub _chains {
         my $dom2 = $self->_mkchain(
             $h->{PDB},$h->{CHAIN2},$h->{ASSEMBLY}, $h->{MODEL2});
         my $mod1 = SBG::Model->new(query=>$seq1,subject=>$dom1,
-            scores=>{coverage=>$h->{COV1}});
+                                   scores=>{cov=>$h->{COV1},seqid=>$h->{ID1}});
         my $mod2 = SBG::Model->new(query=>$seq2,subject=>$dom2,
-            scores=>{coverage=>$h->{COV2}});
-        my $avg_coverage = (
-            $mod1->scores->at('coverage')+$mod2->scores->at('coverage')
-            )/2;
+                                   scores=>{cov=>$h->{COV2},seqid=>$h->{ID2}});
 
         my $iaction = SBG::Interaction->new;
         $iaction->set($seq1 => $mod1);
         $iaction->set($seq2 => $mod2);
-        $iaction->weight($avg_coverage);
-        $iaction->scores({ avg_coverage=>$avg_coverage,
-                           contacts=>$h->{TOT_CONTACTS},
-                         });
+        $iaction->avg_scores(qw/cov seqid/);
+        $iaction->scores->put('contacts', $h->{CONTACTS});
+        $iaction->weight($iaction->scores->at('avg_seqid'));
 
         push @interactions, $iaction;
     }
@@ -176,13 +172,16 @@ sub _domains {
             $h->{PDB},$h->{CHAIN1},$h->{START1},$h->{END1});
         my $dom2 = $self->_mkdom(
             $h->{PDB},$h->{CHAIN2},$h->{START2},$h->{END2});
-        my $mod1 = SBG::Model->new(query=>$seq1,subject=>$dom1);
-        my $mod2 = SBG::Model->new(query=>$seq2,subject=>$dom2);
+        my $mod1 = SBG::Model->new(query=>$seq1,subject=>$dom1,
+                                   scores=>{seqid=>$h->{ID1}});
+        my $mod2 = SBG::Model->new(query=>$seq2,subject=>$dom2,
+                                   scores=>{seqid=>$h->{ID2}});
             
         my $iaction = SBG::Interaction->new();
         $iaction->set($seq1, $mod1);
         $iaction->set($seq2, $mod2);
-        $iaction->weight(0);
+        $iaction->avg_scores(qw/seqid/);
+        $iaction->weight($iaction->scores->at('avg_seqid'));
         push @interactions, $iaction;
     }
     return @interactions;

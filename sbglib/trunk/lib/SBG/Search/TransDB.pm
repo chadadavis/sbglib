@@ -211,18 +211,18 @@ sub _contact2interaction {
     my $model1 = _model($id1, $hit1, $contact->at('n_res1'));
     my $model2 = _model($id2, $hit2, $contact->at('n_res2'));
 
-    # Save interaction-specific scores in the interaction template
-    my $ia_scores = _avgscores($model1->scores, $model2->scores);
-    # Measure conservation along interface
-    $ia_scores->put(
-        'interface_conserved', 
-        $ia_scores->at('avg_frac_conserved') * $ia_scores->at('avg_n_res'));
 
     my $iaction = SBG::Interaction->new;
     $iaction->set($model1->query => $model1);
     $iaction->set($model2->query => $model2);
-    $iaction->scores($ia_scores);
-    $iaction->weight($ia_scores->at('interface_conserved'));
+    $iaction->avg_scores(
+        qw/evalue frac_identical frac_conserved seqid gaps length n_res/);
+    # Measure conservation along interface
+    my $interface_conserved = 
+        $iaction->scores->at('avg_frac_conserved') * 
+        $iaction->scores->at('avg_n_res');
+    $iaction->scores->put('interface_conserved', $interface_conserved);
+    $iaction->weight($iaction->scores->at('avg_seqid'));
 
     return unless $iaction;
     return $iaction;
@@ -240,17 +240,6 @@ sub _model {
     my $dom = SBG::DB::entity::id2dom($id);
     my $model = SBG::Model->new(query=>$seq,subject=>$dom,scores=>$scores);
     return $model;
-}
-
-
-sub _avgscores {
-    my ($s1, $s2) = @_;
-    my $avg = {};
-    foreach (qw/evalue frac_identical frac_conserved seqid gaps length n_res/) {
-        $avg->put("avg_$_", ($s1->at($_) + $s2->at($_)) / 2.0);
-    }
-
-    return $avg;
 }
 
 
