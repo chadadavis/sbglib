@@ -26,7 +26,7 @@ our @EXPORT_OK = qw/pdbseq/;
 use File::Temp qw/tempfile/;
 use Bio::SeqIO;
 use SBG::DomainIO::stamp;
-
+use IO::String;
 
 ################################################################################
 =head2 pdbseq
@@ -46,9 +46,11 @@ sub pdbseq {
     $domio->write($_) for @doms;
     my $dompath = $domio->file;
     my (undef, $fapath) = tempfile(TMPDIR=>1);
-    `pdbseq -f $dompath > $fapath`;
-    return unless -s $fapath;
-    my $faio = Bio::SeqIO->new(-file=>$fapath);
+    my $seqstr = `pdbseq -f $dompath`;
+    return unless $seqstr && $seqstr =~ /^>/;
+    my $instr = IO::String->new($seqstr); 
+#    my $faio = Bio::SeqIO->new(-file=>$fapath, -format=>'Fasta');
+    my $faio = Bio::SeqIO->new(-fh=>$instr, -format=>'Fasta');
     my @seqs;
     while (my $seq = $faio->next_seq) {
         push @seqs, $seq;
