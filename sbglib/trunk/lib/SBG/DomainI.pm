@@ -70,6 +70,7 @@ use SBG::TransformI;
 # Default transform type
 use SBG::Transform::Affine;
 use SBG::U::RMSD;
+use SBG::Run::pdbseq;
 
 # Some regexs for parsing PDB IDs and descriptors
 use SBG::Types qw/$re_chain $re_chain_seg/;
@@ -446,7 +447,7 @@ sub _descriptor_short {
 =cut
 sub seq {
     my ($self,) = @_;
-    my $seq = SBG::Run::pbdseq($self);
+    my $seq = SBG::Run::pdbseq::pdbseq($self);
     return $seq;
 
 } # seq
