@@ -47,6 +47,7 @@ sub pdbseq {
     my $dompath = $domio->file;
     my (undef, $fapath) = tempfile(TMPDIR=>1);
     `pdbseq -f $dompath > $fapath`;
+    return unless -s $fapath;
     my $faio = Bio::SeqIO->new(-file=>$fapath);
     my @seqs;
     while (my $seq = $faio->next_seq) {
