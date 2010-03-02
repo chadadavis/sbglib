@@ -314,10 +314,10 @@ sub solution {
     my ($self, $state, $partition,) = @_;
     my $complex = $state->{'models'}->{$partition};
 
-    return unless $self->classes < $self->maxsolutions;
+    return -1 unless $self->classes < $self->maxsolutions;
 
     # Uninteresting unless at least two interfaces in solution
-    return unless defined($complex) && $complex->size >= $self->minsize;     
+    return 0 unless defined($complex) && $complex->size >= $self->minsize;     
 
     # A new solution
     $self->solutions($self->solutions+1);
@@ -336,11 +336,11 @@ sub solution {
     if (defined $class) {
         $self->dups($self->dups+1);
         $log->debug('Duplicate solution. Total duplicates: ', $self->dups);
-        return;
+        return 0;
     } else {
         # undef => Don't name the model
         $class = $self->gh->put(undef, $coords, $componentlabels);
-        return unless defined $class;
+        return 0 unless defined $class;
 
         # Counter for classes created so far
 #         $self->classes($class) unless $class < $self->classes;

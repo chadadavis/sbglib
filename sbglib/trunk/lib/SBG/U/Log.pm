@@ -143,11 +143,12 @@ sub init {
     chomp $h;
     $h = sprintf "%-15s", $h;
     $name = sprintf "%6s", ($name || '');
+    $pbs_jobid = sprintf "%8s", ($ENV{PBS_JOBID} || 'NOTPBS');
 
     # Define log format for appender
     # $h host, %d date %M method %m message %n newline
     my $layout = Log::Log4perl::Layout::PatternLayout->new(
-        "$name $h %d{yyyy-MM-dd HH:mm:ss} %-50M %m%n");
+        "$name $h $pbs_jobid %d{yyyy-MM-dd HH:mm:ss} %-50M %m%n");
     # Set the layout of the appender
     $appender->layout($layout);
     # Register the appender with the logger

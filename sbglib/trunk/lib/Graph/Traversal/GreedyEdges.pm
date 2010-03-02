@@ -67,6 +67,13 @@ has 'assembler' => (
     );
 
 
+# Flag to abort recursion
+has 'stop' => (
+    is => 'rw',
+    isa => 'Bool',
+    );
+
+
 ################################################################################
 =head2 sorter
 
@@ -126,7 +133,7 @@ sub traverse {
 
 sub _recurse {
     my ($self, $iactions, $i, $state, $leftmost) = @_;
-
+    $return if $self->stop;
     $log->debug('leftmost:' . ($leftmost || 'undef') . " i:$i");
     return unless $i < $iactions->length;
     my $iaction = $iactions->[$i];
@@ -160,7 +167,12 @@ sub _recurse {
                                                -interaction=>$iaction);
         
         # Every successfully modelled interaction creates a new solution model
-        $self->assembler->solution($state_clone, $partition);
+        my $res = $self->assembler->solution($state_clone, $partition);
+        if ($res == -1) {
+            # Abort signal
+            $log->info("Assembler requested that we stop");
+            $self->stop(1);
+        }
 
         # Recursive call, only when interaction was successfully added
         # Starts with next interaction in the list: $i+1
