@@ -51,7 +51,10 @@ L<SBG::SearchI>
 use Bio::Search::Hit::BlastHit;
 # Overload stringification of external package
 package Bio::Search::Hit::BlastHit;
-use overload ('""' => 'stringify');
+use overload (
+    '""' => 'stringify',
+    fallback => 1,
+    );
 sub stringify { (shift)->name }
 
 
