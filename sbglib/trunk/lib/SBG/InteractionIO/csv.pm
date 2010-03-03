@@ -165,9 +165,12 @@ sub read {
 
         my $interaction = SBG::Interaction->new();
         $interaction->set($node1 => $model1);
-        $interaction->set($node2 => $model1);
+        $interaction->set($node2 => $model2);
         $interaction->scores($scores);
-
+        my $weight = 
+            $interaction->scores->at('weight') || 
+            $interaction->scores->at('default') || 0;
+        $interaction->weight($weight);
         # Return just the interaction, unless nodes also wanted
         return wantarray ? ($interaction, $node1, $node2) : $interaction;
     }
@@ -181,13 +184,13 @@ sub _make_node {
     my $node = $self->_nodes->at($accno);
     my $seq;
     unless (defined $node) {
-        $seq = new SBG::Seq(-accession_number=>$accno);
-        $node = new SBG::Node($seq);
+        $seq = SBG::Seq->new(-accession_number=>$accno);
+        $node = SBG::Node->new($seq);
         $self->_nodes->put($accno, $node)
     }
     ($seq) = $node->proteins unless defined $seq;
-    my $dom = new SBG::Domain(pdbid=>$pdbid,descriptor=>$descr);
-    my $model = new SBG::Model(query=>$seq, subject=>$dom);
+    my $dom = SBG::Domain->new(pdbid=>$pdbid,descriptor=>$descr);
+    my $model = SBG::Model->new(query=>$seq, subject=>$dom);
 
     return ($node, $model);
 }
