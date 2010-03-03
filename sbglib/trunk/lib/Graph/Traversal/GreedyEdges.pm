@@ -133,7 +133,7 @@ sub traverse {
 
 sub _recurse {
     my ($self, $iactions, $i, $state, $leftmost) = @_;
-    $return if $self->stop;
+    return if $self->stop;
     $log->debug('leftmost:' . ($leftmost || 'undef') . " i:$i");
     return unless $i < $iactions->length;
     my $iaction = $iactions->[$i];
