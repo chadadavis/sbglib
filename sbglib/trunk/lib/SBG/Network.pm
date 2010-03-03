@@ -65,6 +65,7 @@ use SBG::U::Cache qw/cache/;
 
 use overload (
     '""' => 'stringify',
+    fallback => 1,
     );
 
 

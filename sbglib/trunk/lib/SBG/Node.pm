@@ -31,7 +31,7 @@ with 'SBG::Role::Storable';
 
 use overload (
     '""' => 'stringify',
-    'cmp' => '_compare',
+    'cmp' => 'equal',
     fallback => 1,
     );
 
@@ -68,7 +68,7 @@ sub stringify {
 } # _asstring
 
 
-sub _compare {
+sub equal {
     my ($a, $b) = @_;
 
     # Assume each Node holds just one protein

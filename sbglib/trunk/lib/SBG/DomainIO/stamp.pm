@@ -60,7 +60,7 @@ use Carp qw/carp cluck/;
 use Module::Load qw/load/;
 use Log::Any qw/$log/;
 
-use SBG::Domain;
+# use SBG::Domain; # Circular dependency
 use SBG::TransformIO::stamp;
 use SBG::Types qw/$re_pdb $re_descriptor/;
 

@@ -26,7 +26,10 @@ L<Bio::Seq>
 use Bio::PrimarySeqI;
 # overload stringify of external package
 package Bio::PrimarySeqI;
-use overload ('""'=>'stringify');
+use overload (
+    '""' => 'stringify',
+    fallback => 1,
+    );
 
 # NB cannot use ->primary_id in operator "" because it'd be recursive
 sub stringify { my $self=shift(); $self->display_id || $self->accession_number }

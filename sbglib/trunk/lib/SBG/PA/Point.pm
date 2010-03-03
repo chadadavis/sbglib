@@ -29,8 +29,8 @@ use Moose;
 
 use Math::Round qw/nearest/;
 use overload (
-    '""' => '_asstring',
-    'cmp' => '_compare',
+    '""' => 'stringify',
+    'cmp' => 'equal',
     fallback => 1,
     );
 
@@ -141,7 +141,7 @@ sub hash {
 ################################################################################
 
 
-sub _asstring {
+sub stringify {
     my ($self) = @_;
     #return $self->label . $self->hash;
     return sprintf("%s-\(%.3f  %.3f  %.3f  %.3f  %.3f\)",$self->label,@{$self->pt},$self->score, $self->pval);
@@ -156,7 +156,7 @@ sub _round {
 }
 
 
-sub _compare {
+sub equal {
     my ($a, $b) = @_;
     return "$a" cmp "$b";
 }

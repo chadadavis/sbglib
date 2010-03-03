@@ -47,12 +47,13 @@ with 'SBG::Role::Writable';
 
 # NB this is not carried into implementing classes.
 # It is here as a suggestion of what you should be overloading
-use overload (
-    'x'  => 'mult', 
-    '!'  => 'inverse', 
-    '==' => 'equals',
-    '""' => 'stringify',
-    );
+# use overload (
+#     'x'  => \&mult, 
+#     '!'  => \&inverse, 
+#     '==' => \&equals,
+#     '""' => \&stringify,
+#     fallback => 1,
+#     );
 
 
 use Module::Load;

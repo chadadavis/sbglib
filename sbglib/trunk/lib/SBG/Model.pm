@@ -28,11 +28,10 @@ SBG::Role::Storable
 SBG::Role::Scorable
 /;
 
-use SBG::Seq;
-use SBG::DomainI;
 
 use overload (
     '""' => 'stringify',
+    fallback => 1,
     );
 
 

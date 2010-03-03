@@ -34,6 +34,7 @@ use overload (
     '!'  => 'inverse', 
     '==' => 'equals',
     '""' => 'stringify',
+    fallback => 1,
     );
 
 use Module::Load;

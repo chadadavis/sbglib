@@ -34,6 +34,7 @@ with 'SBG::Role::Writable';
 
 use overload (
     '""' => 'stringify',
+    fallback => 1,
     );
 
 use Scalar::Util qw/blessed refaddr/;

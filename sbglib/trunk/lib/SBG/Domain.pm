@@ -24,20 +24,19 @@ L<SBG::DomainI>
 package SBG::Domain;
 use Moose;
 
-use Log::Any qw/$log/;
-
-
 # Defines what must be implemented to represent a 3D structure
 with qw/
 SBG::DomainI 
 /;
 
-
+# Implemntations are in DomainI
 use overload (
     '""' => 'stringify',
     '==' => 'equal',
     fallback => 1,
     );
+
+use Log::Any qw/$log/;
 
 
 ################################################################################

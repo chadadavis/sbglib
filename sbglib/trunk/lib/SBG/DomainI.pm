@@ -37,7 +37,6 @@ http://www.compbio.dundee.ac.uk/manuals/stamp.4.2/node29.html
 package SBG::DomainI;
 use Moose::Role;
 
-
 with 'SBG::Role::Clonable';
 with 'SBG::Role::Dumpable';
 with 'SBG::Role::Scorable';
@@ -49,11 +48,11 @@ with 'SBG::Role::Writable';
 # You will need to redefine this (i.e. copy) it to implementing classes
 # The methods themselves will be consumed via this role, however.
 # I.e. just the overload needs to be explicitly redfined in implementing classes.
-use overload (
-    '""' => 'stringify',
-    '==' => 'equal',
-    fallback => 1,
-    );
+# use overload (
+#     '""' => \&stringify,
+#     '==' => \&equal,
+#     fallback => 1,
+#     );
 
 
 # Get address of a reference
@@ -66,7 +65,6 @@ use PDL::Lite;
 use PDL::Core qw/pdl/;
 use PDL::Basic qw/transpose/;
 
-use SBG::TransformI;
 # Default transform type
 use SBG::Transform::Affine;
 use SBG::U::RMSD;
