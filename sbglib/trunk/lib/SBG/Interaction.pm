@@ -256,11 +256,11 @@ Interaction->scores->at('avg_seqid') with value 50%.
 =cut
 sub avg_scores {
     my ($self, @keys) = @_;
-    return unless @keys
-    my ($s1, $s2) = $self->models->values;
+    return unless @keys;
+    my ($s1, $s2) = $self->models->values->flatten;
     foreach my $key (@keys) {
         my $avg = ( $s1->scores->at($key) + $s2->scores->at($key) ) / 2.0;
-        $self->scores->put($key, $avg);
+        $self->scores->put("avg_$key", $avg);
     }
 
 } # avg_scores

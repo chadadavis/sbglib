@@ -128,6 +128,7 @@ sub search {
 # Given an array of memberships, choose a (the first) member for each cluster
 sub _representative {
     my ($clusters, $contacts) = @_;
+    $log->debug;
     my %reps;
     for (my $i = 0; $i < @$clusters; $i++) {
         my $cluster = $clusters->[$i];
@@ -210,7 +211,6 @@ sub _contact2interaction {
     # Add length of interface to each model: n_res
     my $model1 = _model($id1, $hit1, $contact->at('n_res1'));
     my $model2 = _model($id2, $hit2, $contact->at('n_res2'));
-
 
     my $iaction = SBG::Interaction->new;
     $iaction->set($model1->query => $model1);
