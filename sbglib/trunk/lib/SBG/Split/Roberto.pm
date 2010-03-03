@@ -33,6 +33,7 @@ use Bio::Seq;
 use Bio::SeqFeature::Generic;
 use DBI;
 
+use SBG::U::DB;
 
 ################################################################################
 =head2 csvfile
@@ -81,14 +82,16 @@ has '_sth' => (
 sub BUILD {
     my ($self) = @_;
     my $f_dir = $self->csvdir;
-    my $dbh=DBI->connect("DBI:CSV:f_dir=${f_dir};csv_eol=\n;csv_sep_char=\t");
+#     my $dbh=DBI->connect("DBI:CSV:f_dir=${f_dir};csv_eol=\n;csv_sep_char=\t");
+    my $dbh=SBG::U::DB::connect('davis_3dr', 'speedy.embl.de');
 
     my $sth = $dbh->prepare(
         join ' ',
         'SELECT',
         join(',', qw/PROT DOM EVALUE ID START END DOM_ID/),
         'FROM',
-        'yeast_domains.txt',
+#         'yeast_domains.csv',
+        'domain_defs',
         'where PROT=?',
 	);
 
