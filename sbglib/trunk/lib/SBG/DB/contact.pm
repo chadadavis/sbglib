@@ -64,6 +64,7 @@ FROM
 contact
 WHERE id_entity1=?
 AND id_entity2=?
+AND crystal=0
 ");
 
     unless ($sth) {
