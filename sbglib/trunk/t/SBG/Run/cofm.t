@@ -1,5 +1,8 @@
 #!/usr/bin/env perl
 
+use strict;
+use warnings;
+
 use Test::More 'no_plan';
 use SBG::U::Test qw/float_is pdl_approx/;
 use Data::Dumper;
@@ -18,10 +21,10 @@ my $prec = 0.1;
 sub _test {
     my ($pdbid, $descriptor, $radius, @coords) = @_;
 
-    $input = new SBG::Domain(pdbid=>$pdbid, descriptor=>$descriptor);
-    $sphere = cofm($input);
-    $exp_center = pdl(@coords, 1.0);
-    $exp_r = $radius;
+    my $input = new SBG::Domain(pdbid=>$pdbid, descriptor=>$descriptor);
+    my $sphere = cofm($input);
+    my $exp_center = pdl(@coords, 1.0);
+    my $exp_r = $radius;
     pdl_approx($sphere->center, $exp_center, "center $exp_center", $prec);
     float_is($sphere->radius, $exp_r, "radius $exp_r", $prec);
 }
