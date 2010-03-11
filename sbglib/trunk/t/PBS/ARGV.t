@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use Test::More 'no_plan';
+use FindBin qw/$Bin/;
 
 use PBS::ARGV qw/qsub linen nlines/;
 
@@ -27,7 +28,7 @@ if (PBS::ARGV::has_qsub) {
 }
 
 
-my $file = 'data/lines.csv';
+my $file = "$Bin/data/lines.csv";
 is(nlines($file), 4, 'nlines');
 
 is(linen($file, 2), 'two', "linen");

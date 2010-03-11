@@ -246,15 +246,7 @@ sub _submit {
 # Line does not end with a newline
 sub linen {
     my ($file, $n) = @_;
-    our $fhcache;
-    $fhcache ||= {};
-    unless ($fhcache->{$file}) {
-        my $fh;
-        open $fh, $file;
-        $fhcache->{$file} = $fh;
-    }
-    my $fh = $fhcache->{$file};
-    seek $fh, 0, 0;
+    open(my $fh, $file);
     my $line;
     for (my $i = 0; defined($line = <$fh>) && $i < $n; $i++) {}
     return if eof $fh;
