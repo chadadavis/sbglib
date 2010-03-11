@@ -31,10 +31,11 @@ if (PBS::ARGV::has_qsub) {
 my $file = "$Bin/data/lines.csv";
 is(nlines($file), 4, 'nlines');
 
-is(linen($file, 2), 'two', "linen");
-# Test rewinding back to a lower number
-is(linen($file, 1), 'one', "linen");
-# Test forward to a higher number
-is(linen($file, 2), 'two', "linen");
+# last line of file
+is(linen($file, 3), 'three', "linen");
+
+# first line of file
+is(linen($file, 0), 'zero', "linen");
+
 # Doesn't exist
 ok(! linen($file, 4), "linen");
