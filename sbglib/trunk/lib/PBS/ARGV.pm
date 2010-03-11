@@ -18,28 +18,32 @@ foreach my $arg (@ARGV) {
 }
 
 
-# Specify the command(s) to run yourself
-# Will run: $0 some-other-argument $x, for each $x in @ARGV
-my @jobids = qsub("$0 some-other-argument");
+# You can also specify the command(s) to run yourself
+# Will run: another-program with-another-argument $x, for each $x in @ARGV
+my @jobids = qsub(cmd=>"another-program with-an-argument");
+
 
 # With Getopt, give your PBS jobs the same options that you received
 use Getopt::Long;
 my %ops;
 my $result = GetOptions(\%ops,'loglevel|l=s','logfile|f=s','debug|d:i');
-# Add the dash back on to option names:
-my @dashops = map { '-' . $_ => $ops{$_} } keys %ops;
-my @jobids = qsub("$0 @dashops");
+my @jobids = qsub(options=>\%ops);
+
 
 # Add any PBS directives as the elements of an array
-my @jobids = qsub($0, '-w abe', '-N jobname', ...);
+my @jobids = qsub(directives=>['-m abe', '-N jobname', ...]);
 
 # PBS directives are not parsed, with the exception of:
 # -N will be set to the currently processed argument, if not otherwise given
 # -J (job arrays) will cause $PBS_ARRAY_INDEX to be appended to the command line
-my @jobids = qsub($0, '-J 0-15');
+my @jobids = qsub(directives=>[ '-J 0-15' ]);
 # Will make the pbs job script run the command, for each $arg in @ARGV:
-# myscript.pl $arg $PBS_ARRAY_INDEX
+# myscript.pl $arg -J $PBS_ARRAY_INDEX
 # And for each $arg, PBS will run with PBS_ARRAY_INDEX set to each of [0-15]
+
+# I.e. $arg might be the name of a file listing all the input files to be
+# processed then your script will just have to lookup the appropriate line in
+# the file and that is the current file to be processed in the current sub-job.
 
 
 =head1 DESCRIPTION
@@ -66,10 +70,15 @@ determines it is already running under PBS. This is defined as the existance of
 B<$ENV{PBS_ENVIRONMENT}>.
 
 
-TODO BUG Fails when given command line switches. I.e. an option that has no argument. To get around this, use options that require a value only.
+TODO BUG Fails when given command line switches. I.e. an option that has no argument. To get around this, use options that require a value only. E.g. do not use:
 
+ app.pl -q
 
-=head1 JOB ARRAYS
+rather, use:
+
+ app.pl -q 1
+
+See the documentation for L<Getopt::Long>
 
 
 
@@ -88,9 +97,10 @@ use strict;
 use warnings;
 
 use base qw/Exporter/;
-our @EXPORT_OK = qw/qsub/;
+our @EXPORT_OK = qw/qsub linen nlines/;
 use vars qw($VERSION);
 $VERSION = 0.01;
+
 
 use Carp;
 use File::Spec;
@@ -114,7 +124,7 @@ Submits one job to pbs, via B<qsub>, for each argument in B<@ARGV>.
 Sets the current working directory of the executing job to the current
 workign directory from when the job was submitted.
 
- qsub($0, '-N myjobname', '-J 0-15', '-m abe');
+ qsub(directives=>[ '-N myjobname', '-J 0-15', '-m abe']);
 
 =cut
 sub qsub {
@@ -172,15 +182,23 @@ sub _submit {
 
     # Command line options to pass on
     my %cmdops = $ops{'options'} ? %{$ops{'options'}} : ();
-    # Add a dash to precede each argument name
-    my @cmdops = map { '-' . $_ => $cmdops{$_} } keys %cmdops;
-    $cmdline .= " @cmdops";
-
     # PBS directives
     my @directives = $ops{'directives'} ? @{$ops{'directives'}} : ();
+
+    # Check explicitly for mailing address, append it to directives
+    if ($cmdops{'M'}) {
+        push @directives, "-M $cmdops{'M'}";
+        # Doesn't need to be passed on to job invocations
+        delete $cmdops{'M'};
+    }
+
     # Array? if -J directive given, also append \$PBS_ARRAY_INDEX to cmdline
-    if (grep { /^-J/ } @directives) {
-        $cmdline .= ' -J $PBS_ARRAY_INDEX';
+    if ($cmdops{'J'}) {
+        my $lastline = nlines($filearg) - 1;
+        push @directives, "-J 0-$lastline";
+        # NB this variable will be defined by the PBS environment when started
+        # Each job will get a -J 5 where 5 varies from 0 to the lastline of file
+        $cmdops{'J'} = '$PBS_ARRAY_INDEX';
     }
 
     # Add name, unless given
@@ -192,6 +210,10 @@ sub _submit {
         ($base) = $base =~ /^(.{1,15})/;
         push @directives, "-N $base";
     }
+
+    # Add a dash to precede each argument name
+    my @cmdops = map { '-' . $_ => $cmdops{$_} } keys %cmdops;
+    $cmdline .= " @cmdops";
 
     my ($tmpfh, $jobscript) = tempfile("pbs_XXXXX", TMPDIR=>1);
     print $tmpfh "#!/usr/bin/env sh\n";
@@ -215,6 +237,38 @@ sub _submit {
     }
 
 } # _submit
+
+
+# Returns the text of line #N of a file
+# Counting is 0-based
+# Line does not end with a newline
+sub linen {
+    my ($file, $n) = @_;
+    our $fhcache;
+    $fhcache ||= {};
+    unless ($fhcache->{$file}) {
+        my $fh;
+        open $fh, $file;
+        $fhcache->{$file} = $fh;
+    }
+    my $fh = $fhcache->{$file};
+    seek $fh, 0, 0;
+    my $line;
+    for (my $i = 0; defined($line = <$fh>) && $i < $n; $i++) {}
+    return if eof $fh;
+    chomp $line;
+    return $line;
+}
+
+
+sub nlines {
+    my ($file) = @_;
+    open(my $fh, $file) or return;
+    my $count;
+    for ($count=0; <$fh>; $count++) { }
+    return $count;
+}
+
 
 
 1;
