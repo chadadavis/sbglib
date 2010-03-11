@@ -246,10 +246,10 @@ sub _submit {
 # Line does not end with a newline
 sub linen {
     my ($file, $n) = @_;
-    open(my $fh, $file);
+    open(my $fh, $file) or return;
     my $line;
     for (my $i = 0; defined($line = <$fh>) && $i < $n; $i++) {}
-    return if eof $fh;
+    return unless defined $line;
     chomp $line;
     return $line;
 }
@@ -258,8 +258,8 @@ sub linen {
 sub nlines {
     my ($file) = @_;
     open(my $fh, $file) or return;
-    my $count;
-    for ($count=0; <$fh>; $count++) { }
+    my $count = 0;
+    $count++ while <$fh>;
     return $count;
 }
 
