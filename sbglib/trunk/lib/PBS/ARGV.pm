@@ -188,6 +188,8 @@ sub _submit {
     # Check explicitly for mailing address, append it to directives
     if ($cmdops{'M'}) {
         push @directives, "-M $cmdops{'M'}";
+        # Notify on Abort, Begin, End
+        push @directives, "-m abe";
         # Doesn't need to be passed on to job invocations
         delete $cmdops{'M'};
     }
