@@ -34,5 +34,7 @@ is(nlines($file), 4, 'nlines');
 is(linen($file, 2), 'two', "linen");
 # Test rewinding back to a lower number
 is(linen($file, 1), 'one', "linen");
+# Test forward to a higher number
+is(linen($file, 2), 'two', "linen");
 # Doesn't exist
 ok(! linen($file, 4), "linen");
