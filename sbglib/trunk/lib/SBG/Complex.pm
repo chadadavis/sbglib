@@ -49,6 +49,7 @@ use Log::Any qw/$log/;
 
 use SBG::U::List qw/interval_overlap intersection mean sum flatten swap/;
 use SBG::U::RMSD;
+use SBG::U::iRMSD; # qw/irmsd/;
 use SBG::STAMP; # qw/superposition/
 use SBG::Superposition::Cache; # qw/superposition/;
 
@@ -661,8 +662,8 @@ sub cycle {
     $log->debug($iaction);
     my $keys = $iaction->keys;
     # Get domains from self and domains from iaction in corresponding order
-    my $irmsd = SBG::STAMP::irmsd($self->domains($keys), 
-                                  $iaction->domains($keys));
+    my $irmsd = SBG::U::iRMSD::irmsd($self->domains($keys), 
+                                     $iaction->domains($keys));
     return $irmsd;
 
 } # cycle

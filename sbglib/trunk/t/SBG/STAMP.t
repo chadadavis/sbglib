@@ -203,22 +203,3 @@ my $rmsd = $movingb->rmsd($staticf);
 float_is($rmsd, 6.55, "RMSD after transformation", $toler);
 
 
-# Test iRMSD
-# Make pairs of domains :
-sub _d {
-    my ($pdb, $chain) = @_;
-    return new SBG::Domain(pdbid=>$pdb, descriptor=>"CHAIN $chain");
-}
-
-my $doms1 = [ _d(qw/1vor K/), _d(qw/1vor R/) ];
-my $doms2 = [ _d(qw/1vp0 K/), _d(qw/1vp0 R/) ];
-my $irmsd;
-$irmsd = SBG::STAMP::irmsd($doms1, $doms2);
-float_is($irmsd, 5.11, "iRMSD", 0.01);
-$irmsd = SBG::STAMP::irmsd($doms2, $doms1);
-float_is($irmsd, 5.11, "iRMSD reverse", 0.01);
-
-
-
-$TODO = "Test STAMP::irmsd for domains with an existing transformation";
-ok 0;

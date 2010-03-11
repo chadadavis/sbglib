@@ -44,7 +44,11 @@ use overload (
 
 
 use Moose::Autobox;
+
+# Must load SBG::Seq to get string overload on Bio::PrimarySeqI
+use SBG::Seq;
 use SBG::Model;
+use SBG::U::iRMSD;
 
 
 ################################################################################
@@ -157,7 +161,7 @@ sub irmsd {
     my $otherdoms = $keys->map(sub{$other->get($_)->subject});
     return unless $otherdoms->length == $self->doms->length;
 
-    my $res = SBG::STAMP::irmsd($selfdoms, $otherdoms);
+    my $res = SBG::U::iRMSD::irmsd($selfdoms, $otherdoms);
     return $res;
 
 } # irmsd
