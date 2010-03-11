@@ -27,6 +27,8 @@ use Log::Any qw/$log/;
 use DBI;
 use File::Basename;
 
+# Must load SBG::Seq to get string overload on Bio::PrimarySeqI
+use SBG::Seq;
 use SBG::Domain;
 use SBG::Model;
 use SBG::Interaction;
@@ -148,8 +150,8 @@ sub _chains {
                                    scores=>{cov=>$h->{COV2},seqid=>$h->{ID2}});
 
         my $iaction = SBG::Interaction->new;
-        $iaction->set($seq1 => $mod1);
-        $iaction->set($seq2 => $mod2);
+        $iaction->set($seq1, $mod1);
+        $iaction->set($seq2, $mod2);
         $iaction->avg_scores(qw/cov seqid/);
         $iaction->scores->put('contacts', $h->{CONTACTS});
         $iaction->weight($iaction->scores->at('avg_seqid'));

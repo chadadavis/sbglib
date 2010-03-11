@@ -28,6 +28,8 @@ use Algorithm::Cluster qw/treecluster/;
 use List::Util qw/min max sum/;
 use Log::Any qw/$log/;
 
+# Must load SBG::Seq to get string overload on Bio::PrimarySeqI
+use SBG::Seq;
 use SBG::Run::PairedBlast;
 use SBG::Model;
 use SBG::Domain;
@@ -213,8 +215,8 @@ sub _contact2interaction {
     my $model2 = _model($id2, $hit2, $contact->at('n_res2'));
 
     my $iaction = SBG::Interaction->new;
-    $iaction->set($model1->query => $model1);
-    $iaction->set($model2->query => $model2);
+    $iaction->set($model1->query, $model1);
+    $iaction->set($model2->query, $model2);
     $iaction->avg_scores(
         qw/evalue frac_identical frac_conserved seqid gaps length n_res/);
     # Measure conservation along interface
