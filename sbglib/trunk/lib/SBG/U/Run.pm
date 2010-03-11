@@ -159,7 +159,11 @@ sub frac_of {
 sub getoptions {
     my (@ops) = @_;
     # Throw in some standard options
-    push @ops, qw/help|h loglevel|l=s logfile|f=s logdir=s debug|d/;
+    # J is for the line number of a PBS job array
+    # A list file contains the paths of the inputs to be processed
+    # The -J option say which line (0-based) is the current input file
+    # The -M option is for an email address (used by PBS, among others)
+    push @ops, qw/help|h loglevel|l=s logfile|f=s logdir=s debug|d J=s M=s/;
 
     my %ops;
     my $result = GetOptions(\%ops, @ops);
