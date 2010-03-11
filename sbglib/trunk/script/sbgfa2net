@@ -58,7 +58,7 @@ my %ops = getoptions
     qw/maxid|x=i minid|n=i output|o=s cache|c=i top|t=i method|m=s overlap|v=f searcher=s/;
 
 
-# Recreate command line options; (seems to work even ith long option names)
+# Recreate command line options; (seems to work even with long option names)
 my @jobids = qsub(options=>\%ops);
 # print "Submitted:\n", join("\n", @jobids), "\n", if @jobids;
 
@@ -79,6 +79,10 @@ my $searcher = $ops{searcher}->new(blast=>$blast);
 my $buildops = {%ops}->hslice([qw/maxid minid cache top overlap/]);
 
 foreach my $file (@ARGV) {
+    if (defined($ops{'J'})) {
+        # The file is actually the Jth line of the list of files
+        $file = PBS::ARGV::linen($file, $ops{'J'});
+    }
 
     # Setup new log file specific to given input file
     my $basename = basename($file,'.fa');

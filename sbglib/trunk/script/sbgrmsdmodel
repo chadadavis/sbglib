@@ -53,7 +53,7 @@ use PBS::ARGV qw/qsub/;
 ################################################################################
 
 
-my %ops = getoptions(qw/field|f=s reverse|r index|J=i modeldir|m=s/);
+my %ops = getoptions(qw/field|f=s reverse|r index=i modeldir|m=s/);
 
 
 my @pdbids = qsub();
@@ -61,6 +61,10 @@ print join "\n", @pdbids;
 
 
 foreach my $targetfile (@ARGV) {
+    if (defined($ops{'J'})) {
+        # The file is actually the Jth line of the list of files
+        $targetfile = PBS::ARGV::linen($targetfile, $ops{'J'});
+    }
 
     my $target = retrieve $targetfile;
     my $tbase = basename $targetfile, '.stor';
@@ -88,7 +92,7 @@ foreach my $targetfile (@ARGV) {
 __END__
 
 
-my %ops = getoptions(qw/field|f=s reverse|r index|J=i modeldir|m=s/);
+my %ops = getoptions(qw/field|f=s reverse|r index=i modeldir|m=s/);
 
 # Sort descending on Sc by default
 unless (defined $ops{'field'}) {

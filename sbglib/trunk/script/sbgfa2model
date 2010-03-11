@@ -103,6 +103,10 @@ print "Submitted:\n", join("\n", @jobids), "\n", if @jobids;
 
 
 foreach my $file (@ARGV) {
+    if (defined($ops{'J'})) {
+        # The file is actually the Jth line of the list of files
+        $file = PBS::ARGV::linen($file, $ops{'J'});
+    }
 
     # Setup new log file specific to given input file
     my $basename = basename($file,'.fa');
