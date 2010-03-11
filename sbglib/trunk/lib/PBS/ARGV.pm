@@ -31,7 +31,7 @@ my @dashops = map { '-' . $_ => $ops{$_} } keys %ops;
 my @jobids = qsub("$0 @dashops");
 
 # Add any PBS directives as the elements of an array
-my @jobids = qsub($0, '-M ae', '-N jobname', ...);
+my @jobids = qsub($0, '-w abe', '-N jobname', ...);
 
 # PBS directives are not parsed, with the exception of:
 # -N will be set to the currently processed argument, if not otherwise given
@@ -114,7 +114,7 @@ Submits one job to pbs, via B<qsub>, for each argument in B<@ARGV>.
 Sets the current working directory of the executing job to the current
 workign directory from when the job was submitted.
 
- qsub($0, '-N myjobname', '-J 0-15', '-M ae');
+ qsub($0, '-N myjobname', '-J 0-15', '-m abe');
 
 =cut
 sub qsub {
