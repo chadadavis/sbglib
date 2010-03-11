@@ -5,7 +5,8 @@ use warnings;
 
 use Test::More 'no_plan';
 
-use PBS::ARGV qw/qsub/;
+use PBS::ARGV qw/qsub linen nlines/;
+
 
 # TODO TEST get tests from module docs
 
@@ -24,3 +25,13 @@ if (PBS::ARGV::has_qsub) {
 } else {
     ok(1, "has_qsub() false, skipping");
 }
+
+
+my $file = 'data/lines.csv';
+is(nlines($file), 4, 'nlines');
+
+is(linen($file, 2), 'two', "linen");
+# Test rewinding back to a lower number
+is(linen($file, 1), 'one', "linen");
+# Doesn't exist
+ok(! linen($file, 4), "linen");
