@@ -114,13 +114,13 @@ sub stringify {
 =head2 add_node
 
  Function: Adds L<Bio::Network::Node> to L<Bio::Network::ProteinNet> 
- Example : $seq = new Bio::Seq(-accession_number=>"RRP43"); 
+ Example : $seq = new Bio::Seq(-display_id=>"RRP43"); 
            $node = new Bio::Network::Node($seq); 
            $net->add_node($node);
  Returns : $self
  Args    : A L<Bio::Network::Node> or subclass
 
-Also adds index ID (from B<accession_number>) to Node. Then, you can:
+Also adds index ID (from B<display_id>) to Node. Then, you can:
 
  $node = $net->nodes_by_id('RRP43');
 
@@ -129,7 +129,7 @@ override 'add_node' => sub {
     my ($self, $node) = @_;
     my $res = $self->SUPER::add_node($node);
     my ($protein) = $node->proteins;
-    $self->add_id_to_node($protein->accession_number, $node);
+    $self->add_id_to_node($protein->display_id, $node);
     return $res;
 };
 

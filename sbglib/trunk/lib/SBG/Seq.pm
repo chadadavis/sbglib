@@ -12,7 +12,7 @@ SBG::Seq - Additions to Bioperl's L<Bio::Seq>
 =head1 DESCRIPTION
 
 Simple extensions to L<Bio::Seq> to define stringificition, string equality and
-string comparison, all based on the B<accession_number> field.
+string comparison, all based on the B<display_id> field.
 
 =head2 SEE ALSO
 

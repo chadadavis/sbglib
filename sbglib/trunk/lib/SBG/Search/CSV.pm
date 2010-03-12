@@ -55,7 +55,7 @@ has 'file' => (
 =cut
 sub search {
     my ($self, $seq1, $seq2) = @_;
-    my ($comp1, $comp2) = map {$_->accession_number} ($seq1, $seq2);
+    my ($comp1, $comp2) = map {$_->display_id} ($seq1, $seq2);
 
     # Grep the lines from database, space-delimited, either order
     # Save in tempfile

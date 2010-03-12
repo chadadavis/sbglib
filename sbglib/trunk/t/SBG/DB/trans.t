@@ -20,7 +20,7 @@ use SBG::DomainIO::pdb;
 use SBG::DomainIO::stamp;
 
 use SBG::STAMP;
-
+use SBG::U::iRMSD;
 use SBG::Run::cofm qw/cofm/;
 use SBG::Run::rasmol;
 use SBG::U::Log qw/log/;
@@ -145,7 +145,7 @@ my $transf = $superp->transformation;
 # Now get the native dimer: (round 0)
 my $d2br2d0 = id2dom(125754);
 my $d2br2a0 = id2dom(125751);
-# Dont' do transforms in 1st round, those are already in the frame of reference
+# Dont do transforms in 1st round, those are already in the frame of reference
 
 # 2nd round (round 1)
 my $d2br2d1 = id2dom(125754);
@@ -188,8 +188,8 @@ my $doms1 = [id2dom(153203),id2dom(153210)];
 my $doms2 = [id2dom(174395),id2dom(174402)];
 
 my $irmsd;
-$irmsd = SBG::STAMP::irmsd($doms1, $doms2);
-float_is($irmsd, 5.11, "iRMSD", 0.01);
-$irmsd = SBG::STAMP::irmsd($doms2, $doms1);
-float_is($irmsd, 5.11, "iRMSD reverse", 0.01);
+$irmsd = SBG::U::iRMSD::irmsd($doms1, $doms2);
+float_is($irmsd, 5.11, "iRMSD", $toler);
+$irmsd = SBG::U::iRMSD::irmsd($doms2, $doms1);
+float_is($irmsd, 5.11, "iRMSD reverse", $toler);
 

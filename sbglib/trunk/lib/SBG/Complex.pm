@@ -204,9 +204,9 @@ has 'clashes' => (
  Example : $cmplx->set('RRP43',
                new SBG::Model(query=>$myseq, subject=>$template_domain))
  Returns : The one L<SBG::Domain> modelling the protein, if any
- Args    : accession_number
+ Args    : display_id
 
-Indexed by accession_number of L<SBG::Node> modelled by this L<SBG::Model>
+Indexed by display_id of L<SBG::Node> modelled by this L<SBG::Model>
 
 =cut
 has 'models' => (
@@ -400,9 +400,8 @@ sub network {
             @nodes = $i->nodes;
         } else {
             foreach my $key (@{$i->keys}) {
-                # TODO PROB always legit to use accession_number ?
                 push(@nodes,
-                     SBG::Node->new(SBG::Seq->new(-accession_number=>$_)));
+                     SBG::Node->new(SBG::Seq->new(-display_id=>$_)));
             }
         }
         $net->add($_) for @nodes;

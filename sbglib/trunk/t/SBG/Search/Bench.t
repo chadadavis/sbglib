@@ -35,8 +35,8 @@ is(scalar(@ids), 1155, "pdbids()");
 is(scalar(@accnos), 12, "components()");
 
 @seqs = (
-    new SBG::Seq(-accession_number=>'1ir2B.d.58.9.1-1'),
-    new SBG::Seq(-accession_number=>'1ir2B.c.1.14.1-1'),
+    new SBG::Seq(-display_id=>'1ir2B.d.58.9.1-1'),
+    new SBG::Seq(-display_id=>'1ir2B.c.1.14.1-1'),
     );
 $searcher = new SBG::Search::Bench;
 @iactions = $searcher->search(@seqs);
@@ -44,8 +44,8 @@ is(scalar(@iactions), 4, "search()");
 
 # Reverse
 @seqs = (
-    new SBG::Seq(-accession_number=>'1ir2B.c.1.14.1-1'),
-    new SBG::Seq(-accession_number=>'1ir2B.d.58.9.1-1'),
+    new SBG::Seq(-display_id=>'1ir2B.c.1.14.1-1'),
+    new SBG::Seq(-display_id=>'1ir2B.d.58.9.1-1'),
     );
 $searcher = new SBG::Search::Bench;
 @iactions = $searcher->search(@seqs);
@@ -54,7 +54,7 @@ is(scalar(@iactions), 4, "search()");
 
 my $net = new SBG::Network;
 @accnos = SBG::Search::Bench::components('2os7');
-@seqs = map { new SBG::Seq(-accession_number=>$_) } @accnos;
+@seqs = map { new SBG::Seq(-display_id=>$_) } @accnos;
 @nodes = map { new SBG::Node($_) } @seqs;
 $net->add_node($_) for @nodes;
 

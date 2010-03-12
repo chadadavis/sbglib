@@ -13,8 +13,8 @@ use SBG::Interaction;
 
 
 # Sequences becomes nodes become networks
-my $seq1 = new SBG::Seq(-accession_number=>'RRP43');
-my $seq2 = new SBG::Seq(-accession_number=>'RRP41');
+my $seq1 = new SBG::Seq(-display_id=>'RRP43');
+my $seq2 = new SBG::Seq(-display_id=>'RRP41');
 my $net = new SBG::Network;
 
 # Node objects are automatically created from sequence objects, and added

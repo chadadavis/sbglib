@@ -37,7 +37,7 @@ $SIG{__DIE__} = \&confess if $DEBUG;
 
 
 my $components = [ qw/c1 c2 c3 c4 c5 c6/ ];
-my $seqs = $components->map(sub{new SBG::Seq(-accession_number=>$_)});
+my $seqs = $components->map(sub{new SBG::Seq(-display_id=>$_)});
 my $seqmap = { mesh @$components, @$seqs };
 my $nodes = $seqs->map(sub{new SBG::Node($_)});
 my $nodemap = { mesh @$components, @$nodes };

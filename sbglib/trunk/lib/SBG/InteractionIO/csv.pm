@@ -184,7 +184,7 @@ sub _make_node {
     my $node = $self->_nodes->at($accno);
     my $seq;
     unless (defined $node) {
-        $seq = SBG::Seq->new(-accession_number=>$accno);
+        $seq = SBG::Seq->new(-display_id=>$accno);
         $node = SBG::Node->new($seq);
         $self->_nodes->put($accno, $node)
     }

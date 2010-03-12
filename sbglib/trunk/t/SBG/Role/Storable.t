@@ -19,8 +19,8 @@ use SBG::Seq;
 use SBG::Role::Storable;
 
 # Sequences becomes nodes become networks
-# my $seq1 = new SBG::Seq(-accession_number=>'RRP43');
-my $seq1 = new Bio::PrimarySeq(-accession_number=>'RRP43');
+# my $seq1 = new SBG::Seq(-display_id=>'RRP43');
+my $seq1 = new Bio::PrimarySeq(-display_id=>'RRP43');
 my (undef, $file) = tempfile('sbg_XXXXX', TMPDIR=>1, SUFFIX=>'.stor');
 
 store($seq1, $file);

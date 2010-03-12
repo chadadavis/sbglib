@@ -123,7 +123,7 @@ Greps the benchmark text file from Rob for templates.
 =cut
 sub search {
     my ($self, $seq1, $seq2) = @_;
-    my ($accno1, $accno2) = map {$_->accession_number} ($seq1, $seq2);
+    my ($accno1, $accno2) = map {$_->display_id} ($seq1, $seq2);
     return unless $accno1 && $accno2;
 
     # Expliciting grepping the $pdb should make this a little faster
