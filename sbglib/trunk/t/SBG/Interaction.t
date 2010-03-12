@@ -16,7 +16,7 @@ use Moose::Autobox;
 # RRP45 and RRP41
 my @accnos = qw/Q86Y41 Q9NPD3/;
 # Bio::Seq objects
-my @seqs = map { new SBG::Seq(-accession_number=>$_) } @accnos;
+my @seqs = map { new SBG::Seq(-display_id=>$_) } @accnos;
 # Bio::Network::Node objects
 my @nodes = map { new SBG::Node($seqs[$_]) } (0..$#seqs);
 # The corresponding template domains
