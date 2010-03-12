@@ -144,6 +144,8 @@ sub init {
     $h = sprintf "%-15s", $h;
     $name = sprintf "%6s", ($name || '');
     $pbs_jobid = sprintf "%8s", ($ENV{PBS_JOBID} || 'NOTPBS');
+    # Strip off any hostname
+    $pbs_jobid =~ s/\..*$//;
 
     # Define log format for appender
     # $h host, %d date %M method %m message %n newline

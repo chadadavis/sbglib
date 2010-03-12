@@ -119,10 +119,12 @@ sub _build_gh {
 
 
 # File name pattern for saving assemblies
+# %s is an optional name
+# %5d is the model class (one instance per class)
 has 'pattern' => (
     is => 'ro',
     isa => 'Str',
-    default => '%smodel-%05d',
+    default => '%s%05d',
     );
 
 
