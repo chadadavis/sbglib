@@ -163,9 +163,11 @@ sub getoptions {
     # A list file contains the paths of the inputs to be processed
     # The -J option say which line (0-based) is the current input file
     # The -M option is for an email address (used by PBS, among others)
-    push @ops, qw/help|h loglevel|l=s logfile|f=s logdir=s debug|d J=s M=s/;
+    push @ops, qw/help|h debug|d loglevel|l=s logfile|f=s logdir=s J=s M=s/;
 
     my %ops;
+    # This makes single-char options case-sensitive
+    Getopt::Long::Configure ('no_ignore_case');
     my $result = GetOptions(\%ops, @ops);
     
     if (! $result || $ops{'help'}) {
