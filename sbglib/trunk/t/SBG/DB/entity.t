@@ -26,3 +26,6 @@ is(scalar(@hits), 3, "query()");
 
 my $dom = SBG::DB::entity::id2dom(2579998);
 is($dom->descriptor, "A 7 _ to A 130 _", 'id2dom()');
+
+$TODO = 'Test query_hit()';
+ok 0;

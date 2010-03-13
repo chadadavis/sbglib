@@ -71,7 +71,7 @@ use SBG::U::List qw/intersection pairs2 interval_overlap/;
 
 
 has 'cache' => (
-    isa => 'HashRef[Bio::Search::Hit::HitI]',
+    isa => 'HashRef',
     is => 'ro',
     lazy => 1,
     default => sub { {} },

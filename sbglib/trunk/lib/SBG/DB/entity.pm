@@ -45,11 +45,18 @@ our $host = "wilee.embl.de";
 # Query, given a Blast Hit object
 sub query_hit {
     my ($hit, %ops) = @_;
+    our %hit_cache;
+    $ops{'cache'} = 1 unless defined $ops{'cache'};
+    if ($ops{'cache'} && exists $hit_cache{$hit}) {
+        return @{$hit_cache{$hit}};
+    }
+
     my ($pdbid,$chain) = _gi2pdbid($hit->name);
     my ($pdbseq0, $pdbseqn) = $hit->range('hit');
-    $ops{'pdbseq'} = [$pdbseq0,$pdbseqn];
+    $ops{'pdbseq'} ||= [$pdbseq0,$pdbseqn];
     my @entities = query($pdbid, $chain, %ops);
     map { $_->{'hit'} = $hit } @entities;
+    if ($ops{'cache'}) { $hit_cache{$hit} = \@entities }
     return @entities;
 }
 
