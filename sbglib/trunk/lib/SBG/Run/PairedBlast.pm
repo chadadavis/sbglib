@@ -239,7 +239,8 @@ sub search {
             my ($hit1, $hit2) = @{$hitpairs[$i]};
             # Skip check if they're not on the same chain
             next unless $hit1->name eq $hit2->name;
-            my ($subject1, $subject2) = ($hit1->hsp->subject, $hit2->hsp->subject);
+            my ($subject1, $subject2) = 
+                ($hit1->hsp->subject, $hit2->hsp->subject);
             my $frac_overlap = interval_overlap(
                 $subject1->start, $subject1->end,
                 $subject2->start, $subject2->end);
