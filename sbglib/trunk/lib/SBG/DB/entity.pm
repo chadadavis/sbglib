@@ -30,6 +30,7 @@ use DBI;
 use Data::Dump qw/dump/;
 use Log::Any qw/$log/;
 use Carp;
+use Scalar::Util qw/refaddr/;
 
 use SBG::U::DB;
 use SBG::U::List qw/interval_overlap/;
@@ -47,7 +48,7 @@ sub query_hit {
     my ($hit, %ops) = @_;
     our %hit_cache;
     $ops{'cache'} = 1 unless defined $ops{'cache'};
-    if ($ops{'cache'} && exists $hit_cache{$hit}) {
+    if ($ops{'cache'} && exists $hit_cache{refaddr $hit}) {
         return @{$hit_cache{$hit}};
     }
 

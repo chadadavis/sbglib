@@ -29,6 +29,7 @@ use List::MoreUtils qw/uniq/;
 use Log::Any qw/$log/;
 use Sort::Key::Top qw/rnkeytop rnkeyhead/;
 use Sort::Key qw/rnkeysort/;
+use Scalar::Util qw/refaddr/;
 
 # Must load SBG::Seq to get string overload on Bio::PrimarySeqI
 use SBG::Seq;
@@ -140,7 +141,7 @@ sub _top_by_cluster {
         # Singletons have no cluster, just stringify the object's address
         # NB cannot use the entity IDs to make this unique as two entities may
         # have multiple contacts
-        my $cluster = $contact->{'cluster'} || "$contact";
+        my $cluster = $contact->{'cluster'} || refaddr $contact;
         $by_cluster{$cluster} ||= [];
         $by_cluster{$cluster}->push($contact);
     }
