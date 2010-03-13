@@ -33,15 +33,16 @@ my $interaction = new SBG::Interaction;
 # Note which nodes have which models, for this interaction
 $interaction->models->put($nodes[$_],$models[$_]) for (0..$#seqs);
 
+# Stringification (which comes from ->primary_id
+my $alt0 = "$models[0]--$models[1]";
+my $alt1 = "$models[1]--$models[0]";
+ok("$interaction" eq $alt0 || "$interaction" eq $alt1, "stringify");
+
 # Sanity test
 my @gotmodels = map { $interaction->models->at($_) } @nodes;
 
 is($gotmodels[$_], $models[$_], "Storing models in Interaction by Node") 
     for (0..$#nodes);
-
-
-$TODO = "Test updating of primary_id";
-ok 0;
 
 
 $TODO = "Test equality, should be independent of Node endpoints";
