@@ -43,14 +43,16 @@ my $searcher = SBG::Search::TransDB->new(blast=>$blast);
 $net = $net->build($searcher, cache=>0);
 
 # Potential interactions, between pairs of proteins
-my @edges = $net->edges;
-ok(scalar(@edges), 'Network::edges'); 
+my $edges = scalar $net->edges;
+ok($edges, "Network::edges $edges"); 
 
 # Potential *types* of interactions, between all interacting pairs
 # An edge may have multiple interactions
-ok($net->interactions, 'Network::interactions');
+my $interactions = scalar $net->interactions;
+ok($interactions, "Network::interactions: $interactions");
 
 # Interaction network is not necessarily connected, if templates scarce
 my @subnets = $net->partition;
-is(scalar(@subnets), 1, 'Network::partition');
+my $subnets = scalar @subnets;
+is($subnets, 1, "Network::partition: $subnets");
 
