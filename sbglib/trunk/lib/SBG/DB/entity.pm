@@ -47,17 +47,18 @@ our $host = "wilee.embl.de";
 sub query_hit {
     my ($hit, %ops) = @_;
     our %hit_cache;
+    my $key = refaddr $hit;
     $ops{'cache'} = 1 unless defined $ops{'cache'};
-    if ($ops{'cache'} && exists $hit_cache{refaddr $hit}) {
-        return @{$hit_cache{$hit}};
+    if ($ops{'cache'} && exists $hit_cache{$key}) {
+        return @{$hit_cache{$key}};
     }
 
     my ($pdbid,$chain) = _gi2pdbid($hit->name);
     my ($pdbseq0, $pdbseqn) = $hit->range('hit');
     $ops{'pdbseq'} ||= [$pdbseq0,$pdbseqn];
     my @entities = query($pdbid, $chain, %ops);
-    map { $_->{'hit'} = $hit } @entities;
-    if ($ops{'cache'}) { $hit_cache{$hit} = \@entities }
+    $_->{'hit'} = $hit for @entities;
+    if ($ops{'cache'}) { $hit_cache{$key} = \@entities }
     return @entities;
 }
 
