@@ -29,6 +29,7 @@ use PDL::Core qw/pdl zeroes/;
 use DBI;
 use Data::Dump qw/dump/;
 use Log::Any qw/$log/;
+use Carp;
 
 use SBG::U::DB;
 use SBG::U::List qw/interval_overlap/;
@@ -47,7 +48,9 @@ sub query_hit {
     my ($pdbid,$chain) = _gi2pdbid($hit->name);
     my ($pdbseq0, $pdbseqn) = $hit->range('hit');
     $ops{'pdbseq'} = [$pdbseq0,$pdbseqn];
-    return query($pdbid, $chain, %ops);
+    my @entities = query($pdbid, $chain, %ops);
+    map { $_->{'hit'} = $hit } @entities;
+    return @entities;
 }
 
 
@@ -86,7 +89,8 @@ sub query {
     our $host;
 
     if (defined $ops{'resseq'}) {
-        warn "Converting coordinates";
+        carp "Converting coordinates not implemented";
+        return;
     }
     $ops{'overlap'} = 0.50 unless defined $ops{'overlap'};
 
@@ -150,6 +154,7 @@ AND chain = ?
  Returns : 
  Args    : 
 
+TODO should be done by DBIx::Class or equivalent
 
 =cut
 sub id2dom {

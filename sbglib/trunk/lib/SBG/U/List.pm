@@ -104,7 +104,7 @@ sub uniq {
 }    
 
 
-# Numeric sort
+# Numeric sort (See also Sort::Key::nsort() )
 sub nsort {
     @_ = flatten @_;
     my @a = sort { $a <=> $b } @_;
@@ -260,11 +260,12 @@ sub pairs {
 
 # All pairs from two separate lists, each pair contains one element from each
 sub pairs2 {
-    my ($list1, $list2) = @_;
+    my ($list1, $list2, $noself) = @_;
     return unless @$list1 && @$list2;
     my @pairs;
     foreach my $l1 (@$list1) {
         foreach my $l2 (@$list2) {
+            next if $noself && $l1 eq $l2;
             push @pairs, [ $l1, $l2 ];
         }
     }
@@ -322,6 +323,8 @@ where $points in an ArrayRef of objects, on which ->color() can be called,
 returning one of 'red', 'blue', or 'green' in this case.
 
 TODO BUG: will sqaush entries when keys map to non-unique values.
+
+Better solution: Sort::Key
 
 =cut
 sub reorder_broken ($;$&) {

@@ -27,6 +27,7 @@ use Moose::Autobox;
 use Algorithm::Cluster qw/treecluster/;
 use List::Util qw/min max sum/;
 use Log::Any qw/$log/;
+use Sort::Key::Top qw/rnkeytop/;
 
 # Must load SBG::Seq to get string overload on Bio::PrimarySeqI
 use SBG::Seq;
@@ -75,13 +76,13 @@ sub search {
 
         my @entities1 = SBG::DB::entity::query_hit($hit1,%$entityops);
         my @entities2 = SBG::DB::entity::query_hit($hit2,%$entityops);
-        my @entitypairs = SBG::U::List::pairs2(\@entities1, \@entities2);
-        # Make unique (s.t. no entity interacting with itself)
-        @entitypairs = grep {my($a,$b)=@$_;$a->{id}!=$b->{id}} @entitypairs;
+        my @entitypairs = 
+            SBG::U::List::pairs2(\@entities1, \@entities2, 'noself'=>1);
+
         # Maintain a reverse map, entitypair back to hitpair
         foreach my $epair (@entitypairs) {
             my ($e1, $e2) = @$epair;
-            my $epairid = $e1->{id} . '--' . $e2->{id};
+            my $epairid = $e1->{'id'} . '--' . $e2->{'id'};
             $entity2hit{$epairid} ||= $hitpair;
             # There will be duplicates, hash them to get unique keys
             $allentitypairs{$epairid} ||= $epair;
@@ -94,10 +95,6 @@ sub search {
     $log->debug(scalar(@contacts), ' contacts');
     return unless @contacts;
 
-    # TODO want to separate out clustering, so that it can be based on whole network
-    # However, do not want to build domains for unclustered interactions either
-    # Make this 2 steps
-    # Add SearchI::cluster and SearchI::build
 
     # Cluster contacts, based on iRMSD distance matrix
     my ($distmat, $unique) = _distmat(\@contacts);
@@ -117,9 +114,8 @@ sub search {
 
     if (my $topn = $ops{'top'}) {
         # Take top N interactions
-        @interactions = sort { $b->weight <=> $a->weight } @interactions;
-        # Delete rest
-        delete $interactions[$_] for $topn..$#interactions;
+        # This is the reverse numerical sort on the weight field
+        @interactions = rnkeytop { $_->weight } $topn => @interactions;
     }
     $log->debug(scalar(@interactions), " interactions ($seq1,$seq2)");
     return @interactions;

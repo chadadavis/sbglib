@@ -26,6 +26,7 @@ use Moose::Autobox;
 use Log::Any qw/$log/;
 use DBI;
 use File::Basename;
+use Sort::Key::Top qw/rnkeytopsort/;
 
 # Must load SBG::Seq to get string overload on Bio::PrimarySeqI
 use SBG::Seq;
@@ -110,11 +111,13 @@ sub BUILD {
 =cut
 sub search {
     my ($self, $seq1, $seq2, %ops) = @_;
+
     # Need to query in both directions? No, smallest first
     ($seq1, $seq2) = sort { $a->display_id cmp $b->display_id } ($seq1, $seq2);
 
     my @interactions;
     push @interactions, $self->_chains($seq1, $seq2);
+
     my $topn = $ops{'top'};
     # Only use Domain-based templates where there weren't enough chain-based
     unless ($topn && scalar(@interactions) >= $topn) {
@@ -123,9 +126,8 @@ sub search {
 
     if ($topn) {
         # Take top N interactions
-        @interactions = sort { $b->weight <=> $a->weight } @interactions;
-        # Delete rest
-        delete $interactions[$_] for $topn..$#interactions;
+        # This is the reverse numerical sort on the weight field
+        @interactions = rnkeytopsort { $_->weight } $topn => @interactions;
     }
     $log->debug(scalar(@interactions), " interactions ($seq1,$seq2)");
 
@@ -133,6 +135,7 @@ sub search {
 } # search
 
 
+# Full chain templates
 sub _chains {
     my ($self, $seq1, $seq2) = @_;
 
@@ -163,6 +166,7 @@ sub _chains {
 } # _chains
 
 
+# Templates from Pfam domains
 sub _domains {
     my ($self, $seq1, $seq2) = @_;
 
@@ -198,6 +202,7 @@ sub _mkdom {
                                join(' ',$chain,$start,'_','to',$chain,$end,'_'));
     return $dom;
 }
+
 
 sub _mkchain { 
     my ($self, $pdb, $chain, $assem, $model) = @_;

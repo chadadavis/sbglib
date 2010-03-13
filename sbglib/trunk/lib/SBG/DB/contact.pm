@@ -45,7 +45,7 @@ our $host = "wilee";
  Args    : 
            
 
-NB contacts are stored in both directions, so we don't need to check 1<->2 and
+NB contacts are stored in both directions, so we do not need to check 1<->2 and
 2<->1 separately.
 
 =cut
@@ -59,7 +59,8 @@ sub query {
 
     $sth ||= $dbh->prepare("
 SELECT
-id_entity1,id_entity2,n_res1,n_res2
+id_entity1,id_entity2,n_res1,n_res2,
+  cluster_sl_irmsd_5_0_or_same_chains as cluster
 FROM 
 contact
 WHERE id_entity1=?
@@ -81,8 +82,10 @@ AND crystal=0
     my @hits;
     while (my $row = $sth->fetchrow_hashref()) {
         # Do any necessary result filtering here
+        # Link back to original entities
+        $row->{'entity1'} = $entity1;
+        $row->{'entity2'} = $entity2;
         push @hits, $row;
-
     }
     return @hits;
 
