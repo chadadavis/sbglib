@@ -73,7 +73,7 @@ sub search {
     my @hitpairs = $self->blast->search($seq0, $seq1, %ops);
 
     # Each resulting entity will also contain a backreference to ->{'hit'}     
-    my @entitypairs = map { _hitp2entityp($_, %$entityops) } @hitpairs;
+    my @entitypairs = map { _hitp2entityp($_, $entityops) } @hitpairs;
 
     # Each pair of entities may find multiple contacts, again 1-to-many
     my @contacts = map { SBG::DB::contact::query(@$_) } @entitypairs;
