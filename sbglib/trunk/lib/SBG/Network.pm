@@ -279,7 +279,7 @@ sub build {
     my @pairs = pairs(sort $self->nodes);
     my $npairs = @pairs;
     my $ipair = 0;
-    $log->debug($npairs), ' potential edges in interaction network');
+    $log->debug($npairs, ' potential edges in interaction network');
     foreach my $pair (@pairs) {
         $ipair++;
         $log->info("Edge $ipair of $npairs");
