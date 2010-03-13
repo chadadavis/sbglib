@@ -27,7 +27,7 @@ use Moose::Autobox;
 use List::Util qw/min max sum/;
 use List::MoreUtils qw/uniq/;
 use Log::Any qw/$log/;
-use Sort::Key::Top qw/rnkeytop/;
+use Sort::Key::Top qw/rnkeytop rnkeyhead/;
 use Sort::Key qw/rnkeysort/;
 
 # Must load SBG::Seq to get string overload on Bio::PrimarySeqI
@@ -81,7 +81,7 @@ sub search {
     return unless @contacts;
 
     # Score the contacts first, without creating full Interaction objects yet
-    map { _wtcontact($_) } @contacts;
+    _wtcontact($_) for @contacts;
 
     # Get top N contacts, without duplicating contacts from same cluster
     my @toprepcontacts = _top_by_cluster(\@contacts, $ops{'top'});
@@ -133,27 +133,33 @@ sub _wtcontact {
 sub _top_by_cluster {
     my ($contacts, $topn) = @_;
 
+
     # Group by cluster membership
     my %by_cluster;
     foreach my $contact (@$contacts) {
-        my $cluster = $contact->{'cluster'};
+        # Singletons have no cluster, just stringify the object's address
+        # NB cannot use the entity IDs to make this unique as two entities may
+        # have multiple contacts
+        my $cluster = $contact->{'cluster'} || "$contact";
         $by_cluster{$cluster} ||= [];
         $by_cluster{$cluster}->push($contact);
     }
 
-    # Get top contact, per cluster
+
+    # Get top 1 contact, per cluster
     my %top_of_cluster;
     foreach my $cluster (keys %by_cluster) {
         # Reverse key sort, by weight of all contacts in this cluster, top 1
         $top_of_cluster{$cluster} = 
-            rnkeyhead { $_->weight } $by_cluster{$cluster}->flatten;
+            rnkeyhead { $_->{'weight'} } $by_cluster{$cluster}->flatten;
     }
+
 
     # The top N over all the best-per-cluster
     my @topn;
     if ($topn) {
         # This is the top N, but they are unsorted
-        @topn = rnkeytop { $_->weight } $topn => values %top_of_cluster;
+        @topn = rnkeytop { $_->{'weight'} } $topn => values %top_of_cluster;
     } else {
         # Take the 1 best contact from every single cluster, unsorted
         @topn = values %top_of_cluster;
