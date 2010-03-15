@@ -126,6 +126,7 @@ sub traverse {
     # Start recursion at interaction 0
     $self->_recurse($iactions, 0, $state);
 
+    $log->info(join "\t", $self->assembly->stats);
     $log->info('End');
 
 } # traverse

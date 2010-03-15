@@ -386,21 +386,29 @@ sub _write_solution {
 
 sub _status {
     my ($self) = @_;
-    my $keys = $self->sizes->keys->sort;
-    my $sizeheader = $keys->map(sub{ "%3d ${_}mers" })->join("\t");
+
 
     # Flush console and setup in-line printing, unless redirected
     if (-t STDOUT) {
         local $| = 1;
-        printf 
-            "\033[1K\r" . # Carriage return, i.e. w/o linefeed
-            "models:\t%5d unique\t%5d dups\t %5d total\t distribution: " .
-            "$sizeheader ", 
-            $self->classes, $self->dups, $self->solutions,
-            $keys->map(sub{ $self->sizes->at($_) })->flatten,
-            ;
+        my %stats = $self->stats;
+        print "\033[1K\r"; # Carriage return, i.e. w/o linefeed
+        # Print without newline
+        print join "\t", $self->stats;
     }
 } # _status
+
+
+sub stats {
+    my ($self) = @_;
+    my %stats = 
+        map { $_ . 'mers' => $self->sizes->at($_) } $self->sizes->keys->flatten;
+    $stats{'unique'} = $self->classes;
+    $stats{'dups'} = $self->dups;
+    $stats{'total'} = $self->solutions;
+    my @stats = map { $_, $stats{$_} } reverse sort keys %stats;
+    return @stats;
+}
 
 
 ################################################################################

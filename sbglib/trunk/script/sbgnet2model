@@ -116,10 +116,10 @@ foreach my $file (@ARGV) {
     $ops{minsize} = ceil frac_of($ops{minsize}, scalar $net->nodes);
 
     # Traverse the network
-    _one_net($net, $basename, \%ops);
+    @stats = _one_net($net, $basename, \%ops);
 
-    my @files = <${outdir}/*.model>;
-    end_lock($lock, scalar @files);
+#     my @modelfiles = <${outdir}/*.model>;
+    end_lock($lock, join("\t", @stats));
 
 }
 
@@ -157,9 +157,9 @@ sub _one_net {
     # Go!
     $t->traverse();
 
-    $assembler->_status;
+    print join "\t", $self->assembly->stats;
     print "\n";
-
+    return $assembly->stats;
 }
 
 
