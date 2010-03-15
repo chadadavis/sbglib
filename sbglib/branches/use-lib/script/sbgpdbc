@@ -1,0 +1,77 @@
+#!/usr/bin/env perl
+
+=head1 NAME
+
+B<sbgpdbc> - 
+
+=head1 SYNOPSIS
+
+
+=head1 DESCRIPTION
+
+
+=head1 OPTIONS
+
+=head2 --debug 
+
+
+=head2 --keep Keep temporary files
+
+=head2 --log Log level
+
+One of:
+
+ TRACE DEBUG INFO WARN ERROR FATAL
+
+=head2 --help
+
+
+=cut
+
+################################################################################
+
+# NB requires bash cmd: complete  -o default -C scriptname scriptname
+use Getopt::Complete ( 
+    'keep!'      => undef,
+    'help!'      => undef,
+    'debug!'     => undef,
+    'log=s'      => [ qw/TRACE DEBUG INFO WARN ERROR FATAL/ ],
+    # Default : complete files (which would be shell default as well)
+    '<>'         => 'files',
+#     '<>'         => undef,
+    );
+
+use Pod::Usage;
+use File::Temp;
+use Moose::Autobox;
+use Carp;
+use Data::Dump qw/dump/;
+
+use SBG::U::Log;
+use SBG::Run::pdbc qw/pdbc/;
+use SBG::ComplexIO::stamp;
+
+$SIG{__DIE__} = \&confess if $ARGS{debug};
+$File::Temp::KEEP_ALL = 1 if $ARGS{keep};
+
+
+# Non-option arguments
+my (@params) = @{$ARGS{'<>'}};
+pod2usage(-verbose=>2) if $ARGS{help};
+
+foreach my $p (@params) {
+
+    SBG::U::Log::init($p, loglevel=>$ARGS{log});
+    # Given string, use pdbc to make a complex
+    my $complex = SBG::Run::pdbc::complex($p);
+    my $file = "$p.dom";
+    my $io = SBG::ComplexIO::stamp->new(file=>">$file");
+    $io->write($complex);
+    print STDERR "$file written. Domains: ", $complex->count, "\n";
+
+}
+
+exit;
+
+
+
