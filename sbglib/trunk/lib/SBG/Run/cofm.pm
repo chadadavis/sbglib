@@ -69,9 +69,19 @@ TODO option to use Rg or Rmax as the resulting radius
 
 =cut
 sub cofm {
-    my ($dom) = @_;
+    my ($dom, %ops) = @_;
+    our %cofm_cache;
+    $ops{'cache'} = 1 unless defined $ops{'cache'};
+    my $key = _hash($dom);
+    if (exists $cofm_cache{$key}) {
+        print STDERR "Already tried: $cofm_cache{$key}\n"
+    }
 
-    my $fields = _run($dom) or return;
+    my $fields = _run($dom);
+    unless ($fields) {
+        $cofm_cache{$key} = undef;
+        return;
+    }
 
     # Copy construct
     # Append 1 for homogenous coordinates
@@ -85,11 +95,21 @@ sub cofm {
                                           radius=>$fields->{Rg},
                                           length=>$fields->{nres},
         );
-
+    $cofm_cache{$key} = $key if $ops{'cache'};
 
     return $sphere;
 
 } # cofm
+
+
+sub _hash {
+    my ($dom) = @_;
+    my $domstr = "$dom";
+    my $trans = $dom->transformation;
+    my $transstr = "$trans";
+    $domstr .= '(' . $transstr . ')' if $transstr;
+    return $domstr;
+}
 
 
 ################################################################################

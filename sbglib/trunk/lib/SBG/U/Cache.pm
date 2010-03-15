@@ -45,11 +45,11 @@ our %cache_hash;
 sub cache {
     my ($name) = @_;
     our %cache_hash;
+    our $arch;
+    unless (defined $arch) { $arch = `uname -m`; chomp $arch; }
 
     my $base = File::Spec->tmpdir;
     $base = $ENV{CACHEDIR} if -d $ENV{CACHEDIR} && -w $ENV{CACHEDIR};
-    my $arch = `uname -m`;
-    chomp $arch;
     my $cachedir = "${base}/${name}_${arch}";
 
     unless (defined $cache_hash{$name}) {
