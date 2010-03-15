@@ -41,6 +41,7 @@ use Text::ParseWords qw/quotewords/;
 use PDL::Lite;
 use PDL::Core qw/pdl/;
 use Log::Any qw/$log/;
+use Digest::MD5 qw/md5_base64/;
 
 use SBG::Domain::Sphere;
 use SBG::DomainIO::stamp;
@@ -117,7 +118,7 @@ sub _hash {
     my ($dom) = @_;
     my $domstr = "$dom";
     my $trans = $dom->transformation;
-    my $transstr = "$trans";
+    my $transstr = md5_base64 "$trans";
     $domstr .= '(' . $transstr . ')' if $transstr;
     return $domstr;
 }
