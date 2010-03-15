@@ -27,14 +27,15 @@ our @EXPORT_OK = qw/superposition/;
 
 use Log::Any qw/$log/;
 
-use SBG::U::Cache qw/cache/;
+use SBG::U::Cache qw/cache_get cache_set/;
 use SBG::STAMP;
 use SBG::DB::trans;
 
-
+our $cachename = 'sbgsuperposition';
 
 sub superposition_native {
     my ($fromdom, $ontodom, $ops) = @_;
+    my $cachekey = "${fromdom}=>${ontodom}";
 
     if ($fromdom->pdbid eq $ontodom->pdbid &&
         $fromdom->descriptor eq $ontodom->descriptor) {
@@ -46,7 +47,7 @@ sub superposition_native {
     
     # Try cache
     unless (defined $superpos) {
-        $superpos = _cache_get($fromdom, $ontodom);
+        $superpos = cache_get($cachename, $cachekey);
         # Negative cache? (i.e. superpostion previously found to be impossible)
         return if ref($superpos) eq 'ARRAY';
         return $superpos if defined $superpos;
@@ -65,13 +66,16 @@ sub superposition_native {
     }
 
 
+    my $invkey = "${ontodom}=>${fromdom}";
     if (defined $superpos) {
-        _cache_set($fromdom, $ontodom, $superpos);
-        _cache_set($ontodom, $fromdom, $superpos->inverse);
+        cache_set($cachename, $cachekey, $superpos);
+        # Also save the inverse, since we already know it implicitly
+        cache_set($cachename, $invkey, $superpos->inverse);
         return $superpos;
     } else {
-        _cache_set($fromdom, $ontodom, []);
-        _cache_set($ontodom, $fromdom, []);
+        # Negative caching
+        cache_set($cachename, $cachekey, []);
+        cache_set($cachename, $invkey, []);
         return;
     }
 
@@ -114,73 +118,6 @@ sub superposition {
     return $superpos;
 
 } # superposition
-
-
-################################################################################
-=head2 _cache_get
-
- Function: 
- Example : 
- Returns : Re-retrieved object from cache
- Args    : [] implies negative caching
-
-Cache claims to even work between concurrent processes!
-
-=cut
-sub _cache_get {
-    my ($from, $to) = @_;
-    my ($cache,$lock) = SBG::U::Cache::cache('sbgsuperposition');
-    my $key = "${from}=>${to}";
-
-    if (my $data = $cache->get($key)) {
-
-        if (ref($data) eq 'ARRAY') {
-            $log->debug("Cache hit (negative) ", $key);
-            return $data;
-        } else {
-            $log->debug("Cache hit (positive) ", $key);
-            return $data;
-        }
-    } 
-    $log->info("Cache miss ", $key);
-    return;
-
-} # _cache_get
-
-
-=head2 _cache_set
-
- Function: 
- Example : 
- Returns : Re-retrieved object from cache
- Args    : [] implies negative caching
-
-Cache claims to even work between concurrent processes!
-
-=cut
-sub _cache_set {
-    my ($from, $to, $data) = @_;
-    my ($cache,$lock) = SBG::U::Cache::cache('sbgsuperposition');
-    my $key = "${from}=>${to}";
-
-    my $status;
-
-    # (NB [] means negative cache)
-    if (ref($data) eq 'ARRAY') {
-        $status = 'negative';
-    } else {
-        $status = 'positive';
-    }
-
-    $log->debug("Cache write ($status) $key");
-    $log->debug(ref($data), "\n", $data);
-    
-    $cache->set($key, $data);
-
-    # Verification;
-    return $cache->is_valid($key);
-
-} # _cache_set
 
 
 ################################################################################

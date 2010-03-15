@@ -44,10 +44,13 @@ use Log::Any qw/$log/;
 
 use SBG::Domain::Sphere;
 use SBG::DomainIO::stamp;
+use SBG::U::Cache qw/cache_get cache_set/;
 
 # TODO DES OO
 # cofm binary (should be in PATH)
 our $cofm = 'cofm';
+
+our $cachename = 'sbgcofm';
 
 
 ################################################################################
@@ -71,23 +74,30 @@ TODO option to use Rg or Rmax as the resulting radius
 sub cofm {
     my ($dom, %ops) = @_;
     our %cofm_cache;
-    $ops{'cache'} = 1 unless defined $ops{'cache'};
+    # Caching on by default
+    my $cache = 1 unless defined $ops{'cache'};
     my $key = _hash($dom);
-    if (exists $cofm_cache{$key}) {
-        print STDERR "Already tried: $cofm_cache{$key}\n"
+    my $sphere;
+    $sphere = cache_get($cachename, $key) if $cache;
+    if (defined $sphere) {
+        # [] is the marker for a negative cache entry
+        return if ref($sphere) eq 'ARRAY';
+        return $sphere;
     }
 
+    # Cache miss, run external program
     my $fields = _run($dom);
     unless ($fields) {
-        $cofm_cache{$key} = undef;
+        # cofm failed, set negative cache entry
+        cache_set($cachename, $key, []) if $cache;
         return;
     }
 
-    # Copy construct
+
     # Append 1 for homogenous coordinates
     # TODO needs to be contained in Domain::Sphere hook
     my $center = pdl($fields->{Cx}, $fields->{Cy}, $fields->{Cz}, 1);
-
+    # Copy construct, manually
     my $sphere = SBG::Domain::Sphere->new(pdbid=>$dom->pdbid,
                                           descriptor=>$dom->descriptor,
                                           file=>$fields->{file},
@@ -95,13 +105,14 @@ sub cofm {
                                           radius=>$fields->{Rg},
                                           length=>$fields->{nres},
         );
-    $cofm_cache{$key} = $key if $ops{'cache'};
+    cache_set($cachename, $key, $sphere) if $cache;
 
     return $sphere;
 
 } # cofm
 
 
+# Hash a DomainI, including any transformation coords
 sub _hash {
     my ($dom) = @_;
     my $domstr = "$dom";

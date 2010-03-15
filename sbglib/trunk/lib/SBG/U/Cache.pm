@@ -20,12 +20,12 @@ L<Cache::File>
 
 package SBG::U::Cache;
 use base qw/Exporter/;
-our @EXPORT_OK = qw(cache);
+our @EXPORT_OK = qw/cache cache_get cache_set/;
 
 use strict;
 use warnings;
 use File::Spec;
-
+use Log::Any qw/$log/;
 use CHI;
 
 # Cache cache  ;-)
@@ -66,6 +66,70 @@ sub cache {
     return $cache_hash{$name};
 
 }
+
+
+################################################################################
+=head2 cache_get
+
+ Function: 
+ Example : 
+ Returns : Re-retrieved object from cache
+ Args    : [] implies negative caching
+
+Cache claims to even work between concurrent processes!
+
+=cut
+sub cache_get {
+    my ($cachename, $key) = @_;
+    my ($cache,$lock) = cache($cachename);
+
+    if (my $data = $cache->get($key)) {
+
+        if (ref($data) eq 'ARRAY') {
+            $log->debug("Cache hit (negative) ", $key);
+            return $data;
+        } else {
+            $log->debug("Cache hit (positive) ", $key);
+            return $data;
+        }
+    } 
+    $log->info("Cache miss ", $key);
+    return;
+
+} # cache_get
+
+
+=head2 cache_set
+
+ Function: 
+ Example : 
+ Returns : Re-retrieved object from cache
+ Args    : [] implies negative caching
+
+Cache claims to even work between concurrent processes!
+
+=cut
+sub cache_set {
+    my ($cachename, $key, $data) = @_;
+    my ($cache,$lock) = cache($cachename);
+
+    my $status;
+    # (NB [] means negative cache)
+    if (ref($data) eq 'ARRAY') {
+        $status = 'negative';
+    } else {
+        $status = 'positive';
+    }
+
+    $log->debug("Cache write ($status) $key");
+    $log->debug(ref($data), "\n", $data);
+    
+    $cache->set($key, $data);
+
+    # Verification;
+    return $cache->is_valid($key);
+
+} # cache_set
 
 
 ################################################################################
