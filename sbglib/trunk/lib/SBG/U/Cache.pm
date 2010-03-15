@@ -85,15 +85,17 @@ sub cache_get {
 
     if (my $data = $cache->get($key)) {
 
+        my $status;
+        # (NB [] means negative cache)
         if (ref($data) eq 'ARRAY') {
-            $log->debug("Cache hit (negative) ", $key);
-            return $data;
+            $status = 'negative';
         } else {
-            $log->debug("Cache hit (positive) ", $key);
-            return $data;
+            $status = 'positive';
         }
+        $log->debug("$cachename: $status get:", $key);
+        return $data;
     } 
-    $log->info("Cache miss ", $key);
+    $log->info("$cachename: miss:", $key);
     return;
 
 } # cache_get
@@ -121,7 +123,7 @@ sub cache_set {
         $status = 'positive';
     }
 
-    $log->debug("Cache write ($status) $key");
+    $log->debug("$cachename: $status set:", $key);
     $log->debug(ref($data), "\n", $data);
     
     $cache->set($key, $data);

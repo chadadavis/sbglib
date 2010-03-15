@@ -40,6 +40,7 @@ use Moose;
 use File::Spec::Functions;
 use Moose::Autobox;
 use Log::Any qw/$log/;
+use Sort::Key qw/nsort/;
 
 use SBG::STAMP qw/superposition/;
 use SBG::GeometricHash;
@@ -401,12 +402,15 @@ sub _status {
 
 sub stats {
     my ($self) = @_;
-    my %stats = 
-        map { $_ . 'mers' => $self->sizes->at($_) } $self->sizes->keys->flatten;
-    $stats{'unique'} = $self->classes;
-    $stats{'dups'} = $self->dups;
-    $stats{'total'} = $self->solutions;
-    my @stats = map { $_, $stats{$_} } reverse sort keys %stats;
+    # starting with 1mers, 2mers, etc
+    my @sizes = nsort $self->sizes->keys->flatten;
+    my @stats = 
+        ('unique' => $self->classes,
+         'total'  => $self->solutions,
+         'dups'   => $self->dups,
+        );
+    push(@stats, ("${_}mers", $self->sizes->at($_))) for @sizes;
+
     return @stats;
 }
 

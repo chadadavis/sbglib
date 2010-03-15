@@ -147,7 +147,7 @@ sub _recurse {
     if (defined $merged_score) {
         unless (defined $leftmost) {
             $leftmost = $i;
-            $log->info("leftmost: $leftmost");
+            $log->info("Starting with leftmost: $leftmost");
         }
 
         # Clone state, add interaction to cloned state, recurse on next iaction
@@ -181,13 +181,19 @@ sub _recurse {
         $log->debug("i:$i Recursing, with   : $iaction");
         $self->_recurse($iactions, $i+1, $state_clone, $leftmost);
         
+
         $log->debug("i:$i Returned after placing iaction.");
+
     } 
+
+    if ($leftmost == $i) {
+        $log->info("Done with leftmost: $leftmost");
+        $leftmost = undef;
+    }
 
     # Whether successful or not, now tail recurse to the next iaction,
     # Here were using the original state, i.e. before any interaction modelled
     $log->debug("i:$i Recursing, without: $iaction");
-    $leftmost = undef if $leftmost == $i;
     # Tail recursion is flattened here, unless debugger active
     if (defined $DB::sub) {
         $self->_recurse($iactions, $i+1, $state, $leftmost);
