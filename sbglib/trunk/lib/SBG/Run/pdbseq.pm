@@ -46,7 +46,7 @@ sub pdbseq {
     $domio->write($_) for @doms;
     my $dompath = $domio->file;
     my (undef, $fapath) = tempfile(TMPDIR=>1);
-    my $seqstr = `pdbseq -f $dompath`;
+    my $seqstr = `pdbseq -min 1 -f $dompath`;
     return unless $seqstr && $seqstr =~ /^>/;
     my $instr = IO::String->new($seqstr); 
 #    my $faio = Bio::SeqIO->new(-file=>$fapath, -format=>'Fasta');
