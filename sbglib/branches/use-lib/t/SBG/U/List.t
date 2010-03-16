@@ -3,6 +3,11 @@
 use Test::More 'no_plan';
 $,=' ';
 
+
+use FindBin qw/$Bin/;
+use lib "$Bin/../../../lib/";
+
+
 # Autoboxing native types
 use Moose::Autobox;
 # Also: Look for methods of ARRAY objects in SBG::U::List

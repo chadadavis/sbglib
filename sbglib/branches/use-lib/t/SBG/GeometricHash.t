@@ -6,14 +6,15 @@ use Test::More 'no_plan';
 
 use Data::Dumper;
 use Data::Dump qw/dump/;
-
+use File::Temp qw/tempfile/;
 use Carp;
 $SIG{__DIE__} = \&confess;
 
 use FindBin qw/$Bin/;
-use File::Temp qw/tempfile/;
+use lib "$Bin/../../lib/";
 
 use SBG::U::Log;
+
 my $DEBUG;
 # $DEBUG = 1;
 SBG::U::Log::init(undef, loglevel=>'DEBUG') if $DEBUG;

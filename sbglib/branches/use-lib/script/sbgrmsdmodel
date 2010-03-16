@@ -38,6 +38,10 @@ use File::Basename;
 use POSIX; # qw/ceil/;
 use Moose::Autobox;
 
+# Local libraries
+use FindBin qw/$Bin/;
+use lib "$Bin/../lib/";
+
 use SBG::Role::Storable;
 use SBG::U::Run qw/getoptions start_log start_lock end_lock frac_of/;
 use SBG::Seq; # required to reinstate overload on SBG::PrimarySeqI

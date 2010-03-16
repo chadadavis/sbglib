@@ -13,9 +13,14 @@ $| = 1;
 
 ################################################################################
 
+use Graph::Undirected;
+
+use FindBin qw/$Bin/;
+use lib "$Bin/../../../lib/";
+
 use SBG::PA::Assembler;
 use SBG::PA::Point;
-use Graph::Undirected;
+
 use SBG::Traversal;
 use SBG::U::Log;
 

@@ -2,10 +2,12 @@
 
 use Test::More 'no_plan';
 use File::Temp qw(tempfile);
-use SBG::IO;
-use FindBin qw/$Bin/;
 use Data::Dump qw/dump/;
 
+use FindBin qw/$Bin/;
+use lib "$Bin/../../lib/";
+
+use SBG::IO;
 
 # Open a not-yet-opened file
 my $file = "$Bin/data/2nn6.dom";
@@ -22,7 +24,7 @@ is($iofh->fh, $fh, "Filehandle reused");
 ok($iofh && $iofh->fh, "new(fh=>\$fh)");
 
 # Writing to tempfile using tempfile option
-$io = new SBG::IO(tempfile=>1);
+my $io = new SBG::IO(tempfile=>1);
 $io->write("Writing via tempfile=>1 option");
 $io->flush;
 $file = $io->file;

@@ -39,9 +39,12 @@ Put the BLOCK in quotes to prevent your shell from interpreting it.
 # CPAN
 use Getopt::Long;
 use Pod::Usage;
-use SBG::Role::Storable;
-
 use List::Util qw/reduce/;
+
+# Local libraries
+use FindBin qw/$Bin/;
+use lib "$Bin/../lib/";
+
 use SBG::Role::Storable qw(retrieve_files);
 
 my %ops;

@@ -50,10 +50,12 @@ use Scalar::Util qw/blessed/;
 use Moose::Autobox;
 use Data::Dump qw/dump/;
 use Carp;
-
-use SBG::U::Log;
 use Log::Any qw/$log/;
 
+# Local libraries
+use FindBin qw/$Bin/;
+use lib "$Bin/../lib/";
+use SBG::U::Log;
 use SBG::U::Object qw/load_object methods/;
 
 # NB requires bash cmd: complete  -o default -C scriptname scriptname

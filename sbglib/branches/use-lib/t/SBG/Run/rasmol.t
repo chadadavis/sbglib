@@ -3,19 +3,22 @@
 use strict;
 use warnings;
 use Test::More 'no_plan';
-use SBG::U::Test 'float_is';
 use Carp;
 use Data::Dumper;
 use FindBin;
 
 use File::Temp qw/tempfile/;
+
+use FindBin qw/$Bin/;
+use lib "$Bin/../../../lib/";
+use SBG::U::Test 'float_is';
 use SBG::U::Log qw/log/;
+
 my $DEBUG;
 # $DEBUG = 1;
 SBG::U::Log::init(undef, loglevel=>'DEBUG') if $DEBUG;
 $File::Temp::KEEP_ALL = $DEBUG;
 
-use FindBin qw/$Bin/;
 
 ################################################################################
 

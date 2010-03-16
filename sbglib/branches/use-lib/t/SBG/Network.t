@@ -1,11 +1,14 @@
 #!/usr/bin/env perl
 
 use Test::More 'no_plan';
-use SBG::U::Test 'float_is';
+
 use Carp;
 use Data::Dumper;
 use Data::Dump qw/dump/;
 
+use FindBin qw/$Bin/;
+use lib "$Bin/../../lib/";
+use SBG::U::Test 'float_is';
 use SBG::Network;
 use SBG::Node;
 use SBG::Seq;

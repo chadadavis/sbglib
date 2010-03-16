@@ -3,11 +3,15 @@
 use strict;
 use warnings;
 use Test::More 'no_plan';
-use SBG::U::Test qw/pdl_approx float_is/;
 use Carp;
 use Data::Dumper;
 use File::Temp qw/tempfile/;
 $File::Temp::KEEP_ALL = 1;
+
+
+use FindBin qw/$Bin/;
+use lib "$Bin/../../../lib/";
+use SBG::U::Test qw/pdl_approx float_is/;
 
 
 # NB could find better test cases in the trans database(s), e.g.:

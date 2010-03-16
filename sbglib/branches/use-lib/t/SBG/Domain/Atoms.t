@@ -1,13 +1,16 @@
 #!/usr/bin/env perl
 
 use Test::More 'no_plan';
-use SBG::U::Test qw/float_is pdl_approx/;
 use Data::Dumper;
 use Data::Dump qw/dump/;
 use FindBin qw/$Bin/;
 
 use PDL::Lite;
 use PDL::Core qw/pdl/;
+
+use FindBin qw/$Bin/;
+use lib "$Bin/../../../lib/";
+use SBG::U::Test qw/float_is pdl_approx/;
 
 use SBG::Domain::Atoms;
 use SBG::DomainIO::stamp;

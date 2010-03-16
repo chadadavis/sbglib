@@ -4,11 +4,17 @@
 use warnings;
 
 use Test::More 'no_plan';
+use Data::Dump qw/dump/;
+use Moose::Autobox;
+
+use FindBin qw/$Bin/;
+use lib "$Bin/../../lib/";
+
 use SBG::Domain;
 use SBG::Types;
-use Data::Dump qw/dump/;
 
-use Moose::Autobox;
+
+
 
 my $d = new_ok('SBG::Domain');
 

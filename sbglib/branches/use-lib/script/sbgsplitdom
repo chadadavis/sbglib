@@ -33,6 +33,10 @@ use warnings;
 use Moose::Autobox;
 use Bio::SeqIO;
 
+# Local libraries
+use FindBin qw/$Bin/;
+use lib "$Bin/../lib/";
+
 use SBG::U::Run qw/getoptions start_log/;
 use SBG::Split::Roberto;
 

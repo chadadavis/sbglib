@@ -1,15 +1,18 @@
 #!/usr/bin/env perl
 
 use Test::More 'no_plan';
-use SBG::U::Test 'float_is';
+use Moose::Autobox;
 use Data::Dumper;
 use Data::Dump qw/dump/;
 
+use FindBin qw/$Bin/;
+use lib "$Bin/../../lib/";
+use SBG::U::Test 'float_is';
 use SBG::Model;
 use SBG::Node;
 use SBG::Seq;
 use SBG::Domain;
-use Moose::Autobox;
+
 
 
 # RRP45 and RRP41

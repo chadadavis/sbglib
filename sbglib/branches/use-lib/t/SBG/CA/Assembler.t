@@ -7,11 +7,13 @@ use Data::Dumper;
 use Data::Dump qw/dump/;
 use Carp;
 
-use SBG::U::Log qw/log/;
-
 use Moose::Autobox;
 use List::MoreUtils qw/mesh/;
 
+use FindBin qw/$Bin/;
+use lib "$Bin/../../../lib/";
+
+use SBG::U::Log qw/log/;
 use SBG::Seq;
 use SBG::Node;
 use SBG::Domain;
@@ -21,6 +23,7 @@ use SBG::Complex;
 use SBG::CA::Assembler; # qw(linker);
 use SBG::Run::cofm qw/cofm/;
 use SBG::Run::rasmol;
+
 
 my $DEBUG;
 # $DEBUG= 1;

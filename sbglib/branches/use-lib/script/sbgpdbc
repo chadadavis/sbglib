@@ -47,6 +47,10 @@ use Moose::Autobox;
 use Carp;
 use Data::Dump qw/dump/;
 
+# Local libraries
+use FindBin qw/$Bin/;
+use lib "$Bin/../lib/";
+
 use SBG::U::Log;
 use SBG::Run::pdbc qw/pdbc/;
 use SBG::ComplexIO::stamp;
