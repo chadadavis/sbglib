@@ -1,24 +1,30 @@
 #!/usr/bin/env perl
 
 use Test::More 'no_plan';
-use SBG::U::Test 'float_is';
 
 use Carp;
 use Data::Dumper;
 use Data::Dump qw/dump/;
 use File::Temp qw/tempfile/;
 
-use SBG::U::Log qw/log/;
+use FindBin qw/$Bin/;
+use lib "$Bin/../../../lib/";
+use SBG::U::Test 'float_is';
+use SBG::U::Log;
+
+
 $SIG{__DIE__} = \&confess;
 my $DEBUG;
 # $DEBUG = 1;
 SBG::U::Log::init(undef, loglevel=>'DEBUG') if $DEBUG;
 $File::Temp::KEEP_ALL = $DEBUG;
 
+################################################################################
+
+
 use SBG::Run::PairedBlast;
 use Bio::SeqIO;
 
-use FindBin qw/$Bin/;
 my $io = new Bio::SeqIO(-file=>"$Bin/../data/2br2AB.fa");
 my $seq1 = $io->next_seq;
 my $seq2 = $io->next_seq;

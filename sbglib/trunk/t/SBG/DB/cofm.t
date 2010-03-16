@@ -1,14 +1,19 @@
 #!/usr/bin/env perl
 
 use Test::More 'no_plan';
-use SBG::U::Test;
-$, = ' ';
 use Data::Dumper;
-use SBG::DB::cofm;
-use SBG::U::Test qw/float_is/;
+
 
 use PDL;
 use PDL::Matrix;
+
+use FindBin qw/$Bin/;
+use lib "$Bin/../../../lib/";
+use SBG::U::Test qw/float_is/;
+
+use SBG::DB::cofm;
+
+$, = ' ';
 
 my $prec = 4;
 

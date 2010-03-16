@@ -1,12 +1,16 @@
 #!/usr/bin/env perl
 
 use Test::More 'no_plan';
-use SBG::U::Test 'float_is';
 
 use Carp;
 use Data::Dumper;
 use Data::Dump qw/dump/;
 use File::Temp qw/tempfile/;
+
+
+use FindBin qw/$Bin/;
+use lib "$Bin/../../../lib/";
+use SBG::U::Test 'float_is';
 
 use SBG::U::Log qw/log/;
 $SIG{__DIE__} = \&confess;

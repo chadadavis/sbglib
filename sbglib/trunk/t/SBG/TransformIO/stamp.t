@@ -7,6 +7,11 @@ use Carp;
 use Data::Dumper;
 use FindBin;
 use File::Temp qw/tempfile/;
+
+
+use FindBin qw/$Bin/;
+use lib "$Bin/../../../lib/";
+
 use SBG::U::Test qw/float_is pdl_approx/;
 use SBG::U::Log;
 

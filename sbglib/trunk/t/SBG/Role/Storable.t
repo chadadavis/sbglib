@@ -1,13 +1,19 @@
 #!/usr/bin/env perl
 
 use Test::More 'no_plan';
-use SBG::U::Test 'float_is';
+
 use Carp;
 use Data::Dumper;
 use Data::Dump qw/dump/;
 use File::Temp qw/tempfile/;
 
+
+use FindBin qw/$Bin/;
+use lib "$Bin/../../../lib/";
+use SBG::U::Test 'float_is';
 use SBG::U::Log qw/log/;
+
+
 $SIG{__DIE__} = \&confess;
 my $DEBUG;
 # $DEBUG = 1;
@@ -17,6 +23,7 @@ $File::Temp::KEEP_ALL = $DEBUG;
 
 use SBG::Seq;
 use SBG::Role::Storable;
+
 
 # Sequences becomes nodes become networks
 # my $seq1 = new SBG::Seq(-display_id=>'RRP43');

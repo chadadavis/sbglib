@@ -4,6 +4,9 @@ use strict;
 use warnings;
 use Test::More 'no_plan';
 use Data::Dump qw/dump/;
+
+use FindBin qw/$Bin/;
+use lib "$Bin/../../../lib/";
 use SBG::U::Test qw/float_is/;
 
 use SBG::U::Log qw/log/;

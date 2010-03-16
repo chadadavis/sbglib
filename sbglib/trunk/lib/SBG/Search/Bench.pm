@@ -157,9 +157,11 @@ sub search {
 
         # Save interaction-specific scores in the interaction template
         my $iaction = new SBG::Interaction(
-            models=>{$seq1=>$model1, $seq2=>$model2},
-            scores=>{irmsd=>$irmsd, zscore=>$i2z, pval=>$i2p},
+            scores=>{irmsd=>$irmsd, zscore=>$i2z, pval=>$i2p}
             );
+        # Lookup model based on sequence ID
+        $iaction->set($seq1, $model1);
+        $iaction->set($seq2, $model2);
 
         push @interactions, $iaction;
 

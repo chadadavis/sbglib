@@ -2,7 +2,6 @@
 
 
 use Test::More 'no_plan';
-use SBG::U::Test 'float_is';
 use Carp;
 use Data::Dumper;
 use FindBin;
@@ -10,6 +9,11 @@ use File::Temp qw/tempfile/;
 my $dir = $FindBin::RealBin;
 
 use PDL::Lite;
+
+use FindBin qw/$Bin/;
+use lib "$Bin/../../../lib/";
+use SBG::U::Test 'float_is';
+
 use SBG::Domain::Sphere;
 
 

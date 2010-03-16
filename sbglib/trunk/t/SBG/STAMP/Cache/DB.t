@@ -1,14 +1,21 @@
 #!/usr/bin/env perl
 
 use Test::More 'no_plan';
-use SBG::U::Test qw/float_is pdl_approx/;
 use Data::Dumper;
 use Data::Dump qw/dump/;
 use File::Temp;
+
+use FindBin qw/$Bin/;
+use lib "$Bin/../../../../lib/";
+use SBG::U::Test qw/float_is pdl_approx/;
+
 # $File::Temp::KEEP_ALL = 1;
 
-use SBG::STAMP qw/superpose/;
+################################################################################
+
+use SBG::STAMP;
 use SBG::Domain;
+use SBG::DB::trans qw/superposition/;
 use PDL;
 
 # Tolerate rounding differences between stamp (using clib) and PDL
@@ -20,15 +27,14 @@ my $domb = SBG::Domain->new(pdbid=>'2br2', descriptor=>'CHAIN B');
 my $domd = SBG::Domain->new(pdbid=>'2br2', descriptor=>'CHAIN D');
 
 
-
 # Test querying transformations from database
 # Get domains for two chains of interest
-my $domb5 = new SBG::Domain::CofM(pdbid=>'2br2', descriptor=>'CHAIN B');
-my $domd5 = new SBG::Domain::CofM(pdbid=>'2br2', descriptor=>'CHAIN D');
-my $trans5bd = SBG::STAMP::superpose_query($domb5, $domd5);
-my $trans5db = SBG::STAMP::superpose_query($domd5, $domb5);
-ok($trans5bd, "Got transform from database cache") or die;
-ok($trans5db, "Got transform from database cache") or die;
+my $domb5 = new SBG::Domain(pdbid=>'2br2', descriptor=>'CHAIN B');
+my $domd5 = new SBG::Domain(pdbid=>'2br2', descriptor=>'CHAIN D');
+my $trans5bd = SBG::DB::trans::superposition($domb5, $domd5);
+my $trans5db = SBG::DB::trans::superposition($domd5, $domb5);
+ok($trans5bd, "Got transform from database") or die;
+ok($trans5db, "Got transform from database") or die;
 # Get the underlying PDL of the computed transform to be tested
 $trans5bd = $trans5bd->matrix;
 $trans5db = $trans5db->matrix;

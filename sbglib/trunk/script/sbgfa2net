@@ -46,6 +46,10 @@ use Moose::Autobox;
 use Bio::SeqIO;
 use Module::Load qw/load/;
 
+# Local libraries
+use FindBin qw/$Bin/;
+use lib "$Bin/../lib/";
+
 use SBG::U::Run qw/frac_of getoptions start_lock end_lock start_log/;
 
 use SBG::Network;

@@ -1,12 +1,15 @@
 #!/usr/bin/env perl
 
 use Test::More 'no_plan';
-use SBG::U::Test qw/float_is pdl_approx/;
 use Carp;
 use Data::Dumper;
 use Data::Dump qw/dump/;
 use FindBin qw/$Bin/;
 
+
+use FindBin qw/$Bin/;
+use lib "$Bin/../../../lib/";
+use SBG::U::Test qw/float_is pdl_approx/;
 
 use SBG::DomainIO::pdb;
 my $file = "$Bin/../data/1timA.pdb";

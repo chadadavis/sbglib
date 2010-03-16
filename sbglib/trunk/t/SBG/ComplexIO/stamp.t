@@ -1,17 +1,21 @@
 #!/usr/bin/env perl
 
 use Test::More 'no_plan';
-use SBG::U::Test 'float_is';
+
 use Carp;
 use Data::Dumper;
 use Data::Dump qw/dump/;
 use FindBin qw/$Bin/;
 
+use FindBin qw/$Bin/;
+use lib "$Bin/../../../lib/";
+use SBG::U::Test 'float_is';
+use SBG::ComplexIO::stamp;
+
 my $DEBUG;
 # $DEBUG = 1;
 $File::Temp::KEEP_ALL = $DEBUG;
 
-use SBG::ComplexIO::stamp;
 my $file = "$Bin/../data/2nn6.dom";
 
 # Test reading all at once, array context

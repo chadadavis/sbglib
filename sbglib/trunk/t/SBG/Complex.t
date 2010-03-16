@@ -2,19 +2,17 @@
 
 use strict;
 use warnings;
-
 use Test::More 'no_plan';
-use SBG::U::Test 'float_is';
-
+use Moose::Autobox;
 use Data::Dumper;
 use Data::Dump qw/dump/;
 use Carp;
 $SIG{__DIE__} = \&confess;
 
 use FindBin qw/$Bin/;
+use lib "$Bin/../../lib/";
+use SBG::U::Test 'float_is';
 use SBG::U::Log qw/log/;
-
-use Moose::Autobox;
 
 use SBG::Complex;
 use SBG::Domain;
@@ -25,6 +23,7 @@ use SBG::DomainIO::stamp;
 use SBG::DomainIO::pdb;
 use SBG::U::List qw/flatten/;
 use SBG::Run::rasmol;
+
 
 my $DEBUG;
 # $DEBUG = 1;

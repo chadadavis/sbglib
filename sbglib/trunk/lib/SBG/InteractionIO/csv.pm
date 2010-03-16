@@ -98,7 +98,7 @@ sub write {
     foreach my $iaction (@interactions) {
         next unless $iaction->nodes;
         my $nodes = [ $iaction->nodes ];
-        my $models = $nodes->map(sub{ $iaction->models->at($_) });
+        my $models = $nodes->map(sub{ $iaction->get($_) });
         my $doms = $models->map(sub{ $_->subject });
         my $pdbs = $doms->map(sub{ $_->pdbid });
         my $descrs = $doms->map(sub{ $_->descriptor });

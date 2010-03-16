@@ -3,7 +3,6 @@
 use strict;
 use warnings;
 use Test::More 'no_plan';
-use SBG::U::Test 'float_is';
 use Carp;
 $SIG{__DIE__} = \&confess;
 use Data::Dumper;
@@ -12,6 +11,10 @@ use File::Temp qw/tempfile/;
 
 use Moose::Autobox;
 use FindBin qw/$Bin/;
+
+use FindBin qw/$Bin/;
+use lib "$Bin/../../../lib/";
+use SBG::U::Test 'float_is';
 
 use SBG::U::Log qw/log/;
 my $DEBUG;

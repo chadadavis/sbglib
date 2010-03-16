@@ -2,6 +2,9 @@
 
 use Test::More 'no_plan';
 
+use FindBin qw/$Bin/;
+use lib "$Bin/../../lib/";
+
 use SBG::Seq;
 
 # new()

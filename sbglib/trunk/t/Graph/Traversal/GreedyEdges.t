@@ -1,19 +1,21 @@
 #!/usr/bin/env perl
 
 use Test::More 'no_plan';
-use FindBin qw/$Bin/;
 
-use SBG::U::Log qw/log/;
+use Graph::UnionFind;
+
+# Local libraries
+use FindBin qw/$Bin/;
+use lib "$Bin/../../../lib/";
+use Graph::Traversal::GreedyEdges;
+use SBG::NetworkIO::csv;
+
+use SBG::U::Log;
 $SIG{__DIE__} = \&confess;
 my $DEBUG;
 $DEBUG = 1;
 SBG::U::Log::init(undef, loglevel=>'DEBUG') if $DEBUG;
 $File::Temp::KEEP_ALL = $DEBUG;
-
-use Graph::Traversal::GreedyEdges;
-use SBG::NetworkIO::csv;
-
-use Graph::UnionFind;
 
 
 # Load up a network
@@ -130,6 +132,13 @@ sub solution {
     # Append this solution to total answers
     $answers{"@nodecover @ids"} = 1;
 } # solution
+
+
+sub stats {
+    my ($self) = @_;
+    my $total = scalar keys %answers;
+    return 'total', $total;
+}
 
 
 # Just extracts numeric id of interaction template string label

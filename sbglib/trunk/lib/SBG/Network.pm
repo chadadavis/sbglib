@@ -150,7 +150,7 @@ override 'add_interaction' => sub {
     my ($self, %ops) = @_;
     my $iaction = $ops{'-interaction'};
     my $nodes = $ops{'-nodes'};
-    unless (defined $iaction->primary_id) {
+    unless ($iaction->primary_id) {
         $iaction->primary_id(join('--', @$nodes));
     }
     my $res = $self->SUPER::add_interaction(%ops);
@@ -299,6 +299,8 @@ sub build {
                 -nodes=>[$node1,$node2],
                 -interaction=>$iaction,
                 );
+            # This allows the Network to lookup an Interaction by its ID
+            # It's not the same as the ID that the Interaction stores in itself
             $self->add_id_to_interaction("$iaction", $iaction);
         }
     }

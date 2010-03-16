@@ -1,16 +1,19 @@
 #!/usr/bin/env perl
 
 use Test::More 'no_plan';
-use SBG::U::Test 'float_is';
 use Data::Dumper;
 use Data::Dump qw/dump/;
 use FindBin qw/$Bin/;
 
+use FindBin qw/$Bin/;
+use lib "$Bin/../../../lib/";
+use SBG::U::Test 'float_is';
+
 use SBG::InteractionIO::csv;
 
 # Connected network
-$file = shift || "$Bin/../data/ex_small.csv";
-$io = new SBG::InteractionIO::csv(file=>$file);
+my $file = shift || "$Bin/../data/ex_small.csv";
+my $io = new SBG::InteractionIO::csv(file=>$file);
 
 my @iactions;
 while (my $iaction = $io->read) {

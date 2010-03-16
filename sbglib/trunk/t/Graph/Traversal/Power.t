@@ -6,7 +6,9 @@ Bit::Vector->Configuration("in=enum,out=bin");
 
 # Finally, the keyword "^enum" causes scalar input to be considered as being a list ("enumeration") of indices and ranges of (contiguous) indices, i.e., "$vector |= '2,3,5,7-13,17-23';" will cause bits #2, #3, #5, #7 through #13 and #17 through #23 to be set.
 
+# Local libraries
 use FindBin qw/$Bin/;
+use lib "$Bin/../../../lib/";
 
 use SBG::U::Log qw/log/;
 $SIG{__DIE__} = \&confess;

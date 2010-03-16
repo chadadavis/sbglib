@@ -4,7 +4,10 @@ use strict;
 use warnings;
 
 use Test::More 'no_plan';
+
+# Local libraries
 use FindBin qw/$Bin/;
+use lib "$Bin/../../lib/";
 
 use PBS::ARGV qw/qsub linen nlines/;
 

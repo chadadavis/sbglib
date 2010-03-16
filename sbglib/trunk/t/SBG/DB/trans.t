@@ -3,7 +3,6 @@
 use strict;
 use warnings;
 use Test::More 'no_plan';
-use SBG::U::Test qw/float_is pdl_approx pdl_percent/;
 use Data::Dumper;
 use Data::Dump qw/dump/;
 use Carp;
@@ -11,6 +10,10 @@ $SIG{__DIE__} = \&confess;
 
 use Moose::Autobox;
 use PDL;
+
+use FindBin qw/$Bin/;
+use lib "$Bin/../../../lib/";
+use SBG::U::Test qw/float_is pdl_approx pdl_percent/;
 
 use SBG::DB::trans qw/superposition/;
 use SBG::DB::entity qw/id2dom/;

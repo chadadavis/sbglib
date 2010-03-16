@@ -3,14 +3,17 @@
 use strict;
 use warnings;
 use Test::More 'no_plan';
-use SBG::U::Test qw/float_is pdl_approx/;
+use Data::Dumper;
 use Carp;
 $SIG{__DIE__} = \&confess;
 
-use Data::Dumper;
 
-use SBG::Transform::Affine;
 use PDL;
+
+use FindBin qw/$Bin/;
+use lib "$Bin/../../lib/";
+use SBG::U::Test qw/float_is pdl_approx/;
+use SBG::Transform::Affine;
 
 
 # All tests use this transformation matrix

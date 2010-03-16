@@ -3,10 +3,13 @@
 use strict;
 use warnings;
 use Test::More 'no_plan';
-use SBG::U::Test 'float_is';
 use Data::Dumper;
 use Data::Dump qw/dump/;
 use FindBin qw/$Bin/;
+
+use FindBin qw/$Bin/;
+use lib "$Bin/../../../lib/";
+use SBG::U::Test 'float_is';
 
 use SBG::InteractionIO::csv;
 use SBG::InteractionIO::html;

@@ -4,6 +4,9 @@
 
 use File::Basename;
 
+# Local libraries
+use FindBin qw/$Bin/;
+use lib "$Bin/../lib/";
 use SBG::Model;
 use SBG::Complex;
 use SBG::DomainIO::stamp;

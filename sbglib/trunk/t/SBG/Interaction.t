@@ -1,16 +1,20 @@
 #!/usr/bin/env perl
 
 use Test::More 'no_plan';
-use SBG::U::Test 'float_is';
 use Data::Dumper;
 use Data::Dump qw/dump/;
+use Moose::Autobox;
 
+use FindBin qw/$Bin/;
+use lib "$Bin/../../lib/";
+
+use SBG::U::Test 'float_is';
 use SBG::Interaction;
 use SBG::Model;
 use SBG::Node;
 use SBG::Seq;
 use SBG::Domain;
-use Moose::Autobox;
+
 
 # Setup a Network Interaction object
 # RRP45 and RRP41
@@ -31,7 +35,7 @@ my @models = map {
 # An interaction (model) connects two nodes, each has a model
 my $interaction = new SBG::Interaction;
 # Note which nodes have which models, for this interaction
-$interaction->models->put($nodes[$_],$models[$_]) for (0..$#seqs);
+$interaction->set($nodes[$_],$models[$_]) for (0..$#seqs);
 
 # Stringification (which comes from ->primary_id
 my $alt0 = "$models[0]--$models[1]";
@@ -39,7 +43,7 @@ my $alt1 = "$models[1]--$models[0]";
 ok("$interaction" eq $alt0 || "$interaction" eq $alt1, "stringify");
 
 # Sanity test
-my @gotmodels = map { $interaction->models->at($_) } @nodes;
+my @gotmodels = map { $interaction->get($_) } @nodes;
 
 is($gotmodels[$_], $models[$_], "Storing models in Interaction by Node") 
     for (0..$#nodes);

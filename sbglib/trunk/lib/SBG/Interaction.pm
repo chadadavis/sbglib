@@ -52,7 +52,7 @@ use SBG::U::iRMSD;
 
 
 ################################################################################
-=head2 models
+=head2 _models
 
  Function: Sets the L<SBG::Model> used to model one of the L<SBG::Node>s
  Example : my $model = new SBG::Model(query=>$myseq, subject=>$mydomain);
@@ -69,7 +69,7 @@ $interaction->put($node1,$model1);
 my $model1 = $interaction->at($node1);
 
 =cut
-has 'models' => (
+has '_models' => (
     isa => 'HashRef[SBG::Model]',
     is => 'ro',
     lazy => 1,
@@ -93,17 +93,17 @@ class. I.e. neither 'handles' nor 'provides' are useful.
 =cut
 sub set {
     my $self = shift;
-    $self->models->put(@_);
+    $self->_models->put(@_);
     $self->_update_id;
-    return $self->models->at(@_);
+    return $self->_models->at(@_);
 } # set
 sub get {
     my $self = shift;
-    return $self->models->at(@_);
+    return $self->_models->at(@_);
 }
 sub keys {
     my $self = shift;
-    return $self->models->keys;
+    return $self->_models->keys;
 }
 
 
@@ -261,7 +261,7 @@ Interaction->scores->at('avg_seqid') with value 50%.
 sub avg_scores {
     my ($self, @keys) = @_;
     return unless @keys;
-    my ($s1, $s2) = $self->models->values->flatten;
+    my ($s1, $s2) = $self->_models->values->flatten;
     foreach my $key (@keys) {
         my $avg = ( $s1->scores->at($key) + $s2->scores->at($key) ) / 2.0;
         $self->scores->put("avg_$key", $avg);
@@ -278,7 +278,7 @@ sub stringify {
 
 sub _update_id {
     my ($self) = @_;
-    $self->primary_id($self->models->values->join('--'));
+    $self->primary_id($self->_models->values->join('--'));
 }
 
 
