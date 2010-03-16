@@ -47,7 +47,7 @@ sub write {
     foreach my $iaction (@interactions) {
         next unless $iaction->nodes;
         my $nodes = [ $iaction->nodes ];
-        my $models = $nodes->map({ $iaction->models->at($_) });
+        my $models = $nodes->map({ $iaction->get($_) });
         my $doms = $models->map({ $_->subject });
         my $pdbs = $doms->map({ $_->pdbid });
         my $descrs = $pdbs->map({ $_->descriptor });
