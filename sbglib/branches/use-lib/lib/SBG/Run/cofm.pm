@@ -99,7 +99,7 @@ sub cofm {
     # TODO needs to be contained in Domain::Sphere hook
     my $center = pdl($fields->{Cx}, $fields->{Cy}, $fields->{Cz}, 1);
     # Copy construct, manually
-    my $sphere = SBG::Domain::Sphere->new(pdbid=>$dom->pdbid,
+    $sphere = SBG::Domain::Sphere->new(pdbid=>$dom->pdbid,
                                           descriptor=>$dom->descriptor,
                                           file=>$fields->{file},
                                           center=>$center,
