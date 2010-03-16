@@ -45,7 +45,6 @@ requires 'PDL::LinearAlgebra' => '0';
 requires 'Sort::Key' => '0';
 requires 'Sort::Key::Top' => '0';
 requires 'Sub::Call::Recur' => '0';
-requires 'subs::parallel' => '0';
 requires 'Test::More' => '0';
 requires 'Text::ParseWords' => '0';
 
