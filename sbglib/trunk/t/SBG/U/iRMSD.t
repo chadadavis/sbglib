@@ -23,13 +23,14 @@ sub _d {
     return new SBG::Domain(pdbid=>$pdb, descriptor=>"CHAIN $chain");
 }
 
+my $toler = '1%';
 my $doms1 = [ _d(qw/1vor K/), _d(qw/1vor R/) ];
 my $doms2 = [ _d(qw/1vp0 K/), _d(qw/1vp0 R/) ];
 my $irmsd;
 $irmsd = irmsd($doms1, $doms2);
-float_is($irmsd, 5.11, "iRMSD", 0.01);
+float_is($irmsd, 5.11, "iRMSD", $toler);
 $irmsd = irmsd($doms2, $doms1);
-float_is($irmsd, 5.11, "iRMSD reverse", 0.01);
+float_is($irmsd, 5.11, "iRMSD reverse", $toler);
 
 
 $TODO = "Test STAMP::irmsd for domains with an existing transformation";
