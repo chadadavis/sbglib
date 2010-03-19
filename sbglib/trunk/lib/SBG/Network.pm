@@ -24,17 +24,6 @@ attributes, one must peek into the implementation and append the base array,
 e.g. with a HashRef, in which one could store extra object attributes. But we'll
 avoid breaking the API as much as possible and avoid that for now.
 
-Normally the refvertexed=>1 option should be used to store objects at the graph
-nodes.
-
-Due to a bug in Graph::AdjacencyMap::Vertex, we prefer to use
-Graph::AdjacencyMap::Light. This can be achieved by setting revertexed=>0,
-though, intuitively, we would prefer refvertexed=>1, as a Node in the Graph is
-an object, and not just a string.
-
-The bug is that stringification of SGB::Node is ignored, which causes Storable
-to not be able to store/retrieve a SBG::Network correctly.
-
 
 =head1 SEE ALSO
 
@@ -86,12 +75,12 @@ NB Need to override new() as Bio::Network::ProteinNet is not of Moose
 override 'new' => sub {
     my ($class, @ops) = @_;
     
-    # This creates a Bio::Network::ProteinNet
-    # refvertexed=>0 allows us to work around stringification probs in 
-    # Graph::AdjacencyMap
-    # TODO which?
-    my $obj = $class->SUPER::new(refvertexed=>0, @ops);
-#     my $obj = $class->SUPER::new(refvertexed=>1, @ops);
+    # This creates a Bio::Network::ProteinNet. refvertexed_stringfied means the
+    # Nodes are objects, not simple strings and that the stringification of the
+    # object, rather than its address, is used as the hash key. NB refvertexed
+    # is not sufficient here if objects are serialized, because the deserialized
+    # node objects will necessarily have a different memory address.
+    my $obj = $class->SUPER::new(refvertexed_stringified=>1, @ops);
 
     # Normally, we would override a non-Moose base class with: But we don't,
     # since Bio::Network::ProteinNet is an ArrayRef, not a HashRef, like most
