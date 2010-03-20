@@ -947,7 +947,7 @@ sub rmsd {
    }
 
    unless ($selfcofms->length > 1) {
-       log->warn("Too few component-wise superpositions to superpose complex");
+       $log->warn("Too few component-wise superpositions to superpose complex");
        return;
    }
 
