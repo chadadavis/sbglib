@@ -8,7 +8,8 @@
 use inc::Module::Install;
 use Module::AutoInstall;
 
-all_from => 'lib/SBG.pm';
+name 'SBG';
+version '1.00';
 
 requires 'Algorithm::Cluster' => '0';
 requires 'B::Utils' => '0'; # required by B::Hooks::OP::Check
@@ -64,6 +65,6 @@ requires_external_bin 'rasmol';
 #auto_install(force=>1); # Not compat with CPANPLUS
 auto_install();
 
-# Test all *.t files, up to two levels deep
-WriteMakefile(test => {TESTS => 't/*.t t/*/*.t t/*/*/*.t'});
+# Test all *.t files, 
+WriteMakefile(test => {TESTS => 't/*.t t/*/*.t t/*/*/*.t t/*/*/*/*.t'});
 
