@@ -156,6 +156,7 @@ sub _one_net {
     # Go!
     $t->traverse();
 
+    print "\n";
     print join "\t", $assembler->stats;
     print "\n";
     return $assembler->stats;
