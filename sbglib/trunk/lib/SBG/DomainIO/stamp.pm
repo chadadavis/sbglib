@@ -63,7 +63,7 @@ use Log::Any qw/$log/;
 # use SBG::Domain; # Circular dependency
 use SBG::TransformIO::stamp;
 use SBG::Types qw/$re_pdb $re_descriptor/;
-
+use SBG::U::List qw/flatten/;
 
 
 ################################################################################
@@ -124,6 +124,8 @@ list of PDB directories.
 sub write {
     my ($self, @doms) = @_;
     return unless @doms;
+    @doms = SBG::U::List::flatten(@doms);
+
     my $fh = $self->fh or return;
 
 
