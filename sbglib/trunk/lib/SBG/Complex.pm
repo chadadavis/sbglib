@@ -85,6 +85,13 @@ has 'id' => (
     );
 
 
+# Cluster, for duplicate complexes
+has 'class' => (
+    is => 'rw',
+    isa => 'Str',
+    );
+
+
 ################################################################################
 =head2 name
 
@@ -503,7 +510,7 @@ sub globularity {
 
 
 ################################################################################
-=head2 merge
+=head2 combine
 
  Function: Combines all of the domains in this complex into a single domain
  Example : 
@@ -533,7 +540,7 @@ sub combine {
 
 
 ################################################################################
-=head2 merge
+=head2 merge_domain
 
  Function: 
  Example : 
