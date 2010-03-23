@@ -80,15 +80,15 @@ use SBG::DomainIO::pdb;
 use SBG::InteractionIO::html;
 use SBG::SuperpositionIO::html;
 use SBG::U::Log;
+use PBS::ARGV qw/qsub/;
+
+use SBG::U::Run qw/frac_of getoptions start_lock end_lock/;
+
 
 ################################################################################
 
-my %ops;
-my $result = GetOptions(\%ops,
-                        'help|h',
-                        'loglevel|l=s',   # log level
-                        'logfile=s',      # log file
-                        'debug|d',        # print stack trace when die
+my %ops = getoptions(
+                        'modelbase'       # the 'models' base directory
                         'output|o',       # html or csv
                         'size|s=s',       # minimum N (or N%) components/model
                         'complete|c',     # Only full-coverage models
@@ -101,9 +101,6 @@ my $result = GetOptions(\%ops,
     );                  
 
 
-if ($ops{'help'}) { pod2usage(-exitval=>1, -verbose=>2); }
-
-$SIG{__DIE__} = \&confess if $ops{'debug'};
 $ops{'size'} = '100%' if $ops{'complete'};
 
 # Sort descending on Sc by default
@@ -113,52 +110,62 @@ unless (defined $ops{'field'}) {
     $ops{'thresh'} = 5.0;
 }
 
-mkdir 'eval';
-mkdir("eval/$_") for qw/log pdb dom html/;
+
+# Try to submit to PBS, for each argument in @ARGV
+# Recreate command line options;
+my @jobids = qsub(options=>\%ops);
+# @ARGV is empty if all jobs could be submitted
+
+exit unless @ARGV;
+
 
 my @idxkeys = 
     qw/target nmodels ngood model msize rmsd medsc iface seqids superpos/;
 my @allkeys = qw/target model msize rmsd medsc iface seqids superpos/;
 
 
-# First file is the target/benchmark/true complex
-my $targetfile = shift or pod2usage(-exitval=>1);
+foreach my $file (@ARGV) {
+    if (defined($ops{'J'})) {
+        # The file is actually the Jth line of the list of files
+        $file = PBS::ARGV::linen($file, $ops{'J'});
+    }
+    
+    my $basename = basename($file,'.target');
+    SBG::U::Log::init($basename, %ops);
+    my $lock = start_lock($basename) or next;
+    
+    # Looks for models in $modelbase/$basename/*.model
+    my $modeldir = $ops{'modelbase'} . '/' . $basename;
+    
+    # Evaluate all other files as models, against target
+    my ($best, $all) = evaltarget(\%ops, $file) or exit;
 
-my $basename = basename($targetfile,'.target');
-$ops{'logfile'} ||= "eval/log/${basename}.log";
-SBG::U::Log::init($basename, %ops);
+    $best->{'target'} = a({-href=>"${basename}.html"},$basename);
 
+    my $idxrow = td([map { $best->{$_} } @idxkeys ]);
+    my ($idxfh,$idxlock) = openidxhtml(@idxkeys);
+    print $idxfh Tr($idxrow);
+    close $idxfh;
+    $idxlock->unlock;
 
-# Evaluate all other files as models, against target
-my ($best, $all) = evaltarget(\%ops, $targetfile, @ARGV) or exit;
-
-my $tbase = basename($targetfile, '.target');
-my ($pdb) = $tbase =~ /^(.{4})/;
-$best->{'target'} = a({-href=>"${tbase}.html"},$tbase);
-
-my $idxrow = td([map { $best->{$_} } @idxkeys ]);
-my ($idxfh,$idxlock) = openidxhtml(@idxkeys);
-print $idxfh Tr($idxrow);
-close $idxfh;
-$idxlock->unlock;
-
-if (0) {
-my @allrows = map { my $m=$_; td([map { $m->{$_} } @allkeys ]) } @$all;
-my $allrow = Tr(\@allrows);
-my ($allfh, $alllock) = openallhtml(@allkeys);
-print $allfh Tr($allrow);
-close $allfh;
-$alllock->unlock;
+    # Every single model in one mega table
+    if (0) {
+        my @allrows = map { my $m=$_; td([map { $m->{$_} } @allkeys ]) } @$all;
+        my $allrow = Tr(\@allrows);
+        my ($allfh, $alllock) = openallhtml(@allkeys);
+        print $allfh Tr($allrow);
+        close $allfh;
+        $alllock->unlock;
+    }
 }
 
-exit;
 
 
 ################################################################################
 
 sub openidxhtml {
     my (@keys) = @_;
-    my $file = "eval/html/index.html";
+    my $file = "html/index.html";
     my $lock = File::NFSLock->new($file,LOCK_EX,60,5*60);
     unless ($lock) {
         warn "Could not lock for writing: $file";
@@ -180,7 +187,7 @@ sub openidxhtml {
 
 sub openallhtml {
     my (@keys) = @_;
-    my $file = "eval/html/all.html";
+    my $file = "html/all.html";
     my $lock = File::NFSLock->new($file,LOCK_EX,60,5*60);
     unless ($lock) {
         warn "Could not lock for writing: $file";
@@ -202,7 +209,7 @@ sub openallhtml {
 
 sub opencorrcsv {
     my ($corrfile) = @_;
-    $corrfile ||= 'eval/rmsdcorr.csv';
+    $corrfile ||= 'rmsdcorr.csv';
     if (my $lock = File::NFSLock->new($corrfile,LOCK_EX,100,5*60)) {
         unless (-s $corrfile) {
             open my $rmsdfh, ">>$corrfile";
