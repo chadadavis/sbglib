@@ -67,6 +67,26 @@ has 'subject' => (
     );
 
 
+# Original input, e.g. original Bio::Seq
+has 'input' => (
+    is => 'rw',
+    );
+
+
+has 'coverage' => (
+    is => 'rw',
+    lazy_build => 1,
+    );
+
+
+sub _build_coverage {
+    my ($self) = @_;
+    my $model_len = $self->subject->seq->length;
+    my $input_len = $self->input->length;
+    return 100.0 * $model_len / $input_len;
+}
+
+
 sub stringify {
     my ($self) = @_;
     return $self->query . '(' . $self->subject . ')';

@@ -78,7 +78,14 @@ has 'sizes' => (
     default => sub { {} },
     );
 
+# Best scoring solution per unique class
+has 'best' => (
+    is => 'rw',
+    isa => 'HashRef[Num]',
+    default => sub { {} },
+    );
 
+# Atomic bin size for deciding when solution is a duplicate set of CofMs
 has 'binsize' => (
     is => 'ro',
     isa => 'Num',
@@ -336,15 +343,22 @@ sub solution {
     # exact() requires that the sizes match on both sides (i.e. no subsets)
     my $class = $self->gh->exact($coords, $componentlabels);
 
+    my $score = $complex->score;
+
     if (defined $class) {
         $self->dups($self->dups+1);
         $log->debug('Duplicate solution. Total duplicates: ', $self->dups);
+        if ($score && $score > $self->best->at($class)) {
+            $self->_write_solution($complex, $class);
+            $self->best->put($class, $score);
+        }
         return 0;
     } else {
         # undef => Don't name the model
         $class = $self->gh->put(undef, $coords, $componentlabels);
         return 0 unless defined $class;
 
+        $self->best->put($class, $score);
         # Counter for classes created so far
 #         $self->classes($class) unless $class < $self->classes;
         $self->classes($self->classes+1);
@@ -375,6 +389,7 @@ sub _write_solution {
                        $class, 
             );
     $complex->id($label);
+    $complex->class($class);
     my $file .= $label . '.model';
     mkdir $self->dir;
     $file = catfile($self->dir, $file) if -d $self->dir;
