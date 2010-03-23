@@ -66,5 +66,8 @@ requires_external_bin 'rasmol';
 auto_install();
 
 # Test all *.t files, 
-WriteMakefile(test => {TESTS => 't/*.t t/*/*.t t/*/*/*.t t/*/*/*/*.t'});
+# Is there no 'recursive' option here?
+WriteMakefile(
+    test => {TESTS => 't/*.t t/*/*.t t/*/*/*.t t/*/*/*/*.t t/*/*/*/*/*.t'}
+    );
 
