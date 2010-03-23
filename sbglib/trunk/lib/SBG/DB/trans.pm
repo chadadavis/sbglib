@@ -75,6 +75,18 @@ sub superposition {
 } # superposition
 
 
+################################################################################
+=head2 superposition_native
+
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
+
+The Domain objects must have the 'entity' field set. I.e. these objects must
+have come from the entity database in the first place.
+
+=cut
 sub superposition_native {
     my ($dom1, $dom2) = @_;
     return unless $dom1->entity && $dom2->entity;

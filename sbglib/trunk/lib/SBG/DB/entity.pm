@@ -135,6 +135,7 @@ AND chain = ?
     my @hits;
     my ($start, $end) = @{$ops{'pdbseq'}};
     while (my $row = $querysth->fetchrow_hashref()) {
+        $row->{'entity'} = $row->{'id'};
         # Save all, if no coordinates given as restraints
         unless ($ops{'pdbseq'}) {
             push @hits, $row;
