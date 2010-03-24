@@ -100,11 +100,12 @@ sub cofm {
     my $center = pdl($fields->{Cx}, $fields->{Cy}, $fields->{Cz}, 1);
     # Copy construct, manually
     $sphere = SBG::Domain::Sphere->new(pdbid=>$dom->pdbid,
-                                          descriptor=>$dom->descriptor,
-                                          file=>$fields->{file},
-                                          center=>$center,
-                                          radius=>$fields->{Rg},
-                                          length=>$fields->{nres},
+                                       descriptor=>$dom->descriptor,
+                                       file=>$fields->{file},
+                                       center=>$center,
+                                       radius=>$fields->{Rg},
+                                       length=>$fields->{nres},
+                                       transformation=>$dom->transformation->clone,
         );
     cache_set($cachename, $key, $sphere) if $cache;
 

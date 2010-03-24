@@ -363,12 +363,15 @@ sub norm {
 sub interval_overlap {
     my ($a0, $an, $b0, $bn) = @_;
     my $alen = $an-$a0;
+    my $blen = $bn-$b0;
 
     # Smallest end minus largest start
     my $overlap = min($an, $bn) - max($a0, $b0);
     $overlap = 0 if $overlap < 0;
     # Fration of coverage
-    return 1.0 * $overlap / $alen;
+    my $afrac = 1.0 * $overlap / $alen;
+    my $bfrac = 1.0 * $overlap / $blen;
+    return wantarray ? ($afrac, $bfrac) : $afrac;
 }
 
 

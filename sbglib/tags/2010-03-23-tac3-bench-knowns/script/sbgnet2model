@@ -77,7 +77,6 @@ my %ops = getoptions(
     'complete|c','overlap_thresh|o=f','minsize|s=s', 'binsize|b=f'
     );
 
-$SIG{__DIE__} = \&confess if $ops{'debug'};
 
 # Try to submit to PBS, for each argument in @ARGV
 # Recreate command line options;
@@ -157,6 +156,7 @@ sub _one_net {
     # Go!
     $t->traverse();
 
+    print "\n";
     print join "\t", $assembler->stats;
     print "\n";
     return $assembler->stats;

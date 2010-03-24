@@ -84,9 +84,10 @@ sub _gi2pdbid {
  Args    : 
            
 
-e.g. (using 1-based sequence coordinates
+using 1-based sequence coordinates:
 query('2ATC', 'A', pdbseq=>[1,234]);
-or (using IDs from PDB residue counter, not necessarily 1-based)
+using IDs from PDB residue counter
+(not necessarily 1-based, not necessarily contiguous)
 query('2ATC', 'A', resseq=>[-1,233]);
 
 NB not querying PQS here, just PDB
@@ -135,18 +136,23 @@ AND chain = ?
     my @hits;
     my ($start, $end) = @{$ops{'pdbseq'}};
     while (my $row = $querysth->fetchrow_hashref()) {
+        $row->{'entity'} = $row->{'id'};
         # Save all, if no coordinates given as restraints
         unless ($ops{'pdbseq'}) {
             push @hits, $row;
             next;
         }
-        # Skip unless $ops{overlap} of DB entity is covered by Blast hit
-        my $overlap = interval_overlap(
-            $row->{'start'},$row->{'end'},
-            $start, $end,
-            );
-        $log->debug("overlap:$overlap");
-        next unless $overlap >= $ops{'overlap'};
+
+        # How much of structural fragment covered by sequence
+        # And how much of sequence covered by structural fragment
+        my ($covered_struct, $covered_seq) = 
+            interval_overlap($row->{'start'},$row->{'end'}, $start, $end);
+        $log->debug("covered_struct: $covered_struct");
+        $log->debug("covered_seq: $covered_seq");
+        # NB could also verify that sequence is covered enough
+        if ($covered_struct < $ops{'overlap'}) {
+            next;
+        }
         push @hits, $row;
     }
 #     $log->debug('rows: ', scalar(@hits));

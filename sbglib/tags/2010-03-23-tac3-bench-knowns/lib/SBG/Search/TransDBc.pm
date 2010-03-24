@@ -74,7 +74,7 @@ sub search {
     my @hitpairs = $self->blast->search($seq0, $seq1, %ops);
 
     # Each resulting entity will also contain a backreference to ->{'hit'}     
-    my @entitypairs = map { _hitp2entityp($_, $entityops) } @hitpairs;
+    my @entitypairs = map { _hitp2entityp($_,$entityops,$seq0,$seq1) } @hitpairs;
 
     # Each pair of entities may find multiple contacts, again 1-to-many
     my @contacts = map { SBG::DB::contact::query(@$_) } @entitypairs;
@@ -99,10 +99,13 @@ sub search {
 # For a single hit pair [$hit0,$hit1], returns list of entity pairs:
 # ([$entity0,$entity1],[$entity0,$entity1],...)
 sub _hitp2entityp {
-    my ($hitp, $ops) = @_;
+    my ($hitp, $ops, $seq0, $seq1) = @_;
     # Each hit may match multiple entities
     my @entities0 = SBG::DB::entity::query_hit($hitp->[0], %$ops);
     my @entities1 = SBG::DB::entity::query_hit($hitp->[1], %$ops);
+    # Save original input sequence
+    $_->{'input'} = $seq0 for @entities0;
+    $_->{'input'} = $seq1 for @entities1;
 
     # Store backreference to source hit in resulting entity
     # Already done by DB::entity::query_hit
@@ -206,7 +209,12 @@ sub _model {
     $scores->put('n_res', $n_res);
 
     my $dom = SBG::DB::entity::id2dom($entity->{'id'});
-    my $model = SBG::Model->new(query=>$hsp->seq,subject=>$dom,scores=>$scores);
+    my $model = SBG::Model->new(
+        query=>$hsp->seq,
+        subject=>$dom,
+        scores=>$scores,
+        input=>$entity->{'input'},
+        );
     return $model;
 }
 

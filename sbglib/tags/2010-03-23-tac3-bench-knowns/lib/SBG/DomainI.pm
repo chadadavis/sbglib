@@ -336,8 +336,7 @@ sub id {
 
 A unique ID, for use with STAMP.
 
-In addition to L<id>, a unique ID for the transformation, if defined, is
-appended.
+In addition to L<id>, a unique ID is appended.
 
 NB If the L<SBG::Domain> contains a L<SBG::Transform>, the unique ID will be
 different after read/write or after serializing and deserializing. This is
@@ -349,7 +348,7 @@ sub uniqueid {
     my ($self) = @_;
     my $str = $self->id();
     # Get the memory address of some relevant attribute object, 
-    my $rep = $self->transformation;
+    my $rep = $self;
     $str .= $rep ? sprintf("-0x%x", refaddr($rep)) : '';
     return $str;
 } 

@@ -43,6 +43,8 @@ use overload (
 
 use Scalar::Util qw/refaddr/;
 use Moose::Autobox;
+use autobox::List::Util;
+
 use PDL::Lite;
 use PDL::Core qw/pdl squeeze zeroes sclr/;
 use Log::Any qw/$log/;
@@ -80,6 +82,13 @@ Convenience label
 
 =cut
 has 'id' => (
+    is => 'rw',
+    isa => 'Str',
+    );
+
+
+# Cluster, for duplicate complexes
+has 'class' => (
     is => 'rw',
     isa => 'Str',
     );
@@ -235,6 +244,51 @@ has 'overlap_thresh' => (
     isa => 'Num',
     default => 0.5,
     );
+
+
+# Combined score of all models in a complex
+has 'score' => (
+    is => 'rw',
+    isa => 'Num',
+    lazy_build => 1,
+    );
+
+ 
+
+sub _build_score {
+    my ($self) = @_;
+
+    my $models = $self->models->values;
+
+    # Sequence coverage, average
+    my $covers = $models->map(sub{$_->coverage});
+    my $pseqlength = $covers->sum / $covers->length;
+
+
+    # Interactions in model
+    my $miactions = $self->interactions->values;
+    # Edge weight, generally the seqid
+    my $weights = $miactions->map(sub{$_->weight})->grep(sub{defined $_});
+    # Average sequence identity of all the templates.
+    # NB linker domains are counted multiple times. 
+    # Given a hub proten and three interacting spoke proteins, there are not 4
+    # values for sequence identity, but rather 6=2*(3 interactions)
+    my $avg_wt = $weights->sum / $weights->length;
+
+
+    # Linker superpositions required to build model by overlapping dimers
+    my $sups = $self->superpositions->values;
+    my $scs = $sups->map(sub{$_->scores->at('Sc')});
+    # Average Sc of all superpositions done
+    my $msc = $scs->sum / $scs->length;
+
+    my ($wtcover, $wtseqid, $wtsc) = (1, 2, 1.5);
+    my $score = 100 *
+        ($wtcover*$pseqlength + $wtseqid*$avg_wt**2 + $wtsc*(10*$msc)**2) /
+        ($wtcover*100 + $wtseqid*100**2 + $wtsc*100**2);
+    
+    return $score;
+}
 
 
 ###############################################################################
@@ -503,7 +557,7 @@ sub globularity {
 
 
 ################################################################################
-=head2 merge
+=head2 combine
 
  Function: Combines all of the domains in this complex into a single domain
  Example : 
@@ -533,7 +587,7 @@ sub combine {
 
 
 ################################################################################
-=head2 merge
+=head2 merge_domain
 
  Function: 
  Example : 
@@ -597,13 +651,14 @@ sub _model_overlap {
 
     my ($start1, $end1, $start2, $end2) = 
         map { $_->query->start, $_->query->end } ($model1, $model2);
+    # How much of model1's sequence is covered by model2's sequence
     my $seqoverlap = SBG::U::List::interval_overlap(
         $start1, $end1, $start2, $end2);
     $log->debug("start1:$start1:end1:$end1:start2:$start2:end2:$end2");
     $log->debug("seqoverlap:$seqoverlap");
 
     unless ($seqoverlap > 0) {
-        $log->info("Sequences modelled do not overlap: ($model1, $model2)");
+        $log->warn("Sequences modelled do not overlap: ($model1, $model2)");
     }
     return $seqoverlap;
 }
@@ -730,6 +785,8 @@ sub add_interaction {
     return unless defined $destmodel;
     my $destdom = $destmodel->subject;
 
+    # Just verify model_overlap but don't enforce it
+    _model_overlap($srcmodel, $refmodel);
 #     return unless _model_overlap($srcmodel, $refmodel) > 0;
 
     my $linker_superposition = 
@@ -781,8 +838,13 @@ sub _mkmodel {
         blessed($clone) eq 'SBG::Domain::Sphere' ? $clone : cofm($clone);
     return unless defined $cdom;
 
+    # TODO DES need to be copy constructing
     my $model = SBG::Model->new(
-        query=>$vmodel->query, subject=>$cdom, scores=>$vmodel->scores);
+        query=>$vmodel->query, 
+        subject=>$cdom, 
+        scores=>$vmodel->scores,
+        input=>$vmodel->input,
+        );
 
     return $model;
 } # _mkmodel
@@ -932,7 +994,7 @@ sub rmsd {
        $log->error("No common components between complexes");
        return;
    }
-   $log->debug(scalar(@cnames), " common components");
+   $log->debug(scalar(@cnames), " common components: @cnames");
 
    my $selfcofms = [];
    my $othercofms = [];
@@ -940,10 +1002,11 @@ sub rmsd {
    foreach my $key (@cnames) {
        my $selfdom = $self->get($key)->subject;
        my $otherdom = $other->get($key)->subject;
-       $selfdom = _setcrosshairs($selfdom, $otherdom) or next;
-
+       my $sup;
+       $otherdom = cofm($otherdom);
+       ($selfdom, $sup) = _setcrosshairs($selfdom, $otherdom) or next;
+       $othercofms->push($otherdom);
        $selfcofms->push($selfdom);
-       $othercofms->push(cofm($otherdom));
    }
 
    unless ($selfcofms->length > 1) {
@@ -970,29 +1033,22 @@ sub rmsd {
 sub _setcrosshairs {
     my ($selfdom, $otherdom) = @_;
 
-       # Now get the superposition from current $selfdom onto current $otherdom
-       my $sup = SBG::Superposition::Cache::superposition($selfdom, $otherdom);
-       return unless $sup;
-
-       # Set crosshairs
-       $selfdom = cofm($selfdom);
-       # Transform
-       $sup->apply($selfdom);
-       # Rebuild crosshairs over there
-       $selfdom->_build_coords;
-# Why is $otherdom doing this? Esp. since otherdom isn't a new object!
-#        $otherdom->_build_coords; 
-
+    # Now get the superposition from current $selfdom onto current $otherdom
+    my $sup = SBG::Superposition::Cache::superposition($selfdom, $otherdom);
+    return unless $sup;
     
-       # Reverse transform. After this, superpositioning $selfdom onto $otherdom
-       # should align crosshairs
-       $sup->inverse->apply($selfdom);
-
-       # need to do this still? Should be identity anyway, nearly
-       $selfdom->transformation->clear_matrix;
-       # TODO Test here:
-
-    return $selfdom;
+    # Set crosshairs
+    $selfdom = cofm($selfdom);
+    # Transform
+    $sup->apply($selfdom);
+    # Rebuild crosshairs over there
+    $selfdom->_build_coords;
+    
+    # Reverse transform. After this, superpositioning $selfdom onto $otherdom
+    # should align crosshairs
+    $sup->inverse->apply($selfdom);
+    
+    return wantarray ? ($selfdom, $sup) : $selfdom;
 } # _setcrosshairs
 
 

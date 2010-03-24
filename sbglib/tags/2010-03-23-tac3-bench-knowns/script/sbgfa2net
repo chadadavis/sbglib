@@ -73,6 +73,7 @@ my $blast = SBG::Run::PairedBlast->new;
 $blast->method($ops{method}) if $ops{method};
 
 $ops{searcher} ||= 'TransDB';
+$ops{searcher} =~ s/SBG::Search//;
 $ops{searcher} = 'SBG::Search::' . $ops{searcher};
 eval { load $ops{searcher}; };
 if ($@) {
