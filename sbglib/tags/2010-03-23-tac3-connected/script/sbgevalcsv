@@ -37,15 +37,6 @@ my @jobids = qsub(options=>\%ops);
 exit unless @ARGV;
 
 
-# print join("\t", 
-#            'ACC', 'COMPS', 'SEQLEN', 'DESC', 
-#            'MODS',
-#            'MODEL', 'NCOMPS', '%COMPS', 'MIACTS', '%SEQLEN', '%SEQID', 'SC', 
-#            'RMSD',
-#            "\n",
-#         );
-
-
 foreach my $file (@ARGV) {
     if (defined($ops{'J'})) {
         # The file is actually the Jth line of the list of files
@@ -103,7 +94,7 @@ sub do_target {
         }
     }
     close $fh;
-    $target->store($targetfile);
+#     $target->store($targetfile);
 }
 
 
@@ -165,19 +156,26 @@ sub do_model {
 
     my ($rmsd, $matrix) = modelrmsd($model, $target);
 
+    my ($wtcover, $wtseqid, $wtsc) = (1, 2, 1.5);
+#     my $score = 
+#         ($wtcover*$pseqlength + $wtseqid*$avg_wt**2 + $wtsc*(10*$msc)**2) /
+#         ($wtcover*100 + $wtseqid*100**2 + $wtsc*100^2);
+    my $score = $model->score;
+
     print $fh join("\t", 
                    $target->id, $target->description, $target->size, $seqlength,
                    $class, $modelid, 
                    $nmcomps, $pcomps, 
                    $nmiactions, $nsources,
                    $pseqlength, $avg_wt, $msc, $rmsd,
+                   $score,
                    "\n",
         );
     
     modeloutputs($target,$model);
 
     # Save any changes
-    $model->store($modelfile);
+#     $model->store($modelfile);
 
     # TODO %stats
     return ();
@@ -190,16 +188,16 @@ sub modelrmsd {
 
     my $benchrmsd;
     my $benchmatrix;
-    if ($model->scores->exists('benchrmsd')) {
-        $benchrmsd = $model->scores->at('benchrmsd');
-        $benchmatrix = $model->scores->at('benchmatrix');
-    } else {
+#     if ($model->scores->exists('benchrmsd')) {
+#         $benchrmsd = $model->scores->at('benchrmsd');
+#         $benchmatrix = $model->scores->at('benchmatrix');
+#     } else {
         ($benchmatrix, $benchrmsd) = $model->rmsd($target);
         $model->transform($benchmatrix) if defined $benchmatrix;
         $benchrmsd = 'NaN' unless defined $benchrmsd;
         $model->scores->put('benchrmsd', $benchrmsd);
         $model->scores->put('benchmatrix', $benchmatrix);
-    }
+#     }
     return wantarray ? ($benchrmsd, $benchmatrix) : $benchrmsd;
 }
 
@@ -230,43 +228,44 @@ sub _domfile {
     my ($domfile, $model, $target) = @_;
 
     if (-s $domfile) {
-#         print STDERR "$domfile already done\n";
         return;
     }
+    return unless ($model->scores->at('benchrmsd') > 0);
+
     my $lock = File::NFSLock->new($domfile,LOCK_EX|LOCK_NB) or return;
 
     my $domio = new SBG::DomainIO::stamp(file=>">$domfile");
-    $domio->write(@{$model->domains});
-    if ($model->scores->at('benchrmsd') > 0) {
-        my $keys = $model->coverage($target);
-        $domio->write(@{$target->domains($keys)});
+    my $keys = [ $model->coverage($target) ];
+    
+    foreach my $key (@$keys) {
+        # Write in tandem (model, target, model, target)
+        $domio->write($model->domains([$key]));
+        $domio->write($target->domains([$key]));
     }
 }
 
 
 sub _pdbfile {
     my ($pdbfile, $model, $target) = @_;
-
+    if (-s $pdbfile) {
+        return;
+    }
+    return unless ($model->scores->at('benchrmsd') > 0);
     my $lock = File::NFSLock->new($pdbfile,LOCK_EX|LOCK_NB) or return;
 
-    my @doms;
-    # If there was a superposition onto the target, show it as well
-    if ($model->scores->at('benchrmsd') > 0) {
-
-        # Treat model complex as single domain
-        my $modelasdom = $model->combine;
-        push @doms, $modelasdom;
-
-        # Only show common components
-        my $keys = $model->coverage($target);
-        # Get target complex as single domain
-        push @doms, $target->combine(keys=>$keys);
-    } else {
-        push @doms, $model->domains->flatten;
-    }
-
     my $pdbio = new SBG::DomainIO::pdb(file=>">${pdbfile}", compressed=>1);
-    $pdbio->write(@doms);
+
+    # Only show common components
+    my $keys = [ $model->coverage($target) ];
+
+    # Treat model complex as single domain
+    my $modelasdom = $model->combine(keys=>$keys);
+
+    # Get target complex as single domain
+    my $targetasdom = $target->combine(keys=>$keys);
+
+    # Write model first
+    $pdbio->write($modelasdom, $targetasdom);
 
 }
 
