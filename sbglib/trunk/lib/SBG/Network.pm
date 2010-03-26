@@ -12,17 +12,10 @@ SBG::Network - Additions to Bioperl's L<Bio::Network::ProteinNet>
 =head1 DESCRIPTION
 
 NB A L<Bio::Network::ProteinNet>, from which this module inherits, is a blessed
-arrayref, rather than a blessed hashref. This means it is not easy to add any
-additional attributes to this object, even if it is extending another class
-
-
-=head1 BUGS
-
-NB Bio::Network::ProteinNet, like Graph, from which it inherits, are not Hashes,
-but rather Arrays. In order to extend these objects with any additional
-attributes, one must peek into the implementation and append the base array,
-e.g. with a HashRef, in which one could store extra object attributes. But we'll
-avoid breaking the API as much as possible and avoid that for now.
+arrayref, rather than a blessed hashref. Adding attributes should be done with
+the custom API of L<Graph> which uses B<set_graph_attribute($name, $value)> and
+B<get_graph_attribute($name)>. Also a HashRef can preload many of these using
+B<set_graph_attributes($hashref)> and B<get_graph_attributes>.
 
 
 =head1 SEE ALSO
@@ -44,18 +37,20 @@ with 'SBG::Role::Dumpable';
 with 'SBG::Role::Writable';
 with 'SBG::Role::Versionable';
 
+use overload (
+    '""' => 'stringify',
+    fallback => 1,
+    );
+
 use Moose::Autobox;
-use Digest::MD5 qw/md5_base64/;
 use Log::Any qw/$log/;
+
+use Bio::Tools::Run::Alignment::Clustalw;
 
 use SBG::Node;
 use SBG::U::List qw/pairs/;
 use SBG::U::Cache qw/cache/;
 
-use overload (
-    '""' => 'stringify',
-    fallback => 1,
-    );
 
 
 ################################################################################
@@ -97,6 +92,24 @@ sub stringify {
     my ($self) = @_;
     return join(",", sort($self->nodes()));
 }
+
+
+
+################################################################################
+=head2 proteins
+
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
+
+
+=cut
+sub proteins {
+    my ($self,) = @_;
+    return map { $_->proteins } $self->nodes;
+
+} # proteins
 
 
 ################################################################################
@@ -148,6 +161,72 @@ override 'add_interaction' => sub {
 }; # add_interaction
 
 
+
+sub symmetry {
+    my ($self,) = @_;
+
+    if ($self->has_graph_attribute('symmetry')) {
+        return $self->get_graph_attribute('symmetry');
+    }
+
+    my $symmetry = Graph::Undirected->new(unionfind=>1);
+    my @nodes = $self->nodes;
+    # Define homologous groups, initially each protein homologous to self
+    $symmetry->add_vertex("$_") for @nodes;
+
+    my $clustal = Bio::Tools::Run::Alignment::Clustalw->new;
+    my $homo_thresh = 90;
+
+    # For all pairs
+    my @pairs = pairs(@nodes);
+    foreach my $pair (@pairs) {
+        $log->debug("Testing homology: @$pair");
+        next if $symmetry->same_connected_components(@$pair);
+
+        # Align two proteins
+        my @prots = map { $_->proteins } @$pair;
+        my $aln = $clustal->align(\@prots);
+        $log->debug(' identity:', $aln->percentage_identity, 
+                    ' score:', $aln->score);
+
+        if ($aln->percentage_identity > $homo_thresh) {
+            $log->debug("Grouping homologs: @$pair");
+            $symmetry->add_edge("$pair->[0]", "$pair->[1]");
+        }
+    }
+    my @sets = $symmetry->connected_components;
+    my $str = join(',', map { '(' . join(',',@$_) . ')' } @sets);
+    $log->debug($str);
+
+    $self->set_graph_attribute('symmetry', $symmetry);
+    return $symmetry;
+
+} # symmetry
+
+
+
+################################################################################
+=head2 homologs
+
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
+
+List of node names that are in the same homology class as the given node
+=cut
+sub homologs {
+    my ($self, $node) = @_;
+    my $symmetry = $self->get_graph_attribute('symmetry') or return;
+    my @homos = 
+        $symmetry->connected_component_by_index(
+            $symmetry->connected_component_by_vertex($node)
+        );
+    return @homos;
+
+} # homologs
+
+
 ################################################################################
 =head2 add_seq
 
@@ -163,6 +242,7 @@ sub add_seq {
     my @nodes = map { SBG::Node->new($_) } @seqs;
     # Each node contains one sequence object
     $self->add_node($_) for @nodes;
+    $self->delete_graph_attribute('symmetry');
     return $self;
 
 } # add_seq
@@ -264,7 +344,6 @@ sub size {
 sub build {
     my ($self, $searcher, %ops) = @_;
 
-    # For all pairs
     my @pairs = pairs(sort $self->nodes);
     my $npairs = @pairs;
     my $ipair = 0;
@@ -275,14 +354,10 @@ sub build {
         my ($node1, $node2) = @$pair;
         my ($p1) = $node1->proteins;
         my ($p2) = $node2->proteins;
-
-        # Disable cache until ID mapping in place
-#         my @interactions = _interactions($searcher, $p1, $p2, %ops);
         my @interactions = $searcher->search($p1, $p2, %ops);
-
         next unless @interactions;
-        $self->add_edge($node1, $node2);
 
+        $self->add_edge($node1, $node2);
         foreach my $iaction (@interactions) {
             $self->add_interaction(
                 -nodes=>[$node1,$node2],
@@ -300,36 +375,6 @@ sub build {
 
     return $self;
 } # build
-
-
-# Cache wrapper
-# TODO Need to map IDs of query sequences to those in the cached interactions
-sub _interactions {
-    my ($searcher, $p1, $p2, %ops) = @_;
-
-    $log->debug('cache:', $ops{cache});
-
-    my $cache;
-    my $key;
-    if ($ops{cache}) {
-        # Sorted hashes of lower-cases sequences, a bidirectional, unique ID
-        $key = join '--', sort map { md5_base64 lc $_->seq } ($p1, $p2);
-        $cache = SBG::U::Cache::cache('sbginteractions');
-        my $cached = $cache->get($key);
-        return @$cached if defined $cached;
-    }
-
-    my @interactions = $searcher->search($p1, $p2, %ops);
-
-    if ($ops{cache}) {
-        $cache->set($key, \@interactions);
-    }
-
-    return @interactions;
-
-}
-
-
 
 
 ###############################################################################
