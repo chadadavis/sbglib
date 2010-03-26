@@ -72,7 +72,7 @@ exit unless @ARGV;
 my $blast = SBG::Run::PairedBlast->new;
 $blast->method($ops{method}) if $ops{method};
 
-$ops{searcher} ||= 'TransDB';
+$ops{searcher} ||= 'TransDBc';
 $ops{searcher} =~ s/SBG::Search//;
 $ops{searcher} = 'SBG::Search::' . $ops{searcher};
 eval { load $ops{searcher}; };
@@ -91,7 +91,8 @@ foreach my $file (@ARGV) {
 
     # Setup new log file specific to given input file
     my $basename = basename($file,'.fa');
-    my $lock = start_lock($basename) or next;
+    my $lock = start_lock($basename);
+    next if ! $lock && ! $ops{'debug'};
     start_log($basename, %ops);
 
     # Add each sequence as a node to new network

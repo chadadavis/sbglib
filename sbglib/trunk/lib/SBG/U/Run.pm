@@ -92,6 +92,7 @@ sub start_lock {
 =cut
 sub end_lock {
     my ($lock, $result) = @_;
+    return unless $lock && $lock->{file};
     # TODO DES API break
     my $file = $lock->{file};
     open my $fh, ">$file";
@@ -174,6 +175,8 @@ sub getoptions {
         pod2usage(-exitval=>1, -verbose=>2); 
     }
 
+    # Running in debugger? Setup debug mode automatically
+    $ops{'debug'} = 1 if defined $DB::sub;
     $SIG{__DIE__} = \&confes if $ops{'debug'};
     $ops{'loglevel'} ||= 'DEBUG' if $ops{'debug'};
 
