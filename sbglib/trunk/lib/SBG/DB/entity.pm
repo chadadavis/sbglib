@@ -25,6 +25,7 @@ package SBG::DB::entity;
 use base qw/Exporter/;
 our @EXPORT_OK = qw/query id2dom/;
 
+use Moose::Autobox;
 use PDL::Core qw/pdl zeroes/;
 use DBI;
 use Data::Dump qw/dump/;
@@ -47,19 +48,31 @@ our $host = "wilee.embl.de";
 sub query_hit {
     my ($hit, %ops) = @_;
     our %hit_cache;
-    my $key = refaddr $hit;
     $ops{'cache'} = 1 unless defined $ops{'cache'};
-    if ($ops{'cache'} && exists $hit_cache{$key}) {
-        return @{$hit_cache{$key}};
-    }
-
     my ($pdbid,$chain) = _gi2pdbid($hit->name);
     my ($pdbseq0, $pdbseqn) = $hit->range('hit');
+
+#     my $key = $hit->{'refaddr'};
+    my $key = refaddr $hit;
+    my $label = $hit->name . " ($pdbseq0-$pdbseqn)";
+
+    if ($ops{'cache'} && exists $hit_cache{$key}) {
+        my $entities = $hit_cache{$key};
+#         $log->debug($label, ': ', $entities->length, " entities (cached)");
+        $_->{'hit'} = $hit for @$entities;
+        return @$entities;
+    }
+
     $ops{'pdbseq'} ||= [$pdbseq0,$pdbseqn];
-    my @entities = query($pdbid, $chain, %ops);
-    $_->{'hit'} = $hit for @entities;
-    if ($ops{'cache'}) { $hit_cache{$key} = \@entities }
-    return @entities;
+    my $entities = [ query($pdbid, $chain, %ops) ];
+
+    if ($ops{'cache'}) { 
+        $hit_cache{$key} = $entities;
+#         $log->debug($label, ': ', $entities->length, " entities (new)");
+    }
+    # Save ref to hit in each entity
+    $_->{'hit'} = $hit for @$entities;
+    return @$entities;
 }
 
 
@@ -70,8 +83,6 @@ sub _gi2pdbid {
     return unless $pdbid;
     return $pdbid unless $chain && wantarray;
     return $pdbid, $chain;
-
-
 }
 
 

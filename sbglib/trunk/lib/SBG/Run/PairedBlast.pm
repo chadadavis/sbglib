@@ -65,6 +65,11 @@ use Moose::Autobox;
 use Bio::Tools::Run::StandAloneBlast;
 use Bio::Tools::Run::RemoteBlast;
 use Log::Any qw/$log/;
+use Scalar::Util qw/refaddr/;
+
+# For cloning alias hits (duplicate sequences)
+# NB Cannot use the (preferred) Storable::dclone here, as Hit contains CODEREFs
+use Clone qw/clone/;
 
 use SBG::U::List qw/intersection pairs2 interval_overlap/;
 
@@ -78,6 +83,7 @@ has 'cache' => (
     );
 
 
+# PSI-Blast iterations
 has 'j' => (
     is => 'rw',
     isa => 'Maybe[Int]',
@@ -85,6 +91,7 @@ has 'j' => (
     );
 
 
+# Upper expectation value threshold
 has 'e' => (
     is => 'rw',
     isa => 'Maybe[Num]',
@@ -148,8 +155,11 @@ sub _build_standalonefactory {
     $factory->save_tempfiles($self->verbose);
 
     $factory->database($self->database);
+    # Maximum  number of passes to use in multipass version (default =1)
     $factory->j($self->j) if $self->j;
+    # Expectation value (E) (default = 10.0)
     $factory->e($self->e) if $self->e;
+    # Number of database sequences to show alignments for (B) (default is 250)
     $factory->b($self->b) if $self->b;
     return $factory;
 }
@@ -250,7 +260,7 @@ sub search {
                     "(" . $subject1->start . '-' . $subject1->end . ") " .
                     $hitpairs[$i]->[1] . 
                     "(" . $subject2->start . '-' . $subject2->end . ") ";
-                $log->debug("Deleting overlapping hit ($frac_overlap) : $msg");
+#                 $log->debug("Deleting overlapping hit ($frac_overlap) : $msg");
                 delete $hitpairs[$i];
             }
         }
@@ -259,7 +269,7 @@ sub search {
     }
     $log->info(scalar(@pairs), ' Blast hit pairs');
     return @pairs;
-}
+} # search
 
 
 # Blast a sequence and index hits by PDB ID (4-char)
@@ -281,6 +291,11 @@ sub _blast1 {
         # Only take the Hits that have > 0 HSPs
         $hits = $hits->grep(sub{$_->hsps});
         $log->debug($seq->primary_id, ': ', $hits->length," Hits (raw)");
+
+        # Expand alias sequences
+        $hits = _expand_aliases($hits);
+        $log->debug($seq->primary_id, ': ', $hits->length," Hits (expanded)");
+
         # Sort them descending by the Blast bit score of the best HSP of the Hit
         $hits = [ sort { $b->hsp->score <=> $a->hsp->score } @$hits ];
         $self->cache->put($seq, $hits) if $ops{cache};
@@ -307,6 +322,29 @@ sub _blast1 {
     my $hitsbyid = _hitsbyid($hits);
     return $hitsbyid;
 } # _blast1
+
+
+# Clone each hit that has multiple names, so that we can index everything by one
+# name.
+sub _expand_aliases {
+    my ($hits) = @_;
+    my $exphits = [];
+    foreach my $hit (@$hits) {
+        my $longdesc = $hit->name . ' ' . $hit->description;
+        while ($longdesc =~ /pdb\|(.{4})\|(.)/g) {
+            my $name = "pdb|$1|$2";
+            my $clone = clone($hit);
+            $clone->accession($1);
+            $clone->name($name);
+            $clone->hsp->{'HIT_NAME'} = $name;
+            # Trace history
+            $clone->{'refaddr'} = refaddr $hit;
+            push @$exphits, $clone;
+        }
+    }
+    return $exphits;
+}
+
 
 
 sub _hitsbyid {
