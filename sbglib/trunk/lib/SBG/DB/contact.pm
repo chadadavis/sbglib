@@ -63,8 +63,11 @@ id_entity1,id_entity2,n_res1,n_res2,
   cluster_sl_irmsd_5_0_or_same_chains as cluster
 FROM 
 contact
-WHERE id_entity1=?
+WHERE 
+    id_entity1=?
 AND id_entity2=?
+AND n_res1 > 0
+AND n_res2 > 0
 AND crystal=0
 ");
 
