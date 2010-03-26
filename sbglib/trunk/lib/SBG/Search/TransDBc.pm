@@ -126,8 +126,18 @@ sub _wtcontact {
 
     my $hsp1 = $contact->{'entity1'}{'hit'}->hsp;
     my $hsp2 = $contact->{'entity2'}{'hit'}->hsp;
+
+    my ($wtnres, $wtcons) = (.1, .9);
+    # Scale to 100 (assuming max interface size of 1000
+    my $avg_nres = ($contact->{'n_res1'} + $contact->{'n_res2'}) / 2.0 / 10.0;
     my $avg_seqid = 100 * ($hsp1->frac_identical+$hsp2->frac_identical) / 2.0;
-    $contact->{'weight'} = $avg_seqid;
+    my $avg_seqcons = 100 * ($hsp1->frac_conserved+$hsp2->frac_conserved) / 2.0;
+
+    my $score = 100 * 
+        ($wtnres*$avg_nres+$wtcons*$avg_seqcons) / 
+        ($wtnres*100 + $wtcons*100);
+
+    $contact->{'weight'} = $score;
     return $contact;
 }
 
@@ -193,7 +203,7 @@ sub _contact2interaction {
         $iaction->scores->at('avg_frac_conserved') * 
         $iaction->scores->at('avg_n_res');
     $iaction->scores->put('interface_conserved', $interface_conserved);
-    $iaction->weight($iaction->scores->at('avg_seqid'));
+    $iaction->weight($contact->{'weight'});
 
     return $iaction;
 
