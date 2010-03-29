@@ -78,7 +78,7 @@ sub search {
 
     # Each pair of entities may find multiple contacts, again 1-to-many
     my @contacts = map { SBG::DB::contact::query(@$_) } @entitypairs;
-    $log->debug(scalar(@contacts), ' contacts');
+    $log->debug(scalar(@contacts), ' (redundant) contacts');
     return unless @contacts;
 
     # Score the contacts first, without creating full Interaction objects yet
@@ -90,7 +90,7 @@ sub search {
     # Convert contact to SBG::Interaction, including original Blast hits
     my @interactions = map { _contact2interaction($_) } @toprepcontacts;
 
-    $log->debug(scalar(@interactions), " interactions ($seq0,$seq1)");
+    $log->debug(scalar(@interactions), " (clustered) interactions ($seq0,$seq1)");
     return @interactions;
 
 } # search

@@ -158,8 +158,8 @@ AND chain = ?
         # And how much of sequence covered by structural fragment
         my ($covered_struct, $covered_seq) = 
             interval_overlap($row->{'start'},$row->{'end'}, $start, $end);
-        $log->debug("covered_struct: $covered_struct");
-        $log->debug("covered_seq: $covered_seq");
+#         $log->debug("covered_struct: $covered_struct");
+#         $log->debug("covered_seq: $covered_seq");
         # NB could also verify that sequence is covered enough
         if ($covered_struct < $ops{'overlap'}) {
             next;

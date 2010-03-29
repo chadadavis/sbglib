@@ -350,11 +350,12 @@ sub build {
     $log->debug($npairs, ' potential edges in interaction network');
     foreach my $pair (@pairs) {
         $ipair++;
-        $log->info("Edge $ipair of $npairs");
         my ($node1, $node2) = @$pair;
         my ($p1) = $node1->proteins;
         my ($p2) = $node2->proteins;
+        $log->info("Edge $ipair of $npairs ($p1--$p2)");
         my @interactions = $searcher->search($p1, $p2, %ops);
+        $log->info("$p1--$p2: ", scalar(@interactions), ' interactions');
         next unless @interactions;
 
         $self->add_edge($node1, $node2);

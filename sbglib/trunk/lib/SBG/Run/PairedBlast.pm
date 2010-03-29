@@ -267,7 +267,8 @@ sub search {
         @hitpairs = grep { defined $_ } @hitpairs;
         push @pairs, @hitpairs;
     }
-    $log->info(scalar(@pairs), ' Blast hit pairs');
+    $log->info($seq1->display_id , '--', $seq2->display_id, , ': ',
+               scalar(@pairs), ' Blast hit pairs');
     return @pairs;
 } # search
 
@@ -324,8 +325,23 @@ sub _blast1 {
 } # _blast1
 
 
-# Clone each hit that has multiple names, so that we can index everything by one
-# name.
+################################################################################
+=head2 _expand_aliases
+
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
+
+Clone each hit that has multiple names, so that we can index everything by one
+name.
+
+NB this depends on the blast database being formatted to include the
+aliases. This is not the case for the pre-formatted databases downloaded from
+the NCBI. Rather, download the fasta file and create the database with formatdb
+or makeblastdb
+
+=cut
 sub _expand_aliases {
     my ($hits) = @_;
     my $exphits = [];
