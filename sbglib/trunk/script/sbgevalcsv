@@ -141,8 +141,10 @@ sub do_model {
     # This is the sequence from the structural template used
     my $mseqlength = $models->map(sub{$_->subject->seq->length})->sum;
     # Percentage sequence coverage by the complex model
-    my $pseqlength = int 100.0 * $mseqlength / $seqlength;
-    
+    my $pseqlength = sprintf "%.2f", 100.0 * $mseqlength / $seqlength;
+    # TODO BUG this $pseqlength printed is not the $iseqlength that goes into
+    # Complex score
+
     # Edge weight, generally the seqid
     my $weights = $miactions->map(sub{$_->weight})->grep(sub{defined $_});
     # Average sequence identity of all the templates.
@@ -168,8 +170,10 @@ sub do_model {
                    $modelid, 
                    $nmcomps, $pcomps, 
                    $nmiactions, $nsources,
-                   $pseqlength, $avg_wt, $msc, $rmsd,
+                   $pseqlength, $avg_wt, $msc, 
                    $score,
+                   $rmsd,
+
                    "\n",
         );
     
