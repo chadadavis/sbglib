@@ -145,7 +145,7 @@ AND chain = ?
 
     # Check sequence overlap
     my @hits;
-    my ($start, $end) = @{$ops{'pdbseq'}};
+    my ($start, $end) = @{$ops{'pdbseq'}} if defined $ops{'pdbseq'};
     while (my $row = $querysth->fetchrow_hashref()) {
         $row->{'entity'} = $row->{'id'};
         # Save all, if no coordinates given as restraints
