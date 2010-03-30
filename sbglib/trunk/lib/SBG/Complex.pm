@@ -230,25 +230,6 @@ has 'models' => (
     );
 
 
-################################################################################
-=head2 overlap_thresh
-
- Function: 
- Example : 
- Returns : 
- Args    : 
-
-Allowable fractional overlap threshold for a newly added domain. If the domain
-overlaps by more than this threshold with any domain already in the complex,
-then it is rejected.
-
-=cut
-has 'overlap_thresh' => (
-    is => 'rw',
-    isa => 'Num',
-    default => 0.5,
-    );
-
 
 ################################################################################
 =head2 symmetry
@@ -660,8 +641,8 @@ sub combine {
 
 =cut
 sub merge_domain {
-    my ($self,$other,$ref) = @_;
-
+    my ($self,$other,$ref, $olap) = @_;
+    $olap ||= 0.5;
     # Where the last reference domain for this component was placed in space
     my $refmodel = $self->get($ref);
     my $refdom = $refmodel->subject if defined $refmodel;
@@ -684,7 +665,7 @@ sub merge_domain {
     $linker_superposition->apply($_) for $other->domains->flatten;
 
     # Now test steric clashes of potential domain against existing domains
-    my $clashfrac = $self->check_clashes($other->domains, $ref);
+    my $clashfrac = $self->check_clashes($other->domains, $ref, $olap);
     return unless $clashfrac < 1;
 
     # Domain does not clash after being oriented, can be saved in complex now.
@@ -743,8 +724,8 @@ sub _model_overlap {
 
 =cut
 sub merge_interaction {
-    my ($self, $other, $iaction) = @_;
-
+    my ($self, $other, $iaction, $olap) = @_;
+    $olap ||= 0.5;
     # If this interaction is just to create a cycle in this complex
     # Difference of iRMSD from 10 is cheap way to get score in [0:10], as STAMP
     return 10 - $self->cycle($iaction)
@@ -760,11 +741,12 @@ sub merge_interaction {
         $log->error("Neither $src nor $dest present in complex: $self");
         return;
     }        
-    my $iaction_score = $self->add_interaction($iaction, $src, $dest);
+    my $iaction_score = $self->add_interaction(
+        $iaction, $src, $dest, $olap);
     return unless defined $iaction_score;
 
     # $dest node was added to $src complex, can now merge on $dest
-    return $self->merge_domain($other, $dest);
+    return $self->merge_domain($other, $dest, $olap);
 
 } # merge_interaction
 
@@ -833,8 +815,8 @@ TODO initialize a complex from an interaction object.
 
 =cut
 sub add_interaction {
-    my ($self, $iaction, $srckey, $destkey) = @_;
-
+    my ($self, $iaction, $srckey, $destkey, $olap) = @_;
+    $olap ||= 0.5;
     # Where the last reference domain for this component was placed in space
     my $refmodel = $self->get($srckey);
     my $refdom = $refmodel->subject if defined $refmodel;
@@ -869,7 +851,7 @@ sub add_interaction {
     $log->debug("Linking:", $linker_superposition->transformation);
 
     # Now test steric clashes of potential domain against existing domains
-    my $clashfrac = $self->check_clashes([$destdom]);
+    my $clashfrac = $self->check_clashes([$destdom], undef, $olap);
     return unless $clashfrac < 1;
 
     # Domain does not clash after being oriented, can be saved in complex now.
@@ -933,8 +915,9 @@ TODO Deprecated in favor of L<check_clashes>
 
 =cut
 sub check_clash {
-    my ($self, $newdom) = @_;
-    my $thresh = $self->overlap_thresh;
+    my ($self, $newdom, $thresh) = @_;
+    $thresh ||= 0.5;
+
     $log->debug("fractional overlap thresh:$thresh");
     my $overlaps = [];
 
@@ -973,9 +956,9 @@ $ignore is the pivot used to merge the complex, which doesn't need to be checked
 
 =cut
 sub check_clashes {
-    my ($self, $otherdoms, $ignore ) = @_;
-    my $thresh = $self->overlap_thresh;
-    $log->debug("fractional overlap thresh:$thresh");
+    my ($self, $otherdoms, $ignore, $olap ) = @_;
+    $olap ||= 0.5;
+    $log->debug("fractional overlap thresh:$olap");
     my $overlaps = [];
 
     $log->debug($self->size, " vs ", $otherdoms->length);
@@ -990,7 +973,7 @@ sub check_clashes {
             $log->debug("$thisdom vs $otherdom");
             my $overlapfrac = $thisdom->overlap($otherdom);
             # Nonetheless, if one clashes severely, bail out
-            return 1 if $overlapfrac > $thresh;
+            return 1 if $overlapfrac > $olap;
             # Ignore domains that aren't overlapping at all (ie < 0)
             $overlaps->push($overlapfrac) if $overlapfrac > 0;
         }

@@ -147,7 +147,7 @@ sub _print_net {
 sub _one_net {
     my ($net,$name, $ops) = @_;
 
-    my %aops = slice_def($ops, 'minsize', 'binsize');
+    my %aops = slice_def($ops, 'minsize', 'binsize', 'overlap_thresh');
 
     my $assembler = SBG::CA::Assembler2->new(
         name=>$name, 

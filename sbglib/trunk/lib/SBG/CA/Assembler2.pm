@@ -164,6 +164,25 @@ sub _build_dir {
 }
 
 
+################################################################################
+=head2 overlap_thresh
+
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
+
+Allowable fractional overlap threshold for a newly added domain. If the domain
+overlaps by more than this threshold with any domain already in the complex,
+then it is rejected.
+
+=cut
+has 'overlap_thresh' => (
+    is => 'rw',
+    isa => 'Num',
+    default => 0.5,
+    );
+
 
 
 ################################################################################
@@ -205,7 +224,8 @@ sub test {
         # Neither node present in solutions forest. Create dimer
         $merged_complex = SBG::Complex->new(symmetry=>$self->net->symmetry);
         $merged_score = 
-            $merged_complex->add_interaction($iaction, $iaction->keys);
+            $merged_complex->add_interaction(
+                $iaction, $iaction->keys, $self->overlap_thresh);
         
     } elsif ($uf->has($src) && $uf->has($dest)) {
         # Both nodes present in existing complexes
@@ -277,7 +297,8 @@ sub _merge {
     my $dest_complex = $state->{'models'}->{$dest_part};
 
     my $merged_complex = $src_complex->clone;
-    my $merged_score = $merged_complex->merge_interaction($dest_complex,$iaction);
+    my $merged_score = $merged_complex->merge_interaction(
+        $dest_complex,$iaction, $self->overlap_thresh);
 
     return ($merged_complex, $merged_score);
 } # _merge
@@ -301,13 +322,15 @@ sub _add_monomer {
     $log->debug($iaction);
     # Create complex out of a single interaction
     my $add_complex = SBG::Complex->new(symmetry=>$self->net->symmetry);
-    $add_complex->add_interaction($iaction, $iaction->keys);
+    $add_complex->add_interaction(
+        $iaction, $iaction->keys, $self->overlap_thresh);
 
     # Lookup complex to which we want to add the interaction
     my $ref_partition = $state->{'uf'}->find($ref);
     my $ref_complex = $state->{'models'}->{$ref_partition};
     my $merged_complex = $ref_complex->clone;
-    my $merged_score = $merged_complex->merge_domain($add_complex, $ref);
+    my $merged_score = $merged_complex->merge_domain(
+        $add_complex, $ref, $self->overlap_thresh);
 
     return ($merged_complex, $merged_score);
 
