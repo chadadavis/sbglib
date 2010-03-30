@@ -136,10 +136,7 @@ sub qsub {
         return;
     }
     
-    return unless has_bin('qsub');
-    # Also verify that we have permission to connect to PBS server
-    my $qstat = has_bin('qstat');
-    system($qstat) == 0 or return;
+    return unless has_permission();
 
     my @jobids;
     my @failures;
@@ -172,6 +169,13 @@ sub has_bin {
     $log->debug("bin path: $_qsubpath");
     return $_qsubpath;
 
+}
+
+
+# Ability to connect to PBS server
+sub has_permission {
+    my $qstat = has_bin('qstat');
+    return system("$qstat >/dev/null 2>/dev/null") == 0;
 }
 
 

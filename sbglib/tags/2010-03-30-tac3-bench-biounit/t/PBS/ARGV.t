@@ -18,8 +18,7 @@ use PBS::ARGV qw/qsub linen nlines/;
 
 # TODO TEST job array -J option
 
-my $qstat = PBS::ARGV::has_bin('qstat');
-if (system("$qstat 2>/dev/null")==0) {
+if (PBS::ARGV::has_permission) {
 
     @ARGV = 1..5;
     my @jobids = qsub();
