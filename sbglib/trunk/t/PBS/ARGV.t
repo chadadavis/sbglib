@@ -18,7 +18,8 @@ use PBS::ARGV qw/qsub linen nlines/;
 
 # TODO TEST job array -J option
 
-if (PBS::ARGV::has_qsub) {
+my $qstat = PBS::ARGV::has_bin('qstat');
+if (system("$qstat 2>/dev/null")==0) {
 
     @ARGV = 1..5;
     my @jobids = qsub();
@@ -27,7 +28,7 @@ if (PBS::ARGV::has_qsub) {
     } 
 
 } else {
-    ok(1, "has_qsub() false, skipping");
+    ok(1, "No PBS (permissions) skipping");
 }
 
 
