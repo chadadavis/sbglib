@@ -136,7 +136,10 @@ sub qsub {
         return;
     }
     
-    return unless has_qsub();
+    return unless has_bin('qsub');
+    # Also verify that we have permission to connect to PBS server
+    my $qstat = has_bin('qstat');
+    system($qstat) == 0 or return;
 
     my @jobids;
     my @failures;
@@ -157,15 +160,16 @@ sub qsub {
 
 
 # Do we have qsub on this system in the $PATH
-sub has_qsub {
+sub has_bin {
+    my ($bin) = @_;
     our $_qsubpath;
     return $_qsubpath if defined $_qsubpath;
     foreach my $dir (File::Spec->path()) {
-        my $f = File::Spec->catfile($dir, 'qsub');
+        my $f = File::Spec->catfile($dir, $bin);
         $_qsubpath = $f if(-e $f && -x $f );
     }
     $_qsubpath ||= '';
-    $log->debug("_qsubpath: $_qsubpath");
+    $log->debug("bin path: $_qsubpath");
     return $_qsubpath;
 
 }

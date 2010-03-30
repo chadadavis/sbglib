@@ -25,7 +25,7 @@ use SBG::U::List qw/flatten/;
 use SBG::Run::rasmol;
 
 
-my $DEBUG = defined $DB::sub;
+my $DEBUG;
 # $DEBUG = 1;
 SBG::U::Log::init(undef, loglevel=>'DEBUG') if $DEBUG;
 $File::Temp::KEEP_ALL = $DEBUG;
@@ -103,8 +103,9 @@ rasmol($complex->domains) if $DEBUG;
 
 # First check overlap independently
 # should overlap a little with A, should not overlap B
-my $res = $complex->check_clash($dsphere);
-ok($res > 0 && $res < $complex->overlap_thresh,
+my $olap = 0.5;
+my $res = $complex->check_clash($dsphere, $olap);
+ok($res > 0 && $res < $olap, 
    "CHAIN D model in contact (but not clash) with complex");
 
 
