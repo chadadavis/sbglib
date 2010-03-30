@@ -47,6 +47,13 @@ use SBG::GeometricHash;
 use SBG::Complex;
 
 
+has 'net' => (
+    is => 'rw',
+    isa => 'Graph',
+    required => 1,
+    );
+
+
 # Number of solved partial solutions
 has 'solutions' => (
     is => 'rw',
@@ -78,12 +85,14 @@ has 'sizes' => (
     default => sub { {} },
     );
 
+
 # Best scoring solution per unique class
 has 'best' => (
     is => 'rw',
     isa => 'HashRef[Num]',
     default => sub { {} },
     );
+
 
 # Atomic bin size for deciding when solution is a duplicate set of CofMs
 has 'binsize' => (
@@ -194,7 +203,7 @@ sub test {
 
     if (! $uf->has($src) && ! $uf->has($dest) ) {
         # Neither node present in solutions forest. Create dimer
-        $merged_complex = SBG::Complex->new;
+        $merged_complex = SBG::Complex->new(symmetry=>$self->net->symmetry);
         $merged_score = 
             $merged_complex->add_interaction($iaction, $iaction->keys);
         
@@ -291,7 +300,7 @@ sub _add_monomer {
     my ($self, $state, $iaction, $ref) = @_;
     $log->debug($iaction);
     # Create complex out of a single interaction
-    my $add_complex = SBG::Complex->new;
+    my $add_complex = SBG::Complex->new(symmetry=>$self->net->symmetry);
     $add_complex->add_interaction($iaction, $iaction->keys);
 
     # Lookup complex to which we want to add the interaction
@@ -341,7 +350,8 @@ sub solution {
 
     # Check if duplicate, based on geometric hash
     # exact() requires that the sizes match on both sides (i.e. no subsets)
-    my $class = $self->gh->exact($coords, $componentlabels);
+#     my $class = $self->gh->exact($coords, $componentlabels);
+    my $class = $self->gh->exact($coords);
 
     my $score = $complex->score;
 
@@ -349,13 +359,16 @@ sub solution {
         $self->dups($self->dups+1);
         $log->debug('Duplicate solution. Total duplicates: ', $self->dups);
         if ($score && $score > $self->best->at($class)) {
+            $log->info(
+                "Replacing best solution for class: $class, score: $score");
             $self->_write_solution($complex, $class);
             $self->best->put($class, $score);
         }
         return 0;
     } else {
         # undef => Don't name the model
-        $class = $self->gh->put(undef, $coords, $componentlabels);
+#         $class = $self->gh->put(undef, $coords, $componentlabels);
+        $class = $self->gh->put(undef, $coords);
         return 0 unless defined $class;
 
         $self->best->put($class, $score);
@@ -368,6 +381,8 @@ sub solution {
         my $sizeclass = $complex->size;
         my $sizeclassn = $self->sizes->at($sizeclass) || 0;
         $self->sizes->put($sizeclass, $sizeclassn+1);
+
+        $log->info(join "\t", $self->stats);
 
         $self->_write_solution($complex, $class);
     }

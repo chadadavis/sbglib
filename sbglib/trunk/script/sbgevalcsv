@@ -45,7 +45,8 @@ foreach my $file (@ARGV) {
     
 
     my $basename = basename($file,'.target');
-    my $lock = start_lock($basename) or next;
+    my $lock = start_lock($basename);
+    next if ! $lock && ! $ops{'debug'};
     SBG::U::Log::init($basename, %ops);
 
     my $modelbase = $ops{'modelbase'};
@@ -164,7 +165,7 @@ sub do_model {
 
     print $fh join("\t", 
                    $target->id, $target->description, $target->size, $seqlength,
-                   $class, $modelid, 
+                   $modelid, 
                    $nmcomps, $pcomps, 
                    $nmiactions, $nsources,
                    $pseqlength, $avg_wt, $msc, $rmsd,
@@ -175,7 +176,7 @@ sub do_model {
     modeloutputs($target,$model);
 
     # Save any changes
-#     $model->store($modelfile);
+    $model->store($modelfile);
 
     # TODO %stats
     return ();
@@ -186,18 +187,18 @@ sub do_model {
 sub modelrmsd {
     my ($model, $target) = @_;
 
-    my $benchrmsd;
-    my $benchmatrix;
-#     if ($model->scores->exists('benchrmsd')) {
-#         $benchrmsd = $model->scores->at('benchrmsd');
-#         $benchmatrix = $model->scores->at('benchmatrix');
-#     } else {
-        ($benchmatrix, $benchrmsd) = $model->rmsd($target);
-        $model->transform($benchmatrix) if defined $benchmatrix;
-        $benchrmsd = 'NaN' unless defined $benchrmsd;
-        $model->scores->put('benchrmsd', $benchrmsd);
-        $model->scores->put('benchmatrix', $benchmatrix);
-#     }
+    my $benchrmsd = $model->scores->at('benchrmsd');
+    my $benchmatrix = $model->scores->at('benchmatrix');
+
+    unless (defined $benchrmsd && defined $benchmatrix) {
+        ($benchmatrix, $benchrmsd) = $model->rmsd_class($target);
+        if (defined $benchmatrix) {
+            $model->transform($benchmatrix);
+            $model->scores->put('benchrmsd', $benchrmsd);
+            $model->scores->put('benchmatrix', $benchmatrix);
+        }
+    }
+    
     return wantarray ? ($benchrmsd, $benchmatrix) : $benchrmsd;
 }
 
@@ -206,7 +207,8 @@ sub modeloutputs {
     my ($target, $model) = @_;
 
     my $acc = $target->id;
-    my $mbase = join('-', $target->id, $model->class, $model->id);
+    my @fields = ($target->id, $model->id);
+    my $mbase = join('-', @fields);
     mkdir $acc;
     my $pdbfile = "${acc}/${mbase}.pdb.gz";
     my $domfile = "${acc}/${mbase}.dom";
@@ -236,11 +238,12 @@ sub _domfile {
 
     my $domio = new SBG::DomainIO::stamp(file=>">$domfile");
     my $keys = [ $model->coverage($target) ];
-    
+    my $mapping = $model->correspondance;
+
     foreach my $key (@$keys) {
         # Write in tandem (model, target, model, target)
         $domio->write($model->domains([$key]));
-        $domio->write($target->domains([$key]));
+        $domio->write($target->domains([$mapping->{$key}]));
     }
 }
 
@@ -261,8 +264,10 @@ sub _pdbfile {
     # Treat model complex as single domain
     my $modelasdom = $model->combine(keys=>$keys);
 
+    my $mapping = $model->correspondance;
+    my $mapped_keys = [ map { $mapping->{$_} } @$keys ];
     # Get target complex as single domain
-    my $targetasdom = $target->combine(keys=>$keys);
+    my $targetasdom = $target->combine(keys=>$mapped_keys);
 
     # Write model first
     $pdbio->write($modelasdom, $targetasdom);

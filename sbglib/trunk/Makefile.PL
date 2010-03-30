@@ -12,10 +12,12 @@ name 'SBG';
 version '1.00';
 
 requires 'Algorithm::Cluster' => '0';
+requires 'Algorithm::Combinatorics' => '0';
 requires 'B::Utils' => '0'; # required by B::Hooks::OP::Check
 requires 'B::Hooks::OP::Check' => '0'; # required by Sub::Call::Recur
 requires 'Bio::Network::Node' => '0';
 requires 'Bio::Network::Interaction' => '0';
+requires 'Bio::Tools::Run::Alignment::Clustalw' => '0';
 requires 'Bio::Tools::Run::StandAloneBlast' => '0';
 requires 'Cache' => '0';
 requires 'CGI' => '0';
