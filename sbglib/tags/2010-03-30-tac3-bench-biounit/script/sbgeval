@@ -88,7 +88,7 @@ use SBG::U::Run qw/frac_of getoptions start_lock end_lock/;
 ################################################################################
 
 my %ops = getoptions(
-                        'modelbase'       # the 'models' base directory
+                        'modelbase',       # the 'models' base directory
                         'output|o',       # html or csv
                         'size|s=s',       # minimum N (or N%) components/model
                         'complete|c',     # Only full-coverage models
@@ -132,7 +132,8 @@ foreach my $file (@ARGV) {
     
     my $basename = basename($file,'.target');
     SBG::U::Log::init($basename, %ops);
-    my $lock = start_lock($basename) or next;
+    my $lock = start_lock($basename);
+    next if ! $lock && ! $ops{'debug'};
     
     # Looks for models in $modelbase/$basename/*.model
     my $modeldir = $ops{'modelbase'} . '/' . $basename;

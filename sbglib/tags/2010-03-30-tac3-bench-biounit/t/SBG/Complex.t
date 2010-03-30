@@ -25,7 +25,7 @@ use SBG::U::List qw/flatten/;
 use SBG::Run::rasmol;
 
 
-my $DEBUG;
+my $DEBUG = defined $DB::sub;
 # $DEBUG = 1;
 SBG::U::Log::init(undef, loglevel=>'DEBUG') if $DEBUG;
 $File::Temp::KEEP_ALL = $DEBUG;

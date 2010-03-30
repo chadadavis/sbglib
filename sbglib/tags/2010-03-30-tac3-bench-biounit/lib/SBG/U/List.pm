@@ -71,6 +71,7 @@ maprange
 interpolate
 norm
 interval_overlap
+cartesian_product
 );
 
 
@@ -372,6 +373,22 @@ sub interval_overlap {
     my $afrac = 1.0 * $overlap / $alen;
     my $bfrac = 1.0 * $overlap / $blen;
     return wantarray ? ($afrac, $bfrac) : $afrac;
+}
+
+
+# Cartesian cross product of an array of arrays
+# http://stackoverflow.com/questions/215908/whats-a-good-non-recursive-algorithm-to-calculate-a-cartesian-product
+sub cartesian_product {
+  my @input = @_;
+  my @ret = @{ shift @input };
+
+  for my $a2 (@input) {
+    @ret = map {
+      my $v = (ref) ? $_ : [$_];
+      map [@$v, $_], @$a2;
+    } @ret;
+  }
+  return @ret;
 }
 
 

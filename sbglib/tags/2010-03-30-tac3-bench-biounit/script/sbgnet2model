@@ -96,7 +96,8 @@ foreach my $file (@ARGV) {
     $ops{'logdir'} = $outdir;
     my $basepath = catfile($outdir, $basename);
     mkdir $outdir;
-    my $lock = start_lock($basepath) or next;
+    my $lock = start_lock($basepath);
+    next if ! $lock && ! $ops{'debug'};
 
     # Setup new log file specific to given input file
     SBG::U::Log::init($basename, %ops);
@@ -146,11 +147,15 @@ sub _print_net {
 sub _one_net {
     my ($net,$name, $ops) = @_;
 
-    my %aops = slice_def($ops, 'minsize', 'binsize');
+    my %aops = slice_def($ops, 'minsize', 'binsize', 'overlap_thresh');
 
-    my $assembler = SBG::CA::Assembler2->new(name=>$name, %aops);
-    my $t = Graph::Traversal::GreedyEdges->new(net=>$net, 
-                                               assembler=>$assembler,
+    my $assembler = SBG::CA::Assembler2->new(
+        name=>$name, 
+        net=>$net, 
+        %aops);
+    my $t = Graph::Traversal::GreedyEdges->new(
+        assembler=>$assembler,
+        net=>$net,
         );
 
     # Go!

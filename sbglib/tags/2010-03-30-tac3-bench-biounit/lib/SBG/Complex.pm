@@ -44,12 +44,16 @@ use overload (
 use Scalar::Util qw/refaddr/;
 use Moose::Autobox;
 use autobox::List::Util;
+use List::MoreUtils qw/mesh/;
 
 use PDL::Lite;
 use PDL::Core qw/pdl squeeze zeroes sclr/;
 use Log::Any qw/$log/;
 
-use SBG::U::List qw/interval_overlap intersection mean sum flatten swap/;
+use Algorithm::Combinatorics qw/variations/;
+
+use SBG::U::List 
+    qw/interval_overlap intersection mean sum flatten swap cartesian_product/;
 use SBG::U::RMSD;
 use SBG::U::iRMSD; # qw/irmsd/;
 use SBG::STAMP; # qw/superposition/
@@ -226,34 +230,40 @@ has 'models' => (
     );
 
 
+
 ################################################################################
-=head2 overlap_thresh
+=head2 symmetry
 
  Function: 
  Example : 
  Returns : 
  Args    : 
 
-Allowable fractional overlap threshold for a newly added domain. If the domain
-overlaps by more than this threshold with any domain already in the complex,
-then it is rejected.
 
 =cut
-has 'overlap_thresh' => (
+has 'symmetry' => (
     is => 'rw',
-    isa => 'Num',
-    default => 0.5,
+    isa => 'Graph',
     );
 
 
-# Combined score of all models in a complex
+################################################################################
+=head2 score
+
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
+
+
+Combined score of all domain models in a complex
+
+=cut
 has 'score' => (
     is => 'rw',
     isa => 'Num',
     lazy_build => 1,
     );
-
- 
 
 sub _build_score {
     my ($self) = @_;
@@ -273,7 +283,7 @@ sub _build_score {
     # NB linker domains are counted multiple times. 
     # Given a hub proten and three interacting spoke proteins, there are not 4
     # values for sequence identity, but rather 6=2*(3 interactions)
-    my $avg_wt = $weights->sum / $weights->length;
+    my $avg_iaction = $weights->sum / $weights->length;
 
 
     # Linker superpositions required to build model by overlapping dimers
@@ -281,11 +291,28 @@ sub _build_score {
     my $scs = $sups->map(sub{$_->scores->at('Sc')});
     # Average Sc of all superpositions done
     my $msc = $scs->sum / $scs->length;
+    # Scale [0,100]
+    $msc *= 10;
 
-    my ($wtcover, $wtseqid, $wtsc) = (1, 2, 1.5);
-    my $score = 100 *
-        ($wtcover*$pseqlength + $wtseqid*$avg_wt**2 + $wtsc*(10*$msc)**2) /
-        ($wtcover*100 + $wtseqid*100**2 + $wtsc*100**2);
+    my $glob = 100 * $self->globularity;
+
+    # Score weights
+    my ($wtcover, $wtiaction, $wtsc, $wtglob) = (.1, .4, .3, .2);
+    # Score ranges
+    my @ranges;
+
+    # Scale to [0,100]
+    my $score = 100 * sum(
+        $wtcover*$pseqlength,
+        $wtiaction*$avg_iaction**2,
+        $wtsc*$msc**2,
+        $wtglob*$glob,
+        ) / sum(
+        $wtcover*100,
+        $wtiaction*100**2,
+        $wtsc*100**2,
+        $wtglob*100,
+        );
     
     return $score;
 }
@@ -302,12 +329,15 @@ sub _build_score {
 
 =cut
 sub domains {
-    my ($self, $keys) = @_;
+    my ($self, $keys, $map) = @_;
 
     # Order of models attribute
     $keys ||= $self->keys;
     return unless @$keys;
 
+    if (defined $map) {
+        $keys = $keys->map(sub{$map->{$_} || $_});
+    }
     my $models = $keys->map(sub{ $self->get($_) });
     my $domains = $models->map(sub { $_->subject });
     return $domains;
@@ -373,9 +403,16 @@ sub get {
 }
 sub keys {
     my $self = shift;
-    return $self->models->keys;
+    return $self->models->keys->sort;
 }
 
+
+# Mapping to names used to correspond to another structure
+has 'correspondance' => (
+    is => 'rw',
+    isa => 'HashRef[Str]',
+    default => sub { {} },
+    );
 
 
 ################################################################################
@@ -439,7 +476,14 @@ B<subgraph> would tend to do it.  Nor is there a way to remove interactions from
 a graph, so we built it here, as needed.
 
 =cut
-sub network {
+has 'network' => (
+    is => 'rw',
+    isa => 'SBG::Network',
+    lazy_build => 1,
+    );
+
+
+sub _build_network {
     my ($self) = @_;
 
     my $net = SBG::Network->new;
@@ -535,7 +579,7 @@ sub coverage {
 
 Estimates the extent of globularity of a complex as a whole as the ratio of the
 rradius of gyration to the maximum radius, over all of the coordinates in the
-complex.
+complex (which may be all atoms, just residues, just centres-of-mass, etc)
 
 This provides some measure of how compact, non-linear, the components in a
 complex are arranged. E.g. high for an exosome, low for actin fibers
@@ -597,8 +641,8 @@ sub combine {
 
 =cut
 sub merge_domain {
-    my ($self,$other,$ref) = @_;
-
+    my ($self,$other,$ref, $olap) = @_;
+    $olap ||= 0.5;
     # Where the last reference domain for this component was placed in space
     my $refmodel = $self->get($ref);
     my $refdom = $refmodel->subject if defined $refmodel;
@@ -621,7 +665,7 @@ sub merge_domain {
     $linker_superposition->apply($_) for $other->domains->flatten;
 
     # Now test steric clashes of potential domain against existing domains
-    my $clashfrac = $self->check_clashes($other->domains, $ref);
+    my $clashfrac = $self->check_clashes($other->domains, $ref, $olap);
     return unless $clashfrac < 1;
 
     # Domain does not clash after being oriented, can be saved in complex now.
@@ -649,8 +693,13 @@ sub merge_domain {
 sub _model_overlap {
     my ($model1, $model2) = @_;
 
+    my ($query1, $query2) = map { $_->query } ($model1, $model2);
+    return unless 
+        UNIVERSAL::isa($query1, 'Bio::Search::Hit::HitI') &&
+        UNIVERSAL::isa($query2, 'Bio::Search::Hit::HitI');
+
     my ($start1, $end1, $start2, $end2) = 
-        map { $_->query->start, $_->query->end } ($model1, $model2);
+        map { $_->start, $_->end } ($query1, $query2);
     # How much of model1's sequence is covered by model2's sequence
     my $seqoverlap = SBG::U::List::interval_overlap(
         $start1, $end1, $start2, $end2);
@@ -675,8 +724,8 @@ sub _model_overlap {
 
 =cut
 sub merge_interaction {
-    my ($self, $other, $iaction) = @_;
-
+    my ($self, $other, $iaction, $olap) = @_;
+    $olap ||= 0.5;
     # If this interaction is just to create a cycle in this complex
     # Difference of iRMSD from 10 is cheap way to get score in [0:10], as STAMP
     return 10 - $self->cycle($iaction)
@@ -692,11 +741,12 @@ sub merge_interaction {
         $log->error("Neither $src nor $dest present in complex: $self");
         return;
     }        
-    my $iaction_score = $self->add_interaction($iaction, $src, $dest);
+    my $iaction_score = $self->add_interaction(
+        $iaction, $src, $dest, $olap);
     return unless defined $iaction_score;
 
     # $dest node was added to $src complex, can now merge on $dest
-    return $self->merge_domain($other, $dest);
+    return $self->merge_domain($other, $dest, $olap);
 
 } # merge_interaction
 
@@ -765,8 +815,8 @@ TODO initialize a complex from an interaction object.
 
 =cut
 sub add_interaction {
-    my ($self, $iaction, $srckey, $destkey) = @_;
-
+    my ($self, $iaction, $srckey, $destkey, $olap) = @_;
+    $olap ||= 0.5;
     # Where the last reference domain for this component was placed in space
     my $refmodel = $self->get($srckey);
     my $refdom = $refmodel->subject if defined $refmodel;
@@ -801,7 +851,7 @@ sub add_interaction {
     $log->debug("Linking:", $linker_superposition->transformation);
 
     # Now test steric clashes of potential domain against existing domains
-    my $clashfrac = $self->check_clashes([$destdom]);
+    my $clashfrac = $self->check_clashes([$destdom], undef, $olap);
     return unless $clashfrac < 1;
 
     # Domain does not clash after being oriented, can be saved in complex now.
@@ -865,8 +915,9 @@ TODO Deprecated in favor of L<check_clashes>
 
 =cut
 sub check_clash {
-    my ($self, $newdom) = @_;
-    my $thresh = $self->overlap_thresh;
+    my ($self, $newdom, $thresh) = @_;
+    $thresh ||= 0.5;
+
     $log->debug("fractional overlap thresh:$thresh");
     my $overlaps = [];
 
@@ -905,9 +956,9 @@ $ignore is the pivot used to merge the complex, which doesn't need to be checked
 
 =cut
 sub check_clashes {
-    my ($self, $otherdoms, $ignore ) = @_;
-    my $thresh = $self->overlap_thresh;
-    $log->debug("fractional overlap thresh:$thresh");
+    my ($self, $otherdoms, $ignore, $olap ) = @_;
+    $olap ||= 0.5;
+    $log->debug("fractional overlap thresh:$olap");
     my $overlaps = [];
 
     $log->debug($self->size, " vs ", $otherdoms->length);
@@ -922,7 +973,7 @@ sub check_clashes {
             $log->debug("$thisdom vs $otherdom");
             my $overlapfrac = $thisdom->overlap($otherdom);
             # Nonetheless, if one clashes severely, bail out
-            return 1 if $overlapfrac > $thresh;
+            return 1 if $overlapfrac > $olap;
             # Ignore domains that aren't overlapping at all (ie < 0)
             $overlaps->push($overlapfrac) if $overlapfrac > 0;
         }
@@ -1027,6 +1078,124 @@ sub rmsd {
    return wantarray ? ($trans, $rmsd) : $rmsd;
 
 } # rmsd
+
+
+# Determine bijection by testing all combinations in homologous classes
+# If one complex is modelling the other, call this as $model->rmsd($benchmark)
+sub rmsd_class {
+    my ($self,$other) = @_;
+    
+    my $bestrmsd = 'Inf';
+    my $besttrans;
+    my $bestmapping;
+    
+    # The complex model knows the symmetry of the components being built, even
+    # the ones that were not explicitly modelled in this complex.
+    # Group components into homologous classes (a component is in just one class)
+    my @cc = $self->symmetry->connected_components();
+
+    # The components actually being modelled in this complex, sorted by class,
+    # since we about to generate permutations of each class. The order of the
+    # classes in @cc must be the same as the order of classes in $model I.e. if
+    # class [B E] is first in @cc, then any B or E present must also be first in
+    # $model
+    my $keys = $self->keys;
+    my $model = [ map { _members_by_class($_, $keys) } @cc ];
+    
+
+    # Permute all members within each class, based on members present in model
+    my @class_variations = class_variations(\@cc, $model);
+    # Cartesian product of all possibilities of each class of homologs
+    my @carts = cartesian_product(@class_variations);
+    foreach my $cart (@carts) {
+        my @cart = flatten $cart;
+        # Map each component present to a possible component in the benchmark
+        my %mapping = mesh(@$model, @cart);
+        
+        # Test this mapping
+        my ($trans, $rmsd) = rmsd_mapping($self, $other, $model, \%mapping);
+        if (defined($rmsd) && $rmsd < $bestrmsd) {
+            $bestrmsd = $rmsd;
+            $besttrans = $trans;
+            $bestmapping = \%mapping;
+            $log->debug("rmsd:$rmsd via: @cart");
+        }
+    }
+    if ($bestrmsd < 'Inf') {
+        $self->correspondance($bestmapping);
+    } else {
+        $bestrmsd = 'NaN';
+    }
+    
+    return wantarray ? ($besttrans, $bestrmsd, $bestmapping) : $bestrmsd;
+    
+} # rmsd_class
+
+
+# $class is an array of arrays. Each array contains the members of a class
+# The $model contains those members, over all classes, which are actually present
+sub class_variations {
+    my ($classes, $model) = @_;
+
+    my @class_variations;
+    foreach my $class (@$classes) {
+        # Get members of this class that are present in model
+        my @present = _members_by_class($class, $model);
+        # All nPk permutations of $k elements of this class
+        my @variations = variations($class, scalar(@present));
+        push @class_variations, \@variations;
+    }
+    return @class_variations;
+}
+
+
+#
+sub _members_by_class {
+    my ($class, $members) = @_;
+    # Stringify (in case of objects)
+    $class = [ map { "$_" } @$class ];
+    my @present = grep { my $c=$_; grep { $_ eq $c  } @$members } @$class;
+    return wantarray ? @present : \@present;
+}
+
+
+# Do RMSD of domains with the given label mapping
+sub rmsd_mapping {
+    my ($self, $other, $keys, $mapping) = @_;
+
+    my $selfcofms = [];
+    my $othercofms = [];
+    foreach my $selflabel (@$keys) {
+       my $selfdom = $self->get($selflabel)->subject;
+
+       my $otherlabel = $mapping->{$selflabel} || $selflabel;
+       my $otherdom = $other->get($otherlabel)->subject;
+       $otherdom = cofm($otherdom);
+
+       my $sup;
+       ($selfdom, $sup) = _setcrosshairs($selfdom, $otherdom) or next;
+
+       $othercofms->push($otherdom);
+       $selfcofms->push($selfdom);
+   }
+
+   unless ($selfcofms->length > 1) {
+       $log->warn("Too few component-wise superpositions to superpose complex");
+       return;
+   }
+
+   my $selfcoords = pdl($selfcofms->map(sub{ $_->coords }));
+   my $othercoords = pdl($othercofms->map(sub{ $_->coords }));
+   $selfcoords = $selfcoords->clump(1,2) if $selfcoords->dims == 3;
+   $othercoords = $othercoords->clump(1,2) if $othercoords->dims == 3;
+
+   my $trans = SBG::U::RMSD::superpose($selfcoords, $othercoords);
+   # Now it has been transformed already. Can measure RMSD of new coords
+   my $rmsd = SBG::U::RMSD::rmsd($selfcoords, $othercoords);
+   $log->info("rmsd:", $rmsd);
+   return wantarray ? ($trans, $rmsd) : $rmsd;
+
+} # rmsd_mapping
 
 
 # set crosshairs of one domain, based on second

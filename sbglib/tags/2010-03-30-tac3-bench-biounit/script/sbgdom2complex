@@ -28,8 +28,9 @@ sub _dom2complex {
         my $model = SBG::Model->new(query=>$dom, subject=>$sphere);
         $complex->set($dom, $model);
     }
-    $complex->store("$base.stor");
-    print "$base.stor complex written\n";
+    my $file = "$base.target";
+    $complex->store($file);
+    print "$file written\n";
 }
 
 

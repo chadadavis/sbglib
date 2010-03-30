@@ -70,8 +70,11 @@ sub start_lock {
     # Why is this necessary? Don't give me a lock, if it's not locked!
     unless (defined $lock && ! $lock->{unlocked}) {
         my $ext = $File::NFSLock::LOCK_EXTENSION;
-        my $lockedby = slurp($donefile . $ext);
-        $log->info("$basepath : locked by: $lockedby");
+        my $lockfile = $donefile . $ext;
+        if (-r $lockfile) {
+            my $lockedby = slurp($donefile . $ext);
+            $log->info("$basepath : locked by: $lockedby");
+        }
         return;
     }
 
