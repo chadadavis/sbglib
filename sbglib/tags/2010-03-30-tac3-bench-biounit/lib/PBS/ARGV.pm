@@ -225,9 +225,13 @@ sub _submit {
     my @cmdops = map { '-' . $_ => $cmdops{$_} } keys %cmdops;
     $cmdline .= " @cmdops";
 
+    # Explicitly inherit TMPDIR from parent process, to prevent PBS from overwriting it
+    $ENV{'TMPDIR'} ||= File::Spec->tmpdir();
+
     my ($tmpfh, $jobscript) = tempfile("pbs_XXXXX", TMPDIR=>1);
     print $tmpfh "#!/usr/bin/env sh\n";
     print $tmpfh "#PBS $_\n" for @directives;
+    print $tmpfh "export TMPDIR=\"$ENV{'TMPDIR'}\"\n";
     print $tmpfh "cd $ENV{PWD}\n";
     print $tmpfh "$cmdline\n";
     close $tmpfh;
