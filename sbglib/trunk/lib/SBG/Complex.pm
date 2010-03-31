@@ -1118,10 +1118,11 @@ sub rmsd_class {
             $bestrmsd = $rmsd;
             $besttrans = $trans;
             $bestmapping = \%mapping;
-            $log->debug("rmsd:$rmsd via: @cart");
+            $log->debug("better rmsd:$rmsd via: @cart");
         }
     }
     if ($bestrmsd < 'Inf') {
+        $log->info("best rmsd:$bestrmsd via: ", join ' ', %$bestmapping);
         $self->correspondance($bestmapping);
     } else {
         $bestrmsd = 'NaN';
@@ -1192,7 +1193,7 @@ sub rmsd_mapping {
    my $trans = SBG::U::RMSD::superpose($selfcoords, $othercoords);
    # Now it has been transformed already. Can measure RMSD of new coords
    my $rmsd = SBG::U::RMSD::rmsd($selfcoords, $othercoords);
-   $log->info("rmsd:", $rmsd);
+   $log->debug("one rmsd:", $rmsd, " via: ", join ' ', %$mapping);
    return wantarray ? ($trans, $rmsd) : $rmsd;
 
 } # rmsd_mapping
