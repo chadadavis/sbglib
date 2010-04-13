@@ -11,6 +11,7 @@ use Module::AutoInstall;
 name 'SBG';
 version '1.00';
 
+requires 'autobox::List::Util' => '0';
 requires 'Algorithm::Cluster' => '0';
 requires 'Algorithm::Combinatorics' => '0';
 requires 'B::Utils' => '0'; # required by B::Hooks::OP::Check
