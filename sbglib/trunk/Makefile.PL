@@ -35,6 +35,7 @@ requires 'Graph' => '0.94';
 requires 'Graph::Writer::GraphViz' => '0';
 requires 'Hash::MoreUtils' => '0';
 requires 'Heap::Priority' => '0';
+requires 'Log::Any' => '0';
 requires 'Log::Dispatch::File' => '0';
 requires 'Log::Log4perl' => '0';
 requires 'Math::Round' => '0';
