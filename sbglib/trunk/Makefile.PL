@@ -69,6 +69,10 @@ requires_external_bin 'rasmol';
 #auto_install(force=>1); # Not compat with CPANPLUS
 auto_install();
 
+install_script 'script/sbgfa2net';
+install_script 'script/sbgnet2model';
+install_script 'script/sbgobj';
+
 # Test all *.t files, 
 # Is there no 'recursive' option here?
 WriteMakefile(
