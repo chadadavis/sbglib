@@ -104,6 +104,8 @@ sub do_target {
 sub do_model {
     my ($target, $modelfile, $fh) = @_;
     
+    $log->debug($modelfile);
+
     my $acc = $target->id;
     # Number of components we want to model
     my $ncomps = $target->size;
