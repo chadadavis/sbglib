@@ -55,7 +55,7 @@ foreach my $file (@ARGV) {
         if ($dirname =~ s/targets/models/) {
             $modelbase = $dirname;
         } else {
-            die;
+            die "Cannot find model files to evaluate. Use --modebase ./path\n";
         }
     }
     $log->debug('modelbase ', $modelbase);
@@ -81,9 +81,11 @@ sub do_target {
         $target->description($pdbc->{'header'});
     }
 
+
     my $seqlength = 
         $target->models->values->map(sub{$_->subject->seq->length})->sum;
     $target->{'seqlength'} = $seqlength;
+    $log->debug("target sequence length: $seqlength");
 
     open my $fh, ">${basename}.csv";
 
@@ -196,7 +198,7 @@ sub modelrmsd {
     my $benchrmsd = $model->scores->at('benchrmsd');
     my $benchmatrix = $model->scores->at('benchmatrix');
 
-    unless (defined $benchrmsd && defined $benchmatrix) {
+    unless (!$ops{'debug'} && defined $benchrmsd && defined $benchmatrix) {
         ($benchmatrix, $benchrmsd) = $model->rmsd_class($target);
         if (defined $benchmatrix) {
             $model->transform($benchmatrix);
