@@ -55,7 +55,7 @@ foreach my $file (@ARGV) {
         if ($dirname =~ s/targets/models/) {
             $modelbase = $dirname;
         } else {
-            die;
+            die "Cannot find model files to evaluate. Use --modebase ./path\n";
         }
     }
     $log->debug('modelbase ', $modelbase);
@@ -81,9 +81,11 @@ sub do_target {
         $target->description($pdbc->{'header'});
     }
 
+
     my $seqlength = 
         $target->models->values->map(sub{$_->subject->seq->length})->sum;
     $target->{'seqlength'} = $seqlength;
+    $log->debug("target sequence length: $seqlength");
 
     open my $fh, ">${basename}.csv";
 
@@ -122,7 +124,7 @@ sub do_model {
     # Number of domain components in this complex model
     my $nmcomps = $models->length;
     # Percentage of component coverage
-    my $pcomps = int 100.0 * $nmcomps / $ncomps;
+    my $pcomps = sprintf "%0.2f", 100.0 * $nmcomps / $ncomps;
     # Interactions in model
     my $miactions = $model->interactions->values;
     my $nmiactions = $miactions->length;
@@ -141,7 +143,7 @@ sub do_model {
     # This is the sequence from the structural template used
     my $mseqlength = $models->map(sub{$_->subject->seq->length})->sum;
     # Percentage sequence coverage by the complex model
-    my $pseqlength = sprintf "%.2f", 100.0 * $mseqlength / $seqlength;
+    my $pseqlength = sprintf "%0.2f", 100.0 * $mseqlength / $seqlength;
     # TODO BUG this $pseqlength printed is not the $iseqlength that goes into
     # Complex score
 
@@ -151,19 +153,21 @@ sub do_model {
     # NB linker domains are counted multiple times. 
     # Given a hub proten and three interacting spoke proteins, there are not 4
     # values for sequence identity, but rather 6=2*(3 interactions)
-    my $avg_wt = sprintf "%.2f", (1.0*$weights->sum/$weights->length);
+    my $avg_wt = sprintf "%0.2f", (1.0*$weights->sum/$weights->length);
     # Average Sc of all superpositions done
     my $msc = 
-        sprintf "%.2f", 
+        sprintf "%0.2f", 
         $superpositions->map(sub{$_->scores->at('Sc')})->sum / $nsup;
 
     my ($rmsd, $matrix) = modelrmsd($model, $target);
+    $rmsd = sprintf("%0.4f", $rmsd);
+    $rmsd = 'NaN' unless defined $matrix;
 
     my ($wtcover, $wtseqid, $wtsc) = (1, 2, 1.5);
 #     my $score = 
 #         ($wtcover*$pseqlength + $wtseqid*$avg_wt**2 + $wtsc*(10*$msc)**2) /
 #         ($wtcover*100 + $wtseqid*100**2 + $wtsc*100^2);
-    my $score = $model->score;
+    my $score = sprintf "%0.2f", $model->score;
 
     print $fh join("\t", 
                    $target->id, $target->description, $target->size, $seqlength,
@@ -194,7 +198,7 @@ sub modelrmsd {
     my $benchrmsd = $model->scores->at('benchrmsd');
     my $benchmatrix = $model->scores->at('benchmatrix');
 
-    unless (defined $benchrmsd && defined $benchmatrix) {
+    unless (!$ops{'debug'} && defined $benchrmsd && defined $benchmatrix) {
         ($benchmatrix, $benchrmsd) = $model->rmsd_class($target);
         if (defined $benchmatrix) {
             $model->transform($benchmatrix);
@@ -225,7 +229,7 @@ sub modeloutputs {
     return if $alldone;
 
     _domfile($domfile, $model, $target);
-    _pdbfile($pdbfile, $model, $target);
+#     _pdbfile($pdbfile, $model, $target);
 
 } # modeloutput
 
@@ -236,7 +240,9 @@ sub _domfile {
     if (-s $domfile) {
         return;
     }
-    return unless ($model->scores->at('benchrmsd') > 0);
+    my $write_target = 
+        $model->scores->exists('benchrmsd') && 
+        $model->scores->at('benchrmsd') > 0;
 
     my $lock = File::NFSLock->new($domfile,LOCK_EX|LOCK_NB) or return;
 
@@ -247,7 +253,7 @@ sub _domfile {
     foreach my $key (@$keys) {
         # Write in tandem (model, target, model, target)
         $domio->write($model->domains([$key]));
-        $domio->write($target->domains([$mapping->{$key}]));
+        $domio->write($target->domains([$mapping->{$key}])) if $write_target;
     }
 }
 

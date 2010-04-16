@@ -28,6 +28,7 @@ use Algorithm::Cluster qw/treecluster/;
 use List::Util qw/min max sum/;
 use Log::Any qw/$log/;
 use Sort::Key::Top qw/rnkeytop/;
+use bigint;
 
 # Must load SBG::Seq to get string overload on Bio::PrimarySeqI
 use SBG::Seq;
@@ -165,6 +166,9 @@ sub _cluster {
 sub _distmat {
     my ($contacts) = @_;
 
+    # Upper sentinel on RMSD
+    my $maxint = inf();
+
     my $distmat = [];
     my $nqueries = @$contacts * (@$contacts-1) / 2;
     $log->debug("$nqueries queries on irmsd table ...");
@@ -179,7 +183,7 @@ sub _distmat {
         for (my $j = $i+1; $j < @$contacts; $j++) {
             # Column-major order, to produce a lower-diagonal distance matrix
             my $irmsd = SBG::DB::irmsd::query($contacts->[$i],$contacts->[$j]);
-            $distmat->[$j][$i] = $irmsd || 'Inf';
+            $distmat->[$j][$i] = $irmsd || $maxint;
 
             if (defined $irmsd) {
                 $similarities[$i]++;
