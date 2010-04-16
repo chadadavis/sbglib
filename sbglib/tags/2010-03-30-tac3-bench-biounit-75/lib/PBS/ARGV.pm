@@ -174,7 +174,7 @@ sub has_bin {
 
 # Ability to connect to PBS server
 sub has_permission {
-    my $qstat = has_bin('qstat');
+    my $qstat = has_bin('qstat') or return;
     return system("$qstat >/dev/null 2>/dev/null") == 0;
 }
 

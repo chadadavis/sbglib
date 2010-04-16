@@ -19,8 +19,8 @@ use SBG::Domain;
 use PDL::Lite;
 use PDL::Core qw/pdl/;
 
-# Precision
-my $prec = 0.1;
+# Precision (or error tolerance)
+my $prec = '2%';
 
 
 sub _test {

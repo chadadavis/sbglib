@@ -11,6 +11,7 @@ use Module::AutoInstall;
 name 'SBG';
 version '1.00';
 
+requires 'autobox::List::Util' => '0';
 requires 'Algorithm::Cluster' => '0';
 requires 'Algorithm::Combinatorics' => '0';
 requires 'B::Utils' => '0'; # required by B::Hooks::OP::Check
@@ -34,6 +35,7 @@ requires 'Graph' => '0.94';
 requires 'Graph::Writer::GraphViz' => '0';
 requires 'Hash::MoreUtils' => '0';
 requires 'Heap::Priority' => '0';
+requires 'Log::Any' => '0';
 requires 'Log::Dispatch::File' => '0';
 requires 'Log::Log4perl' => '0';
 requires 'Math::Round' => '0';
@@ -66,6 +68,10 @@ requires_external_bin 'rasmol';
 # Automagically install above deps from CPAN
 #auto_install(force=>1); # Not compat with CPANPLUS
 auto_install();
+
+install_script 'script/sbgfa2net';
+install_script 'script/sbgnet2model';
+install_script 'script/sbgobj';
 
 # Test all *.t files, 
 # Is there no 'recursive' option here?
