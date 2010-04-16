@@ -49,7 +49,7 @@ use List::MoreUtils qw/mesh/;
 use PDL::Lite;
 use PDL::Core qw/pdl squeeze zeroes sclr/;
 use Log::Any qw/$log/;
-use bigint;
+use bignum; # qw/inf/;
 
 use Algorithm::Combinatorics qw/variations/;
 
@@ -1087,8 +1087,8 @@ sub rmsd_class {
     my ($self,$other) = @_;
     
     # Upper sentinel for RMSD
-    my $maxint = inf();
-    my $bestrmsd = $maxint;
+    my $maxnum = inf();
+    my $bestrmsd = $maxnum;
     my $besttrans;
     my $bestmapping;
     
@@ -1117,14 +1117,20 @@ sub rmsd_class {
         
         # Test this mapping
         my ($trans, $rmsd) = rmsd_mapping($self, $other, $model, \%mapping);
-        if (defined($rmsd) && $rmsd < $bestrmsd) {
+        $log->debug("rmsd:", $rmsd || 'undef');
+        $log->debug("bestrmsd:", $bestrmsd||'undef');
+        $log->debug("rmsd<bestrmsd:", 
+                    defined($rmsd) && defined($bestrmsd) && $rmsd<$bestrmsd);
+        next unless defined $rmsd;
+        if (! defined($bestrmsd) || $rmsd < $bestrmsd) {
             $bestrmsd = $rmsd;
             $besttrans = $trans;
             $bestmapping = \%mapping;
             $log->debug("better rmsd:$rmsd via: @cart");
         }
+
     }
-    if ($bestrmsd < $maxint) {
+    if ($bestrmsd < $maxnum) {
         $log->info("best rmsd:$bestrmsd via: ", join ' ', %$bestmapping);
         $self->correspondance($bestmapping);
     } else {
