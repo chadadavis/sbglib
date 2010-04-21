@@ -16,7 +16,7 @@ L<SBG::STAMP> , L<SBG::DB::trans> , <SBG::U::RMSD>
 
 =cut
 
-################################################################################
+
 
 package SBG::Superposition::Cache;
 use strict;
@@ -82,7 +82,7 @@ sub superposition_native {
 } # superposition_native
 
 
-################################################################################
+
 =head2 superposition
 
  Function: 
@@ -120,7 +120,7 @@ sub superposition {
 } # superposition
 
 
-################################################################################
+
 1;
 
 

@@ -20,7 +20,7 @@ L<Bio::Seq>
 
 =cut
 
-################################################################################
+
 
 # Need to use the package first, before adding to it
 use Bio::PrimarySeqI;
@@ -48,7 +48,7 @@ use overload (
     );
 
 
-################################################################################
+
 =head2 new
 
  Function: 

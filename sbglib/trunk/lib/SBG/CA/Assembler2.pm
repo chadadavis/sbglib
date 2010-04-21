@@ -32,7 +32,7 @@ This will pass from Assembler::solution to Traversal, then back to client
 
 =cut
 
-################################################################################
+
 
 package SBG::CA::Assembler2;
 use Moose;
@@ -109,7 +109,7 @@ has 'maxsolutions' => (
     );
 
 
-################################################################################
+
 =head2 minsize
 
 The solution callback function is only called on solutions this size or
@@ -164,7 +164,7 @@ sub _build_dir {
 }
 
 
-################################################################################
+
 =head2 overlap_thresh
 
  Function: 
@@ -185,7 +185,7 @@ has 'overlap_thresh' => (
 
 
 
-################################################################################
+
 =head2 test
 
  Function: 
@@ -304,7 +304,7 @@ sub _merge {
 } # _merge
 
 
-################################################################################
+
 =head2 _add_monomer
 
  Function: 
@@ -338,7 +338,7 @@ sub _add_monomer {
 
 
 
-################################################################################
+
 =head2 solution
 
  Function: Callback for output/saving/printing
@@ -468,7 +468,7 @@ sub stats {
 }
 
 
-################################################################################
+
 __PACKAGE__->meta->make_immutable;
 no Moose;
 1;

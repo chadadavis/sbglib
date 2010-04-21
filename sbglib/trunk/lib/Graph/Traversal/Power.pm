@@ -45,7 +45,7 @@ Bit::Vector->Configuration("in=enum,out=bin");
 use Log::Any qw/$log/;
 
 
-################################################################################
+
 
 =head1 Attributes
 
@@ -77,7 +77,7 @@ has 'assembler' => (
     );
 
 
-################################################################################
+
 =head2 minsize
 
 The solution callback function is only called on solutions this size or
@@ -92,7 +92,7 @@ has 'minsize' => (
 
 
 
-################################################################################
+
 =head1 Methods
 
 =cut

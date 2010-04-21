@@ -34,7 +34,7 @@ Put the BLOCK in quotes to prevent your shell from interpreting it.
 
 =cut
 
-################################################################################
+
 
 # CPAN
 use Getopt::Long;

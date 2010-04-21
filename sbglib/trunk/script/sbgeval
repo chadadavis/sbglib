@@ -43,7 +43,7 @@ messages, but no info or debug messages to the log file (B<log.log>)
 
 =cut
 
-################################################################################
+
 
 
 use strict;
@@ -85,7 +85,7 @@ use PBS::ARGV qw/qsub/;
 use SBG::U::Run qw/frac_of getoptions start_lock end_lock/;
 
 
-################################################################################
+
 
 my %ops = getoptions(
                         'modelbase',       # the 'models' base directory
@@ -162,7 +162,7 @@ foreach my $file (@ARGV) {
 
 
 
-################################################################################
+
 
 sub openidxhtml {
     my (@keys) = @_;
@@ -310,7 +310,7 @@ sub evaltarget {
 } # evaltarget
 
 
-################################################################################
+
 sub evalmodel {
     my $ops = {};
     $ops = shift(@_) if ref($_[0]) eq 'HASH';
@@ -374,7 +374,7 @@ sub modellinks {
 }
 
 
-################################################################################
+
 sub modelstats {
     my ($ev, $target, $model) = @_;
 
@@ -408,7 +408,7 @@ sub modelstats {
 }
 
 
-################################################################################
+
 
 sub modelrmsd {
     my ($model, $target) = @_;
@@ -429,7 +429,7 @@ sub modelrmsd {
 }
 
 
-################################################################################
+
 sub _sort {
     my ($observations, $field, $reverse) = @_;
     return $observations unless $field;
@@ -439,7 +439,7 @@ sub _sort {
 }
 
 
-################################################################################
+
 # Only top N, or top N% ?
 # Assuming $observations already sorted
 sub _top {
@@ -454,7 +454,7 @@ sub _top {
 
 
 
-################################################################################
+
 # target tsize model msize cover rmsd olap irmsd pval zscore seqid eval sc glob
 sub _print_html {
     my ($table, $tbase) = @_;
@@ -567,7 +567,7 @@ sub _pdbfile {
 }
 
 
-################################################################################
+
 sub _minsize {
     my ($totalsize, $minsize, $complete) = @_;
     # Min components in complex (e.g. 4 or '75%' )
@@ -582,7 +582,7 @@ sub _minsize {
 }
 
 
-################################################################################
+
 sub _domain_scores {
     my ($complex) = @_;
     my $models = $complex->models->values;
@@ -608,7 +608,7 @@ sub _domain_scores {
 } # _domain_scores
 
 
-################################################################################
+
 sub _interaction_scores {
     my ($complex) = @_;
 
@@ -632,7 +632,7 @@ sub _interaction_scores {
 } # _interaction_scores
 
 
-################################################################################
+
 sub _superposition_scores {
     my ($complex) = @_;
     

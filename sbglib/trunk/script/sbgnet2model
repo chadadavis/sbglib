@@ -45,7 +45,7 @@ L<SBG::CA::Assembler> , L<SBG::Network> , L<SBG::SearchI>
 
 =cut
 
-################################################################################
+
 
 use strict;
 use warnings;
@@ -70,7 +70,7 @@ use Graph::Traversal::GreedyEdges;
 use PBS::ARGV qw/qsub/;
 
 
-################################################################################
+
 
 
 my %ops = getoptions(
@@ -126,7 +126,7 @@ foreach my $file (@ARGV) {
 exit;
 
 
-################################################################################
+
 # 
 sub _print_net {
     my ($basename, $net, $i, $n) = @_;
@@ -142,7 +142,7 @@ sub _print_net {
 }
 
 
-################################################################################
+
 # Assemble network
 sub _one_net {
     my ($net,$name, $ops) = @_;

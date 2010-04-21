@@ -28,7 +28,7 @@ B<bencheval> - Evaluate a complex against models of it
 
 =cut
 
-################################################################################
+
 
 
 use strict;
@@ -54,7 +54,7 @@ use Data::Dump qw/dump/;
 use PBS::ARGV qw/qsub/;
 
 
-################################################################################
+
 
 
 my %ops = getoptions(qw/field|f=s reverse|r index=i modeldir|m=s/);
@@ -150,7 +150,7 @@ $alllock->unlock;
 exit;
 
 
-################################################################################
+
 
 
 sub lock_html {
@@ -279,7 +279,7 @@ sub _lc_target {
 }
 
 
-################################################################################
+
 sub evalmodel {
     my $ops = {};
     $ops = shift(@_) if ref($_[0]) eq 'HASH';
@@ -338,7 +338,7 @@ sub modellinks {
 }
 
 
-################################################################################
+
 sub modelstats {
     my ($ev, $target, $model) = @_;
 
@@ -374,7 +374,7 @@ sub modelstats {
 }
 
 
-################################################################################
+
 
 sub modelrmsd {
     my ($model, $target) = @_;
@@ -392,7 +392,7 @@ sub modelrmsd {
 }
 
 
-################################################################################
+
 sub _sort {
     my ($observations, $field, $reverse) = @_;
     return $observations unless $field;
@@ -402,7 +402,7 @@ sub _sort {
 }
 
 
-################################################################################
+
 # Only top N, or top N% ?
 # Assuming $observations already sorted
 sub _top {
@@ -417,7 +417,7 @@ sub _top {
 
 
 
-################################################################################
+
 # target tsize model msize cover rmsd olap irmsd pval zscore seqid eval sc glob
 sub _print_html {
     my ($table, $tbase) = @_;
@@ -672,7 +672,7 @@ sub _ppmfile {
 }
 
 
-################################################################################
+
 sub _domain_scores {
     my ($complex) = @_;
     my $models = $complex->models->values;
@@ -698,7 +698,7 @@ sub _domain_scores {
 } # _domain_scores
 
 
-################################################################################
+
 sub _interaction_scores {
     my ($complex) = @_;
 
@@ -722,7 +722,7 @@ sub _interaction_scores {
 } # _interaction_scores
 
 
-################################################################################
+
 sub _superposition_scores {
     my ($complex) = @_;
     

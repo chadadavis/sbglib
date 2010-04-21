@@ -104,7 +104,7 @@ is(scalar(keys %expected), 0,
 exit;
 
 
-################################################################################
+
 
 package TestAssembler;
 use Moose;

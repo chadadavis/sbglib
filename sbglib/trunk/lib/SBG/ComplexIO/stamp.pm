@@ -16,7 +16,7 @@ L<SBG::DomainIO::stamp> , L<SBG::Complex>
 
 =cut
 
-################################################################################
+
 
 package SBG::ComplexIO::stamp;
 use Moose;
@@ -33,7 +33,7 @@ use SBG::Model;
 use SBG::Complex;
 
 
-################################################################################
+
 =head2 native
 
  Function: Prevents writing the L<SBG::TransformI> of the domain
@@ -67,7 +67,7 @@ sub BUILD {
 }
     
 
-################################################################################
+
 =head2 write
 
  Function: 
@@ -90,7 +90,7 @@ sub write {
 } # write
 
 
-################################################################################
+
 =head2 read
 
  Title   : 
@@ -116,7 +116,7 @@ sub read {
 } # read
 
 
-################################################################################
+
 __PACKAGE__->meta->make_immutable;
 no Moose;
 1;

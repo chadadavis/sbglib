@@ -20,7 +20,7 @@ SBG::U::Log::init(undef, loglevel=>'DEBUG') if $DEBUG;
 $File::Temp::KEEP_ALL = $DEBUG;
 
 
-################################################################################
+
 
 use SBG::Run::rasmol qw/pdb2img/;
 

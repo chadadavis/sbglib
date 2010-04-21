@@ -20,7 +20,7 @@ L<SBG::TransformI> , L<SBG::DomainI>
 
 =cut
 
-################################################################################
+
 
 package SBG::Superposition;
 use Moose;
@@ -83,7 +83,7 @@ has 'transformation' => (
     );
 
 
-################################################################################
+
 =head2 identity
 
  Function: Represents the transformation of a domain onto itself
@@ -116,7 +116,7 @@ sub identity {
 };
 
 
-################################################################################
+
 =head2 transform
 
  Function: 
@@ -142,7 +142,7 @@ sub transform {
 } # transform
 
 
-################################################################################
+
 =head2 apply
 
  Function: 
@@ -160,7 +160,7 @@ sub apply {
 
 
 
-################################################################################
+
 =head2 inverse
 
  Function: 
@@ -195,7 +195,7 @@ sub inverse {
 } # inverse
 
 
-################################################################################
+
 =head2 stringify
 
  Function: 

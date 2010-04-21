@@ -24,7 +24,7 @@ L<SBG::U::RMSD> L<SBG::Superposition::Cache> L<SBG::STAMP>
 
 =cut
 
-################################################################################
+
 
 package SBG::U::iRMSD;
 
@@ -46,7 +46,7 @@ use SBG::U::RMSD qw/rmsd/;
 use SBG::Superposition::Cache qw/superposition/;
 
 
-################################################################################
+
 =head2 irmsd
 
  Function: 

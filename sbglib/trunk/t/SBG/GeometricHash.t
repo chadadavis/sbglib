@@ -19,7 +19,7 @@ my $DEBUG;
 # $DEBUG = 1;
 SBG::U::Log::init(undef, loglevel=>'DEBUG') if $DEBUG;
 
-################################################################################
+
 
 
 use PDL::Lite;
@@ -126,7 +126,7 @@ is ($gh->class($objpoints, $objlabels), 'Multi-point',
     "Model with multi-point objects, labelled");
 
 
-################################################################################
+
 
 # A matrix of random points (row-major, i.e. one row = one point
 # Will add a final column of 1's if homogenous, default

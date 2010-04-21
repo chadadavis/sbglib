@@ -48,7 +48,7 @@ L<SBG::Domain> , L<SBG::IOI>
 
 =cut
 
-################################################################################
+
 
 package SBG::DomainIO::stamp;
 use Moose;
@@ -66,7 +66,7 @@ use SBG::Types qw/$re_pdb $re_descriptor/;
 use SBG::U::List qw/flatten/;
 
 
-################################################################################
+
 =head2 native
 
  Function: Prevents writing the L<SBG::TransformI> of the domain
@@ -100,7 +100,7 @@ sub BUILD {
 }
     
 
-################################################################################
+
 =head2 write
 
  Function: Writes given domain object to the output stream
@@ -159,7 +159,7 @@ sub write {
 } # write
 
 
-################################################################################
+
 =head2 read
 
  Title   : read
@@ -236,7 +236,7 @@ sub read {
 } # read
 
 
-################################################################################
+
 __PACKAGE__->meta->make_immutable;
 no Moose;
 1;

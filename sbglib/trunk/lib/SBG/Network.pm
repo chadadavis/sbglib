@@ -25,7 +25,7 @@ L<Bio::Network::ProteinNet> , L<Bio::Network::Interaction> , L<SBG::Interaction>
 =cut
 
 
-################################################################################
+
 
 package SBG::Network;
 use Moose;
@@ -53,7 +53,7 @@ use SBG::U::Cache qw/cache/;
 
 
 
-################################################################################
+
 =head2 new
 
  Function: 
@@ -95,7 +95,7 @@ sub stringify {
 
 
 
-################################################################################
+
 =head2 proteins
 
  Function: 
@@ -112,7 +112,7 @@ sub proteins {
 } # proteins
 
 
-################################################################################
+
 =head2 add_node
 
  Function: Adds L<Bio::Network::Node> to L<Bio::Network::ProteinNet> 
@@ -136,7 +136,7 @@ override 'add_node' => sub {
 };
 
 
-################################################################################
+
 =head2 add_interaction
 
  Function: 
@@ -205,7 +205,7 @@ sub symmetry {
 
 
 
-################################################################################
+
 =head2 homologs
 
  Function: 
@@ -227,7 +227,7 @@ sub homologs {
 } # homologs
 
 
-################################################################################
+
 =head2 add_seq
 
  Function: 
@@ -248,7 +248,7 @@ sub add_seq {
 } # add_seq
 
 
-################################################################################
+
 =head2 partition
 
  Function: Subsets the network into connected sub graphs 
@@ -275,7 +275,7 @@ sub partition {
 } # partitions
 
 
-################################################################################
+
 =head2 seeds
 
  Function: 
@@ -314,7 +314,7 @@ sub seeds {
 } # seeds
 
 
-################################################################################
+
 =head2 size
 
  Function: 
@@ -331,7 +331,7 @@ sub size {
 } # size
 
 
-################################################################################
+
 =head2 build
 
  Function: Uses B<searcher> to add interactions to network

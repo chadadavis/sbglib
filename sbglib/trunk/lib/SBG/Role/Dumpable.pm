@@ -18,7 +18,7 @@ L<Moose>
 
 =cut
 
-################################################################################
+
 
 package SBG::Role::Dumpable;
 use Moose::Role;
@@ -38,7 +38,7 @@ use PDL::IO::Storable;
 use File::Slurp qw/slurp/;
 
 
-################################################################################
+
 =head2 dump
 
  Function: dumps $self to given file handle, or STDOUT
@@ -75,7 +75,7 @@ sub undump {
 }
 
 
-################################################################################
+
 no Moose::Role;
 1;
 

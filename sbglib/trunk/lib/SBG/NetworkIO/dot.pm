@@ -16,7 +16,7 @@ L<SBG::Network> , L<SBG::IOI>
 
 =cut
 
-################################################################################
+
 
 package SBG::NetworkIO::dot;
 use Moose;
@@ -31,7 +31,7 @@ use Graph::Writer::GraphViz;
 use SBG::Network;
 
 
-################################################################################
+
 =head2 read
 
  Function: Reads the interaction lines from the stream and produces a network
@@ -57,7 +57,7 @@ sub read {
 } # read
 
 
-################################################################################
+
 =head2 write
 
  Function: 
@@ -105,7 +105,7 @@ sub write {
 
 
 
-################################################################################
+
 __PACKAGE__->meta->make_immutable;
 no Moose;
 1;

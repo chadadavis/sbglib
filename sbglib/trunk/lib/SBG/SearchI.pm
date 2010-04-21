@@ -20,7 +20,7 @@ L<SBG::Network> , L<Moose::Role>
 
 =cut
 
-################################################################################
+
 
 package SBG::SearchI;
 use Moose::Role;
@@ -48,7 +48,7 @@ before 'objtype' => sub {
 };
 
 
-################################################################################
+
 =head2 search
 
  Function: Search for homologous interaction template structure for two proteins.
@@ -61,7 +61,7 @@ before 'objtype' => sub {
 requires 'search';
 
 
-################################################################################
+
 no Moose::Role;
 1;
 

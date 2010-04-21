@@ -46,7 +46,7 @@ L<SBG::SearchI>
 
 =cut
 
-################################################################################
+
 
 use Bio::Search::Hit::BlastHit;
 # Overload stringification of external package
@@ -214,7 +214,7 @@ sub remoteblast {
 } # remoteblast
 
 
-################################################################################
+
 =head2 search
 
  Function: 
@@ -325,7 +325,7 @@ sub _blast1 {
 } # _blast1
 
 
-################################################################################
+
 =head2 _expand_aliases
 
  Function: 
@@ -388,7 +388,7 @@ sub _gi2pdbid {
 }
 
 
-################################################################################
+
 __PACKAGE__->meta->make_immutable(inline_constructor=>0);
 no Moose;
 1;

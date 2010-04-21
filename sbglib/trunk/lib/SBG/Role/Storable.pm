@@ -26,7 +26,7 @@ L<Moose::Role>
 
 =cut
 
-################################################################################
+
 
 package SBG::Role::Storable;
 use Moose::Role;
@@ -47,7 +47,7 @@ use SBG::U::List qw/flatten/;
 use PDL::IO::Storable;
 
 
-################################################################################
+
 =head2 store
 
  Function:
@@ -70,7 +70,7 @@ sub store {
 } # store
 
 
-################################################################################
+
 =head2 retrieve
 
  Function:
@@ -98,7 +98,7 @@ sub retrieve {
 } # retrieve
 
 
-################################################################################
+
 =head2 retrieve_files
 
  Function: Get all the objects from all the Stor'ed arrays in all given files
@@ -115,7 +115,7 @@ sub retrieve_files {
 }
 
 
-################################################################################
+
 no Moose::Role;
 1;
 

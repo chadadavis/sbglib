@@ -16,7 +16,7 @@ L<SBG::IOI>
 
 =cut
 
-################################################################################
+
 
 package SBG::InteractionIO::txt;
 use Moose;
@@ -28,7 +28,7 @@ SBG::IOI
 use Moose::Autobox;
 
 
-################################################################################
+
 =head2 write
 
  Function: tab-separated line of components and their templates 
@@ -61,7 +61,7 @@ sub write {
 } # write
 
 
-################################################################################
+
 =head2 read
 
  Function: 
@@ -79,7 +79,7 @@ sub read {
 } # read
 
 
-################################################################################
+
 __PACKAGE__->meta->make_immutable;
 no Moose;
 1;

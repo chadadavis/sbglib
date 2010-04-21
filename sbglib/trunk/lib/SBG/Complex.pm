@@ -23,7 +23,7 @@ L<SBG::Traversal>
 
 =cut
 
-################################################################################
+
 
 package SBG::Complex;
 use Moose;
@@ -75,7 +75,7 @@ use SBG::Domain::Sphere;
 use Module::Load;
 
 
-################################################################################
+
 =head2 id
 
  Function: 
@@ -99,7 +99,7 @@ has 'class' => (
     );
 
 
-################################################################################
+
 =head2 name
 
  Function: 
@@ -115,7 +115,7 @@ has 'name' => (
     );
 
 
-################################################################################
+
 =head2 description
 
  Function: 
@@ -132,7 +132,7 @@ has 'description' => (
 
 
 
-################################################################################
+
 =head2 objtype
 
  Function: Type of L<SBG::DomainI> object to use for clash detection
@@ -154,7 +154,7 @@ before 'objtype' => sub {
 };
 
 
-################################################################################
+
 =head2 interactions
 
 L<SBG::Interaction> objects used to create this complex. Indexed by the
@@ -169,7 +169,7 @@ has 'interactions' => (
     );
 
 
-################################################################################
+
 =head2 superpositions
 
 L<SBG::Superposition> objects used to link structural homologs. Indexed by the
@@ -188,7 +188,7 @@ has 'superpositions' => (
     );
 
 
-################################################################################
+
 =head2 clashes
 
 Fractional overlap/clash of each domain when it was added to the complex. This
@@ -211,7 +211,7 @@ has 'clashes' => (
 # TODO each clash should be saved is the 'scores' hash of the Superposition
 
 
-################################################################################
+
 =head2 models
 
  Function: Maps accession number of protein components to L<SBG::Model> model.
@@ -232,7 +232,7 @@ has 'models' => (
 
 
 
-################################################################################
+
 =head2 symmetry
 
  Function: 
@@ -248,7 +248,7 @@ has 'symmetry' => (
     );
 
 
-################################################################################
+
 =head2 score
 
  Function: 
@@ -346,7 +346,7 @@ sub domains {
 } # domains
 
 
-################################################################################
+
 =head2 count
 
  Function: 
@@ -363,7 +363,7 @@ sub count {
 } # count
 
 
-################################################################################
+
 =head2 size
 
  Function: 
@@ -381,7 +381,7 @@ sub size {
 } # size
 
 
-################################################################################
+
 =head2 set/get/keys
 
  Function: 
@@ -416,7 +416,7 @@ has 'correspondance' => (
     );
 
 
-################################################################################
+
 =head2 coords
 
  Function: 
@@ -447,7 +447,7 @@ sub coords {
 } # coords
 
 
-################################################################################
+
 =head2 add_model
 
  Function: 
@@ -463,7 +463,7 @@ sub add_model {
 } # add_model
 
 
-################################################################################
+
 =head2 network
 
  Function: Derive a new L<SBG::Network> from this complex
@@ -512,7 +512,7 @@ sub _build_network {
 } # network
 
 
-################################################################################
+
 =head2 stringify
 
  Function: 
@@ -528,7 +528,7 @@ sub stringify {
 }
 
 
-################################################################################
+
 =head2 transform
 
  Title   : transform
@@ -550,7 +550,7 @@ sub transform {
 } # transform
 
 
-################################################################################
+
 =head2 coverage
 
  Function: How well do our domains cover those of B<$other>
@@ -570,7 +570,7 @@ sub coverage {
 } # coverage
 
 
-################################################################################
+
 =head2 globularity
 
  Function: 
@@ -601,7 +601,7 @@ sub globularity {
 } # globularity
 
 
-################################################################################
+
 =head2 combine
 
  Function: Combines all of the domains in this complex into a single domain
@@ -631,7 +631,7 @@ sub combine {
 } # combine
 
 
-################################################################################
+
 =head2 merge_domain
 
  Function: 
@@ -714,7 +714,7 @@ sub _model_overlap {
 }
 
 
-################################################################################
+
 =head2 merge_interaction
 
  Function: 
@@ -752,7 +752,7 @@ sub merge_interaction {
 } # merge_interaction
 
 
-################################################################################
+
 =head2 cycle
 
  Function: 
@@ -774,7 +774,7 @@ sub cycle {
 } # cycle
 
 
-################################################################################
+
 =head2 init
 
  Function: 
@@ -798,7 +798,7 @@ sub init {
 } # init
 
 
-################################################################################
+
 =head2 add_interaction
 
  Function: 
@@ -901,7 +901,7 @@ sub _mkmodel {
 } # _mkmodel
 
 
-################################################################################
+
 =head2 check_clash
 
  Function:
@@ -941,7 +941,7 @@ sub check_clash {
 } # check_clash
 
 
-################################################################################
+
 =head2 check_clashes
 
  Function: 
@@ -986,7 +986,7 @@ sub check_clashes {
 } # check_clashes
 
 
-################################################################################
+
 =head2 overlap
 
  Function: 
@@ -1019,7 +1019,7 @@ sub overlap {
 
 
 
-################################################################################
+
 =head2 rmsd
 
  Function:
@@ -1231,7 +1231,7 @@ sub _setcrosshairs {
 } # _setcrosshairs
 
 
-################################################################################
+
 __PACKAGE__->meta->make_immutable;
 no Moose;
 1;

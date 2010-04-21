@@ -28,7 +28,7 @@ One of:
 
 =cut
 
-################################################################################
+
 
 # NB requires bash cmd: complete  -o default -C scriptname scriptname
 use Getopt::Complete ( 

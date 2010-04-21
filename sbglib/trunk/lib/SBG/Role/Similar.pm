@@ -23,13 +23,13 @@ L<Clone>
 
 =cut
 
-################################################################################
+
 
 package SBG::Role::Similar;
 use Moose::Role;
 
 
-################################################################################
+
 =head2 similar
 
  Function: Measures similarity to another instance
@@ -42,7 +42,7 @@ use Moose::Role;
 requires 'similar';
 
 
-################################################################################
+
 no Moose::Role;
 1;
 

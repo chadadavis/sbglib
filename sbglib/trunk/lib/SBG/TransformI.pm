@@ -31,7 +31,7 @@ L<SBG::TransformIO::stamp> , L<SBG::DomainI> , L<SBG::ComplexI>
 
 =cut
 
-################################################################################
+
 
 
 package SBG::TransformI;
@@ -59,7 +59,7 @@ with 'SBG::Role::Writable';
 use Module::Load;
 
 
-################################################################################
+
 =head2 matrix
 
  Function: 
@@ -81,7 +81,7 @@ has 'matrix' => (
     );
 
 
-################################################################################
+
 =head2 _build_matrix
 
  Function: matrix constructor
@@ -97,7 +97,7 @@ requires '_build_matrix';
 
 
 
-################################################################################
+
 =head2 reset
 
  Function: 
@@ -110,7 +110,7 @@ requires '_build_matrix';
 requires 'reset';
 
 
-################################################################################
+
 =head2 apply
 
  Function: Applies this transformation to a given vector/matrix
@@ -124,7 +124,7 @@ requires 'apply';
 
 
 
-################################################################################
+
 =head2 mult
 
  Function: 
@@ -137,7 +137,7 @@ requires 'apply';
 requires 'mult';
 
 
-################################################################################
+
 =head2 inverse
 
  Function: Inverse of this transformation matrix
@@ -150,7 +150,7 @@ requires 'mult';
 requires 'inverse';
 
 
-################################################################################
+
 =head2 equals
 
  Function: True when transformation matrices are equivalent
@@ -169,7 +169,7 @@ requires 'equals';
 sub CLONE_SKIP { 1 }
 
 
-################################################################################
+
 =head2 relativeto
 
  Function: 

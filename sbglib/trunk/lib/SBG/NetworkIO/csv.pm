@@ -50,7 +50,7 @@ L<SBG::Interaction> , L<SBG::Network>
 
 =cut
 
-################################################################################
+
 
 package SBG::NetworkIO::csv;
 use Moose;
@@ -69,7 +69,7 @@ use SBG::Interaction;
 use SBG::Node;
 
 
-################################################################################
+
 =head2 write
 
  Function: 
@@ -90,7 +90,7 @@ sub write {
 } # write
 
 
-################################################################################
+
 =head2 read
 
  Function: Reads the interaction lines from the stream and produces a network
@@ -122,7 +122,7 @@ sub read {
 } # read
 
 
-################################################################################
+
 __PACKAGE__->meta->make_immutable;
 no Moose;
 1;

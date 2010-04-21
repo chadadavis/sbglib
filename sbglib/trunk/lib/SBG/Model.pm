@@ -18,7 +18,7 @@ SBG::Model - A homologous structural template to model a protein sequence
 =cut
 
 
-################################################################################
+
 
 package SBG::Model;
 use Moose;
@@ -36,7 +36,7 @@ use overload (
 
 
 
-################################################################################
+
 =head2 query
 
  Function: The thing of interest, the thing being modelled
@@ -51,7 +51,7 @@ has 'query' => (
     );
 
 
-################################################################################
+
 =head2 subject
 
  Function: The model for the query

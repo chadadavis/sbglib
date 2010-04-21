@@ -19,7 +19,7 @@ L<SBG::IO> generic implementation
 
 =cut
 
-################################################################################
+
 
 package SBG::IOI;
 use Moose::Role;
@@ -33,7 +33,7 @@ use Module::Load;
 use Log::Any qw/$log/;
 
 
-################################################################################
+
 # Accessors
 
 =head2 fh
@@ -56,7 +56,7 @@ has 'fh' => (
     );
 
 
-################################################################################
+
 =head2 compressed
 
  Function: 
@@ -147,7 +147,7 @@ before 'objtype' => sub {
 };
 
 
-################################################################################
+
 =head2 flush
 
  Function: 
@@ -163,7 +163,7 @@ sub flush {
 } # flush
 
 
-################################################################################
+
 =head2 close
 
  Function: 
@@ -179,7 +179,7 @@ sub close {
 } # close
 
 
-################################################################################
+
 =head2 read
 
  Function: Reads the next object from the stream.
@@ -191,7 +191,7 @@ sub close {
 requires 'read';
 
 
-################################################################################
+
 =head2 read_all
 
  Function: 
@@ -212,7 +212,7 @@ sub read_all {
 } # read_all
 
 
-################################################################################
+
 =head2 write
 
  Function: Writes given object/string to the output stream
@@ -224,7 +224,7 @@ sub read_all {
 requires 'write';
 
 
-################################################################################
+
 =head2 rewind
 
  Function: Rewinds a read-file handle to the beginnnig of its stream
@@ -246,7 +246,7 @@ sub reset {
 
         
 
-################################################################################
+
 =head2 _file
 
  Function: 
@@ -275,7 +275,7 @@ sub _file {
 }
 
 
-################################################################################
+
 =head2 _string
 
  Function: 
@@ -293,7 +293,7 @@ sub _string {
 
 
 
-################################################################################
+
 =head2 _tempfile
 
  Function: Sets the output to be a tempfile, whose path can also be retrieved
@@ -316,6 +316,6 @@ sub _tempfile {
 
 
 
-################################################################################
+
 no Moose::Role;
 1;

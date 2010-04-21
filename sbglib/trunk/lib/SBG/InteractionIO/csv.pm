@@ -16,7 +16,7 @@ L<SBG::IOI>
 
 =cut
 
-################################################################################
+
 
 package SBG::InteractionIO::csv;
 use Moose;
@@ -39,7 +39,7 @@ use SBG::Node;
 use SBG::Seq;
 
 
-################################################################################
+
 =head2 _nodes
 
  Function: 
@@ -62,7 +62,7 @@ has '_nodes' => (
     );
 
 
-################################################################################
+
 =head2 count
 
  Function: 
@@ -79,7 +79,7 @@ sub count {
 } # count
 
 
-################################################################################
+
 =head2 write
 
  Function: tab-separated line of components and their templates 
@@ -112,7 +112,7 @@ sub write {
 } # write
 
 
-################################################################################
+
 =head2 read
 
  Function: Reads the interaction lines from the stream and produces a network
@@ -196,7 +196,7 @@ sub _make_node {
 }
 
 
-################################################################################
+
 __PACKAGE__->meta->make_immutable;
 no Moose;
 1;

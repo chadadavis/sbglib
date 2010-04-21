@@ -23,7 +23,7 @@ L<Moose::Role>
 
 =cut
 
-################################################################################
+
 
 package SBG::Role::Versionable;
 use Moose::Role;
@@ -35,7 +35,7 @@ our @EXPORT_OK = qw/check_version/;
 use SBG;
 
 
-################################################################################
+
 =head2 version
 
  Function: Returns the version of the module that created the object
@@ -57,7 +57,7 @@ has version => (
 
 
 
-################################################################################
+
 =head2 check_version
 
  Function: Confirms that the module version has not changed for stored objects
@@ -85,7 +85,7 @@ sub check_version {
 } # check_version
 
 
-################################################################################
+
 no Moose::Role;
 1;
 

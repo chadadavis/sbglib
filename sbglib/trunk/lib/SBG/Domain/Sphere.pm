@@ -23,7 +23,7 @@ L<SBG::DomainI> , L<SBG::U::RMSD>
 
 =cut
 
-################################################################################
+
 
 package SBG::Domain::Sphere;
 use Moose;
@@ -47,7 +47,7 @@ use List::Util; # qw/min/; # min() clashes with PDL::min
 use Log::Any qw/$log/;
 
 
-################################################################################
+
 =head2 center
 
  Function: 
@@ -73,7 +73,7 @@ has 'center' => (
     );
 
 
-################################################################################
+
 =head2 radius
 
  Function: 
@@ -90,7 +90,7 @@ has 'radius' => (
     );
 
 
-################################################################################
+
 =head2 _hair_len
 
  Function: 
@@ -144,7 +144,7 @@ sub _build_coords {
 }
 
 
-################################################################################
+
 =head2 centroid
 
  Function: 
@@ -164,7 +164,7 @@ sub centroid {
 } # centroid
 
 
-################################################################################
+
 =head2 overlap
 
  Function: 
@@ -182,7 +182,7 @@ sub overlap {
 }
 
 
-################################################################################
+
 =head2 overlap_lin
 
  Function: Linear overlap between two spheres, considering the radius 
@@ -218,7 +218,7 @@ sub overlap_lin {
 } # overlap_lin
 
 
-################################################################################
+
 =head2 overlap_lin_max
 
  Function: 
@@ -237,7 +237,7 @@ sub overlap_lin_max {
 } # overlap_lin_max
 
 
-################################################################################
+
 =head2 overlap_lin_frac
 
  Function: 
@@ -259,7 +259,7 @@ sub overlap_lin_frac {
 
 
 
-################################################################################
+
 =head2 volume
 
  Function:
@@ -275,7 +275,7 @@ sub volume {
 }
 
 
-################################################################################
+
 =head2 capvolume
 
  Function:
@@ -301,7 +301,7 @@ sub capvolume {
 }
 
 
-################################################################################
+
 =head2 overlap_vol
 
  Function: volume-based overlap measure
@@ -370,7 +370,7 @@ sub overlap_vol {
 } # overlap_vol
 
 
-################################################################################
+
 __PACKAGE__->meta->make_immutable;
 no Moose;
 1;

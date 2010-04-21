@@ -32,13 +32,13 @@ L<Clone>
 
 =cut
 
-################################################################################
+
 
 package SBG::Role::Transformable;
 use Moose::Role;
 
 
-################################################################################
+
 =head2 transform
 
  Function: Apply the given transformation matrix to this object
@@ -68,7 +68,7 @@ Or as a Perl array with:
 requires 'transform';
 
 
-################################################################################
+
 no Moose::Role;
 1;
 

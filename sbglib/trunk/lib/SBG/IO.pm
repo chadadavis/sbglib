@@ -18,14 +18,14 @@ Interface L<SBG::IOI>
 
 =cut
 
-################################################################################
+
 
 package SBG::IO;
 use Moose;
 with qw/SBG::IOI/;
 
 
-################################################################################
+
 =head2 read
 
  Function: Reads the next object from the stream.
@@ -55,7 +55,7 @@ sub read {
 } # read
 
 
-################################################################################
+
 =head2 write
 
  Function: Writes given object/string to the output stream
@@ -83,7 +83,7 @@ sub write {
 } # write
 
 
-################################################################################
+
 __PACKAGE__->meta->make_immutable;
 no Moose;
 1;

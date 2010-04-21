@@ -20,7 +20,7 @@ L<Moose::Util::TypeConstraints>
 
 =cut
 
-################################################################################
+
 
 package SBG::Types;
 use Moose;
@@ -111,7 +111,7 @@ coerce 'SBG.Descriptor'
     => via { s/\s+/ /g; $_ };
 
 
-################################################################################
+
 __PACKAGE__->meta->make_immutable;
 no Moose::Util::TypeConstraints;
 no Moose;

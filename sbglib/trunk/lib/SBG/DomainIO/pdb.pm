@@ -20,7 +20,7 @@ http://www.wwpdb.org/documentation/format32/v3.2.html
 
 =cut
 
-################################################################################
+
 
 package SBG::DomainIO::pdb;
 use Moose;
@@ -84,7 +84,7 @@ has 'homogenous' => (
     );
 
 
-################################################################################
+
 =head2 write
 
  Function: 
@@ -120,7 +120,7 @@ sub write {
 } # write
 
 
-################################################################################
+
 =head2 read
 
  Function: 
@@ -146,7 +146,7 @@ sub read {
 }
 
 
-################################################################################
+
 =head2 coords
 
  Function: Loads atom coordinates from the PDB file into a L<PDL> matrix
@@ -191,7 +191,7 @@ sub coords {
 } # read
 
 
-################################################################################
+
 __PACKAGE__->meta->make_immutable;
 no Moose;
 1;

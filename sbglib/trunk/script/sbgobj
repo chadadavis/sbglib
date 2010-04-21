@@ -40,7 +40,7 @@ L<SBG::Role::Storable>
 
 =cut
 
-################################################################################
+
 
 # CPAN
 
@@ -100,7 +100,7 @@ print "\n" unless $stringified[$#stringified] =~ /\n$/;
 exit;
 
 
-################################################################################
+
 sub _obj_help {
     my ($obj) = @_;
     # Show the POD page for the packge of the object

@@ -20,7 +20,7 @@ Annotate L<Bio::Seq> with L<Bio::SeqFeature::Generic> first, then collapse it do
 
 =cut
 
-################################################################################
+
 
 package SBG::Split::Roberto;
 use Moose;
@@ -35,7 +35,7 @@ use DBI;
 
 use SBG::U::DB;
 
-################################################################################
+
 =head2 csvfile
 
  Function: 
@@ -69,7 +69,7 @@ has '_sth' => (
     );
 
 
-################################################################################
+
 =head2 BUILD
 
  Function: Sets up DB connection on object construction
@@ -84,6 +84,7 @@ sub BUILD {
     my $f_dir = $self->csvdir;
 #     my $dbh=DBI->connect("DBI:CSV:f_dir=${f_dir};csv_eol=\n;csv_sep_char=\t");
     my $dbh=SBG::U::DB::connect('davis_3dr', 'speedy.embl.de');
+    return unless $dbh;
 
     my $sth = $dbh->prepare(
         join ' ',
@@ -102,7 +103,7 @@ sub BUILD {
 } # BUILD
 
 
-################################################################################
+
 =head2 split
 
  Function: Looks up domain annatations and splits sequence on domains
@@ -131,7 +132,7 @@ sub split {
 }
 
 
-################################################################################
+
 =head2 query
 
  Function: The raw domain feature annotations
@@ -261,7 +262,7 @@ sub _subseq_feat {
 }
 
 
-################################################################################
+
 __PACKAGE__->meta->make_immutable;
 no Moose;
 1;

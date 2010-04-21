@@ -75,7 +75,7 @@ cartesian_product
 );
 
 
-################################################################################
+
 
 # Recursively flattens an array (nested array of arrays) into one long array
 # See also L<Moose::Autobox::Array::flatten_deep> for OO interface
@@ -290,7 +290,7 @@ sub lcp {
 
 
 
-################################################################################
+
 =head2 reorder
 
  Title   : reorder
@@ -392,7 +392,7 @@ sub cartesian_product {
 }
 
 
-################################################################################
+
 1;
 __END__
 

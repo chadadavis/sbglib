@@ -245,7 +245,7 @@ ok($cycle_score > 8,
    "Merging within a complex to close cycle: $cycle_score");
 
 
-################################################################################
+
 
 # Test RMSD of crosshairs of (matching) components of complexes
 # TODO DES assuming Domain::Sphere implementation

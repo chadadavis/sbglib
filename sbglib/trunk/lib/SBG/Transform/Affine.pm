@@ -19,7 +19,7 @@ L<SBG::TransformI>
 
 =cut
 
-################################################################################
+
 
 package SBG::Transform::Affine;
 use Moose;
@@ -48,7 +48,7 @@ use PDL::Basic qw/transpose/;
 use PDL::IO::Storable;
 
 
-################################################################################
+
 =head2 _build_matrix
 
  Function: 
@@ -71,7 +71,7 @@ sub _build_matrix {
 
 
 
-################################################################################
+
 =head2 reset
 
  Function: 
@@ -87,7 +87,7 @@ sub reset {
 } # reset
 
 
-################################################################################
+
 =head2 inverse
 
  Function: Returns the inverse of the given L<SBG::Transform::Affine>
@@ -104,7 +104,7 @@ sub inverse {
 }
 
 
-################################################################################
+
 =head2 apply
 
  Function: Applies this transformation matrix to some L<PDL::Matrix>
@@ -134,7 +134,7 @@ sub apply {
 }
 
 
-################################################################################
+
 =head2 mult
 
  Function: 
@@ -156,7 +156,7 @@ sub mult {
 } # mult
 
 
-################################################################################
+
 =head2 transform
 
  Function: Transform self by the given transformation matrix
@@ -180,7 +180,7 @@ sub transform {
 } # transform
 
 
-################################################################################
+
 =head2 equals
 
  Function:
@@ -201,7 +201,7 @@ sub equals {
 }
 
 
-################################################################################
+
 =head2 stringify
 
  Function: 

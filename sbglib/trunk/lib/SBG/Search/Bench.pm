@@ -16,7 +16,7 @@ L<SBG::SearchI> , L<SBG::Network> , L<SBG::Interaction>
 
 =cut
 
-################################################################################
+
 
 package SBG::Search::Bench;
 use Moose;
@@ -40,7 +40,7 @@ use SBG::U::List qw/uniq/;
 
 our $templatedb = dirname(__FILE__) . "/Bench.csv.gz";
 
-################################################################################
+
 =head2 components
 
  Function: Returns all domains of a given PDB ID, from benchmark
@@ -66,7 +66,7 @@ sub components {
 }
 
 
-################################################################################
+
 =head2 pdbids
 
  Function: 
@@ -89,7 +89,7 @@ sub pdbids {
 }
 
 
-################################################################################
+
 =head2 search
 
  Function: 
@@ -170,7 +170,7 @@ sub search {
 } # search
 
 
-################################################################################
+
 __PACKAGE__->meta->make_immutable;
 no Moose;
 1;

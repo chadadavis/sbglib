@@ -34,7 +34,7 @@ Private internal functions are generally preceded with an _
 
 =cut
 
-################################################################################
+
 
 package SBG::U::RMSD;
 
@@ -55,7 +55,7 @@ use PDL::Ufunc qw/sumover average max all/;
 use PDL::MatrixOps qw/svd det identity/;
 
 
-################################################################################
+
 =head2 rmsd
 
  Function: 
@@ -94,7 +94,7 @@ sub rmsd {
 } # rmsd
 
 
-################################################################################
+
 =head2 centroid
 
  Function: 
@@ -131,7 +131,7 @@ sub centroid {
 }
 
 
-################################################################################
+
 =head2 radius_gyr
 
  Function: 
@@ -149,7 +149,7 @@ sub radius_gyr {
 }
 
 
-################################################################################
+
 =head2 radius_max
 
  Function: 
@@ -168,7 +168,7 @@ sub radius_max {
 } # radius_max
 
 
-################################################################################
+
 =head2 superposition
 
  Function: Determines transformation required to superpose sets of points
@@ -227,7 +227,7 @@ sub superposition {
 } # superposition
 
 
-################################################################################
+
 =head2 superpose
 
  Function: Determines the transformation matrix to superpose A onto B
@@ -307,7 +307,7 @@ sub _rot_inv {
 }
 
 
-################################################################################
+
 =head2 translation
 
  Function: 

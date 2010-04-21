@@ -11,7 +11,7 @@ use FindBin qw/$Bin/;
 use lib "$Bin/../../../lib/";
 use SBG::U::Test qw/float_is pdl_approx/;
 
-################################################################################
+
 
 use SBG::Run::cofm qw/cofm/;
 use SBG::Domain;

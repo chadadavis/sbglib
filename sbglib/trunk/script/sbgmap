@@ -26,7 +26,7 @@ sbgmap SBG::Domain::descriptor files.stor [more-files.stor]
 
 =cut
 
-################################################################################
+
 
 # Don't use strict/warnings here, as that would enforce the incoming function
 # use strict;

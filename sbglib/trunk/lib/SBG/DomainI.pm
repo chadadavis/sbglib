@@ -32,7 +32,7 @@ http://www.compbio.dundee.ac.uk/manuals/stamp.4.2/node29.html
 
 =cut
 
-################################################################################
+
 
 package SBG::DomainI;
 use Moose::Role;
@@ -75,7 +75,7 @@ use SBG::Types qw/$re_chain $re_chain_seg/;
 
 
 
-################################################################################
+
 =head2 pdbid
 
 PDB identifier, from which this domain comes. 
@@ -91,7 +91,7 @@ has 'pdbid' => (
     );
 
 
-################################################################################
+
 =head2 descriptor
 
 STAMP descriptor, Examples:
@@ -142,7 +142,7 @@ has 'entity' => (
     );
 
 
-################################################################################
+
 =head2 file
 
 Path to PDB/MMol file.
@@ -158,7 +158,7 @@ has 'file' => (
     );
 
 
-################################################################################
+
 =head2 length
 
  Function: 
@@ -174,7 +174,7 @@ has 'length' => (
     );
 
 
-################################################################################
+
 =head2 transformation
 
 The L<SBG::Transform> describing any applied transformations
@@ -192,7 +192,7 @@ has 'transformation' => (
     );
 
 
-################################################################################
+
 =head2 coords
 
 Set of homogenous 4D coordinates. The 4th dimension of each point must be 1.
@@ -212,7 +212,7 @@ sub _build_coords {
 }
 
 
-################################################################################
+
 =head2 centroid
 
  Function: 
@@ -226,7 +226,7 @@ Center of mass of all coordinates;
 requires 'centroid';
 
 
-################################################################################
+
 =head2 overlap
 
  Function: Extent to which two domains clash in space
@@ -244,7 +244,7 @@ requires 'overlap';
 sub CLONE_SKIP { 1 }
 
 
-################################################################################
+
 =head2 rmsd
 
  Function:
@@ -261,7 +261,7 @@ sub rmsd {
 }
 
 
-################################################################################
+
 =head2 transform
 
  Function: 
@@ -290,7 +290,7 @@ sub transform {
 } # transform
 
 
-################################################################################
+
 =head2 wholechain
 
  Function:
@@ -309,7 +309,7 @@ sub wholechain {
 }
 
 
-################################################################################
+
 =head2 id
 
 Combines the PDBID and the descriptor into a short ID.
@@ -331,7 +331,7 @@ sub id {
 } 
 
 
-################################################################################
+
 =head2 uniqueid
 
 A unique ID, for use with STAMP.
@@ -354,7 +354,7 @@ sub uniqueid {
 } 
 
 
-################################################################################
+
 =head2 stringify
 
  Function: Resturns a string representation of this domain.
@@ -369,7 +369,7 @@ sub stringify {
 }
 
 
-################################################################################
+
 =head2 equal
 
  Function:
@@ -408,7 +408,7 @@ sub equal {
 } # equal
 
 
-################################################################################
+
 =head2 _descriptor_short
 
  Function:
@@ -432,7 +432,7 @@ sub _descriptor_short {
 }
 
 
-################################################################################
+
 =head2 seq
 
  Function: 
@@ -450,7 +450,7 @@ sub seq {
 } # seq
 
 
-################################################################################
+
 no Moose::Role;
 1;
 

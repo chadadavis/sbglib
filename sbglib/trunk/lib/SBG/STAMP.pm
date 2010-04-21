@@ -35,7 +35,7 @@ http://www.compbio.dundee.ac.uk/Software/Stamp/stamp.html
 
 =cut
 
-################################################################################
+
 
 package SBG::STAMP;
 use strict;
@@ -86,7 +86,7 @@ our $parameters =
 our $cmd = "$stamp $parameters";
 
 
-################################################################################
+
 =head2 superposition_native
 
  Function: Calculates superposition required to put $fromdom onto $ontodom
@@ -168,7 +168,7 @@ sub superposition_native {
 
 
 
-################################################################################
+
 =head2 superposition
 
  Function: 
@@ -243,7 +243,7 @@ sub _setup_input {
 } # _setup_input
 
 
-################################################################################
+
 1;
 
 
