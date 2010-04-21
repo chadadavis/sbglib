@@ -61,8 +61,9 @@ requires_external_bin 'pdbseq';
 requires_external_bin 'stamp';
 requires_external_bin 'transform';
 requires_external_bin 'cofm';
-
 requires_external_bin 'rasmol';
+requires_external_bin 'blastpgp';
+requires_external_bin 'clustalw';
 # requires_external_bin 'dot'; # graphviz
 
 # Automagically install above deps from CPAN
