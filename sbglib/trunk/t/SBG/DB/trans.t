@@ -13,7 +13,7 @@ use PDL;
 
 use FindBin qw/$Bin/;
 use lib "$Bin/../../../lib/";
-use SBG::U::Test qw/float_is pdl_approx pdl_percent/;
+use SBG::U::Test qw/float_is pdl_approx/;
 
 use SBG::DB::trans qw/superposition/;
 use SBG::DB::entity qw/id2dom/;
@@ -53,7 +53,7 @@ my $atod_expect = pdl
  [ -0.71786 , -0.62425 ,  0.30819 ,     -55.71054 ], 
  [        0 ,        0 ,        0 ,             1 ];
 # Verify approximate equality
-pdl_percent($atod_sup->transformation->matrix->slice(',0:2'),
+pdl_approx($atod_sup->transformation->matrix->slice(',0:2'),
            $atod_expect->slice(',0:2'),
            "superposition($doma, $domd)",
            $toler);
@@ -62,13 +62,13 @@ pdl_percent($atod_sup->transformation->matrix->slice(',0:2'),
 # The opposite superposition should have the inverse transformation matrix
 my $dtoa_sup = superposition($domd, $doma);
 my $dtoa_expect = $atod_expect->inv;
-pdl_percent($dtoa_sup->transformation->matrix->slice(',0:2'),
+pdl_approx($dtoa_sup->transformation->matrix->slice(',0:2'),
            $dtoa_expect->slice(',0:2'),
            "superposition($domd, $doma)",
            $toler);
 
 # Also achievable by using inverse() from the Transformation
-pdl_percent($atod_sup->transformation->inverse->matrix->slice(',0:2'),
+pdl_approx($atod_sup->transformation->inverse->matrix->slice(',0:2'),
            $dtoa_expect->slice(',0:2'),
            "superposition($doma, $domd)->transformation->inverse",
            $toler);

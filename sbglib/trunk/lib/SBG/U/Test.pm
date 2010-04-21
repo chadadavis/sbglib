@@ -17,19 +17,19 @@ L<Test::More>
 
 =cut
 
-################################################################################
+
 
 package SBG::U::Test;
 use base qw(Exporter);
 use Test::More;
-use PDL::Ufunc qw/all/;
+use PDL::Ufunc qw/all any/;
 use PDL::Core qw/approx/;
 use Carp qw/carp cluck/;
 
-our @EXPORT_OK = qw(float_is pdl_approx pdl_percent);
+our @EXPORT_OK = qw(float_is pdl_approx);
 
 
-################################################################################
+
 =head2 float_is
 
  Function: Like L<Test::More::is> but works for imprecise floating-point numbers
@@ -65,40 +65,29 @@ sub float_is ($$;$$) {
 }
 
 
-################################################################################
+
 =head2 pdl_approx
 
  Function: Approximate matrix equality
- Example : pdl_approx($mat1, $mat2, 1.5, "These are equal to within +/- 1.5");
+ Example : pdl_approx($mat1, $mat2, "These are equal to within +/- 1.5", 1.5);
  Returns : Bool
- Args    : tolerance (default 1.0)
+ Args    : tolerance as a float or a percent (default '1%')
 
 
 =cut
 sub pdl_approx ($$;$$) {
    my ($mat1, $mat2, $msg, $tol) = @_;
-   $tol = 1.0 unless defined $tol;
-   $msg ||= "pdl approx (+/- $tol)";
+   $tol = '1%' unless defined $tol;
 
-   if (ok(all(approx($mat1, $mat2, $tol)),$msg)) {
-       return 1;
-   } else {
-       print STDERR "\tExpected:\n${mat2}\n\tGot:\n${mat1}\n";
-       return 0;
-   }
-}
-
-sub pdl_percent ($$;$$) {
-   my ($mat1, $mat2, $msg, $tol) = @_;
-   $tol = '10%' unless defined $tol;
+   $msg ||= "pdl (+/- $tol)";
+   my $diff = abs($mat1-$mat2);
 
    if ($tol =~ /(\d+)\%$/) {
        $tol = $1 / 100.0;
+       $diff /= $mat1;
    }
 
-   $msg ||= "pdl percent (+/- $tol\%)";
-
-   if (ok(all(abs($mat1-$mat2)/$mat1 < $tol), $msg)) {
+   if (ok(! any($diff > $tol), $msg)) {
        return 1;
    } else {
        print STDERR "\tExpected:\n${mat2}\n\tGot:\n${mat1}\n";
@@ -107,6 +96,6 @@ sub pdl_percent ($$;$$) {
 }
 
 
-################################################################################
+
 1;
 
