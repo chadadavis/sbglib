@@ -16,7 +16,7 @@ SBG::Run::rasmol - Rasmol utilities
 
 =cut
 
-################################################################################
+
 
 package SBG::Run::rasmol;
 use base qw/Exporter/;
@@ -36,7 +36,7 @@ use SBG::DomainIO::pdb;
 use SBG::U::List qw/flatten/;
 
 
-################################################################################
+
 =head2 rasmol
 
  Function: Runs rasmol on given list of L<SBG::DomainI> objects
@@ -60,7 +60,7 @@ sub rasmol {
     my $io = new SBG::DomainIO::pdb(tempfile=>1);
     $io->write(@doms);
     my $cmd = "$rasmol_gui " . $io->file;
-    system("$cmd 2>/dev/null") == 0 or
+    system("$cmd 1>/dev/null 2>/dev/null") == 0 or
         $log->error("Failed: $cmd\n\t$!");
 
     return $io->file;
@@ -68,7 +68,7 @@ sub rasmol {
 
 
 
-################################################################################
+
 =head2 pdb2img
 
  Function:
@@ -131,7 +131,7 @@ HERE
 } # pdb2img
     
 
-################################################################################
+
 1;
 
 __END__
