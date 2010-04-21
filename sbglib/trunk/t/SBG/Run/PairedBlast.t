@@ -19,7 +19,7 @@ my $DEBUG;
 SBG::U::Log::init(undef, loglevel=>'DEBUG') if $DEBUG;
 $File::Temp::KEEP_ALL = $DEBUG;
 
-################################################################################
+
 
 
 use SBG::Run::PairedBlast;
@@ -32,18 +32,29 @@ my $seq2 = $io->next_seq;
 # Get pairs of hits from common PDB structure
 # my $blast = SBG::Run::PairedBlast->new();
 my $blast;
-$blast =SBG::Run::PairedBlast->new(verbose=>$DEBUG, 
-#                                    method=>'standaloneblast');
-                                   method=>'remoteblast');
+my $method;
+$method = 'standaloneblast';
+ok(blastmethod($method, $seq1, $seq2), "$method");
+$method = 'remoteblast';
+ok(blastmethod($method, $seq1, $seq2), "$method");
 
-my @hitpairs = $blast->search($seq1, $seq2);
-ok(scalar(@hitpairs), 'PairedBlast::search()');
+sub blastmethod {
+    my ($method, $seq1, $seq2) = @_;
+    my $blast =SBG::Run::PairedBlast->new(verbose=>$DEBUG, 
+                                          method=>$method);
+    my @hitpairs = $blast->search($seq1, $seq2);
+    return scalar @hitpairs;
+
+}
+
 
 # Test limit
 # NB this does not imply that always 10 pairs are returned
 # Only that each monomer has 10 hits, max
 # Pairing them generally results in more than 10 hits
-@hitpairs = $blast->search($seq1, $seq2, limit=>10);
+$blast =SBG::Run::PairedBlast->new(verbose=>$DEBUG, 
+                                      method=>'remoteblast');
+my @hitpairs = $blast->search($seq1, $seq2, limit=>10);
 ok(scalar(@hitpairs), 'with limit=10 monomeric hits on each side');
 
 
