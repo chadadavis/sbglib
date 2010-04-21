@@ -16,7 +16,7 @@ L<SBG::SearchI> , L<SBG::Network> , L<SBG::Interaction>
 
 =cut
 
-################################################################################
+
 
 package SBG::Search::Roberto;
 use Moose;
@@ -45,7 +45,8 @@ has '_dbh' => (
 has '_biounit' => (
     is => 'rw',
     isa => 'Str', # Better: MooseX::...Path
-    default => '/g/russell2/3dr/data/final_paper/roberto/pdb_bio_units',
+#     default => '/g/russell2/3dr/data/final_paper/roberto/pdb_bio_units',
+    default => '/net/netfile1/ds-russell/pdb-biounit',
 #     default => '/usr/local/data/pdb-biounit-roberto',
     );
 
@@ -66,6 +67,8 @@ sub BUILD {
 
     my $f_dir = dirname(__FILE__);
     my $dbh=SBG::U::DB::connect('davis_3dr', 'speedy.embl.de');
+    # TODO invalid state if connection fails
+    return unless defined $dbh;
     $self->_dbh($dbh);
 
     my $sth_chain = $dbh->prepare(
@@ -211,14 +214,20 @@ sub _mkchain {
                                descriptor=>"CHAIN $chain");
     if ($assem && $model) {
         my $base = $self->_biounit;
-        my $path = "${base}/${pdb}.pdb${assem}.model${model}.gz";
-        $dom->file($path);
+        my ($subcode) = $pdb =~ /^.(..).$/;
+        my $dir;
+        # Check for the PDB hierarchy
+        $dir ||= "$base/$subcode" if -d "$base/$subcode";
+        # Else assume everything in a single directory
+        $dir ||= $base;
+        my $path = "${dir}/${pdb}.pdb${assem}.model${model}.gz";
+        $dom->file($path) if -e $path;
     }
     return $dom;
 }
 
 
-################################################################################
+
 __PACKAGE__->meta->make_immutable;
 no Moose;
 1;

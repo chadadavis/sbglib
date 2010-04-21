@@ -36,6 +36,11 @@ while (my $seq = $seqio->next_seq) {
 is(scalar($net->nodes), 4, "nodes");
 
 my $roberto = SBG::Search::Roberto->new;
+unless ($roberto->_dbh && -d $roberto->_biounit) {
+    ok(1, 'Skipping tests that require database');
+    exit;
+}
+
 $net->build($roberto);
 # diag join("\n", $net->interactions);
 

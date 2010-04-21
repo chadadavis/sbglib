@@ -10,7 +10,6 @@ use Data::Dump qw/dump/;
 use File::Temp qw/tempfile/;
 
 use Moose::Autobox;
-use FindBin qw/$Bin/;
 
 use FindBin qw/$Bin/;
 use lib "$Bin/../../../lib/";
@@ -26,6 +25,11 @@ use Bio::SeqIO;
 
 
 my $splitter = SBG::Split::Roberto->new(mingap=>30);
+unless ($splitter->_dbh) {
+    ok(1, 'Skipping tests that require database');
+    exit;
+}
+
 # A fasta file of two sequences, with various domains
 my $file = "$Bin/data/85.fa";
 my $in = Bio::SeqIO->new(-file=>$file);
