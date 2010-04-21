@@ -39,5 +39,17 @@ my %iactions = $net->get_interactions($net->nodes);
 my ($got) = values %iactions;
 is_deeply([sort $got->nodes], [sort $node1, $node2], "add_interaction");
 
+# Test symmetry
+use Bio::SeqIO;
+my $io = Bio::SeqIO->new(-file=>"$Bin/data/bovine-f1-atpase.fa");
+my $snet = SBG::Network->new;
+while (my $seq = $io->next_seq) { $snet->add_seq($seq); }
 
+my $symm = $snet->symmetry;
+my @cc = $symm->connected_components;
+my $str = join(',', sort map { '(' . join(',',sort @$_) . ')' } @cc);
+my $str_expected = 
+    '(1e79A,1e79B,1e79C),(1e79D,1e79E,1e79F),(1e79G),(1e79H),(1e79I)';
 
+is($str, $str_expected, 'symmetry()');
+    
