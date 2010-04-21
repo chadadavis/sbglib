@@ -19,7 +19,7 @@ L<SBG::Domain::Sphere> , L<SBG::Run::cofm>
 
 =cut
 
-################################################################################
+
 
 package SBG::DB::cofm;
 use base qw/Exporter/;
@@ -33,10 +33,10 @@ use SBG::U::DB;
 
 # TODO DES OO
 our $database = "trans_3_0";
-our $host = "wilee";
+our $host = "pevolution.bioquant.uni-heidelberg.de";
 
 
-################################################################################
+
 =head2 query
 
  Function: Fetches centre-of-mass and radius of gyration of whole PDB chains
@@ -95,5 +95,5 @@ chain=?
 
 
 
-################################################################################
+
 1;

@@ -19,7 +19,7 @@
 
 =cut
 
-################################################################################
+
 
 package SBG::DB::entity;
 use base qw/Exporter/;
@@ -41,7 +41,7 @@ use SBG::Domain::Sphere;
 
 # TODO DES OO
 our $database = "trans_3_0";
-our $host = "wilee.embl.de";
+our $host = "pevolution.bioquant.uni-heidelberg.de";
 
 
 # Query, given a Blast Hit object
@@ -86,7 +86,7 @@ sub _gi2pdbid {
 }
 
 
-################################################################################
+
 =head2 query
 
  Function: 
@@ -172,7 +172,7 @@ AND chain = ?
 } # query
 
 
-################################################################################
+
 =head2 id2dom
 
  Function: 
@@ -232,5 +232,5 @@ AND id = ?
 } # id2dom
 
 
-################################################################################
+
 1;

@@ -18,7 +18,7 @@
 
 =cut
 
-################################################################################
+
 
 package SBG::DB::res_mapping;
 use base qw/Exporter/;
@@ -32,10 +32,10 @@ use SBG::U::DB;
 
 # TODO DES OO
 our $database = "trans_3_0";
-our $host = "wilee";
+our $host = "pevolution.bioquant.uni-heidelberg.de";
 
 
-################################################################################
+
 =head2 query
 
  Function: 
@@ -91,5 +91,5 @@ AND pdbseq=?
 
 
 
-################################################################################
+
 1;

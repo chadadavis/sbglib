@@ -18,7 +18,7 @@
 
 =cut
 
-################################################################################
+
 
 package SBG::DB::trans;
 use base qw/Exporter/;
@@ -38,10 +38,10 @@ use SBG::Transform::Affine;
 
 # TODO DES OO
 our $database = "trans_3_0";
-our $host = "wilee";
+our $host = "pevolution.bioquant.uni-heidelberg.de";
 
 
-################################################################################
+
 =head2 query
 
  Function: 
@@ -75,7 +75,7 @@ sub superposition {
 } # superposition
 
 
-################################################################################
+
 =head2 superposition_native
 
  Function: 
@@ -152,5 +152,5 @@ WHERE (id_entity1=? AND id_entity2=?)
 
 
 
-################################################################################
+
 1;

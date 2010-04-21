@@ -18,7 +18,7 @@
 
 =cut
 
-################################################################################
+
 
 package SBG::DB::irmsd;
 use base qw/Exporter/;
@@ -33,10 +33,10 @@ use SBG::U::DB;
 
 # TODO DES OO
 our $database = "trans_3_0";
-our $host = "wilee";
+our $host = "pevolution.bioquant.uni-heidelberg.de";
 
 
-################################################################################
+
 =head2 query
 
  Function: 
@@ -98,5 +98,5 @@ sub _order {
 }
 
 
-################################################################################
+
 1;
