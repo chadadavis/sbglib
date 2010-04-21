@@ -15,6 +15,7 @@ use lib "$Bin/../../lib/";
 use SBG::U::Test qw/float_is pdl_approx/;
 use SBG::Transform::Affine;
 
+my $toler = 0.01;
 
 # All tests use this transformation matrix
 my $mat = pdl
@@ -32,13 +33,19 @@ my $inv_ans = pdl
     [0.425322451 , -0.739532804 , -0.521708170 , -48.386305 ],
     [-0.71959723 , -0.625931417 ,  0.300643047 , -55.816782 ], 
     [ 0.         ,  0.          ,  0.          ,   1.       ];
-pdl_approx($inv->matrix, $inv_ans, 'inverse()');
+pdl_approx($inv->matrix, $inv_ans, 
+           'inverse()', 
+           $toler,
+    );
 
 
 # Test identity
 my $inv_prod = $t x $inv;
 my $id = new SBG::Transform::Affine;
-pdl_approx($inv_prod->matrix, $id->matrix, 'inverse() produces identity');
+pdl_approx($inv_prod->matrix, $id->matrix, 
+           'inverse() produces identity',
+           $toler,
+    );
 
 
 # Test transforming a vector
@@ -46,7 +53,10 @@ my $v = pdl [ 1.1,2.2,3.3,1];
 # NB don't need to transpose $v here (does it for us)
 my $prod = $t->apply($v);
 my $prod_ans = pdl [ -54.2423,-59.4336,-56.9354,1.];
-pdl_approx($prod, $prod_ans, 'Vector transformation');
+pdl_approx($prod, $prod_ans, 
+           'Vector transformation',
+           $toler,
+    );
 
 
 # Testing matrix composition
@@ -56,13 +66,19 @@ my $squared_ans = pdl
     [  0.18079 ,  0.97878 ,  0.09660 ,  7.48028],
     [  0.06905 , -0.11058 ,  0.99145 , -1.80878],
     [  0       ,  0       ,  0       ,  1      ];
-pdl_approx($squared, $squared_ans, 'Matrix composition');
+pdl_approx($squared, $squared_ans, 
+           'Matrix composition',
+           $toler,
+    );
 
 
 # Test inverting a composition
 my $sq_inv = $squared->inverse;
 my $sq_inv_prod = $sq_inv x $squared;
-pdl_approx($sq_inv_prod->matrix, $id->matrix, 'inverse() on composition');
+pdl_approx($sq_inv_prod->matrix, $id->matrix, 
+           'inverse() on composition',
+           $toler,
+    );
 
 
 

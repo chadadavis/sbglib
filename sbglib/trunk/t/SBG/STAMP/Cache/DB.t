@@ -11,7 +11,7 @@ use SBG::U::Test qw/float_is pdl_approx/;
 
 # $File::Temp::KEEP_ALL = 1;
 
-################################################################################
+
 
 use SBG::STAMP;
 use SBG::Domain;
@@ -20,7 +20,7 @@ use SBG::DB::entity;
 use PDL;
 
 # Tolerate rounding differences between stamp (using clib) and PDL
-my $toler = '1%';
+my $toler = 1.0;
 
 # get domains for chains of interest
 my $doma = SBG::Domain->new(pdbid=>'2br2', descriptor=>'CHAIN A');
@@ -66,11 +66,11 @@ my $dtob_ans = pdl [
     ];
 
 pdl_approx($trans5bd, $btod_ans,
-           "Database transformation verified B=>D, to within $toler A",
+           "Database transformation verified B=>D, to within $toler",
            $toler
     );
 pdl_approx($trans5db, $dtob_ans, 
-           "Database transformation verified D=>B, to within $toler A",
+           "Database transformation verified D=>B, to within $toler",
            $toler,
     );
 
