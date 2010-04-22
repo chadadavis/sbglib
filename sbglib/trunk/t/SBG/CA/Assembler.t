@@ -75,7 +75,7 @@ rasmol($complex->domains) if $DEBUG;
 
 my $solutionfile = 
     $assembler->solution($complex, $net, [$net->nodes], $interactions, 0);
-ok($solutionfile, 'Checking solution');
+ok($solutionfile && -e $solutionfile, 'Checking solution file');
 unlink $solutionfile;
 
 my $dup = $assembler->solution($complex, $net, [$net->nodes], $interactions, 0);

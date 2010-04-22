@@ -150,9 +150,9 @@ sub solution {
         my $sizeclassn = $self->sizes->at($sizeclass) || 0;
         $self->sizes->put($sizeclass, $sizeclassn+1);
 
-        $self->_write_solution($complex, $class);
+        my $solutionfile = $self->_write_solution($complex, $class);
 
-        return 1;
+        return $solutionfile;
     }
 
 } # solution
@@ -172,7 +172,7 @@ sub _write_solution {
     $file = catfile($self->dir, $file) if -d $self->dir;
 
     $complex->store($file);
-
+    return $file;
 }
 
 
