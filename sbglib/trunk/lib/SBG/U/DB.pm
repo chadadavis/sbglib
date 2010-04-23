@@ -78,14 +78,14 @@ sub connect {
     };
 
     unless (defined $dbh) {
-        while (DBI->errstr =~ /too many connections/i) {
+        while ($DBI::errstr =~ /too many connections/i) {
             sleep int(rand*$sleep);            
             # Try again
             $dbh = DBI->connect($dbistr);
         }
         unless ($dbh) {
             # Some other error
-            warn ("Could not connect to database:" . DBI->errstr . "\n");
+            warn ("Could not connect to database:" . $DBI::errstr . "\n");
             return;
         }
     }
