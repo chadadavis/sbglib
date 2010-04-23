@@ -33,7 +33,7 @@ use SBG::U::DB;
 
 # TODO DES OO
 our $database = "trans_3_0";
-our $host = "pevolution.bioquant.uni-heidelberg.de";
+our $host;
 
 
 

@@ -41,7 +41,7 @@ use SBG::Domain::Sphere;
 
 # TODO DES OO
 our $database = "trans_3_0";
-our $host = "pevolution.bioquant.uni-heidelberg.de";
+our $host;
 
 
 # Query, given a Blast Hit object

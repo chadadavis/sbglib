@@ -51,11 +51,15 @@ without incurring any overhead.
 
 If the return value is not defined, check L<DBI>C<errstr()>
 
+Host name is optional. If not given, uses the same rules as mysql to determine
+which database host to connect to. Specified in ~/.my.cnf otherwise B<localhost>
+
 =cut
 sub connect {
     my ($dbname, $host, $timeout) = @_;
     our $sleep;
     our %connections;
+    $host ||= _default_host();
     # This is also OK, if $host is not defined
     my $dbh = $connections{$host}{$dbname};
     return $dbh if $dbh;
@@ -88,6 +92,16 @@ sub connect {
     # Update cache
     $connections{$host}{$dbname} = $dbh;
     return $dbh;
+}
+
+
+use Config::IniFiles;
+sub _default_host {
+    our $host;
+    return $host if $host;
+    my $cfg = Config::IniFiles->new(-file=>"$ENV{HOME}/.my.cnf");
+    $host = $cfg->val('client', 'host') || '';
+    return $host;
 }
 
 
