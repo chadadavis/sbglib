@@ -88,8 +88,6 @@ sub _cache {
         return;
     }
 
-    my $seq = _run($dom);
-
     cache_set($cachename, $key, $seq) if $cache;
     return $seq;
 
