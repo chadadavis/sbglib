@@ -503,7 +503,7 @@ sub _build_network {
                      SBG::Node->new(SBG::Seq->new(-display_id=>$_)));
             }
         }
-        $net->add($_) for @nodes;
+        $net->add_node($_) for @nodes;
         $net->add_interaction(
             -nodes=>[@nodes],-interaction=>$i);
     }
@@ -764,7 +764,7 @@ sub merge_interaction {
 =cut
 sub cycle {
     my ($self, $iaction) = @_;
-    $log->debug($iaction);
+    $log->info($iaction);
     my $keys = $iaction->keys;
     # Get domains from self and domains from iaction in corresponding order
     my $irmsd = SBG::U::iRMSD::irmsd($self->domains($keys), 
