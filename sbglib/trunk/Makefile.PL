@@ -54,6 +54,7 @@ requires 'Sort::Key::Top' => '0';
 requires 'Sub::Call::Recur' => '0';
 requires 'Test::More' => '0';
 requires 'Text::ParseWords' => '0';
+requires 'Test::Pod::Coverage' => '1.08';
 
 
 # These STAMP binaries need to be found in the PATH
