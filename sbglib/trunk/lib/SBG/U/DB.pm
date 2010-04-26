@@ -30,6 +30,9 @@ use strict;
 use warnings;
 use DBI;
 
+# Simply for documenting the dependency
+use DBD::mysql;
+
 # Connection cache (by hostname/dbname)
 our %connections;
 
