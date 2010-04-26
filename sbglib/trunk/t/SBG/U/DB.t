@@ -17,12 +17,12 @@ use SBG::U::DB qw/connect/;
 use Scalar::Util qw/refaddr/;
 
 # Test connection caching
-my $dbh1 = connect('trans_3_0', 'pevolution.bioquant.uni-heidelberg.de');
-my $dbh2 = connect('trans_3_0', 'pevolution.bioquant.uni-heidelberg.de');
+my $dbh1 = connect('trans_3_0');
+my $dbh2 = connect('trans_3_0');
 
 # Test bad connection
-my $dbh3 = connect('blahblah', 'www.embl.de');
-ok(!defined($dbh3), 'Testing timeout on www.embl.de');
+my $dbh3 = connect('blahblahsdfdfkjasdfkjadsflj');
+ok(!defined($dbh3), 'Testing timeout');
 
 is(refaddr($dbh1),refaddr($dbh2), "connect() caching");
 
