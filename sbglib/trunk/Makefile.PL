@@ -1,7 +1,6 @@
 #!/usr/bin/env perl
 
 # Update this list with something like:
-# cd sbglib
 # grep  '^use ' --exclude='*.svn*' -r . |cut -f 2 -d ' '|cut -f 1 -d ';'|grep -v '^SBG'|sort|uniq
 
 
@@ -20,13 +19,14 @@ requires 'Bio::Network::Node' => '0';
 requires 'Bio::Network::Interaction' => '0';
 requires 'Bio::Tools::Run::Alignment::Clustalw' => '0';
 requires 'Bio::Tools::Run::StandAloneBlast' => '0';
-requires 'Cache' => '0';
 requires 'CGI' => '0';
 requires 'CHI' => '0';
 requires 'Class::MOP' => '0';
 requires 'Clone' => '0';
 requires 'Config::IniFiles' => '0';
 requires 'Data::Dump' => '0';
+requires 'DBD::mysql';
+requires 'DBI';
 requires 'File::Basename' => '0';
 requires 'File::Slurp' => '0';
 requires 'File::Temp' => '0';
