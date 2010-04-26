@@ -292,21 +292,6 @@ sub _rot_svd {
 }
 
 
-# Determine rotation matrix, based on symmetric square roots
-# Doesn't (seem to) work if covariance matrix (crossprod) is non singular
-# http://www.personal.leeds.ac.uk/~bgy1mm/Bioinformatics/rmsd.html
-use PDL::LinearAlgebra qw/mchol/;
-sub _rot_inv {
-    my ($A) = @_;
-    my $crossprod = $A->crossprod($A);
-    # Symmetric square root. Will only work if matrix is positive definite.
-    my $sqrt = mchol($crossprod);
-    my $rot = $sqrt x $A->inv;
-    return $rot;
-
-}
-
-
 
 =head2 translation
 
