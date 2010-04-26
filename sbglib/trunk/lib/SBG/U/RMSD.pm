@@ -53,7 +53,7 @@ use PDL::Core qw/pdl ones inplace sclr/;
 use PDL::Reduce qw/reduce/;
 use PDL::Ufunc qw/sumover average max all/;
 use PDL::MatrixOps qw/svd det identity/;
-
+use PDL::LinearAlgebra; # qw/crossprod/;
 
 
 =head2 rmsd
