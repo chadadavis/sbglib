@@ -2,6 +2,8 @@
 # Library paths are always appended rathern than prepended.
 # They will not over-ride your own libraries
 
+export DUB=1
+
 # Enable bash programable completion
 shopt -s progcomp
 # And don't break words on a colon :
