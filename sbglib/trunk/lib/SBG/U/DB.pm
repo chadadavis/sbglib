@@ -66,16 +66,15 @@ sub connect {
 
     my $dbistr = "dbi:mysql:dbname=$dbname";
     $dbistr .= ";host=$host" if $host;
-    $timeout ||= 5;
+    $timeout ||= defined($DB::sub) ? 100: 5;
 
     $dbh = eval { 
         local $SIG{ALRM} = sub { die "SIGALRM\n"; };
         alarm($timeout);
-        my $success = DBI->connect($dbistr);
-        alarm(0);
-        die "$!\n" unless $success;
+        my $success = DBI->connect($dbistr) or die "$DBI::errstr\n";
         return $success;
     };
+    alarm(0);
 
     unless (defined $dbh) {
         while ($DBI::errstr =~ /too many connections/i) {

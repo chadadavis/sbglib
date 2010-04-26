@@ -80,7 +80,7 @@ sub _cache {
     }
 
     # Cache miss, run external program
-    my $seq = _run($dom);
+    $seq = _run($dom);
 
     unless ($seq) {
         # failed, set negative cache entry
