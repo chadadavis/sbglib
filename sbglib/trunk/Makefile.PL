@@ -73,6 +73,7 @@ auto_install();
 install_script 'script/sbgfa2net';
 install_script 'script/sbgnet2model';
 install_script 'script/sbgobj';
+install_script 'sbglib.sh';
 
 # Test all *.t files, 
 # Is there no 'recursive' option here?
