@@ -26,7 +26,8 @@ use PBS::ARGV qw/qsub linen nlines/;
 if (PBS::ARGV::has_permission) {
 
     @ARGV = 1..5;
-    my $dir = $ENV{CACHEDIR} || $ENV{TMPDIR} || tempdir(CLEANUP=>!$DEBUG);
+    my $base = $ENV{'CACHEDIR'} || $ENV{'HOME'};
+    my $dir = tempdir(DIR=>$base, CLEANUP=>!$DEBUG);
     diag $dir;
     my @jobids = qsub(directives=>["-o $dir", "-e $dir"]);
     if (! defined $ENV{'PBS_ENVIRONMENT'}) {
