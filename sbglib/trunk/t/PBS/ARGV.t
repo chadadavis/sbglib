@@ -28,7 +28,6 @@ if (PBS::ARGV::has_permission) {
     @ARGV = 1..5;
     my $base = $ENV{'CACHEDIR'} || $ENV{'HOME'};
     my $dir = tempdir(DIR=>$base, CLEANUP=>!$DEBUG);
-    diag $dir;
     my @jobids = qsub(directives=>["-o $dir", "-e $dir"]);
     if (! defined $ENV{'PBS_ENVIRONMENT'}) {
         is(scalar(@ARGV), 0, "All arguments submitted as PBS jobs");

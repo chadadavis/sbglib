@@ -246,7 +246,6 @@ sub _submit {
     } else {
         chomp $jobid;
         $log->info("$jobid $filearg");
-        print STDERR "$jobid $filearg $jobscript\n";
         return $jobid;
     }
 
