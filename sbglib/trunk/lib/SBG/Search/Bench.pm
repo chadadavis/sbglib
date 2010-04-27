@@ -55,7 +55,7 @@ sub components {
     my ($pdbid) = @_;
     $pdbid = lc $pdbid;
     # Grep the lines from database
-    my $cmd = "zgrep -P \'^ -- Can model $pdbid (\\S+) (\\S+)\' $templatedb";
+    my $cmd = "zcat $templatedb | egrep \'^ -- Can model $pdbid (([^[:space:]]+)) (([^[:space:]]+))\'";
     open my $fh, "$cmd|";
     my @components;
     while (my $line = <$fh>) {
@@ -78,7 +78,7 @@ sub components {
 =cut
 sub pdbids {
     # Grep the lines from database
-    my $cmd = "zgrep -o -P \'^ -- Can model (\\S+)\' $templatedb|sort|uniq";
+    my $cmd = "zcat $templatedb | egrep -o \'^ -- Can model (....)\' | sort | uniq";
     open my $fh, "$cmd|";
     my @ids;
     while (my $line = <$fh>) {
