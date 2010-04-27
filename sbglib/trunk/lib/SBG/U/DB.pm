@@ -31,13 +31,14 @@ use warnings;
 use DBI;
 
 # Simply for documenting the dependency
-use DBD::mysql;
+#use DBD::mysql;
 
 # Connection cache (by hostname/dbname)
 our %connections;
 
 our $sleep = 10;
 
+our $default_db = 'trans_3_0';
 
 
 =head2 connect
@@ -62,6 +63,7 @@ sub connect {
     my ($dbname, $host, $timeout) = @_;
     our $sleep;
     our %connections;
+    $dbname ||= $default_db;
     $host ||= _default_host();
     # This is also OK, if $host is not defined
     my $dbh = $connections{$host}{$dbname};
@@ -72,22 +74,25 @@ sub connect {
     $timeout ||= defined($DB::sub) ? 100: 5;
 
     $dbh = eval { 
-        local $SIG{ALRM} = sub { die "SIGALRM\n"; };
+        local $SIG{ALRM} = sub { 
+            die "DBI::connect timed out: $dbname@$host\n"; 
+        };
         alarm($timeout);
-        my $success = DBI->connect($dbistr) or die "$DBI::errstr\n";
+        my $success = DBI->connect($dbistr) or die;
         return $success;
     };
     alarm(0);
 
     unless (defined $dbh) {
-        while ($DBI::errstr =~ /too many connections/i) {
+        while (defined($DBI::errstr) && 
+               $DBI::errstr =~ /too many connections/i) {
             sleep int(rand*$sleep);            
             # Try again
             $dbh = DBI->connect($dbistr);
         }
         unless ($dbh) {
             # Some other error
-            warn ("Could not connect to database:" . $DBI::errstr . "\n");
+            # warn ("Could not connect to database:" . $DBI::errstr . "\n");
             return;
         }
     }
