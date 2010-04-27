@@ -9,6 +9,11 @@ use Test::More 'no_plan';
 use FindBin qw/$Bin/;
 use lib "$Bin/../../lib/";
 
+my $DEBUG;
+# $DEBUG = 1;
+
+use File::Temp qw/tempdir/;
+
 use PBS::ARGV qw/qsub linen nlines/;
 
 
@@ -21,7 +26,9 @@ use PBS::ARGV qw/qsub linen nlines/;
 if (PBS::ARGV::has_permission) {
 
     @ARGV = 1..5;
-    my @jobids = qsub();
+    my $dir = $ENV{CACHEDIR} || $ENV{TMPDIR} || tempdir(CLEANUP=>!$DEBUG);
+    diag $dir;
+    my @jobids = qsub(directives=>["-o $dir", "-e $dir"]);
     if (! defined $ENV{'PBS_ENVIRONMENT'}) {
         is(scalar(@ARGV), 0, "All arguments submitted as PBS jobs");
     } 
