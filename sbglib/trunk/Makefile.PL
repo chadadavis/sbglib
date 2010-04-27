@@ -28,6 +28,7 @@ requires 'Config::IniFiles' => '0';
 requires 'Data::Dump' => '0';
 requires 'DBD::mysql' => '0';
 requires 'DBI' => '0';
+requires 'Devel::Symdump' => '0'; # Missing dep for Test::Pod::Coverage
 requires 'File::Basename' => '0';
 requires 'File::NFSLock' => '0';
 requires 'File::Slurp' => '0';
