@@ -11,6 +11,12 @@ use SBG::U::Test qw/float_is pdl_approx/;
 
 # $File::Temp::KEEP_ALL = 1;
 
+use SBG::U::DB;
+my $dbh = SBG::U::DB::connect();
+unless($dbh) {
+    diag "Could not connect to database. Skipping database tests\n";
+    exit;
+}
 
 
 use SBG::STAMP;
