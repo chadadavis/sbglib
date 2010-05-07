@@ -5,7 +5,8 @@ use warnings;
 
 use PDL::LiteF;
 use PDL::NiceSlice;
-use PDL::Stats::GLM;
+use PDL::Stats::GLM;   # qw/ols/;
+use PDL::Stats::Basic; # qw/corr/;
 use PDL::IO::Misc qw/rcols/;
 
 # do a multiple linear regression and plot the residuals
@@ -22,15 +23,15 @@ my $nlines = shift;
 my $inputlines = "1:$nlines";
 my ($Mcomps, $pcComps, $nIacts, $nSources, $pcSeqLen, $avgIactCons, $avgSc,
 # With MscoreLess
-    $Mscore, $MscoreLess, $RMSDcofm, $Target, $Description, $Tcomps, $TseqLen) =
-    rcols($csvfile, 5..14, 
+#     $Mscore, $MscoreLess, $RMSDcofm, $Target, $Description, $Tcomps, $TseqLen) =
+#     rcols($csvfile, 5..14, 
 # Without MscoreLess
-#     $Mscore, $RMSDcofm, $Target, $Description, $Tcomps, $TseqLen) =
-#     rcols($csvfile, 5..13, 
+    $Mscore, $RMSDcofm, $Target, $Description, $Tcomps, $TseqLen) =
+    rcols($csvfile, 5..13, 
           {
               PERLCOLS => [0..4],
               LINES => $inputlines,
-              EXCLUDE => "/\tNaN\t/",
+              EXCLUDE => "/NaN/",
           },
     );
 
@@ -47,7 +48,7 @@ my $iv = cat $pcComps, $nIacts, $nSources, $pcSeqLen, $avgIactCons, $avgSc;
 my %m  = $y->ols( $iv );
 
 # Don't need this any longer
-delete $m{'y_pred'};
+# delete $m{'y_pred'};
 
 # Show linear model params
 print "$_\t$m{$_}\n" for (sort keys %m);
@@ -66,7 +67,7 @@ my $modelvars = cat(dog($iv), $ones);
 
 # make a prediction on observations: $obsi
 # my $ntestend = 15;
-my $ntestend = 1000;
+my $ntestend = 10;
 my $obsi = "0:$ntestend";
 
 my $obs = $modelvars->slice("$obsi,")->transpose;
@@ -86,6 +87,10 @@ print "nmodels: $nmodels\n";
 print "ntests: ", ($ntestend-1), "\n";
 print "mean error: ", sum($diffs)/($ntestend-1), "\n";
 print "\n";
+
+# Now correlate $m->{y_pred} and $y
+my $corr = $y->corr($m{'y_pred'});
+print "corr: $corr\n";
 
 
 # use PDL::Graphics::PGPLOT::Window;
