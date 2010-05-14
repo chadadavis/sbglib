@@ -146,7 +146,7 @@ sub _model {
     my $scores = _hspscores($hsp);
 
     $log->debug("hitname ", $hit->name);
-    my ($pdb, $chain) = $hit->name =~ /pdb\|(.{4})\|(.)$/;
+    my ($pdb, $chain) = SBG::Run::PairedBlast::gi2pdbid($hit->name);
     unless (defined $pdb && defined $chain) {
         $log->error("Could not extract PDB ID/Chain ID from: ", $hit->name);
         return;
