@@ -57,7 +57,7 @@ sub query {
 
     $sth ||= $dbh->prepare("
 SELECT
-resseq, icode
+resseq, idcode
 FROM 
 res_mapping
 WHERE idcode=?
