@@ -21,7 +21,7 @@ foreach my $pair (@$pairs_of_hits) {
 
 Blasts two sequences and returns a list of pairs of
 L<Bio::Search::Hit::BlastHit> such that each hit of a pair come from the same
-PDB ID, as given by the B<pdbaa> Blast sequence database.
+PDB ID, as given by the BLAST sequence database.
 
 Does not check any structural properties, i.e. whether the two matching regions
 are actually in contact, that they do not overlap along a single chain. Also
@@ -61,6 +61,12 @@ sub stringify { (shift)->name }
 package SBG::Run::PairedBlast;
 use Moose;
 use Moose::Autobox;
+
+# Also a functional interface
+use base qw/Exporter/;
+our @EXPORT = qw//;
+our @EXPORT_OK = qw/gi2pdbid/;
+
 
 use Bio::Tools::Run::StandAloneBlast;
 use Bio::Tools::Run::RemoteBlast;
@@ -106,10 +112,25 @@ has 'b' => (
     default => 500,
     );
 
+
+=head2 database
+
+ Function: Blast database name (default: pdbaa)
+ Example : 
+ Returns : 
+ Args    : 
+
+
+pdbaa is the database from the NCBI which is based on the SEQRES field of the PDB entry.
+
+pdbseq is the database created using the pdbseq tool from STAMP, whose sequences are based on the residues actually present in a given structure.
+
+=cut
 has 'database' => (
     is => 'rw',
     isa => 'Str',
     default => 'pdbaa',
+#     default => 'pdbseq',
     );
 
 has 'verbose' => (
@@ -117,12 +138,36 @@ has 'verbose' => (
     isa => 'Bool',
     );
 
-# 'standaloneblast or remoteblast
+
+
+=head2 method
+
+ Function: Set local or remote blast
+ Example : 
+ Returns : 
+ Args    : 'standaloneblast' or 'remoteblast'
+
+The remoteblast will require that B<database> is set to something that the NCBI
+recognizes, i.e. one of the standard databases.
+
+For the StandAloneBlast, the chose database must either exist in your
+B<$BLASTDB> directory, or it must be specified with a full path, e.g.
+
+ $blast->database('/usr/local/blastdb/pdbaa');
+
+See the list of remote databases:
+ 
+ http://www.ncbi.nlm.nih.gov/staff/tao/URLAPI/remote_blastdblist.html
+
+
+=cut
 has 'method' => (
     is => 'rw',
     isa => 'Str',
-    default => 'remoteblast',
+#     default => 'remoteblast',
+    default => 'standaloneblast',
     );
+
 
 # Handle to Bio::Tools::Run::StandAloneBlast
 has 'standalonefactory' => (
@@ -137,6 +182,7 @@ has 'remotefactory' => (
     is => 'ro',
     lazy_build => 1,
     );
+
 
 # Polling frequency (seconds) for remoteblast
 has 'wait' => (
@@ -346,11 +392,15 @@ sub _expand_aliases {
     my ($hits) = @_;
     my $exphits = [];
     foreach my $hit (@$hits) {
+        # $hit->name contains the name of the actual hit, get its ID too
         my $longdesc = $hit->name . ' ' . $hit->description;
-        while ($longdesc =~ /pdb\|(.{4})\|(.)/g) {
-            my $name = "pdb|$1|$2";
+        my @hitnames = gi2pdbid($longdesc);
+        foreach my $hitname (@hitnames) {
+            my ($pdb, $chain) = @$hitname;
+            # Reformat it, respecting any lowercase chain names now
+            my $name = "pdb|$pdb|$chain";
             my $clone = clone($hit);
-            $clone->accession($1);
+            $clone->accession($pdb);
             $clone->name($name);
             $clone->hsp->{'HIT_NAME'} = $name;
             # Trace history
@@ -369,7 +419,7 @@ sub _hitsbyid {
     # Index by pdbid
     my $hitsbyid = {};
     foreach my $h (@$hits) {
-        my $pdbid = _gi2pdbid($h->name);
+        my $pdbid = gi2pdbid($h->name);
         $hitsbyid->{$pdbid} ||= [];
         $hitsbyid->at($pdbid)->push($h);
     }
@@ -377,14 +427,48 @@ sub _hitsbyid {
 }
 
 
-# Extract PDB ID and chain
-sub _gi2pdbid {
-    my ($gi) = @_;
-    my ($pdbid, $chain) = $gi =~ /pdb\|(.{4})\|(.*)/;
-    return unless $pdbid;
-    return $pdbid unless $chain && wantarray;
-    return $pdbid, $chain;
 
+
+=head2 gi2pdbid
+
+ Function: 
+ Example : 
+ Returns : nothing when no matches, other array of tuples
+ Args    : 
+
+Given a string like: 
+
+ pdb|13gn|A pdb|1g3n|BB
+
+returns an Array of tuples like
+
+(
+  [ '1g3n', 'A', ],
+  [ '1g3n', 'b', ],
+)
+
+Blast uses double uppercase when the PDB chain ID is lower case. Such uppercase
+double are returned as a lower-case chain ID, e.g. 'BB' => 'b'
+
+=cut
+our $pdbre = 'pdb\|(\d[a-zA-Z0-9]{3})\|([a-zA-Z0-9]{0,2})';
+sub gi2pdbid {
+    my ($gistr) = @_;
+    my @res;
+    while ($gistr =~ /$pdbre/g) {
+        my $pdb = $1;
+        my $chain = $2 || '';
+        if (length($chain) == 2 && substr($chain,0,1) eq substr($chain,1,1)) {
+            $chain = lc substr($chain,0,1)
+        }
+        push @res, [$pdb,$chain];
+    }
+    return unless @res;
+
+    unless (wantarray) { 
+        return $res[0]->[0];
+    }
+    return @res;
 }
 
 

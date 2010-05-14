@@ -20,10 +20,16 @@ SBG::U::Log::init(undef, loglevel=>'DEBUG') if $DEBUG;
 $File::Temp::KEEP_ALL = $DEBUG;
 
 
-
-
 use SBG::Run::PairedBlast;
 use Bio::SeqIO;
+
+
+# Convert upper to lower case chain names:
+my $pdbgi = 'pdb|1g3n|BB pdb|1tim|AA';
+my @res = SBG::Run::PairedBlast::gi2pdbid($pdbgi);
+my @gi_expect = ( [ qw/1g3n b/ ], [ qw/1tim a/ ] );
+is_deeply(\@res, \@gi_expect, "PDB double uppercase chain IDs from Blast");
+
 
 my $io = new Bio::SeqIO(-file=>"$Bin/../data/2br2AB.fa");
 my $seq1 = $io->next_seq;
