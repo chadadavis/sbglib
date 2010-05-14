@@ -22,3 +22,10 @@ is($subset->{chain}->keys->length, 2, "pdbc chains subset $chains");
 $pdbid = '1g3n';
 $fields = pdbc($pdbid);
 is($fields->{chain}->keys->length, 6, "pdbc 6 chains in $pdbid");
+
+
+# Structure with more than 62 chains
+$pdbid = '3hfa';
+$fields = pdbc($pdbid);
+is($fields->{chain}->keys->length, 83, "pdbc 83 chains in $pdbid");
+
