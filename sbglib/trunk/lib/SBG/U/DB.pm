@@ -106,7 +106,9 @@ use Config::IniFiles;
 sub _default_host {
     our $host;
     return $host if $host;
-    my $cfg = Config::IniFiles->new(-file=>"$ENV{HOME}/.my.cnf");
+    my $cnf = "$ENV{HOME}/.my.cnf";
+    return '' unless -r $cnf;
+    my $cfg = Config::IniFiles->new(-file=>$cnf);
     $host = $cfg->val('client', 'host') || '';
     return $host;
 }
