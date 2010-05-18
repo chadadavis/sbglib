@@ -44,7 +44,7 @@ our @ISA = qw(Exporter);
 our @EXPORT    = qw//;
 # Manually exported symbols
 our @EXPORT_OK = qw/
-rmsd centroid radius_gyr radius_max superposition superpose translation
+rmsd centroid radius_gyr radius_max globularity superposition superpose translation
 /;
 
 
@@ -246,6 +246,36 @@ sub superpose {
     return $t;
 
 } # superpose
+
+
+
+=head2 globularity
+
+ Function: 
+ Example : 
+ Returns : [0,1]
+ Args    : 
+
+Estimates the extent of globularity of a set of coordinates as the ratio of the
+radius of gyration to the maximum radius, over all of the coordinates in (which
+may be all atoms, just residues, just centres-of-mass, etc)
+
+This provides some measure of how compact, non-linear, the components in a
+complex are arranged. E.g. high for an exosome, low for actin fibers
+
+=cut
+sub globularity {
+    my ($pdl) = @_;
+
+    my $centroid = centroid($pdl);
+    my $radgy = radius_gyr($pdl, $centroid);
+    my $radmax = radius_max($pdl, $centroid);
+
+    # Convert PDL to scalar
+    return ($radgy / $radmax);
+
+} # globularity
+
 
 
 sub _apply {
