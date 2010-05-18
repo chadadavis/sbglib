@@ -29,12 +29,37 @@ use SBG::DomainIO::pdb;
 # the 'models' base directory
 my %ops = getoptions('modelbase=s');
 
+# Column header labels
+my $tkeys = [ qw/tid tdesc tndoms tseqlen tnias/ ];
+my $allkeys = [ 
+    @$tkeys,
+    qw/rmsd/,
+    qw/score/,
+    qw/mid mndoms mseqlen pdoms pseqlen mnias pias/,
+    qw/nsources/,
+    qw/ncycles/,
+    qw/scmin scmax scmed/,
+    qw/glob/,
+    qw/idmin idmax idmed/,
+    qw/ifacelenmin ifacelenmax ifacelenmed/,
+    qw/ifaceconsmin ifaceconsmax ifaceconsmed/,
+    qw/sas/,
+    qw/olmin olmax olmed/,
+    ];
+
+
 # Try to submit to PBS, for each argument in @ARGV
 # Recreate command line options;
 my @jobids = qsub(options=>\%ops);
 # @ARGV is empty if all jobs could be submitted
 
 exit unless @ARGV;
+
+my $headerpath = '00-header.csv';
+unless (-s $headerpath) {
+    open my $fh, '>', $headerpath;
+    print $fh $allkeys->join("\t"), "\n";
+}
 
 
 foreach my $file (@ARGV) {
@@ -82,34 +107,41 @@ sub do_target {
     }
 
 
-    my $seqlength = 
+    my $tseqlen = 
         $target->models->values->map(sub{$_->subject->seq->length})->sum;
-    $target->{'seqlength'} = $seqlength;
-    $log->debug("target sequence length: $seqlength");
+    $target->{'tseqlen'} = $tseqlen;
+    $log->debug("target sequence length: $tseqlen");
 
     open my $fh, ">${basename}.csv";
 
-    foreach my $modelfile (<$modeldir/*.model>) {
-        do_model($target, $modelfile, $fh);
-        if (0) {
-            # TODO
-            # new top model?
+    my $stats = {
+        'tid' => $target->id,
+        'tdesc' => $target->description,
+        'tndoms' => $target->size,
+        'tseqlen' => $target->{'tseqlen'},
+    };
+    
+    my @modelfiles = <$modeldir/*.model>;
+    if (@modelfiles) {
+        foreach my $modelfile (@modelfiles) {
+            do_model($target, $modelfile, $fh, $stats);
         }
-    }
+    } else {
+        # If no models produced, just a print a truncated header
+        print $fh $stats->slice($tkeys)->join("\t"), "\n";
+     }
+
     close $fh;
 #     $target->store($targetfile);
 }
 
 
 sub do_model {
-    my ($target, $modelfile, $fh) = @_;
+    my ($target, $modelfile, $fh, $stats) = @_;
     
     $log->debug($modelfile);
 
     my $acc = $target->id;
-    # Number of components we want to model
-    my $ncomps = $target->size;
-    my $seqlength = $target->{'seqlength'};
     my $model = load_object($modelfile);
     # Two formats
     my ($class, $modelid) = $modelfile =~ /$acc-(\d+)-(\d+).model$/;
@@ -119,77 +151,117 @@ sub do_model {
         ($modelid) = $modelfile =~ /$acc-(\d+).model$/;
     }
     $model->id($modelid);
+    $stats->{'mid'} = $modelid;
 
 
     # domain models within this complex model
-    my $models = $model->models->values;
-    # Number of domain components in this complex model
-    my $nmcomps = $models->length;
+    my $dommodels = $model->models->values;
+    my $mndoms = $dommodels->length;
+    my $tndoms = $target->size;
+    $stats->{'mndoms'} = $mndoms;
     # Percentage of component coverage
-    my $pcomps = sprintf "%0.2f", 100.0 * $nmcomps / $ncomps;
-    # Interactions in model
-    my $miactions = $model->interactions->values;
-    my $nmiactions = $miactions->length;
-    # Linker superpositions required to build model by overlapping dimers
-    my $superpositions = $model->superpositions->values;
-    my $nsup = $superpositions->length;
+    $stats->{'pdoms'} = sprintf "%0.2f", 100.0 * $mndoms / $tndoms;
+
+    # Alignments
+    my $alns = $dommodels->map(sub{$_->aln()});
+    my $ids = $alns->map(sub{$_->overall_percentage_identity('long')});
+    $stats->{'idmin'} = $ids->min;
+    $stats->{'idmax'} = $ids->max;
+    $stats->{'idmed'} = median($ids);
+        
+
+    # Model: interactions
+    my $mias = $model->interactions->values;
+    # Model: number of interactions
+    my $mnias = $mias->length;
+    $stats->{'mnias'} = $mnias;
+
+    # Fractional residue conservations of each interaction.
+    # The value for each interaction is the average of its two interfaces
+    my $cons = $mias->map(sub{$_->scores->at('avg_frac_conserved')});
+    $stats->{'ifaceconsmin'} = $cons->min;
+    $stats->{'ifaceconsmax'} = $cons->max;
+    $stats->{'ifaceconsmed'} = median($cons);
+    
+    # Number of residues in contact in an interaction, averaged between 2
+    # interfaces.
+    my $nres = $mias->map(sub{$_->scores->at('avg_n_res')});
+    $stats->{'ifacelenmin'} = $nres->min;
+    $stats->{'ifacelenmax'} = $nres->max;
+    $stats->{'ifacelenmed'} = median($nres);
+
 
     # Number of template PDB structures used in entire model
-    my $idomains = $miactions->map(sub{$_->domains->flatten});
-#     print dump $idomains;
-
+    # TODO belongs in SBG::Complex
+    my $idomains = $mias->map(sub{$_->domains->flatten});
     my $ipdbs = $idomains->map(sub{$_->pdbid});
     my $nsources = scalar List::MoreUtils::uniq $ipdbs->flatten;
+    $stats->{'nsources'} = $nsources;
 
-    # NB getting length from the SBG::DomainI here, not the Bio::Seq
     # This is the sequence from the structural template used
-    my $mseqlength = $models->map(sub{$_->subject->seq->length})->sum;
+    my $mseqlen = $dommodels->map(sub{$_->subject->seq->length})->sum;
+    $stats->{'mseqlen'} = $mseqlen;
     # Percentage sequence coverage by the complex model
-    my $pseqlength = sprintf "%0.2f", 100.0 * $mseqlength / $seqlength;
-    # TODO BUG this $pseqlength printed is not the $iseqlength that goes into
-    # Complex score
+    my $pseqlen = sprintf "%0.2f", 100.0 * $mseqlen / $stats->{'tseqlen'};
+    $stats->{'pseqlen'} = $pseqlen;
+
+
+    # Sequence coverage per domain
+    my $pdomcovers = $dommodels->map(sub{$_->coverage()});
+    $stats->{'seqcovermin'} = $pdomcovers->min;
+    $stats->{'seqcovermax'} = $pdomcovers->max;
+    $stats->{'seqcovermed'} = median($pdomcovers);
+
 
     # Edge weight, generally the seqid
-    my $weights = $miactions->map(sub{$_->weight})->grep(sub{defined $_});
+    my $weights = $mias->map(sub{$_->weight})->grep(sub{defined $_});
     # Average sequence identity of all the templates.
     # NB linker domains are counted multiple times. 
     # Given a hub proten and three interacting spoke proteins, there are not 4
     # values for sequence identity, but rather 6=2*(3 interactions)
-    my $avg_wt = sprintf "%0.2f", (1.0*$weights->sum/$weights->length);
-    # Average Sc of all superpositions done
-    my $msc = 
-        sprintf "%0.2f", 
-        $superpositions->map(sub{$_->scores->at('Sc')})->sum / $nsup;
+    $stats->{'ifaceconsmin'} = $weights->min;
+    $stats->{'ifaceconsmax'} = $weights->max;
+    $stats->{'ifaceconsmed'} = median($weights);
+
+    # Linker superpositions required to build model by overlapping dimers
+    my $superpositions = $model->superpositions->values;
+    # Sc scores of all superpositions done
+    my $scs = $superpositions->map(sub{$_->scores->at('Sc')});
+    $stats->{'scmin'} = $scs->min;
+    $stats->{'scmax'} = $scs->max;
+    $stats->{'scmed'} = median($scs);
+
+    # Globularity of entire model
+    $stats->{'glob'} = $model->globularity();
+
+    # Fraction overlaps between domains for each new component placed, averages
+    my $overlaps = $model->clashes->values;
+    $stats->{'olmin'} = $overlaps->min;
+    $stats->{'olmax'} = $overlaps->max;
+    $stats->{'olmed'} = median($overlaps);
+
+    # Number of closed rings in modelled structure, using known interfaces
+    $stats->{'ncycles'} = $model->ncycles();
 
     my ($rmsd, $matrix) = modelrmsd($model, $target);
     $rmsd = sprintf("%0.4f", $rmsd);
     $rmsd = 'NaN' unless defined $matrix;
+    $stats->{'rmsd'} = $rmsd;
 
-    my ($wtcover, $wtseqid, $wtsc) = (1, 2, 1.5);
-#     my $score = 
-#         ($wtcover*$pseqlength + $wtseqid*$avg_wt**2 + $wtsc*(10*$msc)**2) /
-#         ($wtcover*100 + $wtseqid*100**2 + $wtsc*100^2);
+    # Intrinsic model score
     my $score = sprintf "%0.2f", $model->score;
+    $stats->{'score'} = $score;
 
-    print $fh join("\t", 
-                   $target->id, $target->description, $target->size, $seqlength,
-                   $modelid, 
-                   $nmcomps, $pcomps, 
-                   $nmiactions, $nsources,
-                   $pseqlength, $avg_wt, $msc, 
-                   $score,
-                   $rmsd,
-
-                   "\n",
-        );
+    # Print the CSV line, using predefined key ordering
+    my $fields = $stats->slice($allkeys)->map(sub{defined $_?$_:''});
+    print $fh $fields->join("\t"), "\n";
     
     modeloutputs($target,$model);
 
     # Save any changes
     $model->store($modelfile);
 
-    # TODO %stats
-    return ();
+    return ($stats);
 }
 
 
@@ -285,4 +357,3 @@ sub _pdbfile {
     $pdbio->write($modelasdom, $targetasdom);
 
 }
-
