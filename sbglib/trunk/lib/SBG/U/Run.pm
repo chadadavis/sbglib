@@ -29,6 +29,7 @@ use warnings;
 
 use Pod::Usage;
 use Getopt::Long;
+use Carp;
 
 use File::NFSLock;
 use Fcntl qw/LOCK_EX LOCK_NB/;
@@ -180,7 +181,7 @@ sub getoptions {
 
     # Running in debugger? Setup debug mode automatically
     $ops{'debug'} = 1 if defined $DB::sub;
-    $SIG{__DIE__} = \&confes if $ops{'debug'};
+    $SIG{__DIE__} = \&confess if $ops{'debug'};
     $ops{'loglevel'} ||= 'DEBUG' if $ops{'debug'};
 
     return %ops;
