@@ -110,8 +110,8 @@ sub aln2locations {
     my $seq1i = $seq1->start;
     my $seq2i = $seq2->start;
     # Jump over gaps, incrementallycount other positions
-    my @seq1pos = map { /-/ ? undef : $seq1i++ } split '', $seq1seq;
-    my @seq2pos = map { /-/ ? undef : $seq2i++ } split '', $seq2seq;
+    my @seq1pos = map { /[.-]/ ? undef : $seq1i++ } split '', $seq1seq;
+    my @seq2pos = map { /[.-]/ ? undef : $seq2i++ } split '', $seq2seq;
     # Which positions are not gapped in either sequence
     my @mask = 
         grep { defined $seq1pos[$_] && defined $seq2pos[$_] } 0 .. $#seq1pos;
