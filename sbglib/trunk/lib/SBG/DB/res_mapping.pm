@@ -43,7 +43,13 @@ our $host;
  Returns : L<SBG::DomainI>
  Args    : 
     
-TODO BUG check for exactly two result rows
+
+Takes an ArrayRef rather than $start, $end now. This should contain all the
+positions in between that also need to be fetched.  Rows are returned according
+to the order in sequence, not in the structure, i.e. the residue IDs returned
+are not necessarily in order, but they do correspond to the order of the
+sequence given, as long as the sequence is ordered.
+
        
 =cut
 sub query {
