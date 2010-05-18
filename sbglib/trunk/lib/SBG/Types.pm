@@ -51,13 +51,13 @@ subtype 'SBG.FileMode'
     => where { /^\s*$re_mode\s*(.*?)\s*$/ && -f $2 };
 
 
-our $re_chain_id = "[A-Za-z0-9_]";
+our $re_chain_id = "[A-Za-z0-9_]*";
 subtype 'SBG.ChainID'
     => as 'Str',
     => where { /^$re_chain_id$/ };
 
 
-our $re_pdb = '\d[a-z0-9]{3}';
+our $re_pdb = '\d[A-Za-z0-9]{3}';
 subtype 'SBG.PDBID'
     => as 'Str',
     => where { /^$re_pdb$/ };
