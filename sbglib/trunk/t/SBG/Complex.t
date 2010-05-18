@@ -281,6 +281,12 @@ $complex->transform($transmat2->inv);
 float_is($rmsd1, $rmsd2, "rmsd() is commutative");
 
 
+# Test globularity()
+# Won't work here, because there are no alignments in the model
+$TODO = "Verify globularity() value";
+ok 0;
+
+
 $TODO = "Verify cofm result";
 ok(0);
 
@@ -316,12 +322,6 @@ is($clone->count, 6, "Complex->clone");
 $TODO = "Verify clone depth, using refaddr on HashRef attrs";
 ok 0;
 
-
-# Test globularity()
-$TODO = "Verify globularity() value";
-ok 0;
-# $globularity = $complex->globularity;
-# ok($globularity, "globularity()");
 
 
 

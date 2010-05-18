@@ -86,3 +86,5 @@ $t->apply($da);
 float_is(rmsd($da->coords, $db->coords), 0.282, 'rmsd', 0.1);
 
 
+$TODO = "Test globularity()";
+ok(0);

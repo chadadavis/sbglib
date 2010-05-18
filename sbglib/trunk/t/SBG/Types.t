@@ -33,4 +33,7 @@ $desc = 'A 3 A to A 189 B A 353 B to A 432 _';
 ok($desc =~ /^\s*($re_descriptor)\s*$/, 
    "Multi-segment descriptor with insertion codes");
 
+$TODO = "Test multi-letter chain ID, e.g. 'AA'";
+ok(0);
+
 
