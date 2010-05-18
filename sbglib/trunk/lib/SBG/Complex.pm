@@ -45,6 +45,7 @@ use Scalar::Util qw/refaddr/;
 use Moose::Autobox;
 use autobox::List::Util;
 use List::MoreUtils qw/mesh/;
+use Module::Load;
 
 use PDL::Lite;
 use PDL::Core qw/pdl squeeze zeroes sclr/;
@@ -59,6 +60,9 @@ use SBG::U::RMSD;
 use SBG::U::iRMSD; # qw/irmsd/;
 use SBG::STAMP; # qw/superposition/
 use SBG::Superposition::Cache; # qw/superposition/;
+use SBG::DB::res_mapping; # qw/query aln2locations/;
+use SBG::U::DB qw/chain_case/;
+use SBG::Run::PairedBlast qw/gi2pdbid/;
 
 # Complex stores these data structures
 use SBG::Superposition;
@@ -72,7 +76,10 @@ use SBG::Network;
 # Default domain representation
 use SBG::Domain::Sphere;
 
-use Module::Load;
+# Get CA representation for backbone RMSD
+use SBG::Domain::Atoms;
+
+
 
 
 
@@ -196,7 +203,7 @@ is not updated when subsequent domains are added. This has the nice side-effect
 that overlaps are not double-counted. Each domain stores the clashes it
 encounted at the time it was added.
 
-E.g attach(A), attach(B), attach(C). If A and C clash, A won't know about it,
+E.g attach(A), attach(B), attach(C). If A and C clash, A wont know about it,
 but C will have saved it, having been added subsequently.
 
 Indexed by the L<SBG::Node> creating the clashes when it was added.
@@ -262,7 +269,6 @@ Combined score of all domain models in a complex
 =cut
 has 'score' => (
     is => 'rw',
-    isa => 'Num',
     lazy_build => 1,
     );
 
@@ -895,6 +901,7 @@ sub _mkmodel {
         subject=>$cdom, 
         scores=>$vmodel->scores,
         input=>$vmodel->input,
+        aln=>$vmodel->aln,
         );
 
     return $model;
@@ -1116,7 +1123,10 @@ sub rmsd_class {
         my %mapping = mesh(@$model, @cart);
         
         # Test this mapping
-        my ($trans, $rmsd) = rmsd_mapping($self, $other, $model, \%mapping);
+        my ($trans, $rmsd) = 
+#             rmsd_mapping($self, $other, $model, \%mapping);
+            rmsd_mapping_backbone($self, $other, $model, \%mapping);
+
         $log->debug("rmsd:", $rmsd || 'undef');
         $log->debug("bestrmsd:", $bestrmsd||'undef');
         $log->debug("rmsd<bestrmsd:", 
@@ -1169,43 +1179,196 @@ sub _members_by_class {
 }
 
 
-# Do RMSD of domains with the given label mapping
+
+
+
+=head2 rmsd_mapping
+
+ Function: Do RMSD-CofM of domains with the given label mapping
+ Example : 
+ Returns : 
+ Args    : 
+
+Based on using the 7-point crosshairs, after setting correct frame of ref, which
+is done by STAMP superposition.
+
+=cut
 sub rmsd_mapping {
     my ($self, $other, $keys, $mapping) = @_;
-
+    
     my $selfcofms = [];
     my $othercofms = [];
     foreach my $selflabel (@$keys) {
-       my $selfdom = $self->get($selflabel)->subject;
-
-       my $otherlabel = $mapping->{$selflabel} || $selflabel;
-       my $otherdom = $other->get($otherlabel)->subject;
-       $otherdom = cofm($otherdom);
-
-       my $sup;
-       ($selfdom, $sup) = _setcrosshairs($selfdom, $otherdom) or next;
-
-       $othercofms->push($otherdom);
-       $selfcofms->push($selfdom);
-   }
-
-   unless ($selfcofms->length > 1) {
-       $log->warn("Too few component-wise superpositions to superpose complex");
-       return;
-   }
-
-   my $selfcoords = pdl($selfcofms->map(sub{ $_->coords }));
-   my $othercoords = pdl($othercofms->map(sub{ $_->coords }));
-   $selfcoords = $selfcoords->clump(1,2) if $selfcoords->dims == 3;
-   $othercoords = $othercoords->clump(1,2) if $othercoords->dims == 3;
-
-   my $trans = SBG::U::RMSD::superpose($selfcoords, $othercoords);
-   # Now it has been transformed already. Can measure RMSD of new coords
-   my $rmsd = SBG::U::RMSD::rmsd($selfcoords, $othercoords);
-   $log->debug("one rmsd:", $rmsd, " via: ", join ' ', %$mapping);
-   return wantarray ? ($trans, $rmsd) : $rmsd;
-
+        my $selfdom = $self->get($selflabel)->subject;
+        
+        my $otherlabel = $mapping->{$selflabel} || $selflabel;
+        my $otherdom = $other->get($otherlabel)->subject;
+        $otherdom = cofm($otherdom);
+        
+        my $sup;
+        ($selfdom, $sup) = _setcrosshairs($selfdom, $otherdom) or next;
+        
+        $othercofms->push($otherdom);
+        $selfcofms->push($selfdom);
+    }
+    
+    unless ($selfcofms->length > 1) {
+        $log->warn("Too few component-wise superpositions to superpose complex");
+        return;
+    }
+    
+    my $selfcoords = pdl($selfcofms->map(sub{ $_->coords }));
+    my $othercoords = pdl($othercofms->map(sub{ $_->coords }));
+    $selfcoords = $selfcoords->clump(1,2) if $selfcoords->dims == 3;
+    $othercoords = $othercoords->clump(1,2) if $othercoords->dims == 3;
+    
+    # Least squares fit of all coords in each complex
+    my $trans = SBG::U::RMSD::superpose($selfcoords, $othercoords);
+    # Now it has been transformed already. Can measure RMSD of new coords
+    my $rmsd = SBG::U::RMSD::rmsd($selfcoords, $othercoords);
+    # The RMSD achieved if we assume this domain-domain mapping
+    $log->debug("Potential rmsd:", $rmsd, " via: ", join ' ', %$mapping);
+    return wantarray ? ($trans, $rmsd) : $rmsd;
+    
 } # rmsd_mapping
+
+
+=head2 rmsd_mapping_backbone
+
+ Function: Do RMSD of domains with the given label mapping.
+ Example : 
+ Returns : 
+ Args    : 
+
+Uses the aligned residue correspondance to determine the RMSD over the aligned
+backbone. The residues correspondance is extracted from the sequence
+alignment. The sequence coords are then mapped, via DB::res_mapping to residue
+IDs, whose coordinates are extracted from the native structures, then any
+transformation is applied to set the frame of reference. This is done for every
+possible domain-domain correspondance that might have results from homologous
+components. The RMSD is then computed after doing a least squares fit of the
+aligned CA backbone atoms.
+
+This probably requires that $self be the model, while $other is the benchmark
+
+=cut
+sub rmsd_mapping_backbone {
+    my ($self, $other, $keys, $mapping) = @_;
+
+    our $native_coords;
+    our $modelled_coords;
+    $native_coords ||= {};
+    $modelled_coords ||= {};
+
+    # Make sure that all coords have been loaded
+    foreach my $selflabel (@$keys) {
+        my $otherlabel = $mapping->{$selflabel} || $selflabel;
+        next if 
+            defined $modelled_coords->{$selflabel} && 
+            defined $native_coords->{$otherlabel};
+        
+        my $selfmodel = $self->get($selflabel);
+        my $aln = $selfmodel->{'aln'};
+        my ($modelled, $native) = 
+            $self->_coords_from_aln($aln, $selflabel, $mapping);
+        $modelled_coords->{$selflabel} = $modelled;
+        $native_coords->{$otherlabel} = $native;
+    }
+
+    # Now do any necessary remapping
+    my $selfdomcoords = [];
+    my $otherdomcoords = [];
+    foreach my $selflabel (@$keys) {
+        my $mcoords = $modelled_coords->{$selflabel};
+        $selfdomcoords->push($mcoords);
+        my $otherlabel = $mapping->{$selflabel} || $selflabel;
+        my $ncoords = $native_coords->{$otherlabel};
+        $otherdomcoords->push($ncoords);
+    }
+
+    # Now combine them into one coordinate set for the whole complex
+    my $selfcoords = pdl($selfdomcoords);
+    my $othercoords = pdl($otherdomcoords);
+    # Make 2-dimensional, if 3-dimensional
+    $selfcoords = $selfcoords->clump(1,2) if $selfcoords->dims == 3;
+    $othercoords = $othercoords->clump(1,2) if $othercoords->dims == 3;
+    
+    # Least squares fit of all coords in each complex
+    my $trans = SBG::U::RMSD::superpose($selfcoords, $othercoords);
+    # Now it has been transformed already. Can measure RMSD of new coords
+    my $rmsd = SBG::U::RMSD::rmsd($selfcoords, $othercoords);
+    $log->debug("Potential rmsd:", $rmsd, " via: ", join ' ', %$mapping);
+    return wantarray ? ($trans, $rmsd) : $rmsd;
+    
+} # rmsd_mapping_backbone {
+
+
+=head2 _coords_from_aln
+
+ Function: 
+ Example : [ $modelled, $benchmark ] = _coords_from_aln($aln, $query_label)
+ Returns : [ modelled_coords, query/benchmark_coords ]
+ Args    : 
+
+
+Extract X,Y,Z atomic coordinates for residues of aligned PDB structures
+
+The query is the sequence to be modelled. When benchmarking, this is the native
+structure, which is determined by extracting the PDB ID / chain ID from the
+label, e.g. 1timA.
+
+
+=cut
+sub _coords_from_aln {
+    my ($self, $aln, $querykey, $mapping) = @_;
+
+    # Map pdbseq sequence coordinates to PDB residue IDs
+    my $seqcoords = { SBG::DB::res_mapping::aln2locations($aln) };
+
+    # Get the name of the one that's not the querykey
+    my ($subjectkey) = $seqcoords->keys->grep(sub{ $_ ne $querykey })->flatten;
+
+    # Convert pdb|1tim|AA to '1tima', returns a [ pdb, chain ] tuple
+    my ($pdb_chain) = gi2pdbid($subjectkey);
+    my $subjectkeyshort = join '', @$pdb_chain;
+
+    my $labels = { 
+        $querykey => $querykey, 
+        $subjectkeyshort => $subjectkey,
+    };
+    my $coords = {};
+    foreach my $key ($labels->keys->flatten) {
+        my $alnlabel = $labels->{$key};
+
+        # Replace key for the benchmark with its mapping, if any
+        $key = $mapping->{$key} || $key;
+        $key =~ /^(....)(.)$/;
+        my $pdbid = $1;
+        my $chainid = $2;
+
+        my $seqcoords = $seqcoords->{$alnlabel};
+        my $resids = SBG::DB::res_mapping::query($pdbid, $chainid, $seqcoords);
+
+        # Note we start with the whole chain here but we're only extracting the
+        # aligned residues. This will be the atomic representation. And since we
+        # never use the Domain object itself, the fact that the descriptor
+        # refers to the whole chain is not relevant.
+        my $dom = SBG::Domain::Atoms->new(pdbid=>$pdbid,
+                                          descriptor=>"CHAIN $chainid",
+                                          residues=>$resids);
+        # If this is the modelled domain, set it's frame of reference
+        if ($key eq $subjectkeyshort) {
+            my $trans = $self->get($querykey)->subject->transformation;
+            $trans->apply($dom);
+        }
+        $coords->{$key} = $dom->coords;
+    }
+
+    # The subject is what was modelled, the query is the benchmark
+    my $mapped_key = $mapping->{$querykey} || $querykey;
+    return $coords->{$subjectkeyshort}, $coords->{$mapped_key}
+    
+} # _coords_from_aln
 
 
 # set crosshairs of one domain, based on second
