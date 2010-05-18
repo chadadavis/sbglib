@@ -231,7 +231,7 @@ sub modeloutputs {
     return if $alldone;
 
     _domfile($domfile, $model, $target);
-#     _pdbfile($pdbfile, $model, $target);
+    _pdbfile($pdbfile, $model, $target);
 
 } # modeloutput
 
