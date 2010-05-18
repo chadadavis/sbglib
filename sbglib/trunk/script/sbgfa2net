@@ -70,7 +70,8 @@ exit unless @ARGV;
 
 # Searcher tries to find interaction templates (edges) to connect seq nodes
 my $blast = SBG::Run::PairedBlast->new(database=>'pdbseq');
-$blast->method($ops{method}) if $ops{method};
+$ops{method} ||= 'standaloneblast';
+$blast->method($ops{method});
 
 $ops{searcher} ||= 'TransDBc';
 $ops{searcher} =~ s/SBG::Search:://;
