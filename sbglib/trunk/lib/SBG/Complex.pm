@@ -53,7 +53,10 @@ use Log::Any qw/$log/;
 use bignum; # qw/inf/;
 
 use Algorithm::Combinatorics qw/variations/;
+use Bio::Tools::Run::Alignment::Clustalw;
 
+
+use SBG::Types qw/$pdb41/;
 use SBG::U::List 
     qw/interval_overlap intersection mean sum flatten swap cartesian_product/;
 use SBG::U::RMSD;
@@ -63,6 +66,7 @@ use SBG::Superposition::Cache; # qw/superposition/;
 use SBG::DB::res_mapping; # qw/query aln2locations/;
 use SBG::U::DB qw/chain_case/;
 use SBG::Run::PairedBlast qw/gi2pdbid/;
+use SBG::Run::pdbseq qw/pdbseq/;
 
 # Complex stores these data structures
 use SBG::Superposition;
@@ -196,6 +200,23 @@ has 'superpositions' => (
 
 
 
+
+=head2 ncycles
+
+ Function: Number of ring closures modelled by known interaction templates
+ Example : 
+ Returns : 
+ Args    : 
+
+
+
+=cut
+has 'ncycles' => (
+    is => 'rw',
+    default => sub { 0 },
+    );
+
+
 =head2 clashes
 
 Fractional overlap/clash of each domain when it was added to the complex. This
@@ -215,7 +236,7 @@ has 'clashes' => (
     lazy => 1,
     default => sub { { } },
     );
-# TODO each clash should be saved is the 'scores' hash of the Superposition
+# TODO each clash should be saved in the 'scores' hash of the Superposition
 
 
 
@@ -423,6 +444,49 @@ has 'correspondance' => (
 
 
 
+
+
+=head2 modelled_coords
+
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
+
+To get the whole set in two dimensions;
+my $modelled_coords = $complex->modelled_coords();
+# Array of coordinate sets
+my $values = $modelled_coords->values;
+# Multidimensional piddle
+my $coords = pdl($values);
+# Flatten into 2D
+$coords = $coords->clump(1,2) if $coords->dims == 3;
+# Do something with $coords
+print SBG::U::RMSD::centroid($coords);
+
+=cut
+has 'modelled_coords' => (
+    is => 'rw',
+    lazy_build => 1,
+    );
+sub _build_modelled_coords {
+    my ($self) = @_;
+    my $modelled_coords = {};    
+    my $keys = $self->keys;
+
+    foreach my $key (@$keys) {
+        my $dommodel = $self->get($key);
+        my $aln = $dommodel->aln();
+        my ($modelled, $native) = 
+            $self->_coords_from_aln($aln, $key);
+        $modelled_coords->{$key} = $modelled;
+    }
+
+    return $modelled_coords;
+    
+} # _build_modelled_coords
+
+
 =head2 coords
 
  Function: 
@@ -581,7 +645,7 @@ sub coverage {
 
  Function: 
  Example : 
- Returns : [0,1]
+ Returns : [0,100]
  Args    : 
 
 Estimates the extent of globularity of a complex as a whole as the ratio of the
@@ -595,14 +659,11 @@ complex are arranged. E.g. high for an exosome, low for actin fibers
 sub globularity {
     my ($self,) = @_;
 
-    my $pdl = $self->coords;
-    my $centroid = SBG::U::RMSD::centroid($pdl);
-
-    my $radgy = SBG::U::RMSD::radius_gyr($pdl, $centroid);
-    my $radmax = SBG::U::RMSD::radius_max($pdl, $centroid);
-
-    # Convert PDL to scalar
-    return ($radgy / $radmax);
+    # Multidimensional piddle
+    my $coords = pdl $self->modelled_coords->values;
+    # Flatten into 2D
+    $coords = $coords->clump(1,2) if $coords->dims == 3;
+    return 100.0 * SBG::U::RMSD::globularity($coords);
 
 } # globularity
 
@@ -771,10 +832,15 @@ sub merge_interaction {
 sub cycle {
     my ($self, $iaction) = @_;
     $log->info($iaction);
+
     my $keys = $iaction->keys;
     # Get domains from self and domains from iaction in corresponding order
     my $irmsd = SBG::U::iRMSD::irmsd($self->domains($keys), 
                                      $iaction->domains($keys));
+
+    # TODO this thresh is also hard-coded in CA::Assembler2
+    $self->ncycles($self->ncycles+1) if $irmsd < 15;
+
     return $irmsd;
 
 } # cycle
@@ -1251,39 +1317,56 @@ aligned CA backbone atoms.
 
 This probably requires that $self be the model, while $other is the benchmark
 
+TODO don't duplicate what's already in _build_modelled_coords
+
+TODO would be smarter to have all the coordinates for $other preloaded and just
+subset them rather than fetch them anew each time, which we do because it's a
+different subset of the coordinates, depening on which modelled domain the given
+benchmark domain is being compared to.
+
 =cut
 sub rmsd_mapping_backbone {
     my ($self, $other, $keys, $mapping) = @_;
 
+    # Cache atomic coordinates, as they will be repeated many times
     our $native_coords;
     our $modelled_coords;
     $native_coords ||= {};
     $modelled_coords ||= {};
 
-    # Make sure that all coords have been loaded
-    foreach my $selflabel (@$keys) {
-        my $otherlabel = $mapping->{$selflabel} || $selflabel;
-        next if 
-            defined $modelled_coords->{$selflabel} && 
-            defined $native_coords->{$otherlabel};
-        
-        my $selfmodel = $self->get($selflabel);
-        my $aln = $selfmodel->{'aln'};
-        my ($modelled, $native) = 
-            $self->_coords_from_aln($aln, $selflabel, $mapping);
-        $modelled_coords->{$selflabel} = $modelled;
-        $native_coords->{$otherlabel} = $native;
-    }
-
-    # Now do any necessary remapping
     my $selfdomcoords = [];
     my $otherdomcoords = [];
+
     foreach my $selflabel (@$keys) {
-        my $mcoords = $modelled_coords->{$selflabel};
-        $selfdomcoords->push($mcoords);
         my $otherlabel = $mapping->{$selflabel} || $selflabel;
-        my $ncoords = $native_coords->{$otherlabel};
+        my $cachekey = join '--', $self->id, $selflabel, $otherlabel;
+        my $mcoords = $modelled_coords->{$cachekey};
+        my $ncoords = $native_coords->{$cachekey};
+
+        if (defined $mcoords && defined $ncoords) {
+            $selfdomcoords->push($mcoords);
+            $otherdomcoords->push($ncoords);
+            next;
+        }
+
+        my $aln = $self->get($selflabel)->aln();
+
+        if ($selflabel ne $otherlabel) {
+            # Here we're trying an alternative mapping of query sequences to
+            # templates, but the alternative sequence must be aligned to the
+            # template used for modelling, before extracting atomic coordinates.
+            $aln = _realign($aln, $selflabel, $otherlabel);
+        }
+
+        ($mcoords, $ncoords) = 
+            $self->_coords_from_aln($aln, $selflabel, $mapping);
+
+        $modelled_coords->{$cachekey} = $mcoords;
+        $native_coords->{$cachekey} = $ncoords;
+
+        $selfdomcoords->push($mcoords);
         $otherdomcoords->push($ncoords);
+
     }
 
     # Now combine them into one coordinate set for the whole complex
@@ -1301,6 +1384,44 @@ sub rmsd_mapping_backbone {
     return wantarray ? ($trans, $rmsd) : $rmsd;
     
 } # rmsd_mapping_backbone {
+
+
+
+
+
+=head2 _realign
+
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
+
+
+
+=cut
+sub _realign {
+    my ($aln, $selflabel, $otherlabel) = @_;
+
+    # Determine PDB ID and chain ID to add to alignment
+    my ($pdbid, $chainid) = $otherlabel =~ /$pdb41/;
+
+    # Fetch the new sequence 
+    my $dom = SBG::Domain->new(pdbid=>$pdbid,descriptor=>"CHAIN $chainid");
+    my $seq = pdbseq($dom);
+    # Reset the display ID
+    $seq->display_id($pdbid . $chainid);
+
+    # Add to alignment, clone it first (not done by factory already?)
+    my $clustal = Bio::Tools::Run::Alignment::Clustalw->new(quiet=>1);
+    $aln = clone($aln);
+    $aln = $clustal->profile_align($aln,$seq);
+
+    # Remove $selflabel from alignment
+    $aln->remove_seq($aln->get_seq_by_id($selflabel));
+
+    return $aln;
+
+} # _realign
 
 
 =head2 _coords_from_aln
@@ -1321,19 +1442,20 @@ label, e.g. 1timA.
 =cut
 sub _coords_from_aln {
     my ($self, $aln, $querykey, $mapping) = @_;
+    $mapping ||= {};
 
     # Map pdbseq sequence coordinates to PDB residue IDs
     my $seqcoords = { SBG::DB::res_mapping::aln2locations($aln) };
-
+    my $mappedkey = $mapping->{$querykey} || $querykey;
     # Get the name of the one that's not the querykey
-    my ($subjectkey) = $seqcoords->keys->grep(sub{ $_ ne $querykey })->flatten;
+    my ($subjectkey) = $seqcoords->keys->grep(sub{ $_ ne $mappedkey })->flatten;
 
     # Convert pdb|1tim|AA to '1tima', returns a [ pdb, chain ] tuple
     my ($pdb_chain) = gi2pdbid($subjectkey);
     my $subjectkeyshort = join '', @$pdb_chain;
 
     my $labels = { 
-        $querykey => $querykey, 
+        $querykey => $mappedkey, 
         $subjectkeyshort => $subjectkey,
     };
     my $coords = {};
@@ -1342,9 +1464,7 @@ sub _coords_from_aln {
 
         # Replace key for the benchmark with its mapping, if any
         $key = $mapping->{$key} || $key;
-        $key =~ /^(....)(.)$/;
-        my $pdbid = $1;
-        my $chainid = $2;
+        my ($pdbid, $chainid) = $key =~ /$pdb41/;
 
         my $seqcoords = $seqcoords->{$alnlabel};
         my $resids = SBG::DB::res_mapping::query($pdbid, $chainid, $seqcoords);
@@ -1365,8 +1485,7 @@ sub _coords_from_aln {
     }
 
     # The subject is what was modelled, the query is the benchmark
-    my $mapped_key = $mapping->{$querykey} || $querykey;
-    return $coords->{$subjectkeyshort}, $coords->{$mapped_key}
+    return $coords->{$subjectkeyshort}, $coords->{$mappedkey}
     
 } # _coords_from_aln
 
