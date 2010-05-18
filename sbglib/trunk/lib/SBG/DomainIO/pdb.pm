@@ -24,6 +24,7 @@ http://www.wwpdb.org/documentation/format32/v3.2.html
 
 package SBG::DomainIO::pdb;
 use Moose;
+use Moose::Autobox;
 
 with 'SBG::IOI';
 use SBG::Domain;
@@ -67,6 +68,12 @@ explicit trailing space). Likewise, 'C' will match 'CA', 'CB', 'CG', 'CG1',
 has 'atom_type' => (
     is => 'rw',
     default =>  'CA ',
+    );
+
+
+has 'residues' => (
+    is => 'ro',
+    isa => 'ArrayRef[Int]',
     );
 
 
@@ -160,23 +167,44 @@ codes.
 See also L<Bio::SeqUtils> for converting amino acid residue codes between
 3-letter and 1-letter versions.
 
+TODO BUG The PDB format is column-defined, not white-space separated. For
+certain PDB files, this can break the parsing, if the fields are not white-space
+separated.
+
 =cut
 sub coords {
-    my ($self,) = @_;
+    my ($self, ) = @_;
     my $pattern = $self->atom_type;
+    my $getresids = $self->residues;
 
     # X,Y,Z coords in fields 6,7,8 (0-based)
-    my ($x, $y, $z, $aas) = rcols($self->file(), 6,7,8,
+    my ($x, $y, $z, $aas, $resids) = rcols($self->file(), 6,7,8,
                                   {
                                       # Field 3 is the 3-char residue type
-                                      PERLCOLS => [3],
+                                      # Field 5 is the residue ID number
+                                      PERLCOLS => [3, 5],
                                       # Only read lines matching this:
                                       INCLUDE  => "/^ATOM.........$pattern/",
                                   },
         );
     # No atoms matching the given pattern?
     return unless scalar @$aas;
-    
+
+    # Subset residue IDs, if given
+    if ($getresids) {
+        # Create a map from residue ID to array index
+        my %resmap = map { $resids->[$_] => $_ } 0..@$resids-1;
+#         for (my $i = 0; $i < @$resids; $i++) {
+#             $resmap{$resid[$i]} = $i;
+#         }
+        my $select = $getresids->map(sub{$resmap{$_}});
+        $aas = $aas->slice($select);
+        $resids = $resids->slice($select);
+        $x = $x->dice($select);
+        $y = $y->dice($select);
+        $z = $z->dice($select);
+    }
+
     # Columns for X,Y,Z coords, 
     my $mat;
     if ($self->homogenous) {

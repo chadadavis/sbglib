@@ -64,6 +64,11 @@ has '_centroid' => (
     );
 
 
+has 'residues' => (
+    is => 'ro',
+    isa => 'ArrayRef[Int]',
+    );
+
 
 =head2 BUILD
 
@@ -83,7 +88,10 @@ sub BUILD {
     my $io = new SBG::DomainIO::pdb(tempfile=>1);
     $io->write($self);
     # Open the file for reading now
-    $io = new SBG::DomainIO::pdb(file=>$io->file,atom_type=>$self->atom_type);
+    $io = new SBG::DomainIO::pdb(file=>$io->file,
+                                 atom_type=>$self->atom_type,
+                                 residues=>$self->residues,
+        );
     
     # Get the coords directly from the IO obj.
     my $coords = $io->coords;
