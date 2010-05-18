@@ -13,7 +13,7 @@ use FindBin qw/$Bin/;
 use lib "$Bin/../../../lib/";
 use SBG::U::Test qw/pdl_approx float_is/;
 
-use SBG::U::DB qw/connect/;
+use SBG::U::DB qw/connect chain_case/;
 use Scalar::Util qw/refaddr/;
 
 # Test connection caching
@@ -30,3 +30,9 @@ is(refaddr($dbh1),refaddr($dbh2), "connect() caching");
 ok(SBG::U::DB::_port_listening('google.com', 80), '_port_listening');
 # 2 is nothing, Should not be listening
 ok(! SBG::U::DB::_port_listening('localhost', 2), '_port_listening');
+
+my $chain;
+$chain = 'a';
+is(chain_case($chain), 'AA', 'chain_case to uc');
+$chain = 'AA';
+is(chain_case($chain), 'a', 'chain_case to lc');

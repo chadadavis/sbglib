@@ -33,7 +33,7 @@ use Log::Any qw/$log/;
 use Carp;
 use Scalar::Util qw/refaddr/;
 
-use SBG::U::DB;
+use SBG::U::DB qw/chain_case/;
 use SBG::U::List qw/interval_overlap/;
 use SBG::Domain;
 use SBG::Domain::Sphere;
@@ -79,7 +79,7 @@ sub query_hit {
 # Extract PDB ID and chain
 sub _gi2pdbid {
     my ($gi) = @_;
-    my ($pdbid, $chain) = $gi =~ /pdb\|(.{4})\|(.*)/;
+    my ($pdbid, $chain) = $gi =~ /pdb\|(.{4})\|([A-Z0-9a-z]*)/;
     return unless $pdbid;
     return $pdbid unless $chain && wantarray;
     return $pdbid, $chain;
@@ -115,7 +115,7 @@ sub query {
     }
     $ops{'overlap'} = 0.50 unless defined $ops{'overlap'};
 
-    $pdbid = uc $pdbid;
+    $chain = chain_case($chain);
     my $dbh = SBG::U::DB::connect($database, $host);
     # Static handle, prepare it only once
     our $querysth;

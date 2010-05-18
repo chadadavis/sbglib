@@ -28,7 +28,7 @@ our @EXPORT_OK = qw/query/;
 use DBI;
 use Log::Any qw/$log/;
 
-use SBG::U::DB;
+use SBG::U::DB qw/chain_case/;
 
 
 # TODO DES OO
@@ -62,7 +62,7 @@ sub query {
     our $database;
     our $host;
 
-    $pdbid = uc $pdbid;
+    $chainid = chain_case($chainid); 
     my $dbh = SBG::U::DB::connect($database, $host);
     # Static handle, prepare it only once
     our $cofm_sth;

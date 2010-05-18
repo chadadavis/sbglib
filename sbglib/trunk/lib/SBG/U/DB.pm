@@ -24,7 +24,7 @@ L<DBI>
 
 package SBG::U::DB;
 use base qw/Exporter/;
-our @EXPORT_OK = qw(connect);
+our @EXPORT_OK = qw(connect chain_case);
 
 use strict;
 use warnings;
@@ -139,6 +139,39 @@ sub _port_listening {
     return if $@;
     return 1;
 }
+
+
+
+
+=head2 chain_case
+
+ Function: Converts between e.g. 'a' and 'AA'
+ Example : $chain = chain_case('a'); $chain = chain_case('AA');
+ Returns : lowercase converted to double uppercase, or vice versa
+ Args    : 
+
+The NCBI Blast standard uses a double uppercase to represent a lower case chain identifier from the PDB. I.e. when a structure has more than 36 chains, the first 26 are named [A-Z] the next 10 are named [0-9], and the next next 26 are named [a-z]. The NCBI Blast is not case-sensitive, so it converts the latter to double uppercase, i.e. 'a' becomes 'AA'.
+
+Given 'a', returns 'AA';
+
+Given 'AA', returns 'a';
+
+Else, returns the identity;
+
+=cut
+sub chain_case {
+    my ($chainid) = @_;
+
+    # Convert lowercase chain id 'a' to uppercase double 'AA'
+    if ($chainid =~ /^([a-z])$/) {
+        $chainid = uc $1 . $1;
+    } elsif ($chainid =~ /^([A-Z])\1$/) {
+        $chainid = lc $1;
+    }
+
+    return $chainid;
+
+} # chain_case
 
 
 
