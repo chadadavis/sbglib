@@ -72,6 +72,9 @@ has 'input' => (
     is => 'rw',
     );
 
+has 'aln' => (
+    is => 'rw',
+    );
 
 has 'coverage' => (
     is => 'rw',

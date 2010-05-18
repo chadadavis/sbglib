@@ -225,6 +225,8 @@ sub _model {
         scores=>$scores,
         input=>$entity->{'input'},
         );
+    # Burry the HSP in the model too, to get the alignment back out
+    $model->aln($hsp->get_aln());
     return $model;
 }
 
