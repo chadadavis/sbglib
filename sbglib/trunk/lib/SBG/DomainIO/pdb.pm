@@ -73,7 +73,7 @@ has 'atom_type' => (
 
 has 'residues' => (
     is => 'ro',
-    isa => 'ArrayRef[Int]',
+    isa => 'Maybe[ArrayRef[Int]]',
     );
 
 
