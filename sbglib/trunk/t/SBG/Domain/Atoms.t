@@ -52,3 +52,7 @@ pdl_approx($dom2_0->coords->slice('0:2,0'), $first_ca_trans,
            "Verifying coords of transformed CA");
 
 
+$TODO = "Test provide specific 'residues'";
+ok(0);
+
+done_testing();
