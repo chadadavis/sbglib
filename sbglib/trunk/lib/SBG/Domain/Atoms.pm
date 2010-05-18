@@ -36,6 +36,7 @@ use overload (
     );
 
 use Carp;
+use File::Spec;
 
 use SBG::DomainIO::pdb;
 use SBG::U::RMSD;
@@ -85,7 +86,8 @@ segment).
 =cut
 sub BUILD {
     my ($self) = @_;
-    my $io = new SBG::DomainIO::pdb(tempfile=>1);
+    my $outfile = File::Spec->catfile(File::Spec->tmpdir, "$self" . '.pdb');
+    my $io = new SBG::DomainIO::pdb(file=>">$outfile");
     $io->write($self);
     # Open the file for reading now
     $io = new SBG::DomainIO::pdb(file=>$io->file,

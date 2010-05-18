@@ -25,6 +25,7 @@ http://www.wwpdb.org/documentation/format32/v3.2.html
 package SBG::DomainIO::pdb;
 use Moose;
 use Moose::Autobox;
+use Log::Any qw/$log/;
 
 with 'SBG::IOI';
 use SBG::Domain;
@@ -177,16 +178,30 @@ sub coords {
     my $pattern = $self->atom_type;
     my $getresids = $self->residues;
 
+    our $cache; 
+    $cache ||= {};
+    my $cachekey = join '--', $self->file, $self->atom_type;
+    $log->debug("Cache key: $cachekey");
+    my $cached = $cache->{$cachekey};
     # X,Y,Z coords in fields 6,7,8 (0-based)
-    my ($x, $y, $z, $aas, $resids) = rcols($self->file(), 6,7,8,
-                                  {
-                                      # Field 3 is the 3-char residue type
-                                      # Field 5 is the residue ID number
-                                      PERLCOLS => [3, 5],
-                                      # Only read lines matching this:
-                                      INCLUDE  => "/^ATOM.........$pattern/",
-                                  },
-        );
+    my ($x, $y, $z, $aas, $resids);
+
+    if (defined $cached) {
+        $log->debug("Cache hit: $cachekey");
+        ($x, $y, $z, $aas, $resids) = @$cached;
+    } else {
+        ($x, $y, $z, $aas, $resids) = 
+            rcols($self->file(), 6,7,8,
+                  {
+                      # Field 3 is the 3-char residue type
+                      # Field 5 is the residue ID number
+                      PERLCOLS => [3, 5],
+                      # Only read lines matching this:
+                      INCLUDE  => "/^ATOM.........$pattern/",
+                  },
+            );
+        $cache->{$cachekey} =  [ $x, $y, $z, $aas, $resids ];
+    }
     # No atoms matching the given pattern?
     return unless scalar @$aas;
 
