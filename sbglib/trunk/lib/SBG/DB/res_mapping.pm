@@ -22,12 +22,13 @@
 
 package SBG::DB::res_mapping;
 use base qw/Exporter/;
-our @EXPORT_OK = qw/query/;
+our @EXPORT_OK = qw/query aln2locations/;
 
 use DBI;
 use Log::Any qw/$log/;
+use List::Util qw/min/;
 
-use SBG::U::DB;
+use SBG::U::DB qw/chain_case/;
 
 
 # TODO DES OO
@@ -46,48 +47,89 @@ TODO BUG check for exactly two result rows
        
 =cut
 sub query {
-    my ($pdbid, $chainid, $start, $end) = @_;
+    my ($pdbid, $chainid, $pdbseq) = @_;
     our $database;
     our $host;
 
-    $pdbid = uc $pdbid;
     my $dbh = SBG::U::DB::connect($database, $host);
-    # Static handle, prepare it only once
-    our $sth;
 
-    $sth ||= $dbh->prepare("
+    my $pdbseqstr = join(',', @$pdbseq);
+    # Covert lower case to uppercase, if necessary
+    $chainid = chain_case($chainid);
+
+
+    my $query = <<END;
 SELECT
-resseq, idcode
+resseq
 FROM 
 res_mapping
-WHERE idcode=?
-AND chain=?
-AND pdbseq=?
-");
+WHERE idcode='$pdbid'
+AND chain='$chainid'
+AND pdbseq in ($pdbseqstr)
+ORDER BY pdbseq
+END
 
-    unless ($sth) {
+    my $resseq = $dbh->selectcol_arrayref($query);
+
+    unless ($resseq) {
         $log->error($dbh->errstr);
         return;
     }
-
-    if (! $sth->execute($pdbid, $chainid, $start)) {
-        $log->error($sth->errstr);
-        return;
-    }
-    log->trace('select start: ', $sth->rows() , ' rows');
-    my $dstart = $sth->fetchrow_hashref();
-
-    if (! $sth->execute($pdbid, $chainid, $end)) {
-        $log->error($sth->errstr);
-        return;
-    }
-    log->trace('select end: ', $sth->rows() , ' rows');
-    my $dend = $sth->fetchrow_hashref();
-
-    return $dstart, $dend;
+    return $resseq;
 
 } # query
 
+
+
+
+=head2 aln2locations
+
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
+
+
+
+=cut
+sub aln2locations {
+    my ($aln) = @_;
+
+    # Bio::Seq objects
+    my $seq1 = $aln->get_seq_by_pos(1);
+    my $seq2 = $aln->get_seq_by_pos(2);
+    # Extract raw character strings, and chop to equal length
+    my ($seq1seq, $seq2seq) = flush_seqs($seq1->seq, $seq2->seq);
+    # Relative sequence begin of each sequence in the alignment, 1-based
+    my $seq1i = $seq1->start;
+    my $seq2i = $seq2->start;
+    # Jump over gaps, incrementallycount other positions
+    my @seq1pos = map { /-/ ? undef : $seq1i++ } split '', $seq1seq;
+    my @seq2pos = map { /-/ ? undef : $seq2i++ } split '', $seq2seq;
+    # Which positions are not gapped in either sequence
+    my @mask = 
+        grep { defined $seq1pos[$_] && defined $seq2pos[$_] } 0 .. $#seq1pos;
+    # Filter out positions that are gapped in either sequence
+    @seq1pos = @seq1pos[@mask];
+    @seq2pos = @seq2pos[@mask];
+
+    # Get keys from alignment
+    my %locations = ($seq1->display_id => [ @seq1pos ],
+                     $seq2->display_id => [ @seq2pos ],
+        );
+    return %locations;
+
+} # aln2locations
+
+
+# Make two strings the same length, by chopping the longer
+sub flush_seqs {
+    my ($seq1, $seq2) = @_;
+    my $minlen = min(length($seq1), length($seq2));
+    $seq1 = substr($seq1, 0, $minlen);
+    $seq2 = substr($seq2, 0, $minlen);
+    return ($seq1, $seq2);
+}
 
 
 
