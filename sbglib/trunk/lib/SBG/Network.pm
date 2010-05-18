@@ -189,7 +189,9 @@ sub symmetry {
         $log->debug(' identity:', $aln->percentage_identity, 
                     ' score:', $aln->score);
 
-        if ($aln->percentage_identity > $homo_thresh) {
+        # Get identity as function of length of longer sequence;
+        my $identity = $aln->overall_percentage_identity('long');
+        if ($identity > $homo_thresh) {
             $log->debug("Grouping homologs: @$pair");
             $symmetry->add_edge("$pair->[0]", "$pair->[1]");
         }
