@@ -94,6 +94,10 @@ has 'pdbid' => (
 
 =head2 descriptor
 
+Which chains and residues are contained within this domain. This may be a single
+chain, multiple chains, segments of a chain, or segments from separate chains
+together.
+
 STAMP descriptor, Examples:
 
 ALL
@@ -113,29 +117,79 @@ has 'descriptor' => (
     );
 
 
+
+
+=head2 description
+
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
+
+Annotation of this domain, functional description text
+
+=cut
 has 'description' => (
     is => 'rw',
     isa => 'Str',
     );
 
 
-# Which PDB biounit assembly this domain is contained in
+
+
+
+=head2 assembly
+
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
+
+Which PDB biounit assembly this domain is contained in
+
+=cut
 has 'assembly' => (
     is => 'rw',
     isa => 'Int',
     );
 
 
-# Which PDB biounit model in the assembly
-# NB Has nothing to do with SBG::Model
+
+
+
+=head2 model
+
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
+
+
+Which PDB biounit model in the assembly
+
+NB Has nothing to do with SBG::Model
+
+=cut
 has 'model' => (
     is => 'rw',
     isa => 'Int',
     );
 
 
-# entity.id field of TransDB
-# TODO should be a subclass
+
+
+=head2 entity
+
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
+
+entity.id field of TransDB
+
+TODO should be a subclass
+
+=cut
 has 'entity' => (
     is => 'rw',
     isa => 'Str',
@@ -166,6 +220,8 @@ has 'file' => (
  Returns : 
  Args    : 
 
+Number of AA residues in the entire domain, including residues from multiple
+chains, if the domain spans multiple chains.
 
 =cut
 has 'length' => (
@@ -195,6 +251,15 @@ has 'transformation' => (
 
 =head2 coords
 
+X,Y,Z coordinates of all the atoms in the domain.
+
+This is generally a reduced representation of the domain, depending on which
+subclass of L<SBG::DomainI> is being used. This might be the C-alpha atoms, or
+simply, the centre of mass of a domain. Of course, all atoms may be used, at a
+significant performance penalty.
+
+Note that class detection is based on spherical representation of a domain.
+
 Set of homogenous 4D coordinates. The 4th dimension of each point must be 1.
 
 TODO: considering coercing coordinates from 3D to 4D here, for convenience
@@ -220,7 +285,7 @@ sub _build_coords {
  Returns : 
  Args    : 
 
-Center of mass of all coordinates;
+Center of mass of all X,Y,Z coordinates of the reduced representation.
 
 =cut
 requires 'centroid';
