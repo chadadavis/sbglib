@@ -174,7 +174,7 @@ sub symmetry {
     # Define homologous groups, initially each protein homologous to self
     $symmetry->add_vertex("$_") for @nodes;
 
-    my $clustal = Bio::Tools::Run::Alignment::Clustalw->new;
+    my $clustal = Bio::Tools::Run::Alignment::Clustalw->new(quiet=>1);
     my $homo_thresh = 90;
 
     # For all pairs
