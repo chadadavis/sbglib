@@ -29,6 +29,7 @@ our @EXPORT_OK = qw(connect chain_case);
 use strict;
 use warnings;
 use DBI;
+use Carp;
 
 # Simply for documenting the dependency
 #use DBD::mysql;
@@ -81,24 +82,27 @@ sub connect {
             die "DBI::connect timed out: $dbname@$host\n"; 
         };
         alarm($timeout);
-        my $success = DBI->connect($dbistr, $user) or die;
-        return $success;
+        my $dbh = DBI->connect($dbistr, $user);
+        alarm(0);
+        unless (defined $dbh) {
+            while (defined($DBI::errstr) && 
+                   $DBI::errstr =~ /too many connections/i) {
+                sleep int(rand()*$sleep);            
+                # Try again
+                alarm($timeout);
+                $dbh = DBI->connect($dbistr, $user);
+                alarm(0);
+            }
+        }
     };
     alarm(0);
 
-    unless (defined $dbh) {
-        while (defined($DBI::errstr) && 
-               $DBI::errstr =~ /too many connections/i) {
-            sleep int(rand*$sleep);            
-            # Try again
-            $dbh = DBI->connect($dbistr, $user);
-        }
-        unless ($dbh) {
-            # Some other error
-            # warn ("Could not connect to database:" . $DBI::errstr . "\n");
-            return;
-        }
+    unless ($dbh) {
+        # Some other error
+        carp("Could not connect to database:" . $DBI::errstr . "\n");
+        return;
     }
+
     # Update cache
     $connections{$host}{$dbname} = $dbh;
     return $dbh;
