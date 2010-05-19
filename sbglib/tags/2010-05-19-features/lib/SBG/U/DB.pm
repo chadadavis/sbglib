@@ -58,9 +58,11 @@ If the return value is not defined, check L<DBI>C<errstr()>
 Host name is optional. If not given, uses the same rules as mysql to determine
 which database host to connect to. Specified in ~/.my.cnf otherwise B<localhost>
 
+TODO this can be replaced by L<DBI::connect_cached>
+
 =cut
 sub connect {
-    my ($dbname, $host, $timeout) = @_;
+    my ($dbname, $host, $timeout, $user) = @_;
     our $sleep;
     our %connections;
     $dbname ||= $default_db;
@@ -72,13 +74,14 @@ sub connect {
     my $dbistr = "dbi:mysql:dbname=$dbname";
     $dbistr .= ";host=$host" if $host;
     $timeout ||= defined($DB::sub) ? 100: 5;
-
+    $user ||= '%';
+    
     $dbh = eval { 
         local $SIG{ALRM} = sub { 
             die "DBI::connect timed out: $dbname@$host\n"; 
         };
         alarm($timeout);
-        my $success = DBI->connect($dbistr) or die;
+        my $success = DBI->connect($dbistr, $user) or die;
         return $success;
     };
     alarm(0);
@@ -88,7 +91,7 @@ sub connect {
                $DBI::errstr =~ /too many connections/i) {
             sleep int(rand*$sleep);            
             # Try again
-            $dbh = DBI->connect($dbistr);
+            $dbh = DBI->connect($dbistr, $user);
         }
         unless ($dbh) {
             # Some other error
