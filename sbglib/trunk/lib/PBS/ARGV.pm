@@ -193,13 +193,12 @@ sub _submit {
     # PBS directives
     my @directives = $cmdops{'directives'} || ();
 
+    # Notify on Abort, Begin, End
+    push @directives, "-m a";
+
     # Check explicitly for mailing address, append it to directives
     if ($cmdops{'M'}) {
         push @directives, "-M $cmdops{'M'}";
-        # Notify on Abort, Begin, End
-        push @directives, "-m abe";
-        # Doesn't need to be passed on to job invocations
-        delete $cmdops{'M'};
     }
 
     # Array? if -J directive given, also append \$PBS_ARRAY_INDEX to cmdline
