@@ -20,7 +20,7 @@ SBG::U::Log::init(undef, loglevel=>'DEBUG') if $DEBUG;
 $File::Temp::KEEP_ALL = $DEBUG;
 
 
-use SBG::Run::PairedBlast;
+use SBG::Run::PairedBlast qw/gi2pdbid/;
 use Bio::SeqIO;
 
 
@@ -28,7 +28,15 @@ use Bio::SeqIO;
 my $pdbgi = 'pdb|1g3n|BB pdb|1tim|AA';
 my @res = SBG::Run::PairedBlast::gi2pdbid($pdbgi);
 my @gi_expect = ( [ qw/1g3n b/ ], [ qw/1tim a/ ] );
-is_deeply(\@res, \@gi_expect, "PDB double uppercase chain IDs from Blast");
+is_deeply(\@res, \@gi_expect, 
+          "gi2pdbid(): Blast double uppercase chain to lowercase");
+
+# Lowercase retained?
+$pdbgi = 'pdb|1g3n|0';
+@res = gi2pdbid($pdbgi);
+@gi_expect = ( [ qw/1g3n 0/ ]);
+is_deeply(\@res, \@gi_expect, 
+          "gi2pdbid(): CHAIN 0 respected");
 
 
 my $io = new Bio::SeqIO(-file=>"$Bin/../data/2br2AB.fa");
@@ -64,6 +72,7 @@ my @hitpairs = $blast->search($seq1, $seq2, limit=>10);
 ok(scalar(@hitpairs), 'with limit=10 monomeric hits on each side');
 
 
+# gi2pdbid
 
 
 

@@ -460,7 +460,7 @@ sub gi2pdbid {
     while ($gistr =~ /$pdbre/g) {
         my $pdb = $1;
         # NB '0'is a valid chain name, but not 'true' according to Perl
-        my $chain = defined($2) || '';
+        my $chain = defined($2) ? $2 : '';
         if (length($chain) == 2 && substr($chain,0,1) eq substr($chain,1,1)) {
             $chain = lc substr($chain,0,1)
         }
