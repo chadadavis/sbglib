@@ -192,6 +192,8 @@ sub _submit {
     my %cmdops = $ops{'options'} ? %{$ops{'options'}} : ();
     # PBS directives
     my @directives = $cmdops{'directives'} || ();
+    # And remove it from the options passed to the job
+    delete $cmdops{'directives'};
 
     # Notify on Abort, Begin, End
     push @directives, "-m a";
