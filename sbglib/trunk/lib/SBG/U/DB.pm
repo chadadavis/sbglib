@@ -94,6 +94,7 @@ sub connect {
                 alarm(0);
             }
         }
+        return $dbh;
     };
     alarm(0);
 
