@@ -37,7 +37,7 @@ use SBG::U::DB qw/chain_case/;
 use SBG::U::List qw/interval_overlap/;
 use SBG::Domain;
 use SBG::Domain::Sphere;
-
+use SBG::Run::PairedBlast qw/gi2pdbid/;
 
 # TODO DES OO
 our $database = "trans_3_0";
@@ -49,7 +49,10 @@ sub query_hit {
     my ($hit, %ops) = @_;
     our %hit_cache;
     $ops{'cache'} = 1 unless defined $ops{'cache'};
-    my ($pdbid,$chain) = _gi2pdbid($hit->name);
+
+    my ($pdbid_chainid) = gi2pdbid($hit->name);
+    my ($pdbid, $chainid) = @$pdbid_chainid;
+    return unless $chainid;
     my ($pdbseq0, $pdbseqn) = $hit->range('hit');
 
 #     my $key = $hit->{'refaddr'};
@@ -64,7 +67,7 @@ sub query_hit {
     }
 
     $ops{'pdbseq'} ||= [$pdbseq0,$pdbseqn];
-    my $entities = [ query($pdbid, $chain, %ops) ];
+    my $entities = [ query($pdbid, $chainid, %ops) ];
 
     if ($ops{'cache'}) { 
         $hit_cache{$key} = $entities;
@@ -74,17 +77,6 @@ sub query_hit {
     $_->{'hit'} = $hit for @$entities;
     return @$entities;
 }
-
-
-# Extract PDB ID and chain
-sub _gi2pdbid {
-    my ($gi) = @_;
-    my ($pdbid, $chain) = $gi =~ /pdb\|(.{4})\|([A-Z0-9a-z]*)/;
-    return unless $pdbid;
-    return $pdbid unless $chain && wantarray;
-    return $pdbid, $chain;
-}
-
 
 
 =head2 query
