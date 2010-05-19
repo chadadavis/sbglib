@@ -296,53 +296,7 @@ has 'score' => (
 sub _build_score {
     my ($self) = @_;
 
-    my $models = $self->models->values;
-
-    # Sequence coverage, average
-    my $covers = $models->map(sub{$_->coverage});
-    my $pseqlength = $covers->sum / $covers->length;
-
-
-    # Interactions in model
-    my $miactions = $self->interactions->values;
-    # Edge weight, generally the seqid
-    my $weights = $miactions->map(sub{$_->weight})->grep(sub{defined $_});
-    # Average sequence identity of all the templates.
-    # NB linker domains are counted multiple times. 
-    # Given a hub proten and three interacting spoke proteins, there are not 4
-    # values for sequence identity, but rather 6=2*(3 interactions)
-    my $avg_iaction = $weights->sum / $weights->length;
-
-
-    # Linker superpositions required to build model by overlapping dimers
-    my $sups = $self->superpositions->values;
-    my $scs = $sups->map(sub{$_->scores->at('Sc')});
-    # Average Sc of all superpositions done
-    my $msc = $scs->sum / $scs->length;
-    # Scale [0,100]
-    $msc *= 10;
-
-    my $glob = 100 * $self->globularity;
-
-    # Score weights
-    my ($wtcover, $wtiaction, $wtsc, $wtglob) = (.1, .4, .3, .2);
-    # Score ranges
-    my @ranges;
-
-    # Scale to [0,100]
-    my $score = 100 * sum(
-        $wtcover*$pseqlength,
-        $wtiaction*$avg_iaction**2,
-        $wtsc*$msc**2,
-        $wtglob*$glob,
-        ) / sum(
-        $wtcover*100,
-        $wtiaction*100**2,
-        $wtsc*100**2,
-        $wtglob*100,
-        );
-    
-    return $score;
+    return 1;
 }
 
 
