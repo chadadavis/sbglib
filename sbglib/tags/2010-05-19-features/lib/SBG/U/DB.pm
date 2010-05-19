@@ -166,7 +166,9 @@ sub chain_case {
     my ($chainid) = @_;
 
     # Convert lowercase chain id 'a' to uppercase double 'AA'
-    if ($chainid =~ /^([a-z])$/) {
+    if (! $chainid) {
+        $chainid = '';
+    } elsif ($chainid =~ /^([a-z])$/) {
         $chainid = uc $1 . $1;
     } elsif ($chainid =~ /^([A-Z])\1$/) {
         $chainid = lc $1;

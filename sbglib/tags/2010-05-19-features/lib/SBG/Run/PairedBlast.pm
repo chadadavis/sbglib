@@ -397,6 +397,7 @@ sub _expand_aliases {
         my @hitnames = gi2pdbid($longdesc);
         foreach my $hitname (@hitnames) {
             my ($pdb, $chain) = @$hitname;
+
             # Reformat it, respecting any lowercase chain names now
             my $name = "pdb|$pdb|$chain";
             my $clone = clone($hit);
@@ -406,6 +407,7 @@ sub _expand_aliases {
             # Trace history
             $clone->{'refaddr'} = refaddr $hit;
             push @$exphits, $clone;
+
         }
     }
     return $exphits;
@@ -457,7 +459,8 @@ sub gi2pdbid {
     my @res;
     while ($gistr =~ /$pdbre/g) {
         my $pdb = $1;
-        my $chain = $2 || '';
+        # NB '0'is a valid chain name, but not 'true' according to Perl
+        my $chain = defined($2) || '';
         if (length($chain) == 2 && substr($chain,0,1) eq substr($chain,1,1)) {
             $chain = lc substr($chain,0,1)
         }

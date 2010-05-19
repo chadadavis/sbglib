@@ -164,11 +164,11 @@ sub frac_of {
 sub getoptions {
     my (@ops) = @_;
     # Throw in some standard options
-    # J is for the line number of a PBS job array
+    # J is for the line number of a PBS job array, but is also generally useful
     # A list file contains the paths of the inputs to be processed
-    # The -J option say which line (0-based) is the current input file
+    # The -J option says which line (0-based) is the current input file
     # The -M option is for an email address (used by PBS, among others)
-    push @ops, qw/help|h debug|d loglevel|l=s logfile|f=s logdir=s J=s M=s/;
+    push @ops, qw/help|h debug|d directives=s loglevel|l=s logfile|f=s logdir=s J=s M=s/;
 
     my %ops;
     # This makes single-char options case-sensitive
