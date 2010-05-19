@@ -64,7 +64,7 @@ my %ops = getoptions
 
 # Recreate command line options; (seems to work even with long option names)
 my @jobids = qsub(options=>\%ops);
-# print "Submitted:\n", join("\n", @jobids), "\n", if @jobids;
+print "Submitted:\n", join("\n", @jobids), "\n", if @jobids;
 
 exit unless @ARGV;
 
