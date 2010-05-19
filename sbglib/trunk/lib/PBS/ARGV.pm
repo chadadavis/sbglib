@@ -191,7 +191,7 @@ sub _submit {
     # Command line options to pass on
     my %cmdops = $ops{'options'} ? %{$ops{'options'}} : ();
     # PBS directives
-    my @directives = $ops{'directives'} ? @{$ops{'directives'}} : ();
+    my @directives = $cmdops{'directives'} || ();
 
     # Check explicitly for mailing address, append it to directives
     if ($cmdops{'M'}) {
