@@ -33,9 +33,11 @@ my %ops = getoptions('modelbase=s');
 my $tkeys = [ qw/tid tdesc tndoms tseqlen tnias/ ];
 my $allkeys = [ 
     @$tkeys,
+    qw/mid/,
     qw/rmsd/,
     qw/score/,
-    qw/mid mndoms mseqlen pdoms pseqlen mnias pias/,
+    qw/mndoms mseqlen pdoms pseqlen mnias/,
+#     qw/pias/,
     qw/nsources/,
     qw/ncycles/,
     qw/scmin scmax scmed/,
@@ -43,7 +45,7 @@ my $allkeys = [
     qw/idmin idmax idmed/,
     qw/ifacelenmin ifacelenmax ifacelenmed/,
     qw/ifaceconsmin ifaceconsmax ifaceconsmed/,
-    qw/sas/,
+#     qw/sas/,
     qw/olmin olmax olmed/,
     ];
 

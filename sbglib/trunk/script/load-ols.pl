@@ -1,5 +1,38 @@
 #!/usr/bin/env perl
 
+=head1 NAME
+
+B<load-ols.pl> - do a multiple linear regression and plot the residuals
+
+=head1 SYNOPSIS
+
+
+
+=head1 DESCRIPTION
+
+
+=head1 OPTIONS
+
+=head2 -h|elp Print this help page
+
+=head2 -l|og Set logging level
+
+In increasing order: TRACE DEBUG INFO WARN ERROR FATAL
+
+I.e. setting B<-l WARN> (the default) will log warnings errors and fatal
+messages, but no info or debug messages to the log file (B<log.log>)
+
+=head2 -f|ile Log file
+
+Default: <network name>.log in current directory
+
+=head1 SEE ALSO
+
+L<PDL::Stats::GLM> , L<PDL::Stats::Basic>
+
+=cut
+
+
 use strict;
 use warnings;
 
@@ -9,40 +42,48 @@ use PDL::Stats::GLM;   # qw/ols/;
 use PDL::Stats::Basic; # qw/corr/;
 use PDL::IO::Misc qw/rcols/;
 
-# do a multiple linear regression and plot the residuals
-
-my $csvfile = shift || '/usr/local/home/davis/work/presentations/2010-04-21-group-ca/eval-100-Mscore.csv';
-
-
 $PDL::IO::Misc::colsep = "\t";
 
-# Leave undefined to get all lines
+
+my $csvfile = shift || die;
+
+# Leave undefined to read all lines
 my $nlines = shift;
-# my $nlines = 20;
 
 my $inputlines = "1:$nlines";
-my ($Mcomps, $pcComps, $nIacts, $nSources, $pcSeqLen, $avgIactCons, $avgSc,
-# With MscoreLess
-#     $Mscore, $MscoreLess, $RMSDcofm, $Target, $Description, $Tcomps, $TseqLen) =
-#     rcols($csvfile, 5..14, 
-# Without MscoreLess
-    $Mscore, $RMSDcofm, $Target, $Description, $Tcomps, $TseqLen) =
-    rcols($csvfile, 5..13, 
+
+my (
+    $rmsd, 
+    $score, $mndoms, $mseqlen, $pdoms, $pseqlen, $mnias, $pias, $nsources, $ncycles, $scmin, $scmax, $scmed, $glob, $idmin, $idmax, $idmed, $ifacelenmin, $ifacelenmax, $ifacelenmed, $ifaceconsmin, $ifaceconsmax, $ifaceconsmed, $sas, $olmin, $olmax, $olmed,
+    $tid, $tdesc, $tndoms, $tseqlen, $tnias, $mid
+    ) = 
+    rcols($csvfile, 
+          6..32,
           {
-              PERLCOLS => [0..4],
+              PERLCOLS => [0..5],
               LINES => $inputlines,
               EXCLUDE => "/NaN/",
           },
     );
 
 
-# Dependent variable, object measure of similarity of model to known target benchmark complex
-my $y = $RMSDcofm;
+# Dependent variable, object measure of similarity of model to known target
+# benchmark complex
+my $y = $rmsd;
 my ($nmodels) = dims($y);
-# print "RMSDcofm:$y\n";
 
 # independent model variables
-my $iv = cat $pcComps, $nIacts, $nSources, $pcSeqLen, $avgIactCons, $avgSc;
+# NB Can't use any emtpy columns;
+my $iv = cat 
+#     $score, $mndoms, $mseqlen, $pdoms, $pseqlen, $mnias, $pias, $nsources, $ncycles, $scmin, $scmax, $scmed, $glob, $idmin, $idmax, $idmed, $ifacelenmin, $ifacelenmax, $ifacelenmed, $ifaceconsmin, $ifaceconsmax, $ifaceconsmed, $sas, $olmin, $olmax, $olmed,
+    # Don't learn $score, as it's just a sum of the others
+#     $score, 
+    $mseqlen, $pseqlen, $mnias, $nsources, $ncycles, $scmin, $scmax, $scmed, $glob, $idmin, $idmax, $idmed, $ifacelenmin, $ifacelenmax, $ifacelenmed, $ifaceconsmin, $ifaceconsmax,
+    # Why is $ifaceconsmed a problem?
+    # And $olmin works, but $olmax doesn't ??
+#     $ifaceconsmed,
+    ;
+
 
 # Ordinary least squares, to the independent variable $y
 my %m  = $y->ols( $iv );
@@ -67,8 +108,9 @@ my $modelvars = cat(dog($iv), $ones);
 
 # make a prediction on observations: $obsi
 # my $ntestend = 15;
-my $ntestend = 10;
-my $obsi = "0:$ntestend";
+my $ntestend = 5;
+# my $obsi = "0:$ntestend";
+my $obsi = "10:19";
 
 my $obs = $modelvars->slice("$obsi,")->transpose;
 # print "obs: $obs\n";
@@ -91,8 +133,3 @@ print "\n";
 # Now correlate $m->{y_pred} and $y
 my $corr = $y->corr($m{'y_pred'});
 print "corr: $corr\n";
-
-
-# use PDL::Graphics::PGPLOT::Window;
-# my $win = pgwin( 'xs' );
-# $win->points( $y - $m{y_pred} );
