@@ -36,3 +36,6 @@ $chain = 'a';
 is(chain_case($chain), 'AA', 'chain_case to uc');
 $chain = 'AA';
 is(chain_case($chain), 'a', 'chain_case to lc');
+
+$TODO = "How to test retry when 'too many connections'?";
+ok(0);
