@@ -610,7 +610,12 @@ This provides some measure of how compact, non-linear, the components in a
 complex are arranged. E.g. high for an exosome, low for actin fibers
 
 =cut
-sub globularity {
+has 'globularity' => (
+    is => 'rw',
+    lazy_build => 1,
+    );
+
+sub _build_globularity {
     my ($self,) = @_;
 
     # Multidimensional piddle
