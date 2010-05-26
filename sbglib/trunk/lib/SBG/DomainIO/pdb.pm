@@ -16,7 +16,12 @@ Requires the B<transform> program from the STAMP package.
 L<SBG::Domain> , L<SBG::IOI> , L<SBG::STAMP>
 
 PDB file format, Version 3.20 (Sept 15, 2008)
-http://www.wwpdb.org/documentation/format32/v3.2.html
+ 
+ http://www.wwpdb.org/documentation/format32/v3.2.html
+
+ATOM records:
+
+ http://www.wwpdb.org/documentation/format32/sect9.html#ATOM
 
 =cut
 
@@ -31,7 +36,7 @@ with 'SBG::IOI';
 use SBG::Domain;
 
 use PDL::Core qw/pdl ones/;
-use PDL::IO::Misc qw/rcols/;
+use PDL::IO::Misc qw/rcols rgrep/;
 
 # Write PDB file by writing a STAMP Dom file and having 'transform' create PDB
 use SBG::DomainIO::stamp;
@@ -68,7 +73,7 @@ explicit trailing space). Likewise, 'C' will match 'CA', 'CB', 'CG', 'CG1',
 =cut
 has 'atom_type' => (
     is => 'rw',
-    default =>  'CA ',
+    default =>  ' CA ',
     );
 
 
@@ -154,7 +159,6 @@ sub read {
 }
 
 
-
 =head2 coords
 
  Function: Loads atom coordinates from the PDB file into a L<PDL> matrix
@@ -175,7 +179,8 @@ separated.
 =cut
 sub coords {
     my ($self, ) = @_;
-    my $pattern = $self->atom_type;
+    my $record = 'ATOM  ';
+    my $atom = $self->atom_type;
     my $getresids = $self->residues;
 
     our $cache; 
@@ -183,38 +188,32 @@ sub coords {
     my $cachekey = join '--', $self->file, $self->atom_type;
     $log->debug("Cache key: $cachekey");
     my $cached = $cache->{$cachekey};
-    # X,Y,Z coords in fields 6,7,8 (0-based)
-    my ($x, $y, $z, $aas, $resids);
+    
+    # Fields to extract
+    my ($resSeq, $x, $y, $z);
 
     if (defined $cached) {
         $log->debug("Cache hit: $cachekey");
-        ($x, $y, $z, $aas, $resids) = @$cached;
+        ($resSeq, $x, $y, $z) = @$cached;
     } else {
-        ($x, $y, $z, $aas, $resids) = 
-            rcols($self->file(), 6,7,8,
-                  {
-                      # Field 3 is the 3-char residue type
-                      # Field 5 is the residue ID number
-                      PERLCOLS => [3, 5],
-                      # Only read lines matching this:
-                      INCLUDE  => "/^ATOM.........$pattern/",
-                  },
-            );
-        $cache->{$cachekey} =  [ $x, $y, $z, $aas, $resids ];
+        ($resSeq, $x, $y, $z) = rgrep { 
+            /^$record..... $atom.... .(....).   (........)(........)(........)/ 
+        } $self->file();
+        
+        # Probably faster to leave it as a PDL, but an Array is more flexible
+        $resSeq = [ $resSeq->list ];
+        $cache->{$cachekey} =  [ $resSeq, $x, $y, $z ];
     }
     # No atoms matching the given pattern?
-    return unless scalar @$aas;
+    return unless $x->nelem > 0;
 
     # Subset residue IDs, if given
     if ($getresids) {
         # Create a map from residue ID to array index
-        my %resmap = map { $resids->[$_] => $_ } 0..@$resids-1;
-#         for (my $i = 0; $i < @$resids; $i++) {
-#             $resmap{$resid[$i]} = $i;
-#         }
+        my %resmap = map { $resSeq->[$_] => $_ } 0..@$resSeq-1;
         my $select = $getresids->map(sub{$resmap{$_}});
-        $aas = $aas->slice($select);
-        $resids = $resids->slice($select);
+
+        $resSeq = $resSeq->slice($select);
         $x = $x->dice($select);
         $y = $y->dice($select);
         $z = $z->dice($select);
@@ -229,9 +228,9 @@ sub coords {
         $mat = pdl([ $x, $y, $z ])->transpose;
     }
 
-    return wantarray ? ($mat, $aas) : $mat;
+    return $mat;
 
-} # read
+} # coords
 
 
 
