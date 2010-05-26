@@ -101,6 +101,10 @@ sub query {
     our $database;
     our $host;
 
+    if ($chain =~ /^([a-z])$/) {
+        $chain = uc $1 . $1;
+    }
+
     if (defined $ops{'resseq'}) {
         carp "Converting coordinates not implemented";
         return;
