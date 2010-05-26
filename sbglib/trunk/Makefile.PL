@@ -54,6 +54,7 @@ requires 'PDL::LinearAlgebra' => '0';
 requires 'Sort::Key' => '0';
 requires 'Sort::Key::Top' => '0';
 requires 'Sub::Call::Recur' => '0';
+requires 'Term::ReadKey' => '0';
 requires 'Test::More' => '0';
 requires 'Text::ParseWords' => '0';
 requires 'Test::Pod::Coverage' => '1.08';
