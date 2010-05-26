@@ -54,7 +54,7 @@ explicit trailing space). Likewise, 'C' will match 'CA', 'CB', 'CG', 'CG1',
 =cut
 has 'atom_type' => (
     is => 'rw',
-    default =>  'CA ',
+    default =>  ' CA ',
     );
 
 

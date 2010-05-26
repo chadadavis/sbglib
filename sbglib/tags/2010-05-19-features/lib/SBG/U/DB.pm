@@ -63,7 +63,7 @@ TODO this can be replaced by L<DBI::connect_cached>
 
 =cut
 sub connect {
-    my ($dbname, $host, $timeout, $user) = @_;
+    my ($dbname, $host, $timeout, $user, $usingpassword) = @_;
     our $sleep;
     our %connections;
     $dbname ||= $default_db;
@@ -76,13 +76,14 @@ sub connect {
     $dbistr .= ";host=$host" if $host;
     $timeout ||= defined($DB::sub) ? 100: 5;
     $user ||= '%';
-    
+    my $password = _password($dbistr) if $usingpassword;
+
     $dbh = eval { 
         local $SIG{ALRM} = sub { 
             die "DBI::connect timed out: $dbname@$host\n"; 
         };
         alarm($timeout);
-        my $dbh = DBI->connect($dbistr, $user);
+        my $dbh = DBI->connect($dbistr, $user, $password);
         alarm(0);
         unless (defined $dbh) {
             while (defined($DBI::errstr) && 
@@ -90,7 +91,7 @@ sub connect {
                 sleep int(rand()*$sleep);            
                 # Try again
                 alarm($timeout);
-                $dbh = DBI->connect($dbistr, $user);
+                $dbh = DBI->connect($dbistr, $user, $password);
                 alarm(0);
             }
         }
@@ -109,15 +110,38 @@ sub connect {
     return $dbh;
 }
 
+use Term::ReadKey;
+sub _password {
+    my ($dsn) = @_;
+    my $cfg = _config();
+    my $password = $ENV{DBI_PASS} || $cfg->val('client', 'password') || '';
+    return $password if $password;
+
+    $dsn ||= '<unknown>';
+    print "\nEnter password for: $dsn : ";
+    ReadMode 'noecho';
+    $password = ReadLine 0;
+    chomp $password;
+    ReadMode 'normal';
+    print "\n";
+    return $password;
+}
+
 
 use Config::IniFiles;
-sub _default_host {
-    our $host;
-    return $host if $host;
+sub _config {
+    our $cfg;
+    return $cfg if $cfg;
     my $cnf = "$ENV{HOME}/.my.cnf";
     return '' unless -r $cnf;
-    my $cfg = Config::IniFiles->new(-file=>$cnf);
-    $host = $cfg->val('client', 'host') || '';
+    $cfg = Config::IniFiles->new(-file=>$cnf);
+    return $cfg;
+}
+
+
+sub _default_host {
+    my $cfg = _config();
+    my $host = $cfg->val('client', 'host') || '';
     return $host;
 }
 
