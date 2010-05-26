@@ -27,7 +27,7 @@ use SBG::DomainIO::pdb;
 
 
 # the 'models' base directory
-my %ops = getoptions('modelbase=s');
+my %ops = getoptions('modelbase=s', 'redo=i');
 
 # Column header labels
 my $tkeys = [ qw/tid tdesc tndoms tseqlen tnias/ ];
@@ -276,7 +276,8 @@ sub modelrmsd {
     my $benchrmsd = $model->scores->at('benchrmsd');
     my $benchmatrix = $model->scores->at('benchmatrix');
 
-    unless (!$ops{'debug'} && defined $benchrmsd && defined $benchmatrix) {
+    unless (!$ops{'debug'} && !$ops{'redo'} && 
+            defined $benchrmsd && defined $benchmatrix) {
         ($benchmatrix, $benchrmsd) = $model->rmsd_class($target);
         if (defined $benchmatrix) {
             $model->transform($benchmatrix);
