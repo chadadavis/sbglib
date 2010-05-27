@@ -281,6 +281,10 @@ $complex->transform($transmat2->inv);
 float_is($rmsd1, $rmsd2, "rmsd() is commutative");
 
 
+# TODO more realistic test needed
+is($complex->pdbids->length, 1, 'pdbids()');
+
+
 # Test globularity()
 # Won't work here, because there are no alignments in the model
 $TODO = "Verify globularity() value";
@@ -289,6 +293,8 @@ ok 0;
 
 $TODO = "Verify cofm result";
 ok(0);
+
+
 
 __END__
 
