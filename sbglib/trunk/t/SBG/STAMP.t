@@ -61,7 +61,10 @@ pdl_approx($atod_sup->transformation->matrix,
 
 # The opposite superposition should have the inverse transformation matrix
 my $dtoa_sup = superposition($domd, $doma);
-my $dtoa_expect = $atod_expect->inv;
+# No-longer using ->inv due to bug in PDL's identity() function
+# my $dtoa_expect = $atod_expect->inv;
+use PDL::Slatec;
+my $dtoa_expect = matinv($atod_expect);
 pdl_approx($dtoa_sup->transformation->matrix,
            $dtoa_expect,
            "superposition($domd, $doma)",

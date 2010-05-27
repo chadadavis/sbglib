@@ -23,8 +23,13 @@ use SBG::U::Test qw/pdl_approx float_is/;
 
 use PDL;
 use SBG::U::RMSD qw/
-centroid radius_gyr radius_max superposition rmsd translation
+centroid radius_gyr radius_max superposition rmsd translation identity
 /;
+
+
+my $id = identity(4);
+pdl_approx($id, pdl([1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]), 'identity');
+
 
 my $pdbid = '2br2';
 # Explicitly use the same lenghts, so we can superpose without aligning

@@ -39,10 +39,12 @@ use overload (
 
 use Module::Load;
 
-use PDL::MatrixOps qw/identity/;
+# use PDL::MatrixOps qw/identity/; # Broken diagonal() not a proper lvalue
 use PDL::Ufunc qw/all/;
 use PDL::Core qw/approx/;
 use PDL::Basic qw/transpose/;
+
+use SBG::U::RMSD qw/identity/;
 
 # To be Storable
 use PDL::IO::Storable;
@@ -96,11 +98,14 @@ sub reset {
  Args    : NA
 
 =cut
+use PDL::Slatec;
 sub inverse {
     my ($self) = @_;
     return $self unless $self->has_matrix;
     my $class = ref $self;
-    return $class->new(matrix=>$self->matrix->copy->inv);
+    # Invert a copy
+    my $inv = matinv($self->matrix->copy);
+    return $class->new(matrix=>$inv);
 }
 
 
