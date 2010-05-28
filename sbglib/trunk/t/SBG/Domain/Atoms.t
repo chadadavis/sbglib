@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 
-use Test::More 'no_plan';
+use Test::More;
 use Data::Dumper;
 use Data::Dump qw/dump/;
 use FindBin qw/$Bin/;
