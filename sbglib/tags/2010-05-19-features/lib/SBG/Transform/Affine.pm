@@ -98,13 +98,12 @@ sub reset {
  Args    : NA
 
 =cut
-use PDL::Slatec;
 sub inverse {
     my ($self) = @_;
     return $self unless $self->has_matrix;
     my $class = ref $self;
     # Invert a copy
-    my $inv = matinv($self->matrix->copy);
+    my $inv = $self->matrix->copy->inv;
     return $class->new(matrix=>$inv);
 }
 
