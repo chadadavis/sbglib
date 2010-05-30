@@ -48,11 +48,15 @@ my $allkeys = [
 #     qw/sas/,
     qw/olmin olmax olmed/,
     ];
-
+# Keys that should be round to 2 decimal places
+my $floatkeys = 
+    [ qw/rmsd score pdoms pseqlen glob idmin idmax idmed ifaceconsmin ifaceconsmax ifaceconsmed olmin olmax olmed/ ];
 
 # Try to submit to PBS, for each argument in @ARGV
 # Recreate command line options;
 my @jobids = qsub(options=>\%ops);
+print "Submitted:\n", join("\n", @jobids), "\n", if @jobids;
+
 # @ARGV is empty if all jobs could be submitted
 
 exit unless @ARGV;
@@ -72,9 +76,16 @@ foreach my $file (@ARGV) {
     
 
     my $basename = basename($file,'.target');
+    next if -e $basename . '.done';
     my $lock = start_lock($basename);
     next if ! $lock && ! $ops{'debug'};
     SBG::U::Log::init($basename, %ops);
+
+    # Mark jobs that are tried, but not done, this file deleted when finished
+    # A cheap way to track what crashes before finishing
+    my $tryingfile = "$basename.trying";
+    open my $tryingfh, ">$tryingfile";
+    close $tryingfh;
 
     my $modelbase = $ops{'modelbase'};
     unless ($modelbase) {
@@ -88,7 +99,9 @@ foreach my $file (@ARGV) {
     $log->debug('modelbase ', $modelbase);
 
     do_target($basename, $file, $modelbase);
-
+    my @domfiles = <${basename}/*.dom>;
+    end_lock($lock, scalar @domfiles);
+    unlink $tryingfile;
 }
 
 
@@ -121,6 +134,8 @@ sub do_target {
         'tdesc' => $target->description,
         'tndoms' => $target->size,
         'tseqlen' => $target->{'tseqlen'},
+        # TODO
+        'tnias' => 0,
     };
     
     my @modelfiles = <$modeldir/*.model>;
@@ -138,23 +153,34 @@ sub do_target {
 }
 
 
+
 sub do_model {
     my ($target, $modelfile, $fh, $stats) = @_;
-    
     $log->debug($modelfile);
-
-    my $acc = $target->id;
     my $model = load_object($modelfile);
-    # Two formats
-    my ($class, $modelid) = $modelfile =~ /$acc-(\d+)-(\d+).model$/;
-    if ($class) {
-        $model->class($class);
-    } else {
-        ($modelid) = $modelfile =~ /$acc-(\d+).model$/;
-    }
-    $model->id($modelid);
-    $stats->{'mid'} = $modelid;
+    $stats = model_stats($target, $model, $stats);
 
+    # Print the CSV line, using predefined key ordering
+    my $fields = $stats->slice($allkeys)->map(sub{defined $_?$_:''});
+    print $fh $fields->join("\t"), "\n";
+    
+    modeloutputs($target,$model);
+
+    # Save any changes
+    $model->store($modelfile);
+}
+
+
+sub model_stats {
+    my ($target, $model, $stats) = @_;
+
+    my $benchstats = $model->scores->at('benchstats');
+
+    if (!$ops{'debug'} && !$ops{'redo'} && defined $benchstats) {
+        return $benchstats;
+    }
+    
+    $stats->{'mid'} = $model->id();
 
     # domain models within this complex model
     my $dommodels = $model->models->values;
@@ -162,7 +188,7 @@ sub do_model {
     my $tndoms = $target->size;
     $stats->{'mndoms'} = $mndoms;
     # Percentage of component coverage
-    $stats->{'pdoms'} = sprintf "%0.2f", 100.0 * $mndoms / $tndoms;
+    $stats->{'pdoms'} = 100.0 * $mndoms / $tndoms;
 
     # Alignments
     my $alns = $dommodels->map(sub{$_->aln()});
@@ -204,7 +230,7 @@ sub do_model {
     my $mseqlen = $dommodels->map(sub{$_->subject->seq->length})->sum;
     $stats->{'mseqlen'} = $mseqlen;
     # Percentage sequence coverage by the complex model
-    my $pseqlen = sprintf "%0.2f", 100.0 * $mseqlen / $stats->{'tseqlen'};
+    my $pseqlen = 100.0 * $mseqlen / $stats->{'tseqlen'};
     $stats->{'pseqlen'} = $pseqlen;
 
 
@@ -246,23 +272,20 @@ sub do_model {
     $stats->{'ncycles'} = $model->ncycles();
 
     my ($rmsd, $matrix) = modelrmsd($model, $target);
-    $rmsd = sprintf("%0.4f", $rmsd);
     $rmsd = 'NaN' unless defined $matrix;
     $stats->{'rmsd'} = $rmsd;
 
     # Intrinsic model score
-    my $score = sprintf "%0.2f", $model->score;
+    my $score = $model->score;
     $stats->{'score'} = $score;
 
-    # Print the CSV line, using predefined key ordering
-    my $fields = $stats->slice($allkeys)->map(sub{defined $_?$_:''});
-    print $fh $fields->join("\t"), "\n";
-    
-    modeloutputs($target,$model);
+    # Format floating point values
+    foreach my $key (@$floatkeys) {
+        my $value = $stats->{$key};
+        $stats->{$key} = sprintf("%.2f",$value) if defined $value;
+    }
 
-    # Save any changes
-    $model->store($modelfile);
-
+    $model->scores->put('benchstats', $stats);
     return ($stats);
 }
 
@@ -340,7 +363,12 @@ sub _pdbfile {
     if (-s $pdbfile) {
         return;
     }
-    return unless ($model->scores->at('benchrmsd') > 0);
+    my $write = 
+        $model->scores->exists('benchrmsd') && 
+        $model->scores->at('benchrmsd') > 0;
+
+    return unless $write;
+
     my $lock = File::NFSLock->new($pdbfile,LOCK_EX|LOCK_NB) or return;
 
     my $pdbio = new SBG::DomainIO::pdb(file=>">${pdbfile}", compressed=>1);

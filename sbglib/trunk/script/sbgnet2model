@@ -102,6 +102,10 @@ foreach my $file (@ARGV) {
     # Setup new log file specific to given input file
     SBG::U::Log::init($basename, %ops);
 
+    # Mark jobs that are tried, but not done, deleted when done
+    open my $triedfile, "$basename.trying";
+    close $triedfile;
+
     # Load the Network object
     my $net;
     unless ($net = load_object($file)) {
@@ -120,6 +124,7 @@ foreach my $file (@ARGV) {
 
 #     my @modelfiles = <${outdir}/*.model>;
     end_lock($lock, join("\t", @stats));
+    unlink $triedfile;
 
 }
 

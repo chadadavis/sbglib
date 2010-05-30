@@ -334,8 +334,6 @@ sub _rot_svd {
     # invert the signs in the last column, when necessary 
 
     if (det $covariance < 0) {
-        # This doesn't seem to ever happen
-        warn "determinant < 0";
         $V->slice('-1,') *= -1;
     }
 

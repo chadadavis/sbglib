@@ -30,6 +30,7 @@ use strict;
 use warnings;
 use DBI;
 use Carp;
+use Log::Any qw/$log/;
 
 # Simply for documenting the dependency
 #use DBD::mysql;
@@ -78,30 +79,27 @@ sub connect {
     $user ||= '%';
     my $password = _password($dbistr) if $usingpassword;
 
-    $dbh = eval { 
-        local $SIG{ALRM} = sub { 
-            die "DBI::connect timed out: $dbname@$host\n"; 
+    my $err;
+    while (!defined $err || $err =~ /too many connections/i) {
+        $dbh = eval { 
+            local $SIG{ALRM} = sub { 
+                die "DBI::connect timed out: $dbistr\n"; 
+            };
+            alarm($timeout);
+            my $dbh = DBI->connect($dbistr, $user, $password);
+            alarm(0);
+            return $dbh;
         };
-        alarm($timeout);
-        my $dbh = DBI->connect($dbistr, $user, $password);
-        alarm(0);
-        unless (defined $dbh) {
-            while (defined($DBI::errstr) && 
-                   $DBI::errstr =~ /too many connections/i) {
-                sleep int(rand()*$sleep);            
-                # Try again
-                alarm($timeout);
-                $dbh = DBI->connect($dbistr, $user, $password);
-                alarm(0);
-            }
-        }
-        return $dbh;
-    };
-    alarm(0);
+        last if $dbh;
+        $err = $DBI::errstr;
+        $log->info("Waiting for database: $dbistr");
+        sleep int(rand()*$sleep);            
+    }
 
     unless ($dbh) {
         # Some other error
-        carp("Could not connect to database:" . $DBI::errstr . "\n");
+        my $err = $DBI::errstr || '<unidentified error>';
+        carp("Could not connect to $dbistr ($err)\n");
         return;
     }
 

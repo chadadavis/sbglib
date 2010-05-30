@@ -58,7 +58,7 @@ use Bio::Tools::Run::Alignment::Clustalw;
 
 use SBG::Types qw/$pdb41/;
 use SBG::U::List 
-    qw/interval_overlap intersection mean sum flatten swap cartesian_product/;
+    qw/interval_overlap intersection mean min sum flatten swap cartesian_product/;
 use SBG::U::RMSD;
 use SBG::U::iRMSD; # qw/irmsd/;
 use SBG::STAMP; # qw/superposition/
@@ -441,7 +441,7 @@ sub _build_modelled_coords {
         my $dommodel = $self->get($key);
         my $aln = $dommodel->aln();
         my ($modelled, $native) = 
-            $self->_coords_from_aln($aln, $key);
+            $self->_coords_from_aln($aln, $key) or return;
         $modelled_coords->{$key} = $modelled;
     }
 
@@ -628,7 +628,8 @@ sub _build_globularity {
     my ($self,) = @_;
 
     # Multidimensional piddle
-    my $coords = pdl $self->modelled_coords->values;
+    my $mcoords = $self->modelled_coords or return;
+    my $coords = pdl $mcoords->values;
     # Flatten into 2D
     $coords = $coords->clump(1,2) if $coords->dims == 3;
     return 100.0 * SBG::U::RMSD::globularity($coords);
@@ -1344,7 +1345,7 @@ sub rmsd_mapping_backbone {
         }
 
         ($mcoords, $ncoords) = 
-            $self->_coords_from_aln($aln, $selflabel, $mapping);
+            $self->_coords_from_aln($aln, $selflabel, $mapping) or return;
 
         $modelled_coords->{$cachekey} = $mcoords;
         $native_coords->{$cachekey} = $ncoords;
@@ -1444,6 +1445,9 @@ sub _coords_from_aln {
         $subjectkeyshort => $subjectkey,
     };
     my $coords = {};
+    # If we fail to extract all coordinates, arbitarily chop off some
+    # This is not correct, but will provide an approximation, still useful
+    my $ichop;
     foreach my $key ($labels->keys->flatten) {
         my $alnlabel = $labels->{$key};
 
@@ -1453,6 +1457,15 @@ sub _coords_from_aln {
 
         my $seqcoords = $seqcoords->{$alnlabel};
         my $resids = SBG::DB::res_mapping::query($pdbid, $chainid, $seqcoords);
+        $resids or return;
+        my $nfound = scalar @$resids;
+        $ichop ||= $nfound;
+        unless ($nfound == scalar(@$seqcoords)) {
+            $log->error(
+                "Could not extract all residue coordinates from $subjectkey");
+            $ichop = min($ichop, $nfound, scalar @$seqcoords);
+            $resids = $resids->slice([0..$ichop-1]);
+        }
 
         # Note we start with the whole chain here but we're only extracting the
         # aligned residues. This will be the atomic representation. And since we
@@ -1468,6 +1481,18 @@ sub _coords_from_aln {
         }
         $coords->{$key} = $dom->coords;
     }
+
+    # Force them to be the same dimensions by blatantly chopping the longer
+    # This loses the 1-to-1 correspondance, but still aligns well if off by 1
+
+    my $mapped_coords = $coords->{$mappedkey};
+    my $subject_coords = $coords->{$subjectkeyshort};
+    # Truncate both, simply from the end
+    # May be off by a few residues, but should be better than giving up
+    my $nchop = 
+        min($ichop, $mapped_coords->dim(1), $subject_coords->dim(1)) - 1;
+    $coords->{$subjectkeyshort} = $subject_coords->slice(":,0:$nchop");
+    $coords->{$mappedkey} = $mapped_coords->slice(":,0:$nchop");
 
     # The subject is what was modelled, the query is the benchmark
     return $coords->{$subjectkeyshort}, $coords->{$mappedkey}
