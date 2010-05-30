@@ -22,8 +22,9 @@ my $d = new_ok('SBG::Domain');
 ok(! eval { $d->pdbid('3didA') }, "Catching invalid PDB ID");
 ok(! eval { $d->pdbid('didi') }, "Catching invalid PDB ID");
 
-$d = new SBG::Domain(pdbid=>'2NN6');
-is($d->pdbid, '2nn6', "PDBID to lowercase");
+# No longer used, since we now allow uppercase as well
+# $d = new SBG::Domain(pdbid=>'2NN6');
+# is($d->pdbid, '2nn6', "PDBID to lowercase");
 
 
 # Default descriptor ALL

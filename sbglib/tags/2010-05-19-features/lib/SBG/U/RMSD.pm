@@ -44,16 +44,38 @@ our @ISA = qw(Exporter);
 our @EXPORT    = qw//;
 # Manually exported symbols
 our @EXPORT_OK = qw/
-rmsd centroid radius_gyr radius_max globularity superposition superpose translation
+centroid globularity identity radius_gyr radius_max rmsd superpose superposition translation
 /;
 
 
 use PDL::Lite;
-use PDL::Core qw/pdl ones inplace sclr/;
+use PDL::Core qw/pdl ones inplace sclr zeroes/;
 use PDL::Reduce qw/reduce/;
 use PDL::Ufunc qw/sumover average max all/;
-use PDL::MatrixOps qw/svd det identity/;
 use PDL::LinearAlgebra; # qw/crossprod/;
+use PDL::MatrixOps qw/svd det/;
+# use PDL::MatrixOps qw/svd det identity/; # identity uses broken diagonal()
+
+
+
+
+=head2 identity
+
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
+
+
+
+=cut
+sub identity {
+    my ($n) = @_;
+    pdl([1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1])
+#     $z = zeroes($n,$n);
+#     $z->diagonal(0,1) .= $z->diagonal(0,1) + 1;
+#     $z;
+} # identity
 
 
 =head2 rmsd

@@ -62,6 +62,7 @@ subtype 'SBG.PDBID'
     => as 'Str',
     => where { /^$re_pdb$/ };
 # Force lc (lowercase)
+# This is no longer effective, since we now allow uppercase
 coerce 'SBG.PDBID'
     => from 'Str'
     => via { lc $_ };

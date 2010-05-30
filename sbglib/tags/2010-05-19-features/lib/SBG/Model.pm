@@ -67,7 +67,18 @@ has 'subject' => (
     );
 
 
-# Original input, e.g. original Bio::Seq
+
+
+=head2 input
+
+ Function: Original input, e.g. original Bio::Seq
+ Example : 
+ Returns : 
+ Args    : 
+
+
+
+=cut
 has 'input' => (
     is => 'rw',
     );
@@ -76,12 +87,20 @@ has 'aln' => (
     is => 'rw',
     );
 
+=head2 coverage
+
+ Function: 
+ Example : 
+ Returns : [0.0-100.0] Percent of the sequence overlap between input and model
+ Args    : 
+
+
+
+=cut
 has 'coverage' => (
     is => 'rw',
     lazy_build => 1,
     );
-
-
 sub _build_coverage {
     my ($self) = @_;
     my $model_len = $self->subject->seq->length;

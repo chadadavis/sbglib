@@ -44,7 +44,7 @@ use overload (
 use Scalar::Util qw/refaddr/;
 use Moose::Autobox;
 use autobox::List::Util;
-use List::MoreUtils qw/mesh/;
+use List::MoreUtils qw/mesh uniq/;
 use Module::Load;
 
 use PDL::Lite;
@@ -179,6 +179,15 @@ has 'interactions' => (
     default => sub { { } },
     );
 
+
+
+sub pdbids {
+    my ($self) = @_;
+    my $iactions = $self->interactions->values;
+    my $pdbids = $iactions->map(sub{$_->pdbid});
+    my $uniq = [ uniq @$pdbids ];
+    return wantarray ? @$uniq : $uniq;
+}
 
 
 =head2 superpositions
@@ -718,6 +727,8 @@ sub merge_domain {
 
 
 # True if the sequences being modelled by two models overlap
+# Indended to enforce that shared components are actually shared and not just 
+# modelling seperate domains of a single chain, for example
 sub _model_overlap {
     my ($model1, $model2) = @_;
 
@@ -1022,12 +1033,14 @@ sub check_clashes {
 
 =head2 overlap
 
- Function: 
+ Function: Measures spatial coverage between a model and a benchmark complex
  Example : 
  Returns : 
  Args    : 
 
 TODO should be in a DomSetI interface
+
+
 =cut
 sub overlap {
     my ($self, $other) = @_;
@@ -1114,8 +1127,21 @@ sub rmsd {
 } # rmsd
 
 
-# Determine bijection by testing all combinations in homologous classes
-# If one complex is modelling the other, call this as $model->rmsd($benchmark)
+
+
+
+=head2 rmsd_class
+
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
+
+Determine bijection by testing all combinations in homologous classes
+
+If one complex is modelling the other, call this as $model->rmsd($benchmark)
+
+=cut
 sub rmsd_class {
     my ($self,$other) = @_;
     

@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 
-use Test::More 'no_plan';
+use Test::More;
 use Data::Dumper;
 use Data::Dump qw/dump/;
 use FindBin qw/$Bin/;
@@ -18,7 +18,7 @@ use SBG::DomainIO::stamp;
 
 # Check expected number of atoms in a chain
 my $dom1 = new SBG::Domain::Atoms(
-    pdbid=>'1tim',descriptor=>'CHAIN A', atom_type=>'.');
+    pdbid=>'1tim',descriptor=>'CHAIN A', atom_type=>'....');
 is($dom1->coords->dim(1), 1870, "Loading all atoms of a chain");
 
 
