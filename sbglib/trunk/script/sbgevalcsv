@@ -27,7 +27,7 @@ use SBG::DomainIO::pdb;
 
 
 # the 'models' base directory
-my %ops = getoptions('modelbase=s', 'redo=i');
+my %ops = getoptions('modelbase=s', 'redo=i', 'target=s');
 
 # Column header labels
 my $tkeys = [ qw/tid tdesc tndoms tseqlen tnias/ ];
@@ -73,96 +73,109 @@ foreach my $file (@ARGV) {
         # The file is actually the Jth line of the list of files
         $file = PBS::ARGV::linen($file, $ops{'J'});
     }
-    
 
-    my $basename = basename($file,'.target');
-    next if -e $basename . '.done';
-    my $lock = start_lock($basename);
+    # Where we are
+    my $basename = basename($file,'.model');
+    my $dirname = basename dirname $file;
+    my $basepath = "${dirname}/${basename}";
+    # Skip if already finished
+    next if -e $basepath . '.done';
+
+    # Create target-specific directory for its models
+    my $tid = $dirname;
+    mkdir $tid;
+
+    # Lock this model from other processes/jobs
+    my $lock = start_lock($basepath);
     next if ! $lock && ! $ops{'debug'};
-    SBG::U::Log::init($basename, %ops);
+
+
+    # Start logging
+    SBG::U::Log::init($basepath, %ops);
 
     # Mark jobs that are tried, but not done, this file deleted when finished
     # A cheap way to track what crashes before finishing
-    my $tryingfile = "$basename.trying";
+    my $tryingfile = $basepath . '.trying';
     open my $tryingfh, ">$tryingfile";
     close $tryingfh;
 
-    my $modelbase = $ops{'modelbase'};
-    unless ($modelbase) {
-        my $dirname = dirname $file;
-        if ($dirname =~ s/targets/models/) {
-            $modelbase = $dirname;
-        } else {
-            die "Cannot find model files to evaluate. Use --modebase ./path\n";
-        }
-    }
-    $log->debug('modelbase ', $modelbase);
+    my $targetfile = $ops{'target'};
+    $targetfile ||= dirname($file) . "/../../targets/${tid}.target";
 
-    do_target($basename, $file, $modelbase);
-    my @domfiles = <${basename}/*.dom>;
-    end_lock($lock, scalar @domfiles);
+    unless (-r $targetfile) {
+            die "Cannot read: $targetfile. Please specify -target <target>\n";
+    }
+    $log->debug("targetfile: $targetfile");
+
+    do_target($tid, $targetfile, $file);
+    end_lock($lock, 1);
     unlink $tryingfile;
 }
 
 
 
 sub do_target {
-    my ($basename, $targetfile, $modelbase) = @_;
-
-    # Looks for models in $modelbase/$basename/*.model
-    my $modeldir = $modelbase . '/' . $basename;
-    $log->debug('modeldir ', $modeldir);
+    my ($basename, $targetfile, $modelfile) = @_;
 
     my $target = load_object($targetfile);
-    $target->id($basename);
 
-    unless ($target->description) {
-        my $pdbc = pdbc($target->id);
-        $target->description($pdbc->{'header'});
+    my $stats = $target->scores->at('benchstats');
+    unless (defined $stats) {
+
+        $target->id($basename) unless defined $target->id;
+
+        unless ($target->description) {
+            my $pdbc = pdbc($target->id);
+            $target->description($pdbc->{'header'});
+        }
+        
+        unless (defined $target->{'tseqlen'}) {
+            my $tseqlen = 
+                $target->models->values->map(sub{$_->subject->seq->length})->sum;
+            $target->{'tseqlen'} = $tseqlen;
+            $log->debug("target sequence length: $target->{'tseqlen'}");
+        }
+
+        $stats = {
+            'tid' => $target->id,
+            'tdesc' => $target->description,
+            'tndoms' => $target->size,
+            'tseqlen' => $target->{'tseqlen'},
+            # TODO
+            'tnias' => 0,
+        };
+        $target->scores->put('benchstats', $stats);
+        $target->store($targetfile);
     }
 
-
-    my $tseqlen = 
-        $target->models->values->map(sub{$_->subject->seq->length})->sum;
-    $target->{'tseqlen'} = $tseqlen;
-    $log->debug("target sequence length: $tseqlen");
-
-    open my $fh, ">${basename}.csv";
-
-    my $stats = {
-        'tid' => $target->id,
-        'tdesc' => $target->description,
-        'tndoms' => $target->size,
-        'tseqlen' => $target->{'tseqlen'},
-        # TODO
-        'tnias' => 0,
-    };
-    
-    my @modelfiles = <$modeldir/*.model>;
-    if (@modelfiles) {
-        foreach my $modelfile (@modelfiles) {
-            do_model($target, $modelfile, $fh, $stats);
-        }
+    if (-e $modelfile) {
+        do_model($target, $modelfile, $stats);
     } else {
-        # If no models produced, just a print a truncated header
+        # If no models were produced, just a print a truncated header
+        open my $fh, ">${basename}-00000.csv";        
         print $fh $stats->slice($tkeys)->join("\t"), "\n";
+        close $fh;
      }
 
-    close $fh;
-#     $target->store($targetfile);
 }
 
 
 
 sub do_model {
-    my ($target, $modelfile, $fh, $stats) = @_;
+    my ($target, $modelfile, $stats) = @_;
     $log->debug($modelfile);
     my $model = load_object($modelfile);
     $stats = model_stats($target, $model, $stats);
 
+    my $basename = basename($modelfile,'.model');
+    my $dirname = basename dirname $modelfile;
+    my $basepath = "${dirname}/${basename}";
+ 
+    open my $fh, ">${basepath}.csv";
     # Print the CSV line, using predefined key ordering
     my $fields = $stats->slice($allkeys)->map(sub{defined $_?$_:''});
     print $fh $fields->join("\t"), "\n";
+    close $fh;
     
     modeloutputs($target,$model);
 
