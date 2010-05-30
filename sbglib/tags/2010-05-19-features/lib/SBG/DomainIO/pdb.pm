@@ -211,7 +211,7 @@ sub coords {
     if ($getresids) {
         # Create a map from residue ID to array index
         my %resmap = map { $resSeq->[$_] => $_ } 0..@$resSeq-1;
-        my $select = $getresids->map(sub{$resmap{$_}});
+        my $select = $getresids->map(sub{$resmap{$_}})->grep(sub{defined});
 
         $resSeq = $resSeq->slice($select);
         $x = $x->dice($select);
