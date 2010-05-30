@@ -89,7 +89,6 @@ foreach my $file (@ARGV) {
     my $lock = start_lock($basepath);
     next if ! $lock && ! $ops{'debug'};
 
-
     # Start logging
     SBG::U::Log::init($basepath, %ops);
 
@@ -119,7 +118,7 @@ sub do_target {
 
     my $target = load_object($targetfile);
 
-    my $stats = $target->scores->at('benchstats');
+    my $stats = $target->scores->at('benchstats') if $target->scores;
     unless (defined $stats) {
 
         $target->id($basename) unless defined $target->id;
@@ -165,6 +164,14 @@ sub do_model {
     my ($target, $modelfile, $stats) = @_;
     $log->debug($modelfile);
     my $model = load_object($modelfile);
+
+    if ($ops{'redo'}) {
+        $model->scores->delete('benchstats'); 
+        $model->scores->delete('benchrmsd');
+        $model->scores->delete('benchmatrix');
+        $model->store($modelfile);
+        $log->info("model stats and RMSD wiped an re-saved");
+    }
     $stats = model_stats($target, $model, $stats);
 
     my $basename = basename($modelfile,'.model');
@@ -191,8 +198,9 @@ sub model_stats {
 
     if (!$ops{'debug'} && !$ops{'redo'} && defined $benchstats) {
         return $benchstats;
-    }
-    
+    } 
+        
+
     $stats->{'mid'} = $model->id();
 
     # domain models within this complex model
@@ -312,6 +320,8 @@ sub modelrmsd {
 
     unless (!$ops{'debug'} && !$ops{'redo'} && 
             defined $benchrmsd && defined $benchmatrix) {
+        $model->scores->delete('benchrmsd');
+        $model->scores->delete('benchmatrix');
         ($benchmatrix, $benchrmsd) = $model->rmsd_class($target);
         if (defined $benchmatrix) {
             $model->transform($benchmatrix);
@@ -328,8 +338,7 @@ sub modeloutputs {
     my ($target, $model) = @_;
 
     my $acc = $target->id;
-    my @fields = ($target->id, $model->id);
-    my $mbase = join('-', @fields);
+    my $mbase = $model->id;
     mkdir $acc;
     my $pdbfile = "${acc}/${mbase}.pdb.gz";
     my $domfile = "${acc}/${mbase}.dom";
