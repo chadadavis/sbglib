@@ -81,6 +81,10 @@ END
         $log->error($dbh->errstr);
         return;
     }
+    unless (scalar @$resseq) {
+        $log->error("No residues mapped for $pdbid$chainid");
+        return;
+    }
     return $resseq;
 
 } # query
