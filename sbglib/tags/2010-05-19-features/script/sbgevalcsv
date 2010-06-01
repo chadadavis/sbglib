@@ -151,7 +151,7 @@ sub do_target {
         do_model($target, $modelfile, $stats);
     } else {
         # If no models were produced, just a print a truncated header
-        open my $fh, ">${basename}-00000.csv";        
+        open my $fh, ">${basename}/${basename}-00000.csv";        
         print $fh $stats->slice($tkeys)->join("\t"), "\n";
         close $fh;
      }
@@ -338,7 +338,7 @@ sub modeloutputs {
     my ($target, $model) = @_;
 
     my $acc = $target->id;
-    my $mbase = $model->id;
+    my $mbase = $acc . '-' . sprintf("%05d",$model->class);
     mkdir $acc;
     my $pdbfile = "${acc}/${mbase}.pdb.gz";
     my $domfile = "${acc}/${mbase}.dom";
