@@ -196,7 +196,7 @@ sub _submit {
     delete $cmdops{'directives'};
 
     # Notify on Abort, Begin, End
-    push @directives, "-m a";
+#     push @directives, "-m a";
 
     # Check explicitly for mailing address, append it to directives
     if ($cmdops{'M'}) {
