@@ -46,6 +46,7 @@ use Moose::Autobox;
 use autobox::List::Util;
 use List::MoreUtils qw/mesh uniq/;
 use Module::Load;
+use Carp;
 
 use PDL::Lite;
 use PDL::Core qw/pdl squeeze zeroes sclr/;
@@ -83,6 +84,7 @@ use SBG::Domain::Sphere;
 # Get CA representation for backbone RMSD
 use SBG::Domain::Atoms;
 
+use SBG::U::CartesianPermutation;
 
 
 
@@ -1150,7 +1152,8 @@ sub rmsd_class {
     my $bestrmsd = $maxnum;
     my $besttrans;
     my $bestmapping;
-    
+    my $besti = -1;
+
     # The complex model knows the symmetry of the components being built, even
     # the ones that were not explicitly modelled in this complex.
     # Group components into homologous classes (a component is in just one class)
@@ -1162,38 +1165,48 @@ sub rmsd_class {
     # class [B E] is first in @cc, then any B or E present must also be first in
     # $model
     my $keys = $self->keys;
-    my $model = [ map { _members_by_class($_, $keys) } @cc ];
-    
+    # Model componentspresent, grouped by class
+    my $model = [ map { scalar _members_by_class($_, $keys) } @cc ];
+    # Flat list
+    my @model = flatten $model;
+    # Counts per class
+    my $kclass = $model->map(sub{$_->length});
 
     # Permute all members within each class, based on members present in model
-    my @class_variations = class_variations(\@cc, $model);
-    # Cartesian product of all possibilities of each class of homologs
-    my @carts = cartesian_product(@class_variations);
-    foreach my $cart (@carts) {
+    # Cartesian product of permutations
+    my $pm = SBG::U::CartesianPermutation->new(classes=>\@cc, kclass=>$kclass);
+
+    my $icart = 0;
+    my $ncarts = $pm->cardinality;
+
+    while (my $cart = $pm->next) {
+        $icart++;
         my @cart = flatten $cart;
         # Map each component present to a possible component in the benchmark
-        my %mapping = mesh(@$model, @cart);
-        
+        my %mapping = mesh(@model, @cart);
+
         # Test this mapping
         my ($trans, $rmsd) = 
 #             rmsd_mapping($self, $other, $model, \%mapping);
-            rmsd_mapping_backbone($self, $other, $model, \%mapping);
+            rmsd_mapping_backbone($self, $other, \@model, \%mapping);
 
-        $log->debug("rmsd:", $rmsd || 'undef');
-        $log->debug("bestrmsd:", $bestrmsd||'undef');
-        $log->debug("rmsd<bestrmsd:", 
+        $log->debug("rmsd \#$icart / $ncarts: ", $rmsd || 'undef');
+        $log->debug("bestrmsd \#$besti: ", $bestrmsd||'undef');
+        $log->debug("rmsd<bestrmsd: ", 
                     defined($rmsd) && defined($bestrmsd) && $rmsd<$bestrmsd);
         next unless defined $rmsd;
         if (! defined($bestrmsd) || $rmsd < $bestrmsd) {
             $bestrmsd = $rmsd;
             $besttrans = $trans;
             $bestmapping = \%mapping;
-            $log->debug("better rmsd:$rmsd via: @cart");
+            $besti = $icart;
+            $log->debug("better rmsd \#$icart: $rmsd via: @cart");
         }
 
     }
     if ($bestrmsd < $maxnum) {
-        $log->info("best rmsd:$bestrmsd via: ", join ' ', %$bestmapping);
+        $log->info("best rmsd \#$besti: $bestrmsd via: ", 
+                   join ' ', %$bestmapping);
         $self->correspondance($bestmapping);
     } else {
         $bestrmsd = 'NaN';
@@ -1204,23 +1217,6 @@ sub rmsd_class {
 } # rmsd_class
 
 
-# $class is an array of arrays. Each array contains the members of a class
-# The $model contains those members, over all classes, which are actually present
-sub class_variations {
-    my ($classes, $model) = @_;
-
-    my @class_variations;
-    foreach my $class (@$classes) {
-        # Get members of this class that are present in model
-        my @present = _members_by_class($class, $model);
-        # All nPk permutations of $k elements of this class
-        my @variations = variations($class, scalar(@present));
-        push @class_variations, \@variations;
-    }
-    return @class_variations;
-}
-
-
 #
 sub _members_by_class {
     my ($class, $members) = @_;
@@ -1229,8 +1225,6 @@ sub _members_by_class {
     my @present = grep { my $c=$_; grep { $_ eq $c  } @$members } @$class;
     return wantarray ? @present : \@present;
 }
-
-
 
 
 
