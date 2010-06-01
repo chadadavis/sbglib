@@ -157,6 +157,7 @@ sub _one_net {
     my $assembler = SBG::CA::Assembler2->new(
         name=>$name, 
         net=>$net, 
+        maxsolutions=>50,
         %aops);
     my $t = Graph::Traversal::GreedyEdges->new(
         assembler=>$assembler,
