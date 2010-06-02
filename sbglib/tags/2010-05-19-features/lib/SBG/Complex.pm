@@ -1202,14 +1202,18 @@ sub rmsd_class {
             $besti = $icart;
             $log->debug("better rmsd \#$icart: $rmsd via: @cart");
         }
-
-    }
-    if ($bestrmsd < $maxnum) {
-        $log->info("best rmsd \#$besti: $bestrmsd via: ", 
-                   join ' ', %$bestmapping);
-        $self->correspondance($bestmapping);
-    } else {
-        $bestrmsd = 'NaN';
+        # Shortcut for bailing out early, if the answer is already good enough
+        # I.e. accept 10A if 10,000 tries already, or accept < 1A if 1000 tries
+        if (! ($icart % 1000)) {
+            for my $i (1..20) {
+                if ($bestrmsd < $i && $icart > $i * 10_000) {
+                    $log->info("Good enough: $bestrmsd");
+                    return wantarray ? 
+                        ($besttrans, $bestrmsd, $bestmapping) : $bestrmsd;
+                }
+            }
+        }
+        last if $icart > 500_000;
     }
     
     return wantarray ? ($besttrans, $bestrmsd, $bestmapping) : $bestrmsd;

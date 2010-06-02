@@ -317,16 +317,19 @@ sub modelrmsd {
 
     my $benchrmsd = $model->scores->at('benchrmsd');
     my $benchmatrix = $model->scores->at('benchmatrix');
-
+    my $benchmapping;
     unless (!$ops{'debug'} && !$ops{'redo'} && 
             defined $benchrmsd && defined $benchmatrix) {
         $model->scores->delete('benchrmsd');
         $model->scores->delete('benchmatrix');
-        ($benchmatrix, $benchrmsd) = $model->rmsd_class($target);
+        ($benchmatrix, $benchrmsd, $benchmapping) = $model->rmsd_class($target);
         if (defined $benchmatrix) {
             $model->transform($benchmatrix);
             $model->scores->put('benchrmsd', $benchrmsd);
             $model->scores->put('benchmatrix', $benchmatrix);
+            $model->correspondance($benchmapping);
+        } else {
+            $benchrmsd = 'NaN';
         }
     }
     
