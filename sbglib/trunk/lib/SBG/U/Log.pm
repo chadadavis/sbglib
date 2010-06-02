@@ -120,7 +120,7 @@ In order of increasing severity: $TRACE $DEBUG $INFO $WARN $ERROR $FATAL
 =cut
 sub init {
     my ($name, %ops) = @_;
-    my $level = $ops{'loglevel'} || 'WARN';
+    my $level = $ops{'loglevel'} || 'INFO';
     $level = uc $level;
     my $logfile = $ops{'logfile'} || ($name || 'log') . '.log';
     my $logpath = File::Spec->rel2abs($logfile, $ops{'logdir'}) ;

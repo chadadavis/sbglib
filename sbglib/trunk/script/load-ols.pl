@@ -2,13 +2,15 @@
 
 =head1 NAME
 
-B<load-ols.pl> - do a multiple linear regression and plot the residuals
+B<load-ols.pl> - ordinary least squares variable weighting
 
 =head1 SYNOPSIS
 
 
 
 =head1 DESCRIPTION
+
+Need to remove NaN or nan 
 
 
 =head1 OPTIONS
@@ -38,6 +40,7 @@ use warnings;
 
 use PDL::LiteF;
 use PDL::NiceSlice;
+# http://search.cpan.org/~maggiexyz/PDL-Stats-0.4.3/
 use PDL::Stats::GLM;   # qw/ols/;
 use PDL::Stats::Basic; # qw/corr/;
 use PDL::IO::Misc qw/rcols/;
@@ -50,11 +53,14 @@ my $csvfile = shift || die;
 # Leave undefined to read all lines
 my $nlines = shift;
 
-my $inputlines = "1:$nlines";
+# Skip column headers
+# my $inputlines = "1:$nlines";
+my $inputlines = "0:$nlines";
 
+# 0-based column indexing
 my (
     $rmsd, 
-    $score, $mndoms, $mseqlen, $pdoms, $pseqlen, $mnias, $pias, $nsources, $ncycles, $scmin, $scmax, $scmed, $glob, $idmin, $idmax, $idmed, $ifacelenmin, $ifacelenmax, $ifacelenmed, $ifaceconsmin, $ifaceconsmax, $ifaceconsmed, $sas, $olmin, $olmax, $olmed,
+    $score, $mndoms, $mseqlen, $pdoms, $pseqlen, $mnias, $nsources, $ncycles, $scmin, $scmax, $scmed, $glob, $idmin, $idmax, $idmed, $ifacelenmin, $ifacelenmax, $ifacelenmed, $ifaceconsmin, $ifaceconsmax, $ifaceconsmed, $olmin, $olmax, $olmed,
     $tid, $tdesc, $tndoms, $tseqlen, $tnias, $mid
     ) = 
     rcols($csvfile, 
@@ -62,7 +68,7 @@ my (
           {
               PERLCOLS => [0..5],
               LINES => $inputlines,
-              EXCLUDE => "/NaN/",
+              EXCLUDE => "/nan/",
           },
     );
 
@@ -75,18 +81,36 @@ my ($nmodels) = dims($y);
 # independent model variables
 # NB Can't use any emtpy columns;
 my $iv = cat 
-#     $score, $mndoms, $mseqlen, $pdoms, $pseqlen, $mnias, $pias, $nsources, $ncycles, $scmin, $scmax, $scmed, $glob, $idmin, $idmax, $idmed, $ifacelenmin, $ifacelenmax, $ifacelenmed, $ifaceconsmin, $ifaceconsmax, $ifaceconsmed, $sas, $olmin, $olmax, $olmed,
-    # Don't learn $score, as it's just a sum of the others
-#     $score, 
-    $mseqlen, $pseqlen, $mnias, $nsources, $ncycles, $scmin, $scmax, $scmed, $glob, $idmin, $idmax, $idmed, $ifacelenmin, $ifacelenmax, $ifacelenmed, $ifaceconsmin, $ifaceconsmax,
-    # Why is $ifaceconsmed a problem?
-    # And $olmin works, but $olmax doesn't ??
-#     $ifaceconsmed,
+#     $score, # Don't learn $score, as it's just a sum of the others
+    $mndoms, 
+#     $mseqlen,# Causes problems with inv() 
+    $pdoms,# Causes problems with GSL
+    $pseqlen,# Causes problems with GSL
+#      $mnias, # Causes problems with inv()
+#     $nsources,# Causes problems with inv() 
+#     $ncycles, # Causes problems with inv() 
+    $scmin,
+    $scmax,
+    $scmed,
+    $glob,
+    $idmin,
+    $idmax,
+     $idmed,
+     $ifacelenmin,
+     $ifacelenmax, # maybe
+     $ifacelenmed, # maybe
+     $ifaceconsmin,# maybe
+     $ifaceconsmax,# maybe
+     $ifaceconsmed,
+#      $olmin, # maybe
+#      $olmax, # maybe
+#      $olmed, # maybe
     ;
 
 
 # Ordinary least squares, to the independent variable $y
 my %m  = $y->ols( $iv );
+
 
 # Don't need this any longer
 # delete $m{'y_pred'};
@@ -108,19 +132,27 @@ my $modelvars = cat(dog($iv), $ones);
 
 # make a prediction on observations: $obsi
 # my $ntestend = 15;
-my $ntestend = 5;
-# my $obsi = "0:$ntestend";
-my $obsi = "10:19";
+my $ntestend = 0;
+my $obsi = "0:$ntestend";
+# my $obsi = "10:19";
 
 my $obs = $modelvars->slice("$obsi,")->transpose;
 # print "obs: $obs\n";
+
+# Take a sample to test
 # sum over the first dimension, i.e. sum along the rows
-my $preds = sumover $obs * $betas;
+# my $preds = sumover $obs * $betas;
 # print "preds:$preds\n";
-my $actuals = $y->slice("$obsi");
+# my $actuals = $y->slice("$obsi");
+
+# Show the raw data
+my $actuals = $y;
+my $preds = $m{'y_pred'};
+
 # print "actuals:$actuals\n";
 my $preds_actuals = cat($preds, $actuals)->transpose;
 print "pred\tactual\n";
+# print $preds_actuals->slice(':,10:50');
 print $preds_actuals;
 
 my $diffs = abs($actuals-$preds);
