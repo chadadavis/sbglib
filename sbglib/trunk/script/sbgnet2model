@@ -74,7 +74,11 @@ use PBS::ARGV qw/qsub/;
 
 
 my %ops = getoptions(
-    'complete|c','overlap_thresh|o=f','minsize|s=s', 'binsize|b=f'
+    'complete|c',
+    'overlap_thresh|o=f',
+    'minsize|s=s', 
+    'binsize|b=f', 
+    'maxsolutions=i',
     );
 
 
@@ -152,12 +156,12 @@ sub _print_net {
 sub _one_net {
     my ($net,$name, $ops) = @_;
 
-    my %aops = slice_def($ops, 'minsize', 'binsize', 'overlap_thresh');
+    my %aops = 
+        slice_def($ops, 'minsize', 'binsize', 'overlap_thresh', 'maxsolutions');
 
     my $assembler = SBG::CA::Assembler2->new(
         name=>$name, 
         net=>$net, 
-        maxsolutions=>50,
         %aops);
     my $t = Graph::Traversal::GreedyEdges->new(
         assembler=>$assembler,
