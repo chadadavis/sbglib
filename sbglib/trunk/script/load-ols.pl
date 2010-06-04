@@ -83,12 +83,12 @@ my ($nmodels) = dims($y);
 my $iv = cat 
 #     $score, # Don't learn $score, as it's just a sum of the others
     $mndoms, 
-#     $mseqlen,# Causes problems with inv() 
+    $mseqlen,# Causes problems with inv() 
     $pdoms,# Causes problems with GSL
     $pseqlen,# Causes problems with GSL
 #      $mnias, # Causes problems with inv()
-#     $nsources,# Causes problems with inv() 
-#     $ncycles, # Causes problems with inv() 
+    $nsources,# Causes problems with inv() 
+    $ncycles, # Causes problems with inv() 
     $scmin,
     $scmax,
     $scmed,
@@ -102,9 +102,9 @@ my $iv = cat
      $ifaceconsmin,# maybe
      $ifaceconsmax,# maybe
      $ifaceconsmed,
-#      $olmin, # maybe
-#      $olmax, # maybe
-#      $olmed, # maybe
+     $olmin, # maybe
+     $olmax, # maybe
+     $olmed, # maybe
     ;
 
 
