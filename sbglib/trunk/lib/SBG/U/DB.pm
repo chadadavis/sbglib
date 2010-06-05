@@ -69,12 +69,14 @@ sub connect {
     our %connections;
     $dbname ||= $default_db;
     $host ||= _default_host();
+    my $port = _default_port();
     # This is also OK, if $host is not defined
     my $dbh = $connections{$host}{$dbname};
     return $dbh if $dbh;
 
     my $dbistr = "dbi:mysql:dbname=$dbname";
     $dbistr .= ";host=$host" if $host;
+    $dbistr .= ";port=$port" if $port;
     $timeout ||= defined($DB::sub) ? 100: 5;
     $user ||= '%';
     my $password = _password($dbistr) if $usingpassword;
@@ -141,6 +143,13 @@ sub _default_host {
     my $cfg = _config();
     my $host = $cfg->val('client', 'host') || '';
     return $host;
+}
+
+
+sub _default_port {
+    my $cfg = _config();
+    my $port = $cfg->val('client', 'port') || '';
+    return $port;
 }
 
 
