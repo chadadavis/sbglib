@@ -78,6 +78,7 @@ has 'from' => (
 has 'transformation' => (
     is => 'rw',
     does => 'SBG::TransformI',
+    handles => [ qw/matrix/ ],   
     required => 1,
     default => sub { new SBG::Transform::Affine },
     );
