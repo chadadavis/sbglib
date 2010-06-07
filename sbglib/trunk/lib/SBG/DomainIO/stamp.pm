@@ -183,6 +183,8 @@ after it is created.
 
 Called in an array context, returns an array of all domains in the file
 
+NB any assembly or model number cannot be stored in STAMP format
+
 =cut
 sub read {
     my ($self) = @_;
@@ -205,8 +207,9 @@ sub read {
             wantarray ? next : last;
         }
 
-        my ($file, $pdbid, $descr) = ($1, $2, $3);
-        ($pdbid) = $pdbid =~ /^($re_pdb)/;
+        my ($file, $label, $descr) = ($1, $2, $3);
+        my ($pdbid) = $label =~ /^($re_pdb)/;
+        # TODO DES any assembly or model info cannot be stored in STAMP format
         # Get only the params that are defined
         my $params = {pdbid=>$pdbid, descriptor=>$descr};
         $params->{file} = $file if $file;

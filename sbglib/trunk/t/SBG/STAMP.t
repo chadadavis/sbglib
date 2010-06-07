@@ -26,7 +26,7 @@ use SBG::Run::rasmol;
 use SBG::U::Log qw/log/;
 
 my $DEBUG;
-# $DEBUG = 1;
+#$DEBUG = 1;
 SBG::U::Log::init(undef, loglevel=>'DEBUG') if $DEBUG;
 $File::Temp::KEEP_ALL = $DEBUG;
 
@@ -208,4 +208,19 @@ $sup2->apply($movingb);
 my $rmsd = $movingb->rmsd($staticf);
 float_is($rmsd, 6.55, "RMSD after transformation", $toler);
 
+
+my $ass2_1_a = SBG::Domain->new(pdbid=>'3bct', assembly=>2, model=>1);
+my $ass2_2_a = SBG::Domain->new(pdbid=>'3bct', assembly=>2, model=>2);
+my $ass_sup = superposition($ass2_1_a, $ass2_2_a);
+# The value computed externally by STAMP, the reference values
+my $ass_expect = pdl
+ [-1.00000 ,  0.00000 ,  0.00000 ,     128.19835 ],
+ [ 0.00000 ,  1.00000 ,  0.00000 ,       0.00000 ],
+ [ 0.00000 ,  0.00000 , -1.00000 ,      93.50182 ], 
+ [       0 ,        0 ,        0 ,             1 ];
+# Verify approximate equality
+pdl_approx($ass_sup->matrix,
+           $ass_expect,
+           "assembly superposition($ass2_1_a, $ass2_2_a)",
+           $toler);
 

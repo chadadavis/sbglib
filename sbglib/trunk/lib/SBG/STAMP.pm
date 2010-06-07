@@ -33,6 +33,8 @@ L<SBG::DomainI> , L<SBG::Superposition> , <U::RMSD>
 
 http://www.compbio.dundee.ac.uk/Software/Stamp/stamp.html
 
+STAMP is available under the open-source GPL license 
+
 =cut
 
 
@@ -110,7 +112,10 @@ sub superposition_native {
     our $scancut;
 
     if ($fromdom->pdbid eq $ontodom->pdbid &&
-        $fromdom->descriptor eq $ontodom->descriptor) {
+        $fromdom->descriptor eq $ontodom->descriptor &&
+        $fromdom->assembly && $fromdom->assembly eq $ontodom->assembly &&
+        $fromdom->model && $fromdom->model eq $ontodom->model
+        ) {
         $log->debug("Identity: $fromdom");
         return SBG::Superposition->identity($fromdom);
     }

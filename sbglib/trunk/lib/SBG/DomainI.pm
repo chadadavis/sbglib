@@ -32,8 +32,6 @@ http://www.compbio.dundee.ac.uk/manuals/stamp.4.2/node29.html
 
 =cut
 
-
-
 package SBG::DomainI;
 use Moose::Role;
 
@@ -44,7 +42,6 @@ with 'SBG::Role::Storable';
 with 'SBG::Role::Transformable';
 with 'SBG::Role::Writable';
 
-
 # You will need to redefine this (i.e. copy) it to implementing classes
 # The methods themselves will be consumed via this role, however.
 # I.e. just the overload needs to be explicitly redfined in implementing classes.
@@ -54,12 +51,10 @@ with 'SBG::Role::Writable';
 #     fallback => 1,
 #     );
 
-
 # Get address of a reference
 use Scalar::Util qw(refaddr);
 use Module::Load;
 use File::Basename qw/basename/;
-
 
 use PDL::Lite;
 use PDL::Core qw/pdl/;
@@ -73,24 +68,21 @@ use SBG::Run::pdbseq;
 # Some regexs for parsing PDB IDs and descriptors
 use SBG::Types qw/$re_chain $re_chain_seg/;
 
-
-
-
 =head2 pdbid
 
 PDB identifier, from which this domain comes. 
 Will be coerced to lowercase. 
 
 =cut
+
 has 'pdbid' => (
-    is => 'rw',
-    isa => 'SBG.PDBID',
-    required => 0,
-    # Coerce to lowercase
-    coerce => 1,
-    );
+	is       => 'rw',
+	isa      => 'SBG.PDBID',
+	required => 0,
 
-
+	# Coerce to lowercase
+	coerce => 1,
+);
 
 =head2 descriptor
 
@@ -108,16 +100,15 @@ B 33 _ to B 99 _ CHAIN A
 
 See L<SBG::Types>
 =cut
+
 has 'descriptor' => (
-    is => 'rw',
-    isa => 'SBG.Descriptor',
-    default => 'ALL',
-    # Coerce from 'Str', defined in SBG::Types
-    coerce => 1,
-    );
+	is      => 'rw',
+	isa     => 'SBG.Descriptor',
+	default => 'ALL',
 
-
-
+	# Coerce from 'Str', defined in SBG::Types
+	coerce => 1,
+);
 
 =head2 description
 
@@ -129,14 +120,11 @@ has 'descriptor' => (
 Annotation of this domain, functional description text
 
 =cut
+
 has 'description' => (
-    is => 'rw',
-    isa => 'Str',
-    );
-
-
-
-
+	is  => 'rw',
+	isa => 'Str',
+);
 
 =head2 assembly
 
@@ -147,15 +135,14 @@ has 'description' => (
 
 Which PDB biounit assembly this domain is contained in
 
+1-based counting, if defined
+
 =cut
+
 has 'assembly' => (
-    is => 'rw',
-    isa => 'Int',
-    );
-
-
-
-
+	is      => 'rw',
+	isa     => 'Maybe[Int]',
+);
 
 =head2 model
 
@@ -167,16 +154,16 @@ has 'assembly' => (
 
 Which PDB biounit model in the assembly
 
+1-based counting, if assembly defined
+
 NB Has nothing to do with SBG::Model
 
 =cut
+
 has 'model' => (
-    is => 'rw',
-    isa => 'Int',
-    );
-
-
-
+	is      => 'rw',
+	isa     => 'Maybe[Int]',
+);
 
 =head2 entity
 
@@ -190,11 +177,11 @@ entity.id field of TransDB
 TODO should be a subclass
 
 =cut
-has 'entity' => (
-    is => 'rw',
-    isa => 'Str',
-    );
 
+has 'entity' => (
+	is  => 'rw',
+	isa => 'Str',
+);
 
 
 =head2 file
@@ -202,15 +189,70 @@ has 'entity' => (
 Path to PDB/MMol file.
 
 This can be blank and STAMP will look for thas file based on its ID, which must
-begin with the PDB ID for the domain.
+begin with the PDB ID for the domain. 
+This also requires that the STAMPDIR environment variable be set
+
+Files from biounit cannot be automatically found. For those, it is necessary to set the base directory via biounit_base.
 
 =cut
-has 'file' => (
-    is => 'rw',
-    isa => 'SBG.File',
-    clearer => 'clear_file',
-    );
 
+has 'file' => (
+	is      => 'rw',
+	isa     => 'Maybe[SBG.File]',
+	clearer => 'clear_file',
+	lazy_build => 1,
+);
+sub _build_file {
+	my ($self) = @_;
+	my $pdbid = $self->pdbid;
+	return unless $pdbid;
+	my $str = $pdbid;
+	# Append e.g. '-2' for 2nd assembly
+	$str .= '-' . $self->assembly if $self->assembly;
+	# Append model number in the biounit assembly
+	$str .= '-' . $self->model if $self->model;
+	# If PDB files are stored hierarchically e.g. pdb/xy/1xyz.pdb
+	my $subdir = substr($pdbid, 1, 2);
+	my $paths = $self->_path_specs or return;
+	foreach my $path (@$paths) {
+		my ($base, $prefix, $suffix) = @$path;
+		# An underscore means no prefix / suffix
+		$prefix =~ s/_//;
+		$suffix =~ s/_//;
+		my $filename = $prefix . $str . $suffix;
+		my $filepath;
+		# Try flat directory structure
+		$filepath = $base . '/' . $filename;
+		return $filepath if -f $filepath;
+		# Try hierarchical directories
+		$filepath = $base .'/' . $subdir . '/' . $filename;
+		return $filepath if -f $filepath;
+	}
+	return;
+}
+
+
+has '_path_specs' => (
+	is => 'rw',
+	isa => 'Maybe[ArrayRef]',
+	lazy_build => 1,
+	);
+	
+	
+sub _build__path_specs {
+	our @paths;
+	return \@paths if @paths;
+	return unless $ENV{STAMPDIR};
+	my $pdb_directories = $ENV{STAMPDIR} . '/pdb.directories';
+	my $fh;
+	open $fh, $pdb_directories;
+	while (<$fh>) {
+		my @values = split ' ';
+		push @paths, [ @values ];
+	}
+	close $fh;
+	return \@paths;
+}
 
 
 =head2 length
@@ -224,12 +266,11 @@ Number of AA residues in the entire domain, including residues from multiple
 chains, if the domain spans multiple chains.
 
 =cut
+
 has 'length' => (
-    is => 'rw',
-    isa => 'Int',
-    );
-
-
+	is  => 'rw',
+	isa => 'Int',
+);
 
 =head2 transformation
 
@@ -240,14 +281,13 @@ override it.
 
 This defines where the domain is in space at any point in time.
 =cut
+
 has 'transformation' => (
-    is => 'rw',
-    does => 'SBG::TransformI',
-    required => 1,
-    default => sub { new SBG::Transform::Affine },
-    );
-
-
+	is       => 'rw',
+	does     => 'SBG::TransformI',
+	required => 1,
+	default  => sub { new SBG::Transform::Affine },
+);
 
 =head2 coords
 
@@ -265,18 +305,18 @@ Set of homogenous 4D coordinates. The 4th dimension of each point must be 1.
 TODO: considering coercing coordinates from 3D to 4D here, for convenience
 
 =cut
+
 has 'coords' => (
-    is => 'rw',
-    isa => 'PDL',
-    lazy_build => 1,
-    );
+	is         => 'rw',
+	isa        => 'PDL',
+	lazy_build => 1,
+);
+
 # Default: a single point at 0,0,0
 # Final 1 is to create homogenous coordinate in 4D for affine transformation
 sub _build_coords {
-    return pdl [ [ 0,0,0,1 ] ];
+	return pdl [ [ 0, 0, 0, 1 ] ];
 }
-
-
 
 =head2 centroid
 
@@ -288,9 +328,8 @@ sub _build_coords {
 Center of mass of all X,Y,Z coordinates of the reduced representation.
 
 =cut
+
 requires 'centroid';
-
-
 
 =head2 overlap
 
@@ -300,15 +339,13 @@ requires 'centroid';
  Args    : 
 
 =cut
+
 requires 'overlap';
 
-
-# Implicitly thread-safe: cloning (i.e. threading) is disallowed. 
+# Implicitly thread-safe: cloning (i.e. threading) is disallowed.
 # This prevents double free bugs. Spawned thread only has undef references then.
 # See man perlmod
 sub CLONE_SKIP { 1 }
-
-
 
 =head2 rmsd
 
@@ -320,12 +357,11 @@ sub CLONE_SKIP { 1 }
 RMSD between the points of B<$self>'s representation and B<$other>
 
 =cut
+
 sub rmsd {
-    my ($self, $other) = @_;
-    return SBG::U::RMSD::rmsd($self->coords, $other->coords);
+	my ( $self, $other ) = @_;
+	return SBG::U::RMSD::rmsd( $self->coords, $other->coords );
 }
-
-
 
 =head2 transform
 
@@ -338,23 +374,22 @@ This also updates the cumulative L<transformation> (since the original
 coordinates).
 
 =cut
+
 sub transform {
-    my ($self, $matrix) = @_;
-    return $self unless defined($matrix);
+	my ( $self, $matrix ) = @_;
+	return $self unless defined($matrix);
 
-    # Transform coords
-    my $coords = $self->coords;
-    $coords .= transpose($matrix x transpose($coords));
+	# Transform coords
+	my $coords = $self->coords;
+	$coords .= transpose( $matrix x transpose($coords) );
 
-    # Update the cumulative transformation
-    # I.e. transform the current transformation by the given matrix
-    $self->transformation->transform($matrix);
+	# Update the cumulative transformation
+	# I.e. transform the current transformation by the given matrix
+	$self->transformation->transform($matrix);
 
-    return $self;
+	return $self;
 
-} # transform
-
-
+}    # transform
 
 =head2 wholechain
 
@@ -367,13 +402,12 @@ True when this domain consists of only one chain, and that entire chain
 
 See als L<fromchain>
 =cut
+
 sub wholechain {
-    my ($self) = @_;
-    my ($chain) = $self->descriptor =~ /^\s*CHAIN\s+(.)\s*$/i;
-    return $chain;
+	my ($self) = @_;
+	my ($chain) = $self->descriptor =~ /^\s*CHAIN\s+(.)\s*$/i;
+	return $chain;
 }
-
-
 
 =head2 id
 
@@ -387,15 +421,21 @@ A domain descriptor is then appended.
 See also L<uniqueid>
 
 =cut
+
 sub id {
-    my ($self) = @_;
-    my $str = $self->pdbid;
-    $str ||= basename($self->file) . '_' if $self->file;
-    $str .= ($self->_descriptor_short || '');
-    return $str;
-} 
-
-
+	my ($self) = @_;
+	my $str;
+	if ($self->pdbid) {
+		$str = $self->pdbid;
+		$str .= '-' . $self->assembly . '-' if $self->assembly;
+		$str .= $self->model . '-' if $self->model;
+	} elsif ($self->file) {
+		# Or use the filename, if this is not a PDB entry
+		$str = basename($self->file ,qw/.pdb .ent .pdb.gz .ent.gz/);
+	}	
+	$str .= $self->_descriptor_short if $self->_descriptor_short;
+	return $str;
+}
 
 =head2 uniqueid
 
@@ -409,16 +449,16 @@ because the ID is simply the memory address of the Transform. It will be
 different for two copies of the same transform.
 
 =cut
+
 sub uniqueid {
-    my ($self) = @_;
-    my $str = $self->id();
-    # Get the memory address of some relevant attribute object, 
-    my $rep = $self;
-    $str .= $rep ? sprintf("-0x%x", refaddr($rep)) : '';
-    return $str;
-} 
+	my ($self) = @_;
+	my $str = $self->id();
 
-
+	# Get the memory address of some relevant attribute object,
+	my $rep = $self;
+	$str .= $rep ? sprintf( "-0x%x", refaddr($rep) ) : '';
+	return $str;
+}
 
 =head2 stringify
 
@@ -428,12 +468,11 @@ sub uniqueid {
  Args    : NA
 
 =cut
+
 sub stringify {
-    my ($self) = @_;
-    return $self->id;
+	my ($self) = @_;
+	return $self->id;
 }
-
-
 
 =head2 equal
 
@@ -448,31 +487,35 @@ Does not check B<coords> for equality as that is a function of the
 implementation, and not what is being represented.
 
 =cut
+
 sub equal {
-    my ($self, $other) = @_;
+	my ( $self, $other ) = @_;
 
-    return 0 unless defined $other;
-    # Equal if pointing to same underlying object
-    return 1 if refaddr($self) == refaddr($other);
+	return 0 unless defined $other;
 
-    # Fields, from most general to more specific
-    my @fields = qw/pdbid descriptor file/;
-    foreach (@fields) {
-        # If both undefined, then they are not necessarily unequal
-        next if !defined($self->$_) && !defined($other->$_);
-        # If one is defined but the other undefined, they are unequal
-        return 0 if defined($self->$_) ^ defined($other->$_);
-        # Here both are defined, are they equal
-        return 0 if $self->$_ ne $other->$_;
-    }
-    # Assume equal if metadata is same and transformations are same
-    my $transeq = $self->transformation == $other->transformation;
+	# Equal if pointing to same underlying object
+	return 1 if refaddr($self) == refaddr($other);
 
-    return $transeq;
+	# Fields, from most general to more specific
+	my @fields = qw/pdbid assembly model descriptor file/;
+	foreach (@fields) {
 
-} # equal
+		# If both undefined, then they are not necessarily unequal
+		next if !defined( $self->$_ ) && !defined( $other->$_ );
 
+		# If one is defined but the other undefined, they are unequal
+		return 0 if defined( $self->$_ ) ^ defined( $other->$_ );
 
+		# Here both are defined, are they equal
+		return 0 if $self->$_ ne $other->$_;
+	}
+
+	# Assume equal if metadata is same and transformations are same
+	my $transeq = $self->transformation == $other->transformation;
+
+	return $transeq;
+
+}    # equal
 
 =head2 _descriptor_short
 
@@ -487,16 +530,15 @@ Converts: first line to second:
  'B234_B333_DE5_E123_'
 
 =cut
+
 sub _descriptor_short {
-    my ($self) = @_;
-    my $descriptor = $self->descriptor;
-    $descriptor =~ s/CHAIN//g;
-    $descriptor =~ s/to//gi;
-    $descriptor =~ s/\s+//g;
-    return $descriptor;
+	my ($self) = @_;
+	my $descriptor = $self->descriptor;
+	$descriptor =~ s/CHAIN//g;
+	$descriptor =~ s/to//gi;
+	$descriptor =~ s/\s+//g;
+	return $descriptor;
 }
-
-
 
 =head2 seq
 
@@ -507,14 +549,13 @@ sub _descriptor_short {
 
 
 =cut
+
 sub seq {
-    my ($self,) = @_;
-    my $seq = SBG::Run::pdbseq::pdbseq($self);
-    return $seq;
+	my ( $self, ) = @_;
+	my $seq = SBG::Run::pdbseq::pdbseq($self);
+	return $seq;
 
-} # seq
-
-
+}    # seq
 
 no Moose::Role;
 1;
