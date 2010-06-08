@@ -30,7 +30,7 @@ is($seqs[1]->length, 241, '$seqs[1]->length is '. $seqs[1]->length);
 
 # Test getting last residue
 my $dom1rv8B = SBG::Domain->new(pdbid=>'1rv8',descriptor=>'B 7 _ to B 259 _');
-my $seq = pdbseq($dom1rv8B);
+$seq = pdbseq($dom1rv8B);
 is($seq->length, 253, 'pdbseq gets last residue');
 
 

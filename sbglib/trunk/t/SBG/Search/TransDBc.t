@@ -48,7 +48,7 @@ my $net = new SBG::Network;
 $net->add_node($_) for @nodes;
 # Searcher tries to find interaction templates (edges) to connect nodes
 my $blast = SBG::Run::PairedBlast->new(method=>'standaloneblast');
-my $blast = SBG::Run::PairedBlast->new(method=>'remoteblast');
+#my $blast = SBG::Run::PairedBlast->new(method=>'remoteblast');
 my $searcher = SBG::Search::TransDBc->new(blast=>$blast);
 $net = $net->build($searcher, cache=>0);
 
