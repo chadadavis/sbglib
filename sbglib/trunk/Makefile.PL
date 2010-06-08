@@ -76,8 +76,8 @@ requires_external_bin 'clustalw';
 #auto_install(force=>1); # Not compat with CPANPLUS
 auto_install();
 
-install_script 'script/sbgfa2net';
-install_script 'script/sbgnet2model';
+install_script 'script/fasta2net';
+install_script 'script/net2model';
 install_script 'script/sbgobj';
 install_script 'sbglib.sh';
 
