@@ -21,7 +21,7 @@ use SBG::U::Test qw/pdl_approx float_is/;
 
 
 
-use PDL;
+use PDL::Lite;
 use SBG::U::RMSD qw/
 centroid radius_gyr radius_max superposition rmsd translation identity
 /;
