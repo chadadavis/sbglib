@@ -265,12 +265,23 @@ sub _build__path_specs {
 Number of AA residues in the entire domain, including residues from multiple
 chains, if the domain spans multiple chains.
 
+NB this is not simply the difference between the starting residue ID and the 
+ending residue ID as PDB entry may skip residues.
+
 =cut
 
 has 'length' => (
 	is  => 'rw',
 	isa => 'Int',
+	lazy_build => 1,
 );
+
+sub _build_length {
+	my ($self) = @_;
+	# TODO DES use SBG::Domain::Atoms and then count the dims of ->coords
+	return 0;
+}
+
 
 =head2 transformation
 
