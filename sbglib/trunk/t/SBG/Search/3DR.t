@@ -18,7 +18,7 @@ use SBG::U::Test 'float_is';
 
 use SBG::Seq;
 use SBG::Network;
-use SBG::Search::Roberto;
+use SBG::Search::3DR;
 
 use SBG::U::Log qw/log/;
 my $DEBUG;
@@ -35,7 +35,7 @@ while (my $seq = $seqio->next_seq) {
 }
 is(scalar($net->nodes), 4, "nodes");
 
-my $roberto = SBG::Search::Roberto->new;
+my $roberto = SBG::Search::3DR->new;
 unless ($roberto->_dbh && -d $roberto->_biounit) {
     ok(1, 'Skipping tests that require database');
     exit;

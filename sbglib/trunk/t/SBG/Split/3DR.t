@@ -20,11 +20,11 @@ my $DEBUG;
 # $DEBUG = 1;
 SBG::U::Log::init(undef, loglevel=>'DEBUG') if $DEBUG;
 
-use SBG::Split::Roberto;
+use SBG::Split::3DR;
 use Bio::SeqIO;
 
 
-my $splitter = SBG::Split::Roberto->new(mingap=>30);
+my $splitter = SBG::Split::3DR->new(mingap=>30);
 unless ($splitter->_dbh) {
     ok(1, 'Skipping tests that require database');
     exit;

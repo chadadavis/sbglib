@@ -18,7 +18,7 @@ L<SBG::SearchI> , L<SBG::Network> , L<SBG::Interaction>
 
 
 
-package SBG::Search::Roberto;
+package SBG::Search::3DR;
 use Moose;
 with 'SBG::SearchI';
 use Moose::Autobox;
@@ -65,9 +65,8 @@ has '_sth' => (
 sub BUILD {
     my ($self) = @_;
 
-    my $f_dir = dirname(__FILE__);
-    my $dbh=SBG::U::DB::connect('davis_3dr', 'speedy.embl.de');
-    # TODO invalid state if connection fails
+    my $dbh=SBG::U::DB::connect('3dr_complexes');
+    # TODO invalid state if connection fails (too late, has to be in BUILDARGS)
     return unless defined $dbh;
     $self->_dbh($dbh);
 

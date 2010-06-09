@@ -22,7 +22,7 @@ Annotate L<Bio::Seq> with L<Bio::SeqFeature::Generic> first, then collapse it do
 
 
 
-package SBG::Split::Roberto;
+package SBG::Split::3DR;
 use Moose;
 with 'SBG::SplitI';
 
@@ -83,7 +83,7 @@ sub BUILD {
     my ($self) = @_;
     my $f_dir = $self->csvdir;
 #     my $dbh=DBI->connect("DBI:CSV:f_dir=${f_dir};csv_eol=\n;csv_sep_char=\t");
-    my $dbh=SBG::U::DB::connect('davis_3dr', 'speedy.embl.de');
+    my $dbh=SBG::U::DB::connect('3dr_complexes');
     return unless $dbh;
 
     my $sth = $dbh->prepare(
