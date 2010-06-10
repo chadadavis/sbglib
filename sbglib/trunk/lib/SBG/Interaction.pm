@@ -77,6 +77,16 @@ has '_models' => (
     );
 
 
+=head2 source
+
+A label representing the source database of this interaction, or interaction
+template.
+
+=cut
+has 'source' => (
+	isa => 'Str',
+	is => 'rw',
+);
 
 
 =head2 set/get/keys

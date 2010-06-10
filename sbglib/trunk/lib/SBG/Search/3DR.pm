@@ -16,8 +16,6 @@ L<SBG::SearchI> , L<SBG::Network> , L<SBG::Interaction>
 
 =cut
 
-
-
 package SBG::Search::3DR;
 use Moose;
 with 'SBG::SearchI';
@@ -35,72 +33,47 @@ use SBG::Model;
 use SBG::Interaction;
 use SBG::U::DB;
 
+use SBG::U::List qw/flatten/;
 
-has '_dbh' => (
-    is => 'rw',
-    );
-
-
-# Biounit structures
-has '_biounit' => (
-    is => 'rw',
-    isa => 'Str', # Better: MooseX::...Path
-#     default => '/g/russell2/3dr/data/final_paper/roberto/pdb_bio_units',
-    default => '/net/netfile1/ds-russell/pdb-biounit',
-#     default => '/usr/local/data/pdb-biounit-roberto',
-    );
-
+has '_dbh' => ( is => 'rw', );
 
 # Statement handles to query each table, indexed by table name
-# Roberto_chain_templates.csv 
-# Roberto_domain_defs.csv 
+# Roberto_chain_templates.csv
+# Roberto_domain_defs.csv
 # Roberto_domain_templates.csv
 has '_sth' => (
-    is => 'ro',
-    isa => 'HashRef',
-    default => sub { {} },
-    );
-
+	is      => 'ro',
+	isa     => 'HashRef',
+	default => sub { {} },
+);
 
 sub BUILD {
-    my ($self) = @_;
+	my ($self) = @_;
 
-    my $dbh=SBG::U::DB::connect('3dr_complexes');
-    # TODO invalid state if connection fails (too late, has to be in BUILDARGS)
-    return unless defined $dbh;
-    $self->_dbh($dbh);
+	my $dbh = SBG::U::DB::connect('3dr_complexes');
 
-    my $sth_chain = $dbh->prepare(
-        join ' ',
-        'SELECT',
-        join(',', 
-             qw/PDB ASSEMBLY CHAIN1 MODEL1 ID1 COV1 CHAIN2 MODEL2 ID2 COV2 CONTACTS/), 
-        'FROM chain_templates ',
-        'WHERE PROT1=? AND PROT2=?',
-        );
-    $self->_sth->put('chain_templates', $sth_chain);
+	# TODO invalid state if connection fails (too late, has to be in BUILDARGS)
+	return unless defined $dbh;
+	$self->_dbh($dbh);
 
-    my $sth_domain = $dbh->prepare(
-        join ' ',
-        'SELECT',
-        join(',', qw/DOM1 DOM2 PDB CHAIN1 ID1 START1 END1 CHAIN2 ID2 START2 END2/),
-        'FROM domain_templates',
-        'WHERE PROT1=? AND PROT2=?',
-        );
-    $self->_sth->put('domain_templates', $sth_domain);
+	my $sth_interaction = $dbh->prepare(
+		join ' ', 'SELECT',
+		'*', 'FROM interaction_templates',
+		'WHERE uniprot1=? AND uniprot2=?',
+	);
+	$self->_sth->put( 'interaction_templates', $sth_interaction );
 
-    my $sth_defs = $dbh->prepare(
-        join ' ',
-        'SELECT',
-        join(',', qw/START END/),
-        'FROM domain_defs ',
-        'WHERE PROT=? AND DOM=?',
-        );
-    $self->_sth->put('domain_defs', $sth_domain);
+	#    my $sth_docking = $dbh->prepare(
+	#        join ' ',
+	#        'SELECT',
+	#        '*'
+	#        'FROM docking_templates',
+	#        'WHERE uniprot1=? AND uniprot2=?',
+	#        );
+	#    $self->_sth->put('docking_templates', $sth_docking);
 
-    return $self;
-} # BUILD
-
+	return $self;
+}    # BUILD
 
 =head2 search
 
@@ -111,120 +84,96 @@ sub BUILD {
 
 
 =cut
+
 sub search {
-    my ($self, $seq1, $seq2, %ops) = @_;
+	my ( $self, $seq1, $seq2, %ops ) = @_;
 
-    # Need to query in both directions? No, smallest first
-    ($seq1, $seq2) = sort { $a->display_id cmp $b->display_id } ($seq1, $seq2);
+	# Need to query in both directions? No, smallest first
+	# This is the case for the interaction_tempaltes, using uniprot
+	# But after converting sgd to uniprot, won't be the case for docking ...
+	( $seq1, $seq2 ) =
+	  sort { $a->display_id cmp $b->display_id } ( $seq1, $seq2 );
 
-    my @interactions;
-    push @interactions, $self->_chains($seq1, $seq2);
+	my @interactions;
+	push @interactions, $self->_interactions( $seq1, $seq2, %ops );
 
-    my $topn = $ops{'top'};
-    # Only use Domain-based templates where there weren't enough chain-based
-    unless ($topn && scalar(@interactions) >= $topn) {
-        push @interactions, $self->_domains($seq1, $seq2);
-    }
+	my $topn = $ops{'top'};
 
-    if ($topn) {
-        # Take top N interactions
-        # This is the reverse numerical sort on the weight field
-        @interactions = rnkeytopsort { $_->weight } $topn => @interactions;
-    }
-    $log->debug(scalar(@interactions), " interactions ($seq1,$seq2)");
+	# Only use docking-based templates where there weren't enough chain-based
+	unless ( $topn && scalar(@interactions) >= $topn ) {
+#		push @interactions, $self->_docking( $seq1, $seq2, %ops );
+	}
 
-    return @interactions;
-} # search
+	if ($topn) {
 
+		# Take top N interactions
+		# This is the reverse numerical sort on the weight field
+		@interactions = rnkeytopsort { $_->weight } $topn => @interactions;
+	}
+	$log->debug( scalar(@interactions), " interactions ($seq1,$seq2)" );
 
-# Full chain templates
-sub _chains {
-    my ($self, $seq1, $seq2) = @_;
+	return @interactions;
+}    # search
 
-    my $sth = $self->_sth->at('chain_templates');
-    my $res = $sth->execute($seq1->display_id, $seq2->display_id);
-    my @interactions;
-    while (my $h = $sth->fetchrow_hashref) {
-        my $dom1 = $self->_mkchain(
-            $h->{PDB},$h->{CHAIN1},$h->{ASSEMBLY}, $h->{MODEL1});
-        my $dom2 = $self->_mkchain(
-            $h->{PDB},$h->{CHAIN2},$h->{ASSEMBLY}, $h->{MODEL2});
-        my $mod1 = SBG::Model->new(query=>$seq1,subject=>$dom1,
-                                   scores=>{cov=>$h->{COV1},seqid=>$h->{ID1}});
-        my $mod2 = SBG::Model->new(query=>$seq2,subject=>$dom2,
-                                   scores=>{cov=>$h->{COV2},seqid=>$h->{ID2}});
+# Matt's interaction summary: structures
+sub _interactions {
+	my ( $self, $seq1, $seq2 ) = @_;
 
-        my $iaction = SBG::Interaction->new;
-        $iaction->set($seq1, $mod1);
-        $iaction->set($seq2, $mod2);
-        $iaction->avg_scores(qw/cov seqid/);
-        $iaction->scores->put('contacts', $h->{CONTACTS});
-        $iaction->weight($iaction->scores->at('avg_seqid'));
+	my $sth = $self->_sth->at('interaction_templates');
+	my $res = $sth->execute( $seq1->display_id, $seq2->display_id );
+	my @interactions;
+	while ( my $h = $sth->fetchrow_hashref ) {
 
-        push @interactions, $iaction;
-    }
-    return @interactions;
+		my $dom1 = _mkdom( $h->slice( [qw/pdbid assembly model1 dom1/] ) );
+		my $dom2 = _mkdom( $h->slice( [qw/pdbid assembly model2 dom2/] ) );
 
-} # _chains
+		my $mod1 = SBG::Model->new(
+			query   => $seq1,
+			subject => $dom1,
+			scores  => { seqid => $h->{pcid1}, n_res => $h->{n_res1} },
+		);
+		my $mod2 = SBG::Model->new(
+			query   => $seq2,
+			subject => $dom2,
+			scores  => { seqid => $h->{pcid2}, n_res => $h->{n_res2} },
+		);
 
+		my $iaction = SBG::Interaction->new(source=>$h->{source});
+		$iaction->set( $seq1, $mod1 );
+		$iaction->set( $seq2, $mod2 );
+		$iaction->avg_scores(qw/seqid n_res/);
+		
+		my $avg_seqid = $iaction->scores->at('avg_seqid');
+		# Scale to n_res to [0:100] (assuming max interface size of 1000
+		my $avg_n_res = $iaction->scores->at('avg_n_res') / 10;
+		
+		my ( $wtnres, $wtseqid ) = ( .1, .9 );
+	
+		my $score =
+		  100 *
+		  ( $wtnres * $avg_n_res + $wtseqid * $avg_seqid ) /
+		  ( $wtnres * 100 + $wtseqid * 100 );
 
-# Templates from Pfam domains
-sub _domains {
-    my ($self, $seq1, $seq2) = @_;
+		$iaction->weight($score);
 
-    my $sth = $self->_sth->at('domain_templates');
-    my $res = $sth->execute($seq1->display_id, $seq2->display_id); 
-    my @interactions;
-    while (my $h = $sth->fetchrow_hashref) {
-        my $dom1 = $self->_mkdom(
-            $h->{PDB},$h->{CHAIN1},$h->{START1},$h->{END1});
-        my $dom2 = $self->_mkdom(
-            $h->{PDB},$h->{CHAIN2},$h->{START2},$h->{END2});
-        my $mod1 = SBG::Model->new(query=>$seq1,subject=>$dom1,
-                                   scores=>{seqid=>$h->{ID1}});
-        my $mod2 = SBG::Model->new(query=>$seq2,subject=>$dom2,
-                                   scores=>{seqid=>$h->{ID2}});
-            
-        my $iaction = SBG::Interaction->new();
-        $iaction->set($seq1, $mod1);
-        $iaction->set($seq2, $mod2);
-        $iaction->avg_scores(qw/seqid/);
-        $iaction->weight($iaction->scores->at('avg_seqid'));
-        push @interactions, $iaction;
-    }
-    return @interactions;
-} # _domains;
+		push @interactions, $iaction;
+	}
+	return @interactions;
 
-
-sub _mkdom { 
-    my ($self, $pdb, $chain, $start, $end, $assem, $model) = @_;
-
-    my $dom = SBG::Domain->new(pdbid=>$pdb,
-                               descriptor=>
-                               join(' ',$chain,$start,'_','to',$chain,$end,'_'));
-    return $dom;
 }
 
 
-sub _mkchain { 
-    my ($self, $pdb, $chain, $assem, $model) = @_;
+sub _mkdom {
+	my ($pdbid, $assembly, $model, $descriptor) = flatten(@_);
 
-    my $dom = SBG::Domain->new(pdbid=>$pdb,
-                               descriptor=>"CHAIN $chain");
-    if ($assem && $model) {
-        my $base = $self->_biounit;
-        my ($subcode) = $pdb =~ /^.(..).$/;
-        my $dir;
-        # Check for the PDB hierarchy
-        $dir ||= "$base/$subcode" if -d "$base/$subcode";
-        # Else assume everything in a single directory
-        $dir ||= $base;
-        my $path = "${dir}/${pdb}.pdb${assem}.model${model}.gz";
-        $dom->file($path) if -e $path;
-    }
-    return $dom;
+	my $dom = SBG::Domain->new(
+		pdbid      => $pdbid,
+		assembly   => $assembly,
+		model      => $model,
+		descriptor => $descriptor,
+	);
+	return $dom;
 }
-
 
 
 __PACKAGE__->meta->make_immutable;
