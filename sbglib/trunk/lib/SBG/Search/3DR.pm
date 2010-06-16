@@ -49,20 +49,19 @@ has '_sth' => (
 );
 
 
+has 'docking_dir' => (
+    is => 'rw',
+    isa => 'Str',
+    default => '/net/netfile2/ag-russell/3DR/data/final_paper/roberto/docking/chopped',
+    );
+    
 
 has 'dbname' => (
     is => 'rw',
     isa => 'Str',
     default => '3dr_complexes',
     );
-    
-
-has 'dbtable' => (
-    is => 'rw',
-    isa => 'Str',
-    default => 'interaction_templates_v3',
-    );
-    
+     
 
 sub BUILD {
     my ($self) = @_;
@@ -78,22 +77,28 @@ sub BUILD {
         'SELECT',
         '*', 
         'FROM',
-        $self->dbtable,
+        'interaction_templates_v3',
         'WHERE uniprot1=? AND uniprot2=?',
     );
-    $self->_sth->put($self->dbtable, $sth_interaction );
+    $self->_sth->put('interaction_templates', $sth_interaction );
 
-    #    my $sth_docking = $dbh->prepare(
-    #        join ' ',
-    #        'SELECT',
-    #        '*'
-    #        'FROM docking_templates',
-    #        'WHERE uniprot1=? AND uniprot2=?',
-    #        );
-    #    $self->_sth->put('docking_templates', $sth_docking);
+    my $sth_docking = $dbh->prepare(
+        join ' ',
+        'SELECT',
+        '*',
+        'FROM',
+        'docking_templates',
+        'WHERE uniprot1=? AND uniprot2=?',
+        'AND class != "incorrect"',
+        # Take HC first, then clas 'HIGH', then highest score
+        'order by hc desc, class asc, score desc',
+        
+    );
+    $self->_sth->put('docking_templates', $sth_docking);
 
     return $self;
-}    # BUILD
+} # BUILD
+
 
 =head2 search
 
@@ -122,8 +127,7 @@ sub search {
 
     # Only use docking-based templates where there weren't enough chain-based
     unless ( $topn && scalar(@interactions) >= $topn ) {
-    	# TODO docking templates
-#        push @interactions, $self->_docking( $seq1, $seq2, %ops );
+        push @interactions, $self->_docking( $seq1, $seq2, %ops );
     }
 
     if ($topn) {
@@ -141,7 +145,7 @@ sub search {
 sub _interactions {
     my ( $self, $seq1, $seq2 ) = @_;
 
-    my $sth = $self->_sth->at($self->dbtable);
+    my $sth = $self->_sth->at('interaction_templates');
     my $res = $sth->execute( $seq1->display_id, $seq2->display_id );
     my @interactions;
     while ( my $h = $sth->fetchrow_hashref ) {
@@ -184,7 +188,49 @@ sub _interactions {
     }
     return @interactions;
 
-}
+} # _interactions
+
+
+# Just using the best docking model: ${docking_dir}/complex.1
+sub _docking {
+    my ( $self, $seq1, $seq2 ) = @_;
+
+    my $sth = $self->_sth->at('docking_templates');
+    my $res = $sth->execute( $seq1->display_id, $seq2->display_id );
+    my @interactions;
+    while ( my $h = $sth->fetchrow_hashref ) {
+        my $file = join '/', $self->docking_dir, $h->{directory}, 'complex.1';
+        
+        my $dom1 = SBG::Domain->new(file=>$file,descriptor=>'CHAIN A');
+        my $dom2 = SBG::Domain->new(file=>$file,descriptor=>'CHAIN B');
+        
+        my $mod1 = SBG::Model->new(
+            query   => $seq1,
+            subject => $dom1,
+            scores  => { type => $h->{type1} },
+        );
+        my $mod2 = SBG::Model->new(
+            query   => $seq2,
+            subject => $dom2,
+            scores  => { type => $h->{type2} },
+        );
+
+        my $iaction = SBG::Interaction->new(source=>'docking');
+        $iaction->set( $seq1, $mod1 );
+        $iaction->set( $seq2, $mod2 );
+        
+        my $score = $h->{score};
+        $iaction->scores->put('docking', $score);
+            
+        # Arbitary weight, to be less than the structure-based templates
+        $iaction->weight($score / 1000);
+
+        push @interactions, $iaction;
+    }
+    print "Docking: ", scalar(@interactions), " : @interactions";
+    return @interactions;
+
+} # _docking
 
 
 sub _mkdom {
