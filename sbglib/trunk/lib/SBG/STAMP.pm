@@ -111,10 +111,10 @@ sub superposition_native {
     our $minfit;
     our $scancut;
 
-    if ($fromdom->pdbid eq $ontodom->pdbid &&
-        $fromdom->descriptor eq $ontodom->descriptor &&
-        $fromdom->assembly && $fromdom->assembly eq $ontodom->assembly &&
-        $fromdom->model && $fromdom->model eq $ontodom->model
+    my $fromfile = $fromdom->file;
+    my $ontofile = $ontodom->file;
+    if ($fromfile eq $ontofile && 
+        $fromdom->descriptor eq $ontodom->descriptor        
         ) {
         $log->debug("Identity: $fromdom");
         return SBG::Superposition->identity($fromdom);
