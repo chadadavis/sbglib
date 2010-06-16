@@ -194,6 +194,8 @@ This also requires that the STAMPDIR environment variable be set
 
 Files from biounit cannot be automatically found. For those, it is necessary to set the base directory via biounit_base.
 
+NB In filenames, the PDB ID is expected to always be lowercase
+
 =cut
 
 has 'file' => (
@@ -204,7 +206,8 @@ has 'file' => (
 );
 sub _build_file {
 	my ($self) = @_;
-	my $pdbid = $self->pdbid;
+	# The PDB ID in filename is expected to be lowercase
+	my $pdbid = lc $self->pdbid;
 	return unless $pdbid;
 	my $str = $pdbid;
 	# Append e.g. '-2' for 2nd assembly

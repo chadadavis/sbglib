@@ -109,8 +109,9 @@ sub search {
     my ( $self, $seq1, $seq2, %ops ) = @_;
 
     # Need to query in both directions? No, smallest first
-    # This is the case for the interaction_tempaltes, using uniprot
-    # But after converting sgd to uniprot, won't be the case for docking ...
+    # This is the case for the interaction_templates, using uniprot
+    
+    # TODO after converting sgd to uniprot, won't be the case for docking ...
     ( $seq1, $seq2 ) =
       sort { $a->display_id cmp $b->display_id } ( $seq1, $seq2 );
 

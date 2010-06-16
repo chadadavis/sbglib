@@ -54,6 +54,10 @@ ok($dom->file && -f $dom->file, 'Finding file for obsolete:' . $dom->file);
 $dom = SBG::Domain->new(pdbid=>'1tim', assembly=>1, model=>1);
 ok($dom->file && -f $dom->file, 'Finding file for assembly+model:' . $dom->file);
 
+# Find file given uppercase PDB ID
+$dom = SBG::Domain->new(pdbid=>'2I0E');
+ok($dom->file && -f $dom->file, 'Finding uppercase PDB ID');
+
 
 # Basic checks
 $dom = SBG::Domain->new(pdbid=>'2nn6', descriptor=>'CHAIN A');
