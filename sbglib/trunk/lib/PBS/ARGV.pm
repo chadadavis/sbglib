@@ -126,131 +126,131 @@ workign directory from when the job was submitted.
 =cut
 
 sub qsub {
-	my (%ops) = @_;
+    my (%ops) = @_;
 
-	# Already running in a PBS job, don't recurse
-	if ( defined $ENV{'PBS_ENVIRONMENT'} ) {
-		$log->debug('Running in PBS job');
-		return;
-	}
+    # Already running in a PBS job, don't recurse
+    if ( defined $ENV{'PBS_ENVIRONMENT'} ) {
+        $log->debug('Running in PBS job');
+        return;
+    }
 
-	return unless has_permission();
+    return unless has_permission();
 
-	my @jobids;
-	my @failures;
-	while ( my $param = shift @::ARGV ) {
-		my $jobid = _submit( $param, %ops );
-		if ( $jobid eq '-1' ) {
-			push @failures, $param;
-		}
-		else {
-			push @jobids, $jobid;
-		}
-	}
+    my @jobids;
+    my @failures;
+    while ( my $param = shift @::ARGV ) {
+        my $jobid = _submit( $param, %ops );
+        if ( $jobid eq '-1' ) {
+            push @failures, $param;
+        }
+        else {
+            push @jobids, $jobid;
+        }
+    }
 
-	# Restore ARGV with the ones that didn't submit
-	@::ARGV = @failures;
-	return @jobids;
+    # Restore ARGV with the ones that didn't submit
+    @::ARGV = @failures;
+    return @jobids;
 
 }    # qsub
 
 # Do we have qsub on this system in the $PATH
 sub has_bin {
-	my ($bin) = @_;
-	our $_qsubpath;
-	return $_qsubpath if defined $_qsubpath;
-	foreach my $dir ( File::Spec->path() ) {
-		my $f = File::Spec->catfile( $dir, $bin );
-		$_qsubpath = $f if ( -e $f && -x $f );
-	}
-	$_qsubpath ||= '';
-	$log->debug("bin path: $_qsubpath");
-	return $_qsubpath;
+    my ($bin) = @_;
+    our $_qsubpath;
+    return $_qsubpath if defined $_qsubpath;
+    foreach my $dir ( File::Spec->path() ) {
+        my $f = File::Spec->catfile( $dir, $bin );
+        $_qsubpath = $f if ( -e $f && -x $f );
+    }
+    $_qsubpath ||= '';
+    $log->debug("bin path: $_qsubpath");
+    return $_qsubpath;
 
 }
 
 # Ability to connect to PBS server
 sub has_permission {
-	my $qstat = has_bin('qstat') or return;
-	return system("$qstat >/dev/null 2>/dev/null") == 0;
+    my $qstat = has_bin('qstat') or return;
+    return system("$qstat >/dev/null 2>/dev/null") == 0;
 }
 
 # Write and submit one PBS job script
 sub _submit {
-	my ( $filearg, %ops ) = @_;
+    my ( $filearg, %ops ) = @_;
 
-	# Default: rerun same script
-	# NB: this can be a relative path, because we 'cd' to $ENV{PWD} in the job
-	my $cmdline = $ops{'cmd'} || $0;
-	$cmdline .= " $filearg";
+    # Default: rerun same script
+    # NB: this can be a relative path, because we 'cd' to $ENV{PWD} in the job
+    my $cmdline = $ops{'cmd'} || $0;
+    $cmdline .= " $filearg";
 
-	# Command line options to pass on
-	my %cmdops = $ops{'options'} ? %{ $ops{'options'} } : ();
+    # Command line options to pass on
+    my %cmdops = $ops{'options'} ? %{ $ops{'options'} } : ();
 
-	# PBS directives
-	my @directives = $cmdops{'directives'} || ();
+    # PBS directives
+    my @directives = $cmdops{'directives'} || ();
 
-	# And remove it from the options passed to the job
-	delete $cmdops{'directives'};
+    # And remove it from the options passed to the job
+    delete $cmdops{'directives'};
 
-	# Notify on Abort, Begin, End
-	#     push @directives, "-m a";
+    # Notify on Abort, Begin, End
+    #     push @directives, "-m a";
 
-	# Check explicitly for mailing address, append it to directives
-	if ( $cmdops{'M'} ) {
-		push @directives, "-M $cmdops{'M'}";
-	}
+    # Check explicitly for mailing address, append it to directives
+    if ( $cmdops{'M'} ) {
+        push @directives, "-M $cmdops{'M'}";
+    }
 
-	# Array? if -J directive given, also append \$PBS_ARRAY_INDEX to cmdline
-	if ( $cmdops{'J'} ) {
-		my $lastline = nlines($filearg) - 1;
-		push @directives, "-J 0-$lastline";
+    # Array? if -J directive given, also append \$PBS_ARRAY_INDEX to cmdline
+    if ( $cmdops{'J'} ) {
+        my $lastline = nlines($filearg) - 1;
+        push @directives, "-J 0-$lastline";
 
-		# NB this variable will be defined by the PBS environment when started
-		# Each job will get a -J 5 where 5 varies from 0 to the lastline of file
-		$cmdops{'J'} = '$PBS_ARRAY_INDEX';
-	}
+        # NB this variable will be defined by the PBS environment when started
+        # Each job will get a -J 5 where 5 varies from 0 to the lastline of file
+        $cmdops{'J'} = '$PBS_ARRAY_INDEX';
+    }
 
-	# Add name, unless given
-	unless ( grep { /^-N/ } @directives ) {
-		my $base = basename $filearg;
+    # Add name, unless given
+    unless ( grep { /^-N/ } @directives ) {
+        my $base = basename $filearg;
 
-		# Should begin with alphabetic char
-		$base = 'j' . $base unless $base =~ /^[A-Za-z]/;
+        # Should begin with alphabetic char
+        $base = 'j' . $base unless $base =~ /^[A-Za-z]/;
 
-		# First 15 characters limit
-		($base) = $base =~ /^(.{1,15})/;
-		push @directives, "-N $base";
-	}
+        # First 15 characters limit
+        ($base) = $base =~ /^(.{1,15})/;
+        push @directives, "-N $base";
+    }
 
-	# Add a dash to precede each argument name
-	my @cmdops = map { '-' . $_ => $cmdops{$_} } keys %cmdops;
-	$cmdline .= " @cmdops";
+    # Add a dash to precede each argument name
+    my @cmdops = map { '-' . $_ => $cmdops{$_} } keys %cmdops;
+    $cmdline .= " @cmdops";
 
 # Explicitly inherit TMPDIR from parent process, to prevent PBS from overwriting it
-	$ENV{'TMPDIR'} ||= File::Spec->tmpdir();
+    $ENV{'TMPDIR'} ||= File::Spec->tmpdir();
 
-	my ( $tmpfh, $jobscript ) = tempfile( "pbs_XXXXX", TMPDIR => 1 );
-	print $tmpfh "#!/usr/bin/env sh\n";
-	print $tmpfh "#PBS $_\n" for @directives;
-	print $tmpfh "export TMPDIR=\"$ENV{'TMPDIR'}\"\n";
-	print $tmpfh "cd $ENV{PWD}\n";
-	print $tmpfh "$cmdline\n";
-	close $tmpfh;
+    my ( $tmpfh, $jobscript ) = tempfile( "pbs_XXXXX", TMPDIR => 1 );
+    print $tmpfh "#!/usr/bin/env sh\n";
+    print $tmpfh "#PBS $_\n" for @directives;
+    print $tmpfh "export TMPDIR=\"$ENV{'TMPDIR'}\"\n";
+    print $tmpfh "cd $ENV{PWD}\n";
+    print $tmpfh "$cmdline\n";
+    close $tmpfh;
 
-	my $jobid = `qsub $jobscript`;
-	unless ($jobid) {
-		my $msg = "Failed: qsub $jobscript";
-		$log->error($msg);
-		print STDERR "$msg\n";
-		$File::Temp::KEEP_ALL = 1;
-		return -1;
-	}
-	else {
-		chomp $jobid;
-		$log->info("$jobid $filearg");
-		return $jobid;
-	}
+    my $jobid = `qsub $jobscript`;
+    unless ($jobid) {
+        my $msg = "Failed: qsub $jobscript";
+        $log->error($msg);
+        print STDERR "$msg\n";
+        $File::Temp::KEEP_ALL = 1;
+        return -1;
+    }
+    else {
+        chomp $jobid;
+        $log->info("$jobid $filearg");
+        return $jobid;
+    }
 
 }    # _submit
 
@@ -258,21 +258,21 @@ sub _submit {
 # Counting is 0-based
 # Line does not end with a newline
 sub linen {
-	my ( $file, $n ) = @_;
-	open( my $fh, $file ) or return;
-	my $line;
-	for ( my $i = 0 ; defined( $line = <$fh> ) && $i < $n ; $i++ ) { }
-	return unless defined $line;
-	chomp $line;
-	return $line;
+    my ( $file, $n ) = @_;
+    open( my $fh, $file ) or return;
+    my $line;
+    for ( my $i = 0 ; defined( $line = <$fh> ) && $i < $n ; $i++ ) { }
+    return unless defined $line;
+    chomp $line;
+    return $line;
 }
 
 sub nlines {
-	my ($file) = @_;
-	open( my $fh, $file ) or return;
-	my $count = 0;
-	$count++ while <$fh>;
-	return $count;
+    my ($file) = @_;
+    open( my $fh, $file ) or return;
+    my $count = 0;
+    $count++ while <$fh>;
+    return $count;
 }
 
 1;
