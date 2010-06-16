@@ -32,18 +32,18 @@ my $file = shift || "$Bin/030.fa";
 my $seqio = Bio::SeqIO->new( -file => $file );
 my $net = SBG::Network->new;
 while ( my $seq = $seqio->next_seq ) {
-	$net->add_seq($seq);
+    $net->add_seq($seq);
 }
 is( scalar( $net->nodes ), 4, "nodes" );
 
 my $tdr = SBG::Search::3DR->new;
 unless ( $tdr->_dbh ) {
-	ok( 1, 'Skipping tests that require database' );
-	exit;
+    ok( 1, 'Skipping tests that require database' );
+    exit;
 }
 
 $net->build($tdr);
 foreach my $int ( $net->interactions() ) {
-	diag join ' ', $int, $int->source, $int->weight;
+    diag join ' ', $int, $int->source, $int->weight;
 }
 
