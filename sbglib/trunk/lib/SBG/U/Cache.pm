@@ -50,6 +50,7 @@ sub cache {
     unless (defined $arch) { $arch = `uname -m`; chomp $arch; }
 
     my $base = $ENV{'CACHEDIR'};
+    mkdir $base if $base;
     $base = File::Spec->tmpdir unless defined($base) && -d $base && -w $base;
     my $cachedir = "${base}/${name}_${arch}";
 
@@ -63,6 +64,7 @@ sub cache {
             cache_size => '100m',
             l1_cache => { driver=>'Memory', global=>1, cache_size=>'50m' }
             );
+        $log->info("cachedir: $cachedir");
     }
 
     return $cache_hash{$name};
