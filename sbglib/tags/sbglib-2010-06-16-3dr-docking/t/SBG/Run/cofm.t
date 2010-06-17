@@ -10,8 +10,11 @@ use Data::Dump qw/dump/;
 use FindBin qw/$Bin/;
 use lib "$Bin/../../../lib/";
 use SBG::U::Test qw/float_is pdl_approx/;
+use SBG::U::Log;
 
-
+my $DEBUG;
+#$DEBUG = 1;
+SBG::U::Log::init( undef, loglevel => 'DEBUG' ) if $DEBUG;
 
 use SBG::Run::cofm qw/cofm/;
 use SBG::Domain;
@@ -24,36 +27,40 @@ my $prec = '2%';
 
 
 sub _test {
-    my ($pdbid, $descriptor, $radius, @coords) = @_;
-
-    my $input = new SBG::Domain(pdbid=>$pdbid, descriptor=>$descriptor);
-    my $sphere = cofm($input);
+    my ($input, $radius, @coords) = @_;
+    my $sphere = cofm($input, cache=>$DEBUG);
     my $exp_center = pdl(@coords, 1.0);
     my $exp_r = $radius;
     pdl_approx($sphere->center, $exp_center, "center $exp_center", $prec);
     float_is($sphere->radius, $exp_r, "radius $exp_r", $prec);
 }
 
+my $input;
+
 
 # Simple segment
-_test('2nn6', 'A 50 _ to A 120 _', 
-      15.246, (83.495, 17.452, 114.562));
+$input = SBG::Domain->new(pdbid=>'2nn6', descriptor=>'A 50 _ to A 120 _');
+_test($input, 15.246, (83.495, 17.452, 114.562));
 
 
 # With negative residue IDs
-_test('1jzd', 'A -3 _ to A 60 _', 
-      11.917, (16.005,   50.005,   31.212));
+$input = SBG::Domain->new(pdbid=>'1jzd', descriptor=>'A -3 _ to A 60 _');
+_test($input, 11.917, (16.005,   50.005,   31.212));
 
 
 # Multi-segment
-_test('2frq', 'B 100 _ to B 131 A B 150 _ to B 155 B',
-      17.395, (70.445, 30.823, 55.482));
+$input = SBG::Domain->new(pdbid=>'2frq', descriptor=>'B 100 _ to B 131 A B 150 _ to B 155 B');
+_test($input, 17.395, (70.445, 30.823, 55.482));
 
 
 # Multi-segment
-_test('1dan', 'CHAIN T U 91 _ to U 106 _', 
-      12.424, (33.875, 22.586, 43.569));
+$input = SBG::Domain->new(pdbid=>'1dan', descriptor=>'CHAIN T U 91 _ to U 106 _');
+_test($input, 12.424, (33.875, 22.586, 43.569));
 
+
+# Without a PDB ID;
+$input = SBG::Domain->new(file=>"$Bin/../data/docking2.pdb", descriptor=>'CHAIN A');
+_test($input, 17.094, (-1.106,    3.405,    1.805));
 
 # With Insertion codes
 $TODO = "test insertion codes";

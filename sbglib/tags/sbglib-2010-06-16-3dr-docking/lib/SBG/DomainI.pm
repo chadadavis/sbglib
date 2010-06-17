@@ -77,7 +77,7 @@ Will be coerced to lowercase.
 
 has 'pdbid' => (
 	is       => 'rw',
-	isa      => 'SBG.PDBID',
+	isa      => 'Maybe[SBG.PDBID]',
 	required => 0,
 
 	# Coerce to lowercase
@@ -103,7 +103,7 @@ See L<SBG::Types>
 
 has 'descriptor' => (
 	is      => 'rw',
-	isa     => 'SBG.Descriptor',
+	isa     => 'Maybe[SBG.Descriptor]',
 	default => 'ALL',
 
 	# Coerce from 'Str', defined in SBG::Types
