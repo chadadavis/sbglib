@@ -198,11 +198,10 @@ sub _docking {
     my $res = $sth->execute( $seq1->display_id, $seq2->display_id );
     my @interactions;
     while ( my $h = $sth->fetchrow_hashref ) {
-    	# Our docking data provides three alternative interaction conformations
-    	foreach my $docked (qw/complex.1 complex.2 complex.3/) {
+    	# Our docking data provides alternative interaction conformations
+    	my $dir = join '/', $self->docking_dir, $h->{directory};
+    	foreach my $file (<$dir/*>) {
     		
-            my $file = join '/', $self->docking_dir, $h->{directory}, $docked;  
-        
             my $dom1 = SBG::Domain->new(file=>$file,descriptor=>'CHAIN A');
             my $dom2 = SBG::Domain->new(file=>$file,descriptor=>'CHAIN B');
         
