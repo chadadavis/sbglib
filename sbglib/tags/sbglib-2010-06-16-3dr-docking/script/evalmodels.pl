@@ -102,7 +102,8 @@ foreach my $file (@ARGV) {
     $targetfile ||= dirname($file) . "/../../targets/${tid}.target";
 
     unless (-r $targetfile) {
-            die "Cannot read: $targetfile. Please specify -target <target>\n";
+            $log->info(
+            "Cannot read: $targetfile. Specify via: -target <target>");
     }
     $log->debug("targetfile: $targetfile");
 

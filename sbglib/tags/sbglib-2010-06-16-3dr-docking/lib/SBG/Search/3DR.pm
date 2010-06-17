@@ -33,7 +33,8 @@ use SBG::Model;
 use SBG::Interaction;
 use SBG::U::DB;
 
-use SBG::U::List qw/flatten/;
+use SBG::U::List qw/interval_overlap flatten/;
+
 
 has '_dbh' => ( is => 'rw', );
 
@@ -78,7 +79,9 @@ sub BUILD {
         '*', 
         'FROM',
         'interaction_templates_v3',
-        'WHERE uniprot1=? AND uniprot2=?',
+        'WHERE',
+        'uniprot1=? AND uniprot2=?',
+        'AND status not like "%failed"',
     );
     $self->_sth->put('interaction_templates', $sth_interaction );
 
@@ -143,23 +146,30 @@ sub search {
 
 # Matt's interaction summary: structures
 sub _interactions {
-    my ( $self, $seq1, $seq2 ) = @_;
+    my ( $self, $seq1, $seq2, %ops ) = @_;
 
     my $sth = $self->_sth->at('interaction_templates');
     my $res = $sth->execute( $seq1->display_id, $seq2->display_id );
+        
     my @interactions;
     while ( my $h = $sth->fetchrow_hashref ) {
 
+        # Check sequence coverage
+        next unless _covers($seq1, $h->{start1}, $h->{end1}, %ops);
+        next unless _covers($seq2, $h->{start2}, $h->{end2}, %ops);
+        
         my $dom1 = _mkdom( $h->slice( [qw/pdbid assembly model1 dom1/] ) );
         my $dom2 = _mkdom( $h->slice( [qw/pdbid assembly model2 dom2/] ) );
 
         my $mod1 = SBG::Model->new(
             query   => $seq1,
+            input   => $seq1,
             subject => $dom1,
             scores  => { seqid => $h->{pcid1}, n_res => $h->{n_res1} },
         );
         my $mod2 = SBG::Model->new(
             query   => $seq2,
+            input   => $seq2,
             subject => $dom2,
             scores  => { seqid => $h->{pcid2}, n_res => $h->{n_res2} },
         );
@@ -189,6 +199,35 @@ sub _interactions {
     return @interactions;
 
 } # _interactions
+
+
+sub _covers {
+	my ($seq,$start2, $end2, %ops) = @_;
+	
+	# If start2 or end2 not defined (the template coverage of the sequence),
+	# then assume it's a full-length template
+	return 1 unless $start2 && $end2;
+	my $start1 = 1;
+	my $end1 = $seq->length;
+	
+	# minumum sequence coverage required
+    $ops{'overlap'} = 0.50 unless defined $ops{'overlap'};
+	
+    # How much of structural fragment covered by sequence
+    # And how much of sequence covered by structural fragment
+    my ($covered_struct, $covered_seq) = 
+        interval_overlap($start1, $end1, $start2, $end2);
+            
+    if ($covered_struct < $ops{'overlap'} ||
+        $covered_seq < $ops{'overlap'} ) { 
+        $log->debug("covered_struct: $covered_struct");
+        $log->debug("covered_seq: $covered_seq");
+        return 0;
+    }
+        
+    return 1;
+    	
+}
 
 
 sub _docking {
