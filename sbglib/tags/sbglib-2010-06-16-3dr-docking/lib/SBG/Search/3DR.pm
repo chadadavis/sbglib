@@ -81,7 +81,10 @@ sub BUILD {
         'interaction_templates_v3',
         'WHERE',
         'uniprot1=? AND uniprot2=?',
+        # Don't take results where interprets failed
         'AND status not like "%failed"',
+        # Necessary for other cases where it effectively failed
+        'AND sd > 0',
     );
     $self->_sth->put('interaction_templates', $sth_interaction );
 
