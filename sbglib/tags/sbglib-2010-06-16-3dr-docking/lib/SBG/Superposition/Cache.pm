@@ -37,7 +37,9 @@ sub superposition_native {
     my ($fromdom, $ontodom, $ops) = @_;
     my $cachekey = "${fromdom}=>${ontodom}";
 
-    if ($fromdom->pdbid eq $ontodom->pdbid &&
+    my $fromfile = $fromdom->file;
+    my $ontofile = $ontodom->file;
+    if ($fromfile eq $ontofile && 
         $fromdom->descriptor eq $ontodom->descriptor) {
         $log->debug("Identity: $fromdom");
         return SBG::Superposition->identity($fromdom);

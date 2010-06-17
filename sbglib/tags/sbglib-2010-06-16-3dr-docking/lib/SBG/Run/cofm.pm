@@ -188,7 +188,6 @@ sub _run {
     my %res;
     while (my $line = <$cofmfh>) {
 
-
         if ($line =~ /^Domain\s+\S+\s+(\S+)/i) {
             $res{file} = $1;
         } elsif ($line =~ / (\d+) CAs in total/) {
@@ -200,18 +199,18 @@ sub _run {
             $res{Rmax} = $a[13];
             ($res{Cx}, $res{Cy}, $res{Cz}) = ($a[16], $a[17], $a[18]);
         }
-
     } # while
 
-    return unless %res;
-    return unless $res{nres} > 0;
+    unless (%res && $res{nres} > 0) { 
+    	seek $cofmfh, 0, "SEEK_SET";
+    	$log->error("Failed to parse:", <$cofmfh>);
+    	return;
+    }
 
     # keys: (Cx, Cy,Cz, Rg, Rmax, description, file, descriptor)
     return \%res;
 
 } # _run
-
-
 
 
 1;
