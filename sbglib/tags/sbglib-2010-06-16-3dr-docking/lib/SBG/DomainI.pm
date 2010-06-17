@@ -103,7 +103,7 @@ See L<SBG::Types>
 
 has 'descriptor' => (
 	is      => 'rw',
-	isa     => 'Maybe[SBG.Descriptor]',
+	isa     => 'SBG.Descriptor',
 	default => 'ALL',
 
 	# Coerce from 'Str', defined in SBG::Types
