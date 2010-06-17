@@ -179,8 +179,11 @@ sub symmetry {
 
     # For all pairs
     my @pairs = pairs(@nodes);
+    my $npairs = @pairs;
+    my $ipair = 0;
     foreach my $pair (@pairs) {
-        $log->debug("Testing homology: @$pair");
+        $ipair++;
+        $log->debug("Testing homology ($ipair/$npairs): @$pair");
         next if $symmetry->same_connected_components(@$pair);
 
         # Align two proteins

@@ -202,7 +202,7 @@ sub _run {
     } # while
 
     unless (%res && $res{nres} > 0) { 
-    	seek $cofmfh, 0, "SEEK_SET";
+    	seek $cofmfh, 0, 0;
     	$log->error("Failed to parse:", <$cofmfh>);
     	return;
     }
