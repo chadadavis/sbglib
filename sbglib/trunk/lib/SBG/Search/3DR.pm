@@ -191,7 +191,6 @@ sub _interactions {
 } # _interactions
 
 
-# Just using the best docking model: ${docking_dir}/complex.1
 sub _docking {
     my ( $self, $seq1, $seq2 ) = @_;
 
@@ -199,35 +198,39 @@ sub _docking {
     my $res = $sth->execute( $seq1->display_id, $seq2->display_id );
     my @interactions;
     while ( my $h = $sth->fetchrow_hashref ) {
-        my $file = join '/', $self->docking_dir, $h->{directory}, 'complex.1';
+    	# Our docking data provides three alternative interaction conformations
+    	foreach my $docked (qw/complex.1 complex.2 complex.3/) {
+    		
+            my $file = join '/', $self->docking_dir, $h->{directory}, $docked;  
         
-        my $dom1 = SBG::Domain->new(file=>$file,descriptor=>'CHAIN A');
-        my $dom2 = SBG::Domain->new(file=>$file,descriptor=>'CHAIN B');
+            my $dom1 = SBG::Domain->new(file=>$file,descriptor=>'CHAIN A');
+            my $dom2 = SBG::Domain->new(file=>$file,descriptor=>'CHAIN B');
         
-        my $mod1 = SBG::Model->new(
-            query   => $seq1,
-            subject => $dom1,
-            scores  => { type => $h->{type1} },
-        );
-        my $mod2 = SBG::Model->new(
-            query   => $seq2,
-            subject => $dom2,
-            scores  => { type => $h->{type2} },
-        );
+            my $mod1 = SBG::Model->new(
+                query   => $seq1,
+                subject => $dom1,
+                scores  => { type => $h->{type1} },
+            );
+            my $mod2 = SBG::Model->new(
+                query   => $seq2,
+                subject => $dom2,
+                scores  => { type => $h->{type2} },
+            );
 
-        my $iaction = SBG::Interaction->new(source=>'docking');
-        $iaction->set( $seq1, $mod1 );
-        $iaction->set( $seq2, $mod2 );
+            my $iaction = SBG::Interaction->new(source=>'docking');
+            $iaction->set( $seq1, $mod1 );
+            $iaction->set( $seq2, $mod2 );
         
-        my $score = $h->{score};
-        $iaction->scores->put('docking', $score);
+            my $score = $h->{score};
+            $iaction->scores->put('docking', $score);
             
-        # Arbitary weight, to be less than the structure-based templates
-        $iaction->weight($score / 1000);
+            # Arbitary weight, to be less than the structure-based templates
+            $iaction->weight($score / 1000);
 
-        push @interactions, $iaction;
+            push @interactions, $iaction;
+    	}        
     }
-    print "Docking: ", scalar(@interactions), " : @interactions";
+    $log->info("Docking: $interactions[0]") if @interactions;
     return @interactions;
 
 } # _docking

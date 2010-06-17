@@ -44,6 +44,7 @@ unless ( $tdr->_dbh ) {
 
 $net->build($tdr);
 foreach my $int ( $net->interactions() ) {
+	next if $int->source eq 'dom_dom';
     diag join ' ', $int, $int->source, $int->weight;
 }
 
