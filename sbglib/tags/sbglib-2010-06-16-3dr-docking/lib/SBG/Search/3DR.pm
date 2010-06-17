@@ -198,7 +198,7 @@ sub _docking {
     my $res = $sth->execute( $seq1->display_id, $seq2->display_id );
     my @interactions;
     while ( my $h = $sth->fetchrow_hashref ) {
-    	# Our docking data provides three alternative interaction conformations
+    	# Our docking data provides alternative interaction conformations
     	my $dir = join '/', $self->docking_dir, $h->{directory};
     	foreach my $file (<$dir/*>) {
     		

@@ -105,11 +105,16 @@ foreach my $file (@ARGV) {
 
     # Create interaction templates on the edges of the network
     $net = $net->build($searcher,%$buildops);
-
-    my $base = $ops{output} || $basename;
+    
     my $iaction_count = $net->edges > 1 ? $net->interactions : 0;
-    $net->store($base . '.network') if $iaction_count;
-
+    
+    if ($iaction_count) {
+        # Pre-load the symmetry information
+        $net->symmetry;
+        my $base = $ops{output} || $basename;
+        $net->store($base . '.network');
+    }
+    
     end_lock($lock, $iaction_count);
 
 }
