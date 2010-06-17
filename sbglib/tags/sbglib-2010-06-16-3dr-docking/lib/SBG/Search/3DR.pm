@@ -180,8 +180,12 @@ sub _interactions {
         $iaction->avg_scores(qw/seqid n_res/);
         
         my $avg_seqid = $iaction->scores->at('avg_seqid');
+        $log->debug("avg_seqid $avg_seqid");
+
         # Scale to n_res to [0:100] (assuming max interface size of 1000
         my $avg_n_res = $iaction->scores->at('avg_n_res') / 10;
+        $log->debug("avg_n_res $avg_n_res");
+
         # Save interprets z-score in the interaction
         $iaction->scores->put('interpretsz', $h->{z});
         

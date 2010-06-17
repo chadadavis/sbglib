@@ -44,6 +44,7 @@ use overload (
 
 use Moose::Autobox;
 use Log::Any qw/$log/;
+use POSIX qw/ceil/;
 
 use Bio::Tools::Run::Alignment::Clustalw;
 
@@ -183,17 +184,16 @@ sub symmetry {
     my $ipair = 0;
     foreach my $pair (@pairs) {
         $ipair++;
-        $log->debug("Testing homology ($ipair/$npairs): @$pair");
         next if $symmetry->same_connected_components(@$pair);
 
         # Align two proteins
         my @prots = map { $_->proteins } @$pair;
         my $aln = $clustal->align(\@prots);
-        $log->debug(' identity:', $aln->percentage_identity, 
-                    ' score:', $aln->score);
-
+        
         # Get identity as function of length of longer sequence;
         my $identity = $aln->overall_percentage_identity('long');
+        $log->debug("Testing homology ($ipair/$npairs): @$pair $identity");
+        
         if ($identity > $homo_thresh) {
             $log->debug("Grouping homologs: @$pair");
             $symmetry->add_edge("$pair->[0]", "$pair->[1]");
@@ -203,11 +203,188 @@ sub symmetry {
     my $str = join(',', map { '(' . join(',',@$_) . ')' } @sets);
     $log->debug($str);
 
-    $self->set_graph_attribute('symmetry', $symmetry);
-    return $symmetry;
+    $self->set_graph_attribute('symmetry', \@sets);
+    return \@sets;
 
 } # symmetry
 
+
+sub symmetry2 {
+    my ($self,) = @_;
+
+    if ($self->has_graph_attribute('symmetry')) {
+        return $self->get_graph_attribute('symmetry');
+    }
+
+    my @cc = _recur_symm2($self->nodes);
+
+    my $str = join(',', map { '(' . join(',',@$_) . ')' } @cc);
+    $log->debug($str);
+
+    $self->set_graph_attribute('symmetry', \@cc);
+    return \@cc;
+
+}
+
+sub _recur_symm2 {
+	my ($head, @rest) = @_;
+	  
+    our $clustal;
+    our $count2;
+    
+    $clustal ||= Bio::Tools::Run::Alignment::Clustalw->new(quiet=>1);
+
+    my %bins;
+    # 100% identical to self;
+    $bins{10} = [ $head ];
+    
+    foreach my $partner (@rest) {
+    	$count2++;
+        # Align two proteins
+        my @prots = map { $_->proteins } ($head, $partner);
+        my $aln = $clustal->align(\@prots);
+        
+        # Get identity as function of length of longer sequence;
+        my $identity = $aln->overall_percentage_identity('long');
+        $log->debug("Testing homology: $head vs $partner $identity");
+        
+        # $bin is in [0:10]
+        my $bin = ceil ($identity/10);
+        $bins{$bin} ||= [];
+        push @{$bins{$bin}}, $partner;
+    }
+    
+    my @sets;
+    foreach my $bin (keys %bins) {
+        my $set = $bins{$bin};
+        # The group of $head and singletons don't need to be processed further
+        if ($bin == 10 || $set->length == 1) {
+        	push @sets, $set;
+        } else {
+        	push @sets, _recur_symm2(@$set);
+        }	
+    }
+    $log->debug("Alignments run: $count2");
+    return @sets;
+
+} # _recur_symm
+
+
+sub symmetry3 {
+    my ($self,) = @_;
+
+    if ($self->has_graph_attribute('symmetry')) {
+        return $self->get_graph_attribute('symmetry');
+    }
+
+    my @cc = _recur_symm3($self->nodes);
+
+    my $str = join(',', map { '(' . join(',',@$_) . ')' } @cc);
+    $log->debug($str);
+
+    $self->set_graph_attribute('symmetry', \@cc);
+    return \@cc;
+
+}
+
+sub _recur_symm3 {
+    my ($head, @rest) = @_;
+      
+    our $clustal;
+    our $count3;
+    
+    $clustal ||= Bio::Tools::Run::Alignment::Clustalw->new(quiet=>1);
+
+    # Everything in this group
+    my @us = ( $head );
+    return \@us unless @rest;
+    
+    for (my $i = 0; $i < @rest; $i++) {
+    	my $partner = $rest[$i];
+        $count3++;
+        # Align two proteins
+        my @prots = map { $_->proteins } ($head, $partner);
+        my $aln = $clustal->align(\@prots);
+        
+        # Get identity as function of length of longer sequence;
+        my $identity = $aln->overall_percentage_identity('long');
+        $log->debug("Testing homology: $head vs $partner $identity");
+
+        if ($identity >= 90) {
+        	push @us, $partner;
+        	delete $rest[$i];
+        }  
+    }
+
+    my @rest_sets = _recur_symm3(grep { defined } @rest);
+    $log->debug("Alignments run: $count3");
+    
+    return [ @us ], @rest_sets;
+
+} # _recur_symm3
+
+
+sub symmetry4 {
+    my ($self,) = @_;
+
+    if ($self->has_graph_attribute('symmetry')) {
+        return $self->get_graph_attribute('symmetry');
+    }
+
+    my @cc = _recur_symm4(map { $_ => 0 } $self->nodes);
+
+    my $str = join(',', map { '(' . join(',',@$_) . ')' } @cc);
+    $log->debug($str);
+
+    $self->set_graph_attribute('symmetry', \@cc);
+    return \@cc;
+
+}
+
+sub _recur_symm4 {
+    my ($head, @rest) = @_;
+      
+    our $clustal;
+    our $count4;
+    
+    $clustal ||= Bio::Tools::Run::Alignment::Clustalw->new(quiet=>1);
+
+    # Everything in this group
+    my @us = ( $head );
+    return \@us unless @rest;
+
+    # Scores of everything else
+    my @sorted;
+    
+    for (my $i = 0; $i < @rest; $i++) {
+        my $partner = $rest[$i];
+        $count4++;
+        # Align two proteins
+        my @prots = map { $_->proteins } ($head, $partner);
+        my $aln = $clustal->align(\@prots);
+        
+        # Get identity as function of length of longer sequence;
+        my $identity = $aln->overall_percentage_identity('long');
+        $log->debug("Testing homology: $head vs $partner $identity");
+
+        # Put partner on it's spot on the number line
+        _insertion_sort(@sorted, $partner, $identity);
+    }
+
+    # Partition the number line on gaps of 15 percentage points
+    my @parts = _partition(@sorted);
+    
+    # Check if highest-scoring partition is identical enough, 
+    # Otherwise 'us' is a singleton
+    # TODO    
+    
+    my @rest_sets = map { _recur_symm4(@$_) } @parts;
+
+    $log->debug("Alignments run: $count4");
+    
+    return [ @us ], @rest_sets;
+
+} # _recur_symm4
 
 
 

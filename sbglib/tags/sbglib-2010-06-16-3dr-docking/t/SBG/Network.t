@@ -6,6 +6,8 @@ use Carp;
 use Data::Dumper;
 use Data::Dump qw/dump/;
 
+use Moose::Autobox;
+
 use FindBin qw/$Bin/;
 use lib "$Bin/../../lib/";
 use SBG::U::Test 'float_is';
@@ -13,6 +15,11 @@ use SBG::Network;
 use SBG::Node;
 use SBG::Seq;
 use SBG::Interaction;
+
+use SBG::U::Log qw/log/;
+my $DEBUG;
+$DEBUG = 1;
+SBG::U::Log::init( undef, loglevel => 'DEBUG' ) if $DEBUG;
 
 
 # Sequences becomes nodes become networks
@@ -41,15 +48,66 @@ is_deeply([sort $got->nodes], [sort $node1, $node2], "add_interaction");
 
 # Test symmetry
 use Bio::SeqIO;
-my $io = Bio::SeqIO->new(-file=>"$Bin/data/bovine-f1-atpase.fa");
-my $snet = SBG::Network->new;
-while (my $seq = $io->next_seq) { $snet->add_seq($seq); }
+use Benchmark qw(:all) ;
 
-my $symm = $snet->symmetry;
-my @cc = $symm->connected_components;
-my $str = join(',', sort map { '(' . join(',',sort @$_) . ')' } @cc);
-my $str_expected = 
-    '(1e79A,1e79B,1e79C),(1e79D,1e79E,1e79F),(1e79G),(1e79H),(1e79I)';
+sub _symm_test { 
+	my ($file, $method, $expected) = @_;
+	
+    my $cc = _get_symm ($file, $method);
+    my $str = _nested2str(@$cc);
 
-is($str, $str_expected, 'symmetry()');
+    # Split and rejoin, sorted    
+    my @expected = map { s/[()]//g; [ split ',' ] } split('\),\(', $expected);
+    $expected = _nested2str(@expected);
+    is($str, $expected, "${method}()");
     
+}
+
+sub _get_symm {
+    my $file   = shift;
+    my $method = shift || 'symmetry';
+
+    my $io = Bio::SeqIO->new( -file => $file );
+    my $snet = SBG::Network->new;
+    while ( my $seq = $io->next_seq ) { $snet->add_seq($seq); }
+    my $cc;
+    my $time = timeit(1, sub { $cc = $snet->$method });
+    diag "$method: ", timestr($time);
+    return $cc;
+}
+
+sub _nested2str {
+    join(',', sort map { '(' . join(',',sort @$_) . ')' } @_);
+}
+
+
+_symm_test("$Bin/data/bovine-f1-atpase.fa", 'symmetry',
+    '(1e79A,1e79B,1e79C),(1e79D,1e79E,1e79F),(1e79G),(1e79H),(1e79I)');
+                
+_symm_test("$Bin/data/bovine-f1-atpase.fa", 'symmetry2',
+    '(1e79A,1e79B,1e79C),(1e79D,1e79E,1e79F),(1e79G),(1e79H),(1e79I)');
+
+_symm_test("$Bin/data/bovine-f1-atpase.fa", 'symmetry3',
+    '(1e79A,1e79B,1e79C),(1e79D,1e79E,1e79F),(1e79G),(1e79H),(1e79I)');
+
+
+# A (much) larger test (for speed)
+my $cc3 = _get_symm("$Bin/data/522.fa", 'symmetry3');
+my $str3 = _nested2str(@$cc3);
+diag "str3 ", $str3;
+
+my $cc2 = _get_symm("$Bin/data/522.fa", 'symmetry2');
+my $str2 = _nested2str(@$cc2);
+diag "str2 ", $str2;
+
+my $cc1 = _get_symm("$Bin/data/522.fa");
+my $str1 = _nested2str(@$cc1);
+diag "str1 ", $str1;
+
+
+
+
+
+
+    
+

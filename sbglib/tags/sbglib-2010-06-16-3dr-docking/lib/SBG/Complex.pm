@@ -1157,7 +1157,7 @@ sub rmsd_class {
     # The complex model knows the symmetry of the components being built, even
     # the ones that were not explicitly modelled in this complex.
     # Group components into homologous classes (a component is in just one class)
-    my @cc = $self->symmetry->connected_components();
+    my @cc = $self->symmetry->flatten;
 
     # The components actually being modelled in this complex, sorted by class,
     # since we about to generate permutations of each class. The order of the
