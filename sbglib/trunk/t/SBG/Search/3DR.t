@@ -23,7 +23,7 @@ use SBG::Search::3DR;
 use SBG::U::Log qw/log/;
 my $DEBUG;
 
-# $DEBUG = 1;
+#$DEBUG = 1;
 SBG::U::Log::init( undef, loglevel => 'DEBUG' ) if $DEBUG;
 
 use FindBin qw/$Bin/;
@@ -44,7 +44,7 @@ unless ( $tdr->_dbh ) {
 
 $net->build($tdr);
 foreach my $int ( $net->interactions() ) {
-	next if $int->source eq 'dom_dom';
+#	next if $int->source eq 'dom_dom';
     diag join ' ', $int, $int->source, $int->weight;
 }
 
