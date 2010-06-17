@@ -425,12 +425,17 @@ sub wholechain {
 
 =head2 id
 
-Combines the PDBID and the descriptor into a short ID.
+Combines the PDBID, or filename, and the descriptor into a short ID.
 
-E.g. 2nn6 { A 13 _ to A 122 _ } => 2nn6A13_A122_
+ 2nn6 { A 13 _ to A 122 _ } => 2nn6A13_A122_
 
-First four characters are the PDB ID.
+ mystructure.pdb { CHAIN A } => mystructureB
+ 
+First four characters are the PDB ID, or the basename of the file when on PDB
+
 A domain descriptor is then appended.
+
+NB if no PDB ID is present, the filename should be unique.
 
 See also L<uniqueid>
 

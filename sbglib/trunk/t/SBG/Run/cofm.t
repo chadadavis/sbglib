@@ -62,6 +62,10 @@ _test($input, 12.424, (33.875, 22.586, 43.569));
 $input = SBG::Domain->new(file=>"$Bin/../data/docking2.pdb", descriptor=>'CHAIN A');
 _test($input, 17.094, (-1.106,    3.405,    1.805));
 
+# Another docking result
+$input = SBG::Domain->new(file=>"$Bin/../data/P29295.1-P41819.1-complex.2", descriptor=>'CHAIN A');
+_test($input, 19.636, (40.593,    9.387,   82.034));
+
 # With Insertion codes
 $TODO = "test insertion codes";
 ok 0;
