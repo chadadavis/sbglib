@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 
-use Test::More 'no_plan';
+use Test::More;
 
 use Carp;
 use Data::Dumper;
@@ -72,7 +72,7 @@ sub _get_symm {
     while ( my $seq = $io->next_seq ) { $snet->add_seq($seq); }
     my $cc;
     my $time = timeit(1, sub { $cc = $snet->$method });
-    diag "$method: ", timestr($time);
+#    diag "$method: ", timestr($time);
     return $cc;
 }
 
@@ -89,6 +89,11 @@ _symm_test("$Bin/data/bovine-f1-atpase.fa", 'symmetry2',
 
 _symm_test("$Bin/data/bovine-f1-atpase.fa", 'symmetry3',
     '(1e79A,1e79B,1e79C),(1e79D,1e79E,1e79F),(1e79G),(1e79H),(1e79I)');
+
+
+done_testing();
+
+__END__
 
 
 # A (much) larger test (for speed)
