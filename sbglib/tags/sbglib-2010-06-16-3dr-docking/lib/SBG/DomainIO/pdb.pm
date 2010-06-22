@@ -40,6 +40,7 @@ use PDL::IO::Misc qw/rcols rgrep/;
 
 # Write PDB file by writing a STAMP Dom file and having 'transform' create PDB
 use SBG::DomainIO::stamp;
+use SBG::U::List qw/flatten/;
 
 use File::Slurp qw/slurp/;
 
@@ -112,6 +113,7 @@ http://www.compbio.dundee.ac.uk/Software/Stamp/stamp.html
 =cut
 sub write {
     my ($self, @doms) = @_;
+    @doms = SBG::U::List::flatten(@doms);
     return unless @doms;
 
     # A domain defines a subset of structure, write that to a temp file first
