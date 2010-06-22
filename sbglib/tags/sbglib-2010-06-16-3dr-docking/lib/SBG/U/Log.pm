@@ -134,8 +134,12 @@ sub init {
     $logger->level(eval '$' . $level);
     
     # Log appenders (i.e. where the logs get sent)
-    my $appendertype = ("$logfile" eq '-') ? 
-        'Log::Log4perl::Appender::Screen' : 'Log::Dispatch::File';
+    my $appendertype;
+    if ($logfile eq '-') {
+    	$appendertype = 'Log::Log4perl::Appender::Screen';
+    } else {
+    	$appendertype = 'Log::Dispatch::File';
+    }
     my $appender = Log::Log4perl::Appender->
         new($appendertype, filename => $logpath, mode => "append");
 
