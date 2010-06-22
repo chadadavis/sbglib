@@ -2,7 +2,7 @@
 
 =head1 NAME
 
-SBG::Split::Roberto - Divides a Bio::Seq into domains
+SBG::Split::3DR - Divides a Bio::Seq into domains
 
 =head1 SYNOPSIS
 
@@ -36,22 +36,6 @@ use DBI;
 use SBG::U::DB;
 
 
-=head2 csvfile
-
- Function: 
- Example : 
- Returns : 
- Args    : 
-
-
-=cut
-has 'csvdir' => (
-    is => 'rw',
-    isa => 'Str',
-    default => '/g/russell2/3dr/data/final_paper/roberto',
-    );
-
-
 has 'mingap' => (
     is => 'rw',
     isa => 'Int',
@@ -81,19 +65,16 @@ has '_sth' => (
 =cut
 sub BUILD {
     my ($self) = @_;
-    my $f_dir = $self->csvdir;
-#     my $dbh=DBI->connect("DBI:CSV:f_dir=${f_dir};csv_eol=\n;csv_sep_char=\t");
     my $dbh=SBG::U::DB::connect('3dr_complexes');
     return unless $dbh;
 
     my $sth = $dbh->prepare(
         join ' ',
         'SELECT',
-        join(',', qw/PROT DOM EVALUE ID START END DOM_ID/),
+        join(',', qw/uniprot pfam i start end evalue/),
         'FROM',
-#         'yeast_domains.csv',
-        'domain_defs',
-        'where PROT=?',
+        'domain_instances',
+        'where uniprot=?',
 	);
 
     $self->_dbh($dbh);
@@ -167,8 +148,7 @@ sub _hits {
         $hits->push($h);
     }
     # Put domains in the order that they occur in on sequence
-#     $hits = $hits->sort(sub{$a->{START}<=>$b->{START}});
-    $hits = [sort {$a->{START} <=> $b->{START} } @$hits];
+    $hits = [sort {$a->{start} <=> $b->{start} } @$hits];
     return $hits;
 }
 
@@ -176,11 +156,11 @@ sub _hits {
 sub _hit2feat {
     my ($hit) = @_;
     my $feat = Bio::SeqFeature::Generic->new(
-        -start => $hit->{START},
-        -end => $hit->{END},
-        -display_name => $hit->{DOM},
-        -score => $hit->{EVALUE},
-        -source_tag => 'yeast_domains',
+        -start => $hit->{start},
+        -end => $hit->{end},
+        -display_name => join('.', $hit->{pfam}, $hit->{i}),
+        -score => $hit->{evalue},
+        -source_tag => 'pfam_domains',
         );
     return $feat;
 }
@@ -191,17 +171,34 @@ sub _hit2feat {
 sub _smooth_feats {
     my ($self, $seq, $feats) = @_;
 
-    # If any two boundaries are two close together, collapses them into one
+    
     for (my $i = 0; $i < $feats->length - 1; $i++) {
-        my ($this, $next) = ($feats->[$i], $feats->[$i+1]);
-        # Find the midpoint and delete the previous boundary
-        if ($next->start - $this->end < $self->mingap) {
-            my $mid = int (($next->start + $this->end) / 2);
+        my $this = $feats->[$i];
+        my $next = $feats->[$i+1];
+        # Find the midpoint between domains
+        my $gap = $next->start - $this->end;
+        my $mid = int (($next->start + $this->end) / 2);
+        
+        # If next domain is completely contained in this domain, delete it
+        while ($gap < 0 && $next->end < $this->end) {
+            delete $feats->[$i+1];
+            $i++;
+            last unless $i < $feats->length;
+            $next = $feats->[$i+1];
+            $gap = $next->start - $this->end;
+            $mid = int (($next->start + $this->end) / 2);
+        }
+        last unless $next;
+
+        if ($gap < 0 || ($gap > 0 && $gap < $self->mingap)) { 
+            # If any two boundaries are two close together, collapses them
+            # Or, if they overlap, split them at the middle of the overlap
             $this->end($mid);
             $next->start($mid+1);
         }
     }
-
+    $feats = $feats->grep(sub{defined});
+    
     # Stretch ends, if close enough
     if ($feats->[0] && $feats->[0]->start < $self->mingap) {
         $feats->[0]->start(1);
@@ -245,8 +242,8 @@ sub _dummy {
     return Bio::SeqFeature::Generic->new(
         -start => $start,
         -end => $end,
-        -display_name => 'DUMMY',
-        -source_tag => 'yeast_domains',
+        -display_name => 'NODOMAIN',
+        -source_tag => 'pfam_domains',
         );
 }
 

@@ -36,3 +36,8 @@ is("$models[0]", "Q86Y41(2nn6A)", 'stringify');
 
 is("$models[1]", "Q9NPD3(2nn6B)", 'stringify');
 
+
+$TODO = 'Distinguish "subject" from "structure"';
+ok(0);
+
+

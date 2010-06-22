@@ -26,7 +26,12 @@ use Moose;
 with qw/
 SBG::Role::Storable
 SBG::Role::Scorable
+SBG::Role::Transformable
 /;
+
+# TODO DES needs to implement a StructureI interface, defining e.g. 'transform'
+
+use Scalar::Util qw/refaddr/;
 
 
 use overload (
@@ -54,7 +59,7 @@ has 'query' => (
 
 =head2 subject
 
- Function: The model for the query
+ Function: The template for the query
  Example : 
  Returns : 
  Args    : 
@@ -63,11 +68,29 @@ has 'query' => (
 =cut
 has 'subject' => (
     is => 'rw',
-    handles => [ qw/coords/ ],
     );
 
 
+=head2 structure
 
+If a component to be modelled already has a monomeric structure. 
+
+Otherwise the template provides the structure
+
+=cut
+has 'structure' => (
+    is => 'rw',
+    does => 'SBG::DomainI',
+    handles => [ qw/coords transformation/ ],
+    lazy_build => 1,
+    );
+sub _build_structure { 
+	my ($self, ) = @_;
+	# The template is the default structure, if none given
+	return $self->subject;
+}
+
+    
 
 =head2 input
 
@@ -83,10 +106,16 @@ has 'input' => (
     is => 'rw',
     );
 
+
+=head2 aln
+
+Lazy way to keep track of the alignment between the query and the subject
+=cut
 has 'aln' => (
     is => 'rw',
     );
 
+    
 =head2 coverage
 
  Function: 
@@ -104,7 +133,8 @@ has 'coverage' => (
 sub _build_coverage {
     my ($self) = @_;
     my $model_len = $self->subject->seq->length;
-    my $input_len = $self->input->length;
+    my $input = $self->input || $self->query;
+    my $input_len = $input->length;
     return 100.0 * $model_len / $input_len;
 }
 
@@ -114,6 +144,19 @@ sub stringify {
     return $self->query . '(' . $self->subject . ')';
 }
 
+
+sub transform {
+	my ($self, $matrix) = @_;
+	my $subject = $self->subject;
+	$subject->transform($matrix);
+	
+	my $structure = $self->structure;
+	# If Model contains it's own strutural representation in addition to template
+	if (refaddr($structure) != refaddr($subject)) {
+		$structure->transform($matrix);
+	}
+	return $self;
+}
 
 ###############################################################################
 __PACKAGE__->meta->make_immutable;

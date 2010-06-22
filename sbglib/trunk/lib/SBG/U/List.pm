@@ -88,15 +88,15 @@ sub flatten {
 }
 
 sub sum {
-    return List::Util::sum(flatten @_);
+    return List::Util::sum grep { defined } flatten @_;
 }
 
 sub min {
-    return List::Util::min flatten @_;
+    return List::Util::min grep { defined } flatten @_;
 }
 
 sub max {
-    return List::Util::max flatten @_;
+    return List::Util::max grep { defined } flatten @_;
 }
 
 sub uniq { 
@@ -107,8 +107,7 @@ sub uniq {
 
 # Numeric sort (See also Sort::Key::nsort() )
 sub nsort {
-    @_ = flatten @_;
-    my @a = sort { $a <=> $b } @_;
+    my @a = sort { $a <=> $b } flatten @_;
     return wantarray ? @a : \@a;
 }
 
@@ -121,18 +120,18 @@ sub swap (\$\$) {
 
 # Permutes a copy, not in-place
 sub permute {
-    @_ = flatten @_;
-    for (0..$#_) {
-        swap($_[$_], $_[rand(@_)]);
+    my @a = flatten @_;
+    for (0..$#a) {
+        swap($a[$a], $a[rand(@a)]);
     }
-    return wantarray ? @_ : \@_;    
+    return wantarray ? @a : \@a;    
 }
 
 
 # http://www.perlmonks.org/?node_id=453733
 # http://docstore.mik.ua/orelly/perl/prog3/ch06_04.htm
 sub argmax(&@) {
-  return() unless @_ > 1;
+  return unless @_ > 1;
   my $codeblock = shift;
   my $elem = shift;
   $_ = $elem;
@@ -148,7 +147,7 @@ sub argmax(&@) {
 # http://www.perlmonks.org/?node_id=453733
 # http://docstore.mik.ua/orelly/perl/prog3/ch06_04.htm
 sub argmin(&@) {
-  return() unless @_ > 1;
+  return unless @_ > 1;
   my $codeblock = shift;
   my $elem = shift;
   $_ = $elem;
@@ -163,35 +162,35 @@ sub argmin(&@) {
 
 # Average of a list
 sub mean {
-    @_ = flatten @_;
-    return unless @_;
-    return sum(@_) / @_;
+    my @a = grep { defined } flatten @_;
+    return unless @a;
+    return sum(@a) / @a;
 }
 sub avg { return mean @_ }
 sub average { return mean @_ }
 
 
 sub median {
-    @_ = flatten @_;
-    return unless @_;
-    @_ = sort { $a <=> $b } @_;
-    my $n = $#_;
-    if (@_ % 2) {
-        return $_[$n/2];
+    my @a = grep { defined } flatten @_;
+    return unless @a;
+    @a = sort { $a <=> $b } @a;
+    my $n = $#a;
+    if (@a % 2) {
+        return $a[$n/2];
     } else {
-        return ($_[$n/2] + $_[$n/2+1]) / 2.0;
+        return ($a[$n/2] + $a[$n/2+1]) / 2.0;
     }
 }
 
 
 # Variance of a list 
 sub variance {
-    @_ = flatten @_;
-    return 0 unless @_ > 1;
-    my $avg = avg @_;
-    my $sumsqdiff = sum map { ($_ - $avg)**2 } @_;
+    my @a = grep { defined } flatten @_;
+    return 0 unless @a > 1;
+    my $avg = avg @a;
+    my $sumsqdiff = sum map { ($_ - $avg)**2 } @a;
     # One degree of freedom, subtract 1
-    return $sumsqdiff / (@_ - 1);
+    return $sumsqdiff / (@a - 1);
 }
 
 # Stddev of a list

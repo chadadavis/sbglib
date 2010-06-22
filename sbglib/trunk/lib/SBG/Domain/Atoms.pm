@@ -83,12 +83,15 @@ are read back in. Does not read from a native PDB file, as the domain descriptor
 may simply refer to a subset of a PDB entry (e.g. single chain or chain
 segment).
 
+Note any transformation present in the Domain will be applied before the writing. Therefore the coordinates will be already transformed when read back in.
+
 =cut
 sub BUILD {
     my ($self) = @_;
     my $outfile = File::Spec->catfile(File::Spec->tmpdir, "$self" . '.pdb');
     my $io = new SBG::DomainIO::pdb(file=>">$outfile");
     $io->write($self);
+    $io->close;
     # Open the file for reading now
     $io = new SBG::DomainIO::pdb(file=>$io->file,
                                  atom_type=>$self->atom_type,

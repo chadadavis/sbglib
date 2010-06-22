@@ -273,7 +273,8 @@ sub avg_scores {
     return unless @keys;
     my ($s1, $s2) = $self->_models->values->flatten;
     foreach my $key (@keys) {
-    	next unless $s1->scores->at($key) && $s2->scores->at($key);
+    	next unless 
+    	   defined($s1->scores->at($key)) && defined($s2->scores->at($key));
         my $avg = ( $s1->scores->at($key) + $s2->scores->at($key) ) / 2.0;
         $self->scores->put("avg_$key", $avg);
     }

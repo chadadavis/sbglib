@@ -26,7 +26,7 @@ use SBG::Run::rasmol;
 
 
 my $DEBUG;
-# $DEBUG = 1;
+#$DEBUG = 1;
 SBG::U::Log::init(undef, loglevel=>'DEBUG') if $DEBUG;
 $File::Temp::KEEP_ALL = $DEBUG;
 
@@ -295,39 +295,6 @@ $TODO = "Verify cofm result";
 ok(0);
 
 
-
-__END__
-
-$iocofm = new SBG::DomainIO::cofm(tempfile=>1);
-$file = $iocofm->file;
-@mdoms = map { $complex->get($_)->subject } @names;
-@tdoms = map { $true_complex->get($_)->subject } @names;
-$iocofm->write(@mdoms, @tdoms);
-
-
-
-
-__END__
-
-
-# Test superposing complexes
-my ($avgmat, $rmsd) = $complex->superposition($true_complex);
-float_is($rmsd, 1.6, "mean rmsd over components: $rmsd", 0.1);
-
-$complex->transform($avgmat);
-rasmol [@{$complex->domains}, @{$true_complex->domains} ] if $DEBUG;
-
-
-
-
-
-# Test clone()
-ok($complex->does('SBG::Role::Clonable'), "consumes Role::Clonable");
-my $clone = $complex->clone;
-is($clone->count, 6, "Complex->clone");
-$TODO = "Verify clone depth, using refaddr on HashRef attrs";
-ok 0;
-
-
-
+$TODO = 'Build model when (some) structure given for inputs';
+ok(0);
 

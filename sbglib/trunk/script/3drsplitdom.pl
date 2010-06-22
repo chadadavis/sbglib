@@ -38,14 +38,18 @@ use FindBin qw/$Bin/;
 use lib "$Bin/../lib/";
 
 use SBG::U::Run qw/getoptions start_log/;
-use SBG::Split::Roberto;
+use SBG::Split::3DR;
+
+# Read from STDIN or from a (single) file 
+my $file = shift;
+open *STDIN, $file if $file;
 
 my %ops = getoptions
     qw/mingap|g=i/;
 $ops{mingap} = 30 unless defined $ops{mingap};
 my $in = Bio::SeqIO->new(-fh=>\*STDIN);
 my $out = Bio::SeqIO->new(-fh=>\*STDOUT, -format=>'fasta');
-my $splitter = SBG::Split::Roberto->new(mingap=>$ops{mingap});
+my $splitter = SBG::Split::3DR->new(mingap=>$ops{mingap});
 
 while (my $seq = $in->next_seq) {
     my $subseqs = $splitter->split($seq);

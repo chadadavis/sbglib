@@ -86,7 +86,7 @@ use SBG::Domain::Atoms;
 
 use SBG::U::CartesianPermutation;
 
-
+use SBG::Run::pdbc qw/pdbc/;
 
 
 =head2 id
@@ -104,6 +104,16 @@ has 'id' => (
     isa => 'Str',
     );
 
+
+=head2 target
+
+The label / accession / idenftifier for the complex we are trying to build
+=cut
+has 'target' => (
+    is => 'rw',
+    isa => 'Str',
+    );
+    
 
 # Cluster, for duplicate complexes
 has 'class' => (
@@ -141,8 +151,29 @@ has 'name' => (
 has 'description' => (
     is => 'rw',
     isa => 'Str',
+    lazy_build => 1,
     );
-
+sub _build_description {
+    my ($self) = @_;
+    my $target = $self->target;
+    return unless $target;
+    my ($pdbid, $tdrid);
+    ($pdbid) = $target =~ /$pdb41/;
+    my $desc;
+    if ($pdbid) {
+    	# Looks like a PDB ID
+    	my $pdbc = pdbc($target);
+    	$desc = $pdbc->{'header'};
+    } elsif ($target =~ /^\d{3}$/) {
+    	# Looks like a TDR ID
+    	my $dbh = SBG::U::DB::connect('3DR');
+    	my $arr = $dbh->selectall_arrayref(join ' ',
+    	"SELECT description FROM thing",
+    	"where acc=${target} and type_acc='Complex' and source_acc='3DR'");
+    	($desc) = flatten $arr;
+    }
+    return $desc if $desc;
+}
 
 
 
@@ -283,7 +314,6 @@ has 'models' => (
 =cut
 has 'symmetry' => (
     is => 'rw',
-    isa => 'Graph',
     );
 
 
@@ -332,7 +362,7 @@ sub domains {
         $keys = $keys->map(sub{$map->{$_} || $_});
     }
     my $models = $keys->map(sub{ $self->get($_) });
-    my $domains = $models->map(sub { $_->subject });
+    my $domains = $models->map(sub { $_->structure });
     return $domains;
 
 } # domains
@@ -442,9 +472,17 @@ sub _build_modelled_coords {
     foreach my $key (@$keys) {
         my $dommodel = $self->get($key);
         my $aln = $dommodel->aln();
-        my ($modelled, $native) = 
-            $self->_coords_from_aln($aln, $key) or return;
-        $modelled_coords->{$key} = $modelled;
+        if ($aln) {
+            my ($modelled, $native) = 
+                $self->_coords_from_aln($aln, $key) or return;
+            $modelled_coords->{$key} = $modelled;
+        } else {
+        	# Clone the domain using the CA representation
+        	# Transformation will be retained
+        	my $dom = $dommodel->structure;
+        	my $domatoms = SBG::Domain::Atoms->new(%$dom);
+        	$modelled_coords->{$key} = $domatoms->coords;
+        }
     }
 
     return $modelled_coords;
@@ -469,7 +507,7 @@ sub coords {
     @cnames = ($self->models->keys) unless @cnames;
     @cnames = flatten(@cnames);
     
-    my @aslist = map { $self->get($_)->subject->coords } @cnames;
+    my @aslist = map { $self->get($_)->structure->coords } @cnames;
     my $coords = pdl(@aslist);
     
     # Clump into a 2D matrix, if there is a 3rd dimension
@@ -576,12 +614,11 @@ sub stringify {
 
 =cut
 sub transform {
-   my ($self,$matrix) = @_;
-   foreach my $model (@{$self->models->values}) {
-       # The Model contains a 'query' (component) and a 'subject' (domain model)
-       my $domain = $model->subject;
-       $domain->transform($matrix);
+    my ($self,$matrix) = @_;
+    foreach my $model (@{$self->models->values}) {
+   	    $model->transform($matrix);
    }
+   return $self;
 } # transform
 
 
@@ -701,7 +738,7 @@ sub merge_domain {
     # Product of relative with absolute transformation.
     # Order of application of transformations matters
     $log->debug("Linking:", $linker_superposition->transformation);
-    $linker_superposition->apply($_) for $other->domains->flatten;
+    $linker_superposition->apply($_) for $other->models->values->flatten;
 
     # Now test steric clashes of potential domain against existing domains
     my $clashfrac = $self->check_clashes($other->domains, $ref, $olap);
@@ -725,7 +762,7 @@ sub merge_domain {
     # STAMP superposition score of linking superposition 
     return $linker_superposition->scores->at('Sc');
 
-} # merge
+} # merge_domain
 
 
 # True if the sequences being modelled by two models overlap
@@ -865,6 +902,9 @@ sub add_interaction {
     $olap ||= 0.5;
     # Where the last reference domain for this component was placed in space
     my $refmodel = $self->get($srckey);
+    # NB here we use 'subject', not 'structure' to take advantage of 
+    # interactions coming from a single source structure
+    # I.e. there may be identity transformations that we want to exploit
     my $refdom = $refmodel->subject if defined $refmodel;
     # Initial interaction, no spacial constraints yet, always accepted
     unless (defined $refdom) {
@@ -893,11 +933,11 @@ sub add_interaction {
     # Then apply that transformation to the interaction partner $destdom.
     # Product of relative with absolute transformation.
     # Order of application of transformations matters
-    $linker_superposition->apply($destdom);
+    $linker_superposition->apply($destmodel);
     $log->debug("Linking:", $linker_superposition->transformation);
 
     # Now test steric clashes of potential domain against existing domains
-    my $clashfrac = $self->check_clashes([$destdom], undef, $olap);
+    my $clashfrac = $self->check_clashes([$destmodel->structure], undef, $olap);
     return unless $clashfrac < 1;
 
     # Domain does not clash after being oriented, can be saved in complex now.
@@ -917,6 +957,7 @@ sub add_interaction {
 
 
 # Create a concrete model for a given abstract model in an interaction
+# TODO belongs in SBG::Model::clone()
 use SBG::Run::cofm qw/cofm/;
 sub _mkmodel {
     my ($self, $iaction, $key) = @_;
@@ -937,11 +978,16 @@ sub _mkmodel {
     # TODO DES need to be copy constructing
     my $model = SBG::Model->new(
         query=>$vmodel->query, 
-        subject=>$cdom, 
+        subject=>$cdom,
         scores=>$vmodel->scores,
         input=>$vmodel->input,
         aln=>$vmodel->aln,
         );
+    # Needs to be cloned as well, as it will be transformed
+    if (refaddr($vmodel->subject) != refaddr($vmodel->structure)) {
+    	my $struct_clone = $vmodel->structure->clone;
+    	$model->structure($struct_clone);
+    }
 
     return $model;
 } # _mkmodel
@@ -973,7 +1019,7 @@ sub check_clash {
     # If any of them clashes with the to-be-added objects, then disallow
     foreach my $key (@{$self->keys}) {
         # Measure the overlap between $newdom and each component
-        my $existingdom = $self->get($key)->subject;
+        my $existingdom = $self->get($key)->structure;
         $log->debug("$newdom vs $existingdom");
         my $overlapfrac = $newdom->overlap($existingdom);
         # Nonetheless, if one clashes severely, bail out
@@ -1015,7 +1061,7 @@ sub check_clashes {
     foreach my $key ($self->keys->flatten) {
         next if $ignore && $key eq $ignore;
         # Measure the overlap between $thisdom and each $otherdom
-        my $thisdom = $self->get($key)->subject;
+        my $thisdom = $self->get($key)->structure;
         foreach my $otherdom ($otherdoms->flatten) {
             $log->debug("$thisdom vs $otherdom");
             my $overlapfrac = $thisdom->overlap($otherdom);
@@ -1051,8 +1097,8 @@ sub overlap {
     
     my $overlaps = [];
     foreach my $key (@cnames) {
-        my $selfdom = $self->get($key)->subject;
-        my $otherdom = $other->get($key)->subject;
+        my $selfdom = $self->get($key)->structure;
+        my $otherdom = $other->get($key)->structure;
         
         # Returns negative distance if no overlap at all
         my $overlapfrac = $selfdom->overlap($otherdom);
@@ -1100,8 +1146,8 @@ sub rmsd {
    my $othercofms = [];
 
    foreach my $key (@cnames) {
-       my $selfdom = $self->get($key)->subject;
-       my $otherdom = $other->get($key)->subject;
+       my $selfdom = $self->get($key)->structure;
+       my $otherdom = $other->get($key)->structure;
        my $sup;
        $otherdom = cofm($otherdom);
        ($selfdom, $sup) = _setcrosshairs($selfdom, $otherdom) or next;
@@ -1249,10 +1295,10 @@ sub rmsd_mapping {
     my $selfcofms = [];
     my $othercofms = [];
     foreach my $selflabel (@$keys) {
-        my $selfdom = $self->get($selflabel)->subject;
+        my $selfdom = $self->get($selflabel)->structure;
         
         my $otherlabel = $mapping->{$selflabel} || $selflabel;
-        my $otherdom = $other->get($otherlabel)->subject;
+        my $otherdom = $other->get($otherlabel)->structure;
         $otherdom = cofm($otherdom);
         
         my $sup;
@@ -1469,12 +1515,13 @@ sub _coords_from_aln {
         # aligned residues. This will be the atomic representation. And since we
         # never use the Domain object itself, the fact that the descriptor
         # refers to the whole chain is not relevant.
+        # TODO BUG fails when no pdbid, need to be able to bench anon structures
         my $dom = SBG::Domain::Atoms->new(pdbid=>$pdbid,
                                           descriptor=>"CHAIN $chainid",
                                           residues=>$resids);
         # If this is the modelled domain, set it's frame of reference
         if ($key eq $subjectkeyshort) {
-            my $trans = $self->get($querykey)->subject->transformation;
+            my $trans = $self->get($querykey)->transformation;
             $trans->apply($dom);
         }
         $coords->{$key} = $dom->coords;
