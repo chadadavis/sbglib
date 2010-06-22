@@ -27,12 +27,11 @@ L<SBG::DomainI>
 
 package SBG::Run::pdbc;
 use base qw/Exporter/;
-our @EXPORT_OK = qw/pdbc complex/;
+our @EXPORT_OK = qw/pdbc/;
 
 use Moose::Autobox;
 
 use SBG::Types qw/$pdb41/;
-use SBG::Complex;
 use SBG::Model;
 use SBG::Domain;
 
@@ -72,31 +71,6 @@ sub pdbc {
 
 
 
-=head2 complex
-
- Function: 
- Example : 
- Returns : 
- Args    : 
-
-
-=cut
-sub complex {
-    my ($idstr,) = @_;
-    my $pdbc = pdbc($idstr);
-    my $complex = SBG::Complex->new;
-    my $chainids = $pdbc->{chain}->keys;
-    my $doms = $chainids->map(sub{
-        SBG::Domain->new(
-            pdbid=>$pdbc->{pdbid},
-            descriptor=>"CHAIN $_",
-            description=>$pdbc->{chain}{$_},
-            )
-                              });
-    my $models = $doms->map(sub{SBG::Model->new(query=>$_, subject=>$_)});
-    $models->map(sub{$complex->add_model($_)});
-    return $complex;
-} # complex
 
 
 sub _run {
@@ -143,6 +117,33 @@ sub _chains {
     return %chain2desc;
 }
 
-
-
 1;
+
+__END__
+
+=head2 complex
+
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
+
+
+=cut
+sub complex {
+    my ($idstr,) = @_;
+    my $pdbc = pdbc($idstr);
+    my $complex = SBG::Complex->new;
+    my $chainids = $pdbc->{chain}->keys;
+    my $doms = $chainids->map(sub{
+        SBG::Domain->new(
+            pdbid=>$pdbc->{pdbid},
+            descriptor=>"CHAIN $_",
+            description=>$pdbc->{chain}{$_},
+            )
+                              });
+    my $models = $doms->map(sub{SBG::Model->new(query=>$_, subject=>$_)});
+    $models->map(sub{$complex->add_model($_)});
+    return $complex;
+} # complex
+
