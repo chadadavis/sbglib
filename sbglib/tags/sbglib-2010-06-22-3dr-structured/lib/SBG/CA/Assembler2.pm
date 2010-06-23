@@ -105,7 +105,6 @@ has 'binsize' => (
 has 'maxsolutions' => (
     is => 'ro',
     isa => 'Int',
-    default => 100,
     );
 
 
@@ -356,7 +355,7 @@ sub solution {
     my ($self, $state, $partition,) = @_;
     my $complex = $state->{'models'}->{$partition};
 
-    return -1 unless $self->classes < $self->maxsolutions;
+    return -1 if $self->maxsolutions && $self->classes >= $self->maxsolutions;
 
     # Uninteresting unless at least two interfaces in solution
     return 0 unless defined($complex) && $complex->size >= $self->minsize;     
