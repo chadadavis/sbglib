@@ -7,6 +7,7 @@ $,=' ';
 use FindBin qw/$Bin/;
 use lib "$Bin/../../../lib/";
 
+use Data::Dump qw/dump/;
 
 # Autoboxing native types
 use Moose::Autobox;
@@ -14,8 +15,9 @@ use Moose::Autobox;
 use autobox ARRAY => 'SBG::U::List';
 # Add this in to test
 use SBG::U::List 
-    qw/union intersection nsort flatten lcp pairs mean swap argmin argmax/;
+    qw/union intersection nsort sum flatten lcp pairs mean swap argmin argmax/;
 
+use SBG::U::Test qw/float_is/;
 
 # Single element
 my ($elem, $max) = argmax { $_ } (5);
@@ -44,9 +46,10 @@ is_deeply($elem,{val=>2});
 my @a = 1..10;
 my @b = 5..15;
 my @c = 7..12;
-my @ex = nsort(flatten([[\@a,@b],[@c, \@b]]));
-my @ex_chk = nsort(@a,@b,@c,@b);
-is_deeply(\@ex, \@ex_chk, "flatten()");
+my @flat = flatten([[\@a,@b],[@c, \@b]]);
+my @ex_flat = (@a,@b,@c,@b);
+is_deeply([@a,@b,@c,@b], [ flatten([[\@a,@b],[@c, \@b]]) ], 'flatten()');
+
 
 my @un = nsort union(@a,@b,\@c, [@b,\@a]);
 is_deeply(\@un, [1..15], "union()");
@@ -85,6 +88,9 @@ is_deeply(scalar($x->uniq), [4..15,2..3]);
 is_deeply(scalar($x->union), [4..15,2..3]);
 is_deeply(scalar($x->union->nsort), [2..15]);
 
+my @sumtest = qw/77.34 3 66.1610268378063 12.5 0 40/;
+float_is(sum(@sumtest), 199.001027, 'sum()');
+
 # swap scalars
 my ($a, $b) = 1..2;
 swap($a,$b);
@@ -97,6 +103,15 @@ my $perm = $x->permute;
 my $perms = $perm->sort;
 is_deeply($xs, $perms);
 
+my $dota = [1,2,3,4];
+my $dotb = [5,6,7,8];
+my $dot = SBG::U::List::dotproduct($dota,$dotb);
+my $dot_expect = [5,12,21,32]->sum;
+is_deeply($dot, $dot_expect, "dotproduct()");
+
+my $wtavg = SBG::U::List::wtavg([80,90],[20,30]);
+my $wtavg_expect = 86;
+is($wtavg, $wtavg_expect, 'wtavg()');
 
 # Some objects
 my $objs = [ { name=>'joe'}, {name=>'alice'}, {name=>'frank'} ];
