@@ -133,6 +133,7 @@ sub _wtcontact {
     my $avg_seqid = 100 * ($hsp1->frac_identical+$hsp2->frac_identical) / 2.0;
     my $avg_seqcons = 100 * ($hsp1->frac_conserved+$hsp2->frac_conserved) / 2.0;
 
+    # TODO use SBG::U::List::wtavg
     my $score = 100 * 
         ($wtnres*$avg_nres+$wtcons*$avg_seqcons) / 
         ($wtnres*100 + $wtcons*100);
