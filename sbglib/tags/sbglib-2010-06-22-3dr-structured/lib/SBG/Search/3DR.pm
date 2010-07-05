@@ -198,7 +198,7 @@ sub _interactions {
             scores  => { seqid => $h->{pcid2}, n_res => $h->{n_res2} },
         );
 
-        my $iaction = SBG::Interaction->new(source=>$h->{source});
+        my $iaction = SBG::Interaction->new(source=>$h->{source},id=>$h->{'id'});
         $iaction->set( $seq1, $mod1 );
         $iaction->set( $seq2, $mod2 );
         $iaction->avg_scores(qw/seqid n_res/);
@@ -287,7 +287,7 @@ sub _docking {
                 scores  => { type => $h->{type2} },
             );
 
-            my $iaction = SBG::Interaction->new(source=>'docking');
+            my $iaction = SBG::Interaction->new(source=>'docking',id=>$h->{'id'});
             $iaction->set( $seq1, $mod1 );
             $iaction->set( $seq2, $mod2 );
         
