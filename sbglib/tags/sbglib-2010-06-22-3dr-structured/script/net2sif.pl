@@ -1,12 +1,15 @@
 #!/usr/bin/env perl
 
+=head1 NAME
+
+=cut
+
+
 
 use strict;
 use warnings;
 
-use POSIX qw/ceil/;
 use File::Basename;
-use Hash::MoreUtils qw/slice_def/;
 use File::Spec::Functions;
 use Log::Any qw/$log/;
 use Carp;
@@ -19,17 +22,17 @@ use SBG::U::Object qw/load_object/;
 use SBG::U::Run qw/frac_of getoptions start_lock end_lock/;
 use SBG::U::Log;
 
+use SBG::NetworkIO::sif;
 
 my %ops = getoptions(
-
     );
 
-foreach my $file (@ARGV) {
-    
-    my $basename = basename($file,'.network');
+# STDOUT by default
+my $io = SBG::NetworkIO::sif->new();
 
-    # Setup new log file specific to given input file
-    SBG::U::Log::init($basename, %ops);
+foreach my $file (@ARGV) {
+
+    my $basename = basename($file,'.network');
 
     # Load the Network object
     my $net;
@@ -37,21 +40,9 @@ foreach my $file (@ARGV) {
         $log->error("$file is not an object");
         next;
     }
-    _print_net($basename, $net);
-
+    $io->write($net);
+    
 }
 
 exit;
-
-
-
-# 
-sub _print_net {
-    my ($basename, $net) = @_;
-    
-    foreach my $interaction ($net->interactions) {
-    	print "$interaction\n";
-    }
-}
-
 
