@@ -162,6 +162,14 @@ override 'add_interaction' => sub {
 }; # add_interaction
 
 
+sub id {
+	my ($self, $value) = @_;
+	if (defined $value) {
+		$self->set_graph_attribute('id', $value);
+	}
+	return $self->get_graph_attribute('id');
+}
+
 
 sub symmetry {
     my ($self,) = @_;

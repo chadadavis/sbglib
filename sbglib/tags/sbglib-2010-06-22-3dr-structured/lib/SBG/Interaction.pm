@@ -89,6 +89,17 @@ has 'source' => (
 );
 
 
+=head2 id
+
+Unique identifier (within 'source')
+
+=cut
+has 'id' => (
+    isa => 'Int',
+    is => 'rw',
+    );
+
+
 =head2 set/get/keys
 
  Function: 
