@@ -165,8 +165,17 @@ Hack to extract the first word of description, assumed to be the gene name
 =cut
 sub gene {
     my ($self) = @_;
-    my ($gene) = $self->query->desc() =~ /^(\S+)/;
-    return $gene || $self->query->display_id;
+    # Alnternative when no gene name
+    my $query = $self->query;
+    my $gene;
+    if ($query->isa('Bio::SeqI')) {
+        my $desc = $query->desc() || $query->display_id;
+        ($gene) = $desc =~ /^(\S+)/;
+    }
+    # Otherwise just stringify the query objecct
+    return $gene || "$query";
+    	   
+    
 }
 
 
