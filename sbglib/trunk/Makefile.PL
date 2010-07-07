@@ -49,6 +49,7 @@ requires 'Moose::Autobox' => '0';
 requires 'Moose::Util::TypeConstraints' => '0';
 requires 'MooseX::Role::Parameterized' => '0';
 requires 'IO::Compress::Gzip' => '0';
+requires 'IO::Uncompress::Gunzip' => '0';
 requires 'PDL' => '2.4.4';
 requires 'PDL::LinearAlgebra' => '0';
 requires 'Sort::Key' => '0';

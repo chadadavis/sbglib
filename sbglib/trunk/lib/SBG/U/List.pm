@@ -36,6 +36,8 @@ L<List::Utils> , L<List::MoreUtils>
 package SBG::U::List;
 use Carp;
 
+use Moose::Autobox;
+
 use List::Util qw/reduce/;
 use List::MoreUtils;
 
@@ -56,6 +58,8 @@ argmax
 argmin
 mean
 avg
+wtavg
+dotproduct
 median
 variance
 stddev
@@ -70,8 +74,11 @@ thresh
 maprange
 interpolate
 norm
+mapcolor
+mapcolors
 interval_overlap
 cartesian_product
+between
 );
 
 
@@ -80,15 +87,19 @@ cartesian_product
 # Recursively flattens an array (nested array of arrays) into one long array
 # See also L<Moose::Autobox::Array::flatten_deep> for OO interface
 sub flatten { 
-    my @a;
+	my @a;
     foreach (@_) {
         push @a, (ref($_) eq 'ARRAY') ? flatten(@$_) : $_;
     }
+    @a = map { ref($_) =~ /^Math::Big/ ? $_->numify : $_ } @a;
+    
     return wantarray ? @a : \@a;
 }
 
 sub sum {
-    return List::Util::sum grep { defined } flatten @_;
+	my @a = grep { defined } flatten @_;
+    return unless @a;
+    return List::Util::sum @a;
 }
 
 sub min {
@@ -120,9 +131,9 @@ sub swap (\$\$) {
 
 # Permutes a copy, not in-place
 sub permute {
-    my @a = flatten @_;
+    my @a = grep { defined } flatten @_;
     for (0..$#a) {
-        swap($a[$a], $a[rand(@a)]);
+        swap($a[$_], $a[rand(@a)]);
     }
     return wantarray ? @a : \@a;    
 }
@@ -168,6 +179,21 @@ sub mean {
 }
 sub avg { return mean @_ }
 sub average { return mean @_ }
+sub wtavg {
+	my ($a, $weights) = @_;
+    return dotproduct($a, $weights) / $weights->sum;	
+}
+
+
+sub dotproduct {
+	my ($a, $b) = @_;
+	return unless $a->length == $b->length;
+	my $sum = 0;
+	for (my $i = 0; $i < $a->length; $i++) {
+		$sum += $a->[$i] * $b->[$i];
+	}
+	return $sum; 
+}
 
 
 sub median {
@@ -346,14 +372,53 @@ sub maprange {
     return interpolate( norm($val, $min1, $max1), $min2, $max2);
 }
 
+
+# Also for inverted (large to small) ranges
 sub interpolate {
     my ($norm, $min, $max) = @_;
     return $min + ($max - $min) * $norm;
 }
 
+
+# Where is a value, withing a range, as a decimal
+# Also for inverted (large to small) ranges
 sub norm {
     my ($val, $min, $max) = @_;
     return ($val - $min) / ($max - $min);
+}
+
+
+# Map a numeric value to a "value" of a single color: 
+# i.e. given: red or green or blue, determine how red, how green, or how blue
+# color_min and color_max should be hex, with or without preceeding '0x'
+# Returns hex, without the preceeding '0x'
+sub mapcolor {
+    my ($val, $min1, $max1, $color_min, $color_max) = @_;
+    $val ||= 0;
+    $color_min = hex($color_min);
+    $color_max = hex($color_max);
+    my $color = maprange($val, $min1, $max1, $color_min, $color_max);
+    $color = sprintf("%02x", $color);
+    $color =~ s/^0x//;
+    return $color;
+}
+    
+
+# Map into a range of RGB values (I.e. a gradient)
+# color_min and color_max should be full RGB colors, e.g. '#3b5ab9'
+# Reversed (large to small) ranges are accepted
+# E.g. scale a score in the range [0:10] to a gradient in red to green:
+# $the_color_of_x = mapcolors($the_value_of_x, 0, 10, '#ff0000', '#00ff00');
+sub mapcolors {
+    my ($val, $min1, $max1, $color_min, $color_max) = @_;
+    my ($rmin,$gmin,$bmin) = $color_min =~ /^#(..)(..)(..)$/;
+    my ($rmax,$gmax,$bmax) = $color_max =~ /^#(..)(..)(..)$/;
+    
+    my $red   = mapcolor($val, $min1, $max1, $rmin, $rmax);
+    my $green = mapcolor($val, $min1, $max1, $gmin, $gmax);
+    my $blue  = mapcolor($val, $min1, $max1, $bmin, $bmax);
+    
+    return '#' . $red . $green . $blue;    
 }
 
 
@@ -374,6 +439,11 @@ sub interval_overlap {
     return wantarray ? ($afrac, $bfrac) : $afrac;
 }
 
+
+sub between {
+    my ($x, $min, $max) = @_;
+    return defined($x) && $x >= $min && $x < $max;
+}
 
 1;
 __END__

@@ -138,21 +138,68 @@ sub qsub {
 
     my @jobids;
     my @failures;
-    while ( my $param = shift @::ARGV ) {
+    # Number of command line arguments (e.g. files) to process per job, default: 1
+    my $blocksize = $ops{'blocksize'} || 1;
+    my $nparams_submitted = 0;
+    while (my $param = _block($blocksize)) {
+    	# Wait if queue overloaded
+    	_throttle($ops{'throttle'});
         my $jobid = _submit( $param, %ops );
         if ( $jobid eq '-1' ) {
-            push @failures, $param;
+            push @failures, @$param;
         }
         else {
             push @jobids, $jobid;
+            $nparams_submitted += @$param;
         }
     }
 
     # Restore ARGV with the ones that didn't submit
     @::ARGV = @failures;
+    
+    if (! defined $ENV{'PBS_ENVIRONMENT'} ) {
+    	print 
+    	   "Submitted $nparams_submitted args in ", 
+    	   scalar(@jobids), " jobs (x$blocksize)\n";
+    }
+    
     return @jobids;
 
 }    # qsub
+
+
+sub _block {
+	my ($blocksize) = @_;
+	my @block = map { shift @::ARGV } 1..$blocksize;
+	# Workaround for unmatched shell glob
+    # Otherwise we might submit a job to process the file ./stuff.*.dat
+	@block = grep { defined && -r } @block;
+    return unless @block;
+    return \@block;
+}
+
+
+sub _throttle {
+	my ($throttle) = @_;
+	
+	return unless $throttle;
+	my $njobs = _njobs();
+	until ($njobs < $throttle) {
+		print "Sleeping until $njobs < $throttle\n";
+		sleep 60;
+		$njobs = _njobs();
+	}
+}
+
+
+sub _njobs {
+	my $njobs = `qstat -u \$USER | wc -l`;
+    chomp $njobs;
+    # Remove header
+    $njobs -= 5 if $njobs;
+	return $njobs;
+}
+
 
 # Do we have qsub on this system in the $PATH
 sub has_bin {
@@ -177,12 +224,12 @@ sub has_permission {
 
 # Write and submit one PBS job script
 sub _submit {
-    my ( $filearg, %ops ) = @_;
+    my ( $fileargs, %ops ) = @_;
 
     # Default: rerun same script
     # NB: this can be a relative path, because we 'cd' to $ENV{PWD} in the job
     my $cmdline = $ops{'cmd'} || $0;
-    $cmdline .= " $filearg";
+    $cmdline .= " @$fileargs";
 
     # Command line options to pass on
     my %cmdops = $ops{'options'} ? %{ $ops{'options'} } : ();
@@ -203,7 +250,8 @@ sub _submit {
 
     # Array? if -J directive given, also append \$PBS_ARRAY_INDEX to cmdline
     if ( $cmdops{'J'} ) {
-        my $lastline = nlines($filearg) - 1;
+    	# NB if using array jobs, can only have one command line param, the file
+        my $lastline = nlines($fileargs->[0]) - 1;
         push @directives, "-J 0-$lastline";
 
         # NB this variable will be defined by the PBS environment when started
@@ -212,15 +260,16 @@ sub _submit {
     }
 
     # Add name, unless given
-    unless ( grep { /^-N/ } @directives ) {
-        my $base = basename $filearg;
+    my ($name) = join(' ', @directives) =~ /-N (\S+)/; 
+    unless ($name) {
+        $name = basename $fileargs->[0];
 
         # Should begin with alphabetic char
-        $base = 'j' . $base unless $base =~ /^[A-Za-z]/;
+        $name = 'j' . $name unless $name =~ /^[A-Za-z]/;
 
         # First 15 characters limit
-        ($base) = $base =~ /^(.{1,15})/;
-        push @directives, "-N $base";
+        ($name) = $name =~ /^(.{1,15})/;
+        push @directives, "-N $name";
     }
 
     # Add a dash to precede each argument name
@@ -238,9 +287,12 @@ sub _submit {
     print $tmpfh "$cmdline\n";
     close $tmpfh;
 
+#print STDERR "jobscript: $jobscript\n";
+
     my $jobid = `qsub $jobscript`;
+#    my $jobid = 1;
     unless ($jobid) {
-        my $msg = "Failed: qsub $jobscript";
+        my $msg = "Failed: qsub $jobscript (for $name)";
         $log->error($msg);
         print STDERR "$msg\n";
         $File::Temp::KEEP_ALL = 1;
@@ -248,7 +300,11 @@ sub _submit {
     }
     else {
         chomp $jobid;
-        $log->info("$jobid $filearg");
+        my $njobs = _njobs();
+        print "Submitted $jobid ($njobs jobs total) for: $name\n";
+        $log->info("$jobid $name");
+        $log->debug(join("\n", @$fileargs));
+#        print STDERR join("\n", @$fileargs), "\n";
         return $jobid;
     }
 

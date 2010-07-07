@@ -26,6 +26,20 @@ my $mat = pdl
 my $t = new SBG::Transform::Affine(matrix=>$mat);
 
 
+# Text extraction of the rotational component
+my $rot = $t->rotation;
+my $rot_exp = pdl 
+    [ -0.54889 ,  0.42532 , -0.7196  ],
+    [  0.24755 , -0.73955 , -0.62594 ],
+    [ -0.79839 , -0.52171 ,  0.30063 ],
+    ;
+pdl_approx($rot, $rot_exp, 'rotation()', $toler);
+
+my $transl = $t->translation;
+my $transl_exp = pdl(-52.19956, -56.01334, -55.90146)->transpose();
+pdl_approx($transl, $transl_exp, 'translation()', $toler);
+
+
 # Test inverse
 my $inv = $t->inverse;
 my $inv_ans = pdl 

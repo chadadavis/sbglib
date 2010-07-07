@@ -85,7 +85,6 @@ my %ops = getoptions(
 # Try to submit to PBS, for each argument in @ARGV
 # Recreate command line options;
 my @jobids = qsub(options=>\%ops);
-print "Submitted:\n", join("\n", @jobids), "\n", if @jobids;
 # @ARGV is empty if all jobs could be submitted
 
 

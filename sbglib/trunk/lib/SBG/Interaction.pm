@@ -89,6 +89,17 @@ has 'source' => (
 );
 
 
+=head2 id
+
+Unique identifier (within 'source')
+
+=cut
+has 'id' => (
+    isa => 'Int',
+    is => 'rw',
+    );
+
+
 =head2 set/get/keys
 
  Function: 
@@ -284,7 +295,7 @@ sub avg_scores {
 
 sub stringify {
     my ($self) = @_;
-    return $self->primary_id;
+    return $self->_models->values->join('--');
 }
 
 

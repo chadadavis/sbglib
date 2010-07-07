@@ -26,7 +26,7 @@ use PDL::Ufunc qw/all any/;
 use PDL::Core qw/approx/;
 use Carp qw/carp cluck/;
 
-our @EXPORT_OK = qw(float_is pdl_approx);
+our @EXPORT_OK = qw(float_is pdl_approx pdl_equiv);
 
 
 
@@ -77,17 +77,10 @@ sub float_is ($$;$$) {
 =cut
 sub pdl_approx ($$;$$) {
    my ($mat1, $mat2, $msg, $tol) = @_;
-   $tol = '1%' unless defined $tol;
 
-   $msg ||= "pdl (+/- $tol)";
-   my $diff = abs($mat1-$mat2);
-
-   if ($tol =~ /(\d+)\%$/) {
-       $tol = $1 / 100.0;
-       $diff /= $mat1;
-   }
-
-   if (ok(! any($diff > $tol), $msg)) {
+   my $equiv = pdl_equiv($mat1, $mat2, $tol);
+    
+   if (ok($equiv, $msg)) {
        return 1;
    } else {
        print STDERR "\tExpected:\n${mat2}\n\tGot:\n${mat1}\n";
@@ -96,6 +89,17 @@ sub pdl_approx ($$;$$) {
 }
 
 
+# A non-Test::More version
+sub pdl_equiv {
+    my ($mat1, $mat2, $tol) = @_;
+    $tol = '1%' unless defined $tol;
+    my $diff = abs($mat1-$mat2);
+    if ($tol =~ /(\d+)\%$/) {
+        $tol = $1 / 100.0;
+        $diff /= abs($mat1);
+    }
+    return ! any($diff > $tol);
+}
 
 1;
 

@@ -72,6 +72,29 @@ sub _build_matrix {
 }
 
 
+=head2 rotation
+
+The rotational component of the transformation, a 3x3 matrix
+
+=cut 
+sub rotation {
+	my ($self) = @_;
+	my $m = $self->matrix;
+	return $m->slice('0:2,0:2');
+}
+
+
+=head2 translation 
+
+The translational component of the transformation, a 3x1 column vector
+
+=cut
+sub translation {
+	my ($self) = @_;
+	my $m = $self->matrix;
+	# Column major order: 3rd column, rows 0,1,2
+	return $m->slice('3,0:2');
+}
 
 
 =head2 reset

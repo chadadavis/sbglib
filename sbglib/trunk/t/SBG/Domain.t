@@ -70,6 +70,9 @@ ok(! $dom->wholechain, '! wholechain()');
 my $equiv = SBG::Domain->new(pdbid=>'2nn6', descriptor=>'A 10 _ to A 233 _');
 ok($equiv == $dom, 'equals');
 
+# Smtry operators
+is($dom->symops->length, 24, 'symops()');
+
 
 # Assemblies from Biounit
 $dom = SBG::Domain->new(pdbid=>'317d', assembly=>1, model=>1);

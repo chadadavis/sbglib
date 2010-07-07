@@ -51,6 +51,8 @@ with 'SBG::Role::Writable';
 #     fallback => 1,
 #     );
 
+use Moose::Autobox;
+
 # Get address of a reference
 use Scalar::Util qw(refaddr);
 use Module::Load;
@@ -62,6 +64,9 @@ use PDL::Basic qw/transpose/;
 
 # Default transform type
 use SBG::Transform::Affine;
+# Read smtry operators
+use SBG::TransformIO::smtry;
+
 use SBG::U::RMSD;
 use SBG::Run::pdbseq;
 
@@ -331,6 +336,30 @@ has 'coords' => (
 sub _build_coords {
 	return pdl [ [ 0, 0, 0, 1 ] ];
 }
+
+
+=head2 symmops
+
+Symmetry operator matrices, defined in PDB file
+
+=cut
+has 'symops' => (
+    is => 'rw',
+    isa => 'ArrayRef[SBG::Transform::Affine]',
+    lazy_build => 1,
+    );
+sub _build_symops {
+	my ($self) = @_;
+	my $file = $self->file;
+	my $io = SBG::TransformIO::smtry->new(file=>$self->file);
+	my $transformations = [];
+	while (my $trans = $io->read) {
+        $transformations->push($trans);
+	}
+	return $transformations;
+	
+}    
+    
 
 =head2 centroid
 

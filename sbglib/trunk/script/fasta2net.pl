@@ -64,7 +64,6 @@ my %ops = getoptions
 
 # Recreate command line options; (seems to work even with long option names)
 my @jobids = qsub(options=>\%ops);
-print "Submitted:\n", join("\n", @jobids), "\n", if @jobids;
 
 exit unless @ARGV;
 
@@ -97,7 +96,10 @@ foreach my $file (@ARGV) {
     start_log($basename, %ops);
 
     # Add each sequence as a node to new network
-    my $net = SBG::Network->new;
+    my $net = SBG::Network->new();
+    # Cannot pass parameters to constructor as Network is an ArrayRef
+    $net->id($basename);
+    
     my $seqio = Bio::SeqIO->new(-file=>$file);
     while (my $seq = $seqio->next_seq) {
         $net->add_seq($seq);

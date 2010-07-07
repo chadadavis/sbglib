@@ -29,6 +29,7 @@ use File::Temp qw/tempfile/;
 use IO::String;
 use IO::File;
 use IO::Compress::Gzip;
+use IO::Uncompress::Gunzip;
 use Module::Load;
 use Log::Any qw/$log/;
 
@@ -259,10 +260,18 @@ sub reset {
 sub _file {
     my ($self, $file) = @_;
     # $file contains mode characters here still
+    $file =~ s/^\+//;
     
-    if ($self->compressed) {
-        $file =~ s/^[+<>]*//g;
-        $self->fh(IO::Compress::Gzip->new($file));
+    if ($self->compressed || $file =~ /\.gz$/) {
+    	if ($file =~ /^>/) {
+    		# Write to a gzip compressed stream
+            $file =~ s/^[>]+//;
+            $self->fh(IO::Compress::Gzip->new($file));
+    	} else {
+    		# Read from gunzip uncompressed stream
+    		$file =~ s/^[<]+//g;
+    		$self->fh(IO::Uncompress::Gunzip->new($file));
+    	}
     } else {
         $self->fh(IO::File->new($file));
     }

@@ -129,6 +129,7 @@ sub write {
     }
     $tmp->flush;
     my $fh = $self->fh;
+    
     print $fh slurp($tmppath);
 
     return $self;

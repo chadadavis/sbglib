@@ -96,6 +96,20 @@ respective matrix.
 requires '_build_matrix';
 
 
+=head2 rotation
+
+The rotational component of the transformation, a 3x3 matrix
+
+=cut 
+requires 'rotation';
+
+
+=head2 translation 
+
+The translational component of the transformation, a 3x1 column vector
+
+=cut
+requires 'translation';
 
 
 =head2 reset

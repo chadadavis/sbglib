@@ -271,6 +271,8 @@ but C will have saved it, having been added subsequently.
 
 Indexed by the L<SBG::Node> creating the clashes when it was added.
 
+TOOD prefer to call this 'overlaps'
+
 =cut
 has 'clashes' => (
     isa => 'HashRef[Num]',
@@ -280,6 +282,20 @@ has 'clashes' => (
     );
 # TODO each clash should be saved in the 'scores' hash of the Superposition
 
+
+# Clashes, as defined by VMD, all-atom, as a percent
+# Should not be much more than 1.5 
+has 'vmdclashes' => (
+    is => 'rw',
+    isa => 'Num',
+    lazy_build => 1,
+);
+use SBG::Run::vmdclashes;
+sub _build_vmdclashes {
+    my ($self, ) = @_;
+    my $res = SBG::Run::vmdclashes::vmdclashes($self) or return;
+    return $res->{'pcclashes'};
+} 
 
 
 =head2 models
@@ -316,6 +332,31 @@ has 'symmetry' => (
     is => 'rw',
     );
 
+# TOOD DEL
+use Data::Dumper;
+
+has 'homology' => (
+    is => 'rw',
+    isa => 'ArrayRef[Int]',
+    lazy_build => 1,
+);
+sub _build_homology {
+    my ($self, ) = @_;
+    my @cc = $self->symmetry->flatten;
+    # The components actually being modelled in this complex, sorted by class,
+    # since we about to generate permutations of each class. The order of the
+    # classes in @cc must be the same as the order of classes in $model I.e. if
+    # class [B E] is first in @cc, then any B or E present must also be first in
+    # $model
+    my $keys = $self->keys;
+    # Model componentspresent, grouped by class
+    my $model = [ map { scalar _members_by_class($_, $keys) } @cc ];
+    # Flat list
+    my @model = flatten $model;
+    # Counts per class
+    my $kclass = $model->map(sub{$_->length});
+    return $kclass;
+}
 
 
 =head2 score
@@ -349,6 +390,7 @@ sub _build_score {
  Returns : ArrayRef[SBG::DomainI]
  Args    : 
 
+Order of domains is sorted alphabetically
 
 =cut
 sub domains {
@@ -424,6 +466,8 @@ sub get {
     my $self = shift;
     return $self->models->at(@_);
 }
+
+# Order keys is sorted alphabetically
 sub keys {
     my $self = shift;
     return $self->models->keys->sort;

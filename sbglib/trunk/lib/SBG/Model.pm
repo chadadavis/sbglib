@@ -141,7 +141,7 @@ sub _build_coverage {
 
 sub stringify {
     my ($self) = @_;
-    return $self->query . '(' . $self->subject . ')';
+    return $self->gene . '(' . $self->subject . ')';
 }
 
 
@@ -157,6 +157,18 @@ sub transform {
 	}
 	return $self;
 }
+
+=head2 gene
+
+Hack to extract the first word of description, assumed to be the gene name
+
+=cut
+sub gene {
+    my ($self) = @_;
+    my ($gene) = $self->query->desc() =~ /^(\S+)/;
+    return $gene || $self->query->display_id;
+}
+
 
 ###############################################################################
 __PACKAGE__->meta->make_immutable;
