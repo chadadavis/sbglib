@@ -117,7 +117,33 @@ has 'tempfile' => (
     trigger => \&_tempfile,
     );
 
+=head2 pattern
 
+Pattern to be used for tempfile, e.g.
+
+  myprog_XXXXXX
+  myprot_XXXXXX.pdb
+  XXXXXXX.png
+  
+=cut
+has 'pattern' => (
+    is => 'rw',
+    isa => 'Str',
+    default => 'sbg_XXXXX',
+    );
+
+
+=head2 suffix
+
+Suffix for a temp file, if necessary
+=cut
+has 'suffix' => (
+    is => 'rw',
+    isa => 'Str',
+    default => '',
+    );
+    
+        
 =head2 string
 
 Use IO::String to read/write to/from a string as an input/output stream
@@ -315,7 +341,9 @@ sub _string {
 sub _tempfile {
     my ($self,) = @_;
 
-    my ($tfh, $tpath) = tempfile('sbg_XXXXX', TMPDIR=>1);
+    my $pattern = $self->pattern;
+    my $suffix = $self->suffix;
+    my ($tfh, $tpath) = tempfile($pattern, TMPDIR=>1, SUFFIX=>$suffix);
     # Silly to re-open this, but $self->file() opens it anyway
     $tfh->close();
     $self->file('>' . $tpath);
