@@ -16,6 +16,7 @@ use SBG::Domain;
 use SBG::U::Test qw/pdl_equiv/;
 use SBG::DomainIO::pdb;
 use SBG::Run::rasmol;
+use SBG::U::Log;
 
 use Bio::Tools::Run::QCons;
 use SBG::Run::naccess qw/sas_atoms buried/;
@@ -23,6 +24,9 @@ use SBG::Run::naccess qw/sas_atoms buried/;
 my $DEBUG;
 $DEBUG = 1;
 $File::Temp::KEEP_ALL = $DEBUG;
+
+SBG::U::Log::init(undef, loglevel=>'DEBUG') if $DEBUG;
+
 
 foreach my $pdbid (@ARGV) {
 
@@ -62,6 +66,7 @@ foreach my $symop (@$symops) {
     $pdbio->write($dom, $crystal_neighbor);
     
     # Check contact, with Qcontacts
+    $log->debug("outfile:$outfile");
     my $qcons = Bio::Tools::Run::QCons->new(file=>$outfile, chains => ['A', 'B']);
     # Summarize by residue (rather than by atom)
     my $res_contacts = $qcons->residue_contacts;
