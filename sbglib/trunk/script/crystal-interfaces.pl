@@ -21,9 +21,14 @@ use SBG::U::Log;
 use Bio::Tools::Run::QCons;
 use SBG::Run::naccess qw/sas_atoms buried/;
 
+use PBS::ARGV qw/qsub/;
+
 my $DEBUG;
 $DEBUG = 1;
 $File::Temp::KEEP_ALL = $DEBUG;
+
+my @jobids = qsub(throttle=>1000, blocksize=>10, options=>\%ops);
+exit unless @ARGV;
 
 SBG::U::Log::init(undef, loglevel=>'DEBUG') if $DEBUG;
 

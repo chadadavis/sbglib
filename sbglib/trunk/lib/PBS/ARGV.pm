@@ -173,7 +173,9 @@ sub _block {
 	my @block = map { shift @::ARGV } 1..$blocksize;
 	# Workaround for unmatched shell glob
     # Otherwise we might submit a job to process the file ./stuff.*.dat
-	@block = grep { defined && -r } @block;
+#	@block = grep { defined && -r } @block;
+#	Not testing for existance of file, as they may not always be files
+	@block = grep { defined } @block;
     return unless @block;
     return \@block;
 }
