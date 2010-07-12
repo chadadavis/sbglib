@@ -19,7 +19,7 @@ L<SBG::DomainIO::pdb>
 
 package SBG::Run::naccess;
 use base qw/Exporter/;
-our @EXPORT_OK = qw/sas_atoms/;
+our @EXPORT_OK = qw/sas_atoms buried/;
 
 use Cwd;
 use File::Basename;
@@ -59,7 +59,7 @@ sub sas_atoms {
     chdir File::Spec->tmpdir;
     
     my $cmd = "naccess $file";
-    my $res = system($cmd);
+    my $res = system("$cmd >/dev/null");
     if ($res) {
         $log->error("Failed: $cmd");
         chdir $pwd;
@@ -77,6 +77,24 @@ sub sas_atoms {
     return $sas;
     
 } # sas_atoms
+
+
+=head2 buried
+
+Surface area buried by a protein-protein interface.
+
+Not that the area calculated is the sum of the area of the buried interface in the first molecule plus the buried interface of the second molecule. If you want an estimate of the size of the interface itself, you might take the average of this number, i.e. divide it by two. The two halves of the interface are likely of similar size.
+=cut
+sub buried {
+    my ($dom1, $dom2) = @_;
+
+    my $sas1 = sas_atoms($dom1);
+    my $sas2 = sas_atoms($dom2);
+    my $sas_dimer = sas_atoms($dom1, $dom2);
+    # Surface area of the two domains separately, minus that of the dimer
+    # NB, this double counts what it at the interface
+    my $buried_surface = ($sas1 + $sas2 - $sas_dimer);    
+}
 
 
 1;
