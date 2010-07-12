@@ -13,6 +13,8 @@ SBG::U::DB - DB tools
 
 =head1 DESCRIPTION
 
+Not thread-safe
+
 
 =head1 SEE ALSO
 
