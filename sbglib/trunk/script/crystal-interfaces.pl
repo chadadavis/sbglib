@@ -2,7 +2,6 @@
 
 # Tanmay's crystal interfaces extracted from symmetry operators
 
-use Modern::Perl;
 use Moose::Autobox;
 use PDL;
 use Data::Dump qw/dump/;
@@ -10,6 +9,8 @@ use Data::Dump qw/dump/;
 # Local libraries
 use FindBin qw/$Bin/;
 use lib "$Bin/../lib/";
+
+use Log::Any qw/$log/;
 
 use SBG::Domain;
 use SBG::U::Test qw/pdl_equiv/;
@@ -19,6 +20,9 @@ use SBG::Run::rasmol;
 use Bio::Tools::Run::QCons;
 use SBG::Run::naccess qw/sas_atoms buried/;
 
+my $DEBUG;
+$DEBUG = 1;
+$File::Temp::KEEP_ALL = $DEBUG;
 
 foreach my $pdbid (@ARGV) {
 
@@ -35,14 +39,14 @@ foreach my $symop (@$symops) {
     # Skip if there is a rotation
     my $rot = $symop->rotation;
     unless (pdl_equiv($rot, $no_rotation)) {
-#        say "Skipping rotation: $rot";
+        $log->debug("Skipping rotation: $rot");
         next;
     }
 
     # Skip if there is no translation
     my $transl = $symop->translation;
     if (pdl_equiv($transl, $no_translation)) {
-#    	say "Skipping translation: $transl";
+    	$log->debug("Skipping translation: $transl");
     	next;
     }
     
@@ -62,19 +66,19 @@ foreach my $symop (@$symops) {
     # Summarize by residue (rather than by atom)
     my $res_contacts = $qcons->residue_contacts;
     unless ($res_contacts->length) {
-        print STDERR "$outfile not in contact\n";
+        $log->info("$outfile not in contact");
         # Don't save this PDB file if the dimer is not actually an interface
         unlink $outfile;
     	next;
     } else {
-        print STDERR "$outfile via: $symop\n";
+        $log->debug("$outfile via: $symop");
     }
 #    my $atom_contacts = $qcons->atom_contacts;
     
     # Buried surface
     my $buried = buried($dom, $crystal_neighbor);
     
-    say sprintf "%s\t%d\t%.2f", $outfile, $res_contacts->length, $buried;
+    print sprintf "%s\t%d\t%.2f\n", $outfile, $res_contacts->length, $buried;
     open my $fh, ">${base}.csv";
     foreach my $contact ($res_contacts->flatten) {
     	my $a = $contact->{'res1'}{'name'} . $contact->{'res1'}{'number'};
