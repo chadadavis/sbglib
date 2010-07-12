@@ -24,25 +24,7 @@ my $dom = SBG::Domain->new(pdbid=>'1ral');
 my $sas = sas_atoms($dom);
 float_is($sas, 15197.4, 'sas_atoms()');
 
+done_testing();
+
 __END__
 
-my $file = "$Bin/../data/docking2.pdb"
-
-# Without a PDB ID;
-$input = SBG::Domain->new(file=>"$Bin/../data/docking2.pdb", descriptor=>'CHAIN A');
-_test($input, 17.094, (-1.106,    3.405,    1.805));
-
-# Another docking result
-$input = SBG::Domain->new(file=>"$Bin/../data/P29295.1-P41819.1-complex.2", descriptor=>'CHAIN A');
-_test($input, 19.636, (40.593,    9.387,   82.034));
-
-# Original stamp limited to 100-char filenames, check that
-$input = SBG::Domain->new(file=>"$Bin/../data/loooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooong.pdb", descriptor=>'CHAIN A');
-_test($input, 19.636, (40.593,    9.387,   82.034));
-
-# With Insertion codes
-$TODO = "test insertion codes";
-ok 0;
-
-
-done_testing();
