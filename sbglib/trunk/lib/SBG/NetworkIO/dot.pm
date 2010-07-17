@@ -33,6 +33,21 @@ use SBG::Network;
 
 use SBG::U::List qw/maprange mapcolors/;
 
+
+# Caches to prevent duplicate printing
+has 'nodes' => (
+    is => 'rw',
+    isa => 'HashRef',
+    default => sub { {} },
+    );
+    
+has 'interactions' => (
+    is => 'rw',
+    isa => 'HashRef',
+    default => sub { {} },
+    );
+    
+    
 my %color_map = (
     'struct'    => '#00ff00', # green
     'docking'   => '#cccccc', # grey
@@ -130,7 +145,7 @@ sub write_begin {
 	
     my $str = join("\n",
                    "graph \"$name\" {",
-                   "\tgraph [ size=8, tooltip=\"\" ]\n",
+                   "\tgraph [ size=8, tooltip=\"\" ]",
                    "\tnode [fontsize=8, penwidth=1 ]",
                    "\tedge [fontsize=6 ]",
                    ,"");
@@ -151,12 +166,16 @@ sub write_end {
 }
 
 sub _write_node {
-	my ($u) = @_;
+	my ($self, $u) = @_;
     # Keep track of what's been done to avoid duplicates
-    our %nodes;
-	return '' if $nodes{$u};
+    my $nodes = $self->nodes;
+    
+    return '' if $nodes->{$u};
 	
-	our $uniproturl = "http://www.uniprot.org/uniprot";
+	# Uniprot, using uniprot acc
+#	our $nodeurl = "http://www.uniprot.org/uniprot";
+    # Pfam, via uniprot acc
+	our $nodeurl = "http://pfam.sanger.ac.uk/protein";
 	
 	my ($acc, $id, $gene, $desc) = ('') x 4; 
 	
@@ -171,12 +190,12 @@ sub _write_node {
     my $str .= 
         "\t\"$ulabel\" [ " . 
         join(', ',
-        "URL=\"$uniproturl/$acc\"",
+        "URL=\"$nodeurl/$acc\"",
         "tooltip=\"" . join($newline, $gene, $acc, $id, $desc) . "\"",
         ) .
         " ]\n";
 	
-	$nodes{$u} = 1;
+	$nodes->{$u} = 1;
 	return $str;
 }	
 
@@ -189,14 +208,14 @@ sub write_body {
 	our $tdrurl = "http://3drepertoire.russelllab.org/cgi-bin/final_paper.pl";
 	
 	# Keep track of what's been done to avoid duplicates
-	our %interactions;
+	my $interactions = $self->interactions;
 	
     # For each connection between two nodes, get all of the templates
     foreach my $e ($graph->edges) {
         # Swap these, because head and tail are semantically reversed below
         my ($v, $u) = @$e;
-        $str .= _write_node($u);
-        $str .= _write_node($v);
+        $str .= $self->_write_node($u);
+        $str .= $self->_write_node($v);
                         
         # Names of attributes for this edge
         foreach my $attr ($graph->get_edge_attribute_names($u, $v)) {
@@ -204,7 +223,7 @@ sub write_body {
             my $iaction = $graph->get_interaction_by_id($attr);
             # Skip duplicates
             my $iactionkey = "$name--$iaction";
-            next if $interactions{$iactionkey};
+            next if $interactions->{$iactionkey};
 
             my $source = $iaction->source || '';
             my $penwidth = maprange($iaction->weight,1,1000,1,50);
@@ -250,7 +269,7 @@ sub write_body {
                     "tooltip=\"$tooltip\"",
                     "URL=\"$url\"",
                     "];\n");
-            $interactions{$iactionkey} = 1;
+            $interactions->{$iactionkey} = 1;
                     
         }
     }
