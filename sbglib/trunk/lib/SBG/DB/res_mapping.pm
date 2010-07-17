@@ -94,11 +94,14 @@ END
 
 =head2 aln2locations
 
- Function: 
- Example : 
- Returns : 
- Args    : 
+ Function: Converts a L<Bio::SimpleAlign> to ArrayRefs of sequence coordinates
+ Example : my %coords = aln2locations($mybiosimplealign);
+ Returns : Hash, keyed by the Bio::Seq->display_id()
+ Args    : L<Bio::SimpleAlign>, e.g. from a Blast hit.
 
+Removes any gapped columns (columns with any gaps at all), and truncates the longer sequence in the alignment. I.e. the ArraysRefs are both of equal length (i.e. only for alignments of exactly two sequences).
+
+Each ArrayRef can be fed to L<query> to lookup corresponding PDB residue IDs.
 
 
 =cut
@@ -113,7 +116,7 @@ sub aln2locations {
     # Relative sequence begin of each sequence in the alignment, 1-based
     my $seq1i = $seq1->start;
     my $seq2i = $seq2->start;
-    # Jump over gaps, incrementallycount other positions
+    # Jump over gaps, incrementally count other positions
     my @seq1pos = map { /[.-]/ ? undef : $seq1i++ } split '', $seq1seq;
     my @seq2pos = map { /[.-]/ ? undef : $seq2i++ } split '', $seq2seq;
     # Which positions are not gapped in either sequence

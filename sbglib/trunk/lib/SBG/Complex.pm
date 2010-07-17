@@ -1471,6 +1471,11 @@ sub rmsd_mapping_backbone {
  Args    : 
 
 
+Just add the mapped sequence (from pdbseq) to the alignment, using the blast alignment as a seed/profile alignment, then re-align (clustal), the remove the original benchmark/query sequence from the alignment.
+
+e.g. if B=>D
+Then D is added to the alignment, re-aligned, then B is removed. And the coords returned are those for D
+
 
 =cut
 sub _realign {
@@ -1577,7 +1582,7 @@ sub _coords_from_aln {
     my $mapped_coords = $coords->{$mappedkey};
     my $subject_coords = $coords->{$subjectkeyshort};
     # Truncate both, simply from the end
-    # May be off by a few residues, but should be better than giving up
+    # May be off by a few residues, but better than giving up
     my $nchop = 
         min($ichop, $mapped_coords->dim(1), $subject_coords->dim(1)) - 1;
     $coords->{$subjectkeyshort} = $subject_coords->slice(":,0:$nchop");

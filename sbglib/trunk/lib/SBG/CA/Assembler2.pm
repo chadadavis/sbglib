@@ -274,6 +274,7 @@ sub _cycle {
     my $merged_complex = $complex->clone;
     # Difference from 10 to get something in range [0:10]
     my $irmsd = $merged_complex->cycle($iaction);
+    # TODO this thresh (15) is also hard-coded in SBG::Complex  
     return unless defined($irmsd) && $irmsd < 15;
     # Give this a ring bonus of +10, since it closes a ring
     # Normally a STAMP score gives no better than 10

@@ -2,7 +2,8 @@
 
 # Update this list with something like:
 # grep  '^use ' --exclude='*.svn*' -r . |cut -f 2 -d ' '|cut -f 1 -d ';'|grep -v '^SBG'|sort|uniq
-
+# Better: 
+# perl -d:Modlist `find . -name '*.pl' -o -name '*.t' -o -name '*.pm'`
 
 use inc::Module::Install;
 use Module::AutoInstall;
