@@ -40,6 +40,8 @@ BLASTDATADIR to the directory containing the blast databases
 BLASTMAT to the directory containing the BLOSUM and PAM substitution matrices
 
 
+Note, due to a bug in Blast's processing of the -e (e-value) parameter for certain sequence, this module does not use that feature, but post-filters the hits which do not meet the threshold. This results in the same semantics, with a small performance penalty. 
+
 =head1 SEE ALSO
 
 L<SBG::SearchI>
@@ -129,8 +131,7 @@ pdbseq is the database created using the pdbseq tool from STAMP, whose sequences
 has 'database' => (
     is => 'rw',
     isa => 'Str',
-    default => 'pdbaa',
-#     default => 'pdbseq',
+    default => 'pdbseq',
     );
 
 has 'verbose' => (
@@ -164,7 +165,6 @@ See the list of remote databases:
 has 'method' => (
     is => 'rw',
     isa => 'Str',
-#     default => 'remoteblast',
     default => 'standaloneblast',
     );
 
@@ -204,7 +204,8 @@ sub _build_standalonefactory {
     # Maximum  number of passes to use in multipass version (default =1)
     $factory->j($self->j) if $self->j;
     # Expectation value (E) (default = 10.0)
-    $factory->e($self->e) if $self->e;
+    # TODO BUG in Blast, do not set e-value threshold
+#    $factory->e($self->e) if $self->e;
     # Number of database sequences to show alignments for (B) (default is 250)
     $factory->b($self->b) if $self->b;
     return $factory;
@@ -220,7 +221,8 @@ sub _build_remotefactory {
         -database => $self->database,
         );
 
-    $factory->expect($self->e) if $self->e;
+    # TODO BUG in Blast, do not set e-value threshold
+#    $factory->expect($self->e) if $self->e;
 
     return $factory;
 }
@@ -337,6 +339,9 @@ sub _blast1 {
         $hits = [ $res->hits ];
         # Only take the Hits that have > 0 HSPs
         $hits = $hits->grep(sub{$_->hsps});
+        # E-value filtering here, as it's broken when using the -e option
+        $hits = $hits->grep(sub{$_->significance < $self->e()});
+        
         $log->debug($seq->primary_id, ': ', $hits->length," Hits (raw)");
 
         # Expand alias sequences
