@@ -143,15 +143,29 @@ has 'suffix' => (
     default => '',
     );
     
-        
+
+=head2 autocleaen
+
+Whether previously created tempfiles should automatically be cleaned up on startup
+
+=cut
+has 'autoclean' => (
+    is => 'rw',
+    isa => 'Bool',
+    default => 1,
+);
+
+
 =head2 string
 
 Use IO::String to read/write to/from a string as an input/output stream
 
+Accepts a ScalarRef
+
 =cut
 has 'string' => (
     is => 'rw',
-    isa => 'Str',
+    isa => 'ScalarRef',
     trigger => \&_string,
     );
 
@@ -340,6 +354,10 @@ sub _string {
 =cut
 sub _tempfile {
     my ($self,) = @_;
+    
+    # Whether autoclean has already been run
+    our $_autocleaned;
+    _clean_tmp($self->pattern) if ! $_autocleaned && $self->autoclean;
 
     my $pattern = $self->pattern;
     my $suffix = $self->suffix;
@@ -352,6 +370,28 @@ sub _tempfile {
 } # _tempfile
 
 
+# Clean previously created tmp files
+sub _clean_tmp {
+    my ($pattern, $ndays) = @_;
+    our $_autocleaned;
+    $ndays = 7 unless defined($ndays);
+    # Remove trailing 'X' mask
+    $pattern =~ s/X//g if $pattern;
+    # Not using File::Spec->tmpdir() as that might return the current directory
+    my $tmpdir = $ENV{TMPDIR} || '/tmp/';
+    my $user = $ENV{USER};
+    my $cmd = "find $tmpdir";
+    $cmd .= " -mtime +$ndays" if $ndays;
+    $cmd .= " -user $user" if $user;
+    $cmd .= " -name '${pattern}*'" if $pattern;
+    $cmd .= " -exec /bin/rm -rf '{}' \\;";
+#    $cmd .= " -exec /bin/ls -l '{}' \\;";
+    $log->debug($cmd);
+    unless(system("$cmd 2>/dev/null") == 0) {
+        $log->error("Failed ($?): $cmd");
+    }
+    $_autocleaned = 1;
+}
 
 
 no Moose::Role;
