@@ -33,7 +33,7 @@ use SBG::Model;
 use SBG::Interaction;
 use SBG::U::DB;
 
-use SBG::U::List qw/interval_overlap flatten/;
+use SBG::U::List qw/interval_overlap flatten wtavg sum/;
 
 
 has '_dbh' => ( is => 'rw', );
@@ -48,6 +48,14 @@ has '_sth' => (
     default => sub { {} },
 
 );
+
+
+# Count templates by PDB ID, to prefer templates from common structures
+has 'pdbids' => (
+    is => 'ro',
+    isa => 'HashRef',
+    default => sub { {} },
+); 
 
 
 our $datadir = $ENV{'AG'} . '/3DR/data';
@@ -173,7 +181,9 @@ sub _interactions {
     my ( $self, $seq1, $seq2, %ops ) = @_;
 
     my $sth = $self->_sth->at('interaction_templates');
-    my $res = $sth->execute( $seq1->display_id, $seq2->display_id );
+    my @ids = ($seq1->display_id, $seq2->display_id);;
+    $_ =~ s/-\d+$// for @ids;
+    my $res = $sth->execute(@ids);
         
     my @interactions;
     while ( my $h = $sth->fetchrow_hashref ) {
@@ -212,13 +222,16 @@ sub _interactions {
 
         # Save interprets z-score in the interaction
         $iaction->scores->put('interpretsz', $h->{z});
+      
+        # Increment count of interactions used from this PDB 
+        my $pdbcount = ++ $self->pdbids->{$h->{'pdbid'}};  
         
-        my ( $wtnres, $wtseqid ) = ( .1, .9 );
-    
-        my $score =
-          100 *
-          ( $wtnres * $avg_n_res + $wtseqid * $avg_seqid ) /
-          ( $wtnres * 100 + $wtseqid * 100 );
+        my $wtnres = .1;
+        my $wtpdbcount = .3;
+        my $wtseqid = .6;
+        my $weights = [$wtnres, $wtpdbcount, $wtseqid];
+        
+        my $score = wtavg([$avg_n_res,$pdbcount,$avg_seqid], $weights);
 
         $iaction->weight($score);
 
@@ -262,13 +275,15 @@ sub _docking {
     my ( $self, $seq1, $seq2 ) = @_;
 
     my $sth = $self->_sth->at('docking_templates');
-    my $res = $sth->execute(
-        $seq1->display_id, $seq2->display_id,
-    );
+    my @ids = ($seq1->display_id, $seq2->display_id);;
+    $_ =~ s/-\d+$// for @ids;
+    my $res = $sth->execute(@ids);
+
     my @interactions;
     while ( my $h = $sth->fetchrow_hashref ) {
     	# Our docking data provides alternative interaction conformations
     	my $dir = join '/', $self->docking_dir, $h->{directory};
+    	# This also finds gzipped files
     	foreach my $file (<$dir/*>) {
     		
             my $dom1 = SBG::Domain->new(file=>$file,descriptor=>'CHAIN A');
@@ -334,7 +349,9 @@ sub _structures {
     	my $best_struct;
     	my @struct_files;
     	my @sources = $self->model_sources->flatten;
-    	push(@struct_files, <${_}/${key}*.pdb>) for @sources;
+    	# Find each instance of a homology model for the given protein
+    	# This will find the files whether gzipped or not
+    	push(@struct_files, <${_}/${key}*.pdb*>) for @sources;
         $log->debug(scalar(@struct_files), " structures for $key");
         foreach my $struct (@struct_files) {
             	# Representation of the modelled structure
