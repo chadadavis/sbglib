@@ -157,6 +157,7 @@ sub read {
         my ($pdbid1, $pdbid2) = ($3, $13);
         my ($descr1, $descr2) = ($4, $14);
         my $scorestr = $23;
+        # Create a HashRef out of whitespace-separated key value pairs
         $scorestr = "qw($scorestr)";
         my $scores = { eval $scorestr };
 

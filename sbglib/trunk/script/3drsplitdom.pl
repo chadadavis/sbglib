@@ -22,7 +22,7 @@ sbgsplitdom < fasta1.fa  > fastasplit.fa
 
 L<SBG::SplitI>,
 
-=cut
+=cut 
 
 
 

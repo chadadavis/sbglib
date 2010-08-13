@@ -3,7 +3,7 @@
 # Update this list with something like:
 # grep  '^use ' --exclude='*.svn*' -r . |cut -f 2 -d ' '|cut -f 1 -d ';'|grep -v '^SBG'|sort|uniq
 # Better: 
-# perl -d:Modlist `find . -name '*.pl' -o -name '*.t' -o -name '*.pm'`
+# perl -d:Modlist=stop,nocore,cpan,zerodefault `find . -name '*.pl' -o -name '*.t' -o -name '*.pm' | xargs`
 
 use inc::Module::Install;
 use Module::AutoInstall;
@@ -69,10 +69,13 @@ requires_external_bin 'pdbseq';
 requires_external_bin 'stamp';
 requires_external_bin 'transform';
 requires_external_bin 'cofm';
-requires_external_bin 'rasmol';
+requires_external_bin 'rasmol'; # by SBG::Run::rasmol
 requires_external_bin 'blastpgp';
 requires_external_bin 'clustalw';
 # requires_external_bin 'dot'; # graphviz
+# requires_external_bin 'vmd'; # SBG::Run::vmdclashes
+# requires_external_bin 'rlwrap'; # SBG::Run::vmdclashes (from vmd)
+
 
 # Automagically install above deps from CPAN
 #auto_install(force=>1); # Not compat with CPANPLUS

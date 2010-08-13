@@ -14,7 +14,7 @@ use SBG::ComplexIO::pdb;
 use SBG::U::Object qw/load_object/;
 
 my $DEBUG;
-# $DEBUG = 1;
+$DEBUG = $DB::sub;
 $File::Temp::KEEP_ALL = $DEBUG;
 
 my $file = "$Bin/../data/086-00002.model";

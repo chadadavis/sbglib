@@ -289,8 +289,6 @@ sub _submit {
     print $tmpfh "$cmdline\n";
     close $tmpfh;
 
-#print STDERR "jobscript: $jobscript\n";
-
     my $jobid = `qsub $jobscript`;
 #    my $jobid = 1;
     unless ($jobid) {

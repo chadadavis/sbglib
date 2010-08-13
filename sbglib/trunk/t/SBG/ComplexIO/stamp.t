@@ -13,7 +13,7 @@ use SBG::U::Test 'float_is';
 use SBG::ComplexIO::stamp;
 
 my $DEBUG;
-# $DEBUG = 1;
+$DEBUG = $DB::sub;
 $File::Temp::KEEP_ALL = $DEBUG;
 
 my $file = "$Bin/../data/2nn6.dom";
@@ -26,6 +26,8 @@ is($complex->count, 9, "Complex has 9 domains");
 # Write out
 my $out = SBG::ComplexIO::stamp->new(tempfile=>1);
 $out->write($complex);
+
+diag $out->file if $DEBUG;
 
 # Need to flush to re-read it
 $out->flush;
