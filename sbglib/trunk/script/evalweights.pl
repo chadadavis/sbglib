@@ -54,17 +54,59 @@ my $csvfile = shift || die;
 my $nlines = shift;
 
 # Skip column headers
-# my $inputlines = "1:$nlines";
-my $inputlines = "0:$nlines";
+ my $inputlines = "1:$nlines";
+#my $inputlines = "0:$nlines";
 
 # 0-based column indexing
 my (
     $rmsd, 
-    $score, $mndoms, $mseqlen, $pdoms, $pseqlen, $mnias, $nsources, $ncycles, $scmin, $scmax, $scmed, $glob, $idmin, $idmax, $idmed, $ifacelenmin, $ifacelenmax, $ifacelenmed, $ifaceconsmin, $ifaceconsmax, $ifaceconsmed, $olmin, $olmax, $olmed,
+    
+    $score, 
+    $difficulty,
+    
+    $pcclashes,
+    
+    $mndoms, 
+    $pdoms,
+    $mseqlen, 
+    $pseqlen, 
+    $mnias, 
+    
+    $nsources, 
+    $ncycles, 
+    $homology, # Non-numeric, belongs right after target
+     
+    $scmax, 
+    $scmed,
+    $scmin,
+     
+    $glob,
+    $pcburied,
+     
+    $idmax, 
+    $idmed,
+    $idmin, 
+     
+    $ifacelenmax, 
+    $ifacelenmed, 
+    $ifacelenmin, 
+    
+    $iweightmax, 
+    $iweightmed, 
+    $iweightmin, 
+    
+    $seqcovermax,
+    $seqcovermed,
+    $seqcovermin,
+    
+    $olmax, 
+    $olmed,
+    $olmin, 
+    
     $tid, $tdesc, $tndoms, $tseqlen, $tnias, $mid
     ) = 
     rcols($csvfile, 
-          6..32,
+          6..37,
           {
               PERLCOLS => [0..5],
               LINES => $inputlines,
@@ -81,30 +123,43 @@ my ($nmodels) = dims($y);
 # independent model variables
 # NB Can't use any emtpy columns;
 my $iv = cat 
-#     $score, # Don't learn $score, as it's just a sum of the others
-    $mndoms, 
-    $mseqlen,# Causes problems with inv() 
-    $pdoms,# Causes problems with GSL
-    $pseqlen,# Causes problems with GSL
-#      $mnias, # Causes problems with inv()
-    $nsources,# Causes problems with inv() 
-    $ncycles, # Causes problems with inv() 
-    $scmin,
-    $scmax,
+    $pcclashes,
+#    $mndoms, # Ruins correlation, why? 
+    $pdoms,
+    $mseqlen, 
+    $pseqlen,
+    $mnias,
+    
+    $nsources, 
+#    $ncycles, # too often 0
+     
+    $scmax, 
     $scmed,
+    $scmin,
+     
     $glob,
-    $idmin,
-    $idmax,
-     $idmed,
-     $ifacelenmin,
-     $ifacelenmax, # maybe
-     $ifacelenmed, # maybe
-     $ifaceconsmin,# maybe
-     $ifaceconsmax,# maybe
-     $ifaceconsmed,
-     $olmin, # maybe
-     $olmax, # maybe
-     $olmed, # maybe
+    $pcburied,
+     
+    $idmax, 
+    $idmed,
+    $idmin, 
+     
+    $ifacelenmax, 
+    $ifacelenmed, 
+    $ifacelenmin, 
+    
+    $iweightmax, 
+    $iweightmed, 
+    $iweightmin, 
+    
+    $seqcovermax,
+    $seqcovermed,
+    $seqcovermin,
+   
+# Too often 0    
+#    $olmax, 
+#    $olmed,
+#    $olmin, 
     ;
 
 
