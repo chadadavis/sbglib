@@ -36,12 +36,15 @@ use Moose::Autobox;
  Returns : 
  Args    : 
 
+Note that using lazy_build will cause the default to be reset when accessing the attribute after it has been cleared. In contrast, using 'default' will leave the attribute undefined after a clear.
 
 =cut
 has 'scores' => (
     is => 'rw',
     isa => 'HashRef',
-    lazy_build => 1,
+    lazy_build => 1, # Re-built (to the default) after a clear
+#    default => sub { {} }, # Left undefed after a clear
+    clearer => 'clear_scores',
     );
 sub _build_scores {
     return {} ;
