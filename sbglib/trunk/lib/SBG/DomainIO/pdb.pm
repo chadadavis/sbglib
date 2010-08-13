@@ -116,12 +116,16 @@ sub write {
     @doms = SBG::U::List::flatten(@doms);
     return unless @doms;
 
+    $log->debug($self->file);
+    
     # A domain defines a subset of structure, write that to a temp file first
     my $domio = new SBG::DomainIO::stamp(tempfile=>1);
+    $log->debug("DOM file: ", $domio->file);
     $domio->write(@doms);
     $domio->flush;
     # Need to redirect to a tempfile, in case stream goes e.g. to stdout
     my $tmp = SBG::IO->new(tempfile=>1);
+    $log->debug("transform file: ", $tmp->file);
     my $tmppath = $tmp->file;
     my $cmd = 'transform -g -f ' . $domio->file() . ' -o ' . $tmppath;
     unless (system("$cmd > /dev/null") == 0) {
@@ -131,7 +135,8 @@ sub write {
     my $fh = $self->fh;
     
     print $fh slurp($tmppath);
-
+    $fh->flush;
+    
     return $self;
 } # write
 
@@ -202,7 +207,8 @@ sub coords {
         ($resSeq, $x, $y, $z) = rgrep { 
             /^$record..... $atom.... .(....).   (........)(........)(........)/ 
         } $self->file();
-        
+
+        return unless defined $resSeq;        
         # Probably faster to leave it as a PDL, but an Array is more flexible
         $resSeq = [ $resSeq->list ];
         $cache->{$cachekey} =  [ $resSeq, $x, $y, $z ];
