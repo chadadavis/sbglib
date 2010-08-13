@@ -47,6 +47,7 @@ our @EXPORT_OK = qw/
 centroid globularity identity radius_gyr radius_max rmsd superpose superposition translation
 /;
 
+use Log::Any qw/$log/;
 
 use PDL::Lite;
 use PDL::Core qw/pdl ones inplace sclr zeroes/;
@@ -253,19 +254,41 @@ sub superposition {
 =head2 superpose
 
  Function: Determines the transformation matrix to superpose A onto B
- Example : my $transform = superpose($points_a, $points_b);
+ Example : my $transform = superpose($points_a, $points_b, 100);
  Returns : Transformation matrix
  Args    : 
 
 Unlike L<superposition> which just returns the transformation matrix, this also actually performs the transformation on A.
 
+The final options determines the number of iterative refinements. The default is 1, but this should be at least 10 and could be hundreds, for larger structures. 
 
 =cut
 sub superpose {
-    my ($pointsa,$pointsb) = @_;
-    my $t = superposition($pointsa, $pointsb);
-    $pointsa .= _apply($t, $pointsa);
-    return $t;
+    my ($pointsa,$pointsb,$iterations) = @_;
+    $iterations = 1 unless $iterations && $iterations > 1;
+    # Cumulative transform, initialized with an affine identity matrix (4x4)
+    my $total = _affine();
+    my $rmsd_prev = rmsd($pointsa, $pointsb);
+    # Short cut for identity, no refinement
+    return $total if $rmsd_prev < 1;
+    # Additional refinement interations  
+    for (my $i = 0; $i < $iterations; $i++) {
+    	# incremental superposition
+        my $step = superposition($pointsa, $pointsb);	
+    	$pointsa .= _apply($step, $pointsa);
+    	# Right-to-left application of transformation matrices
+    	# So we multiply on the left
+        $total = $step x $total;
+        my $rmsd = rmsd($pointsa,$pointsb);
+        $log->debug("Refinement $i : $rmsd_prev to $rmsd");
+        if ($rmsd_prev - $rmsd < 0.01) {
+        	$log->info("Converged after $i refinements at $rmsd");
+        	last;
+        } else {
+        	$rmsd_prev = $rmsd;
+        }
+    }
+    return $total;
 
 } # superpose
 
