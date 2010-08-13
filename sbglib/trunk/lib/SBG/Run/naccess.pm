@@ -25,9 +25,12 @@ use Cwd;
 use File::Basename;
 use File::Spec;
 use Log::Any qw/$log/;
+use Moose::Autobox;
 
 # Belongs in own module
 use PBS::ARGV qw/nlines linen/;
+
+use SBG::U::List qw/flatten/;
 
 use SBG::DomainIO::pdb;
 #use SBG::U::Cache qw/cache_get cache_set/;
@@ -59,9 +62,10 @@ sub sas_atoms {
     chdir File::Spec->tmpdir;
     
     my $cmd = "naccess $file";
+    $log->debug($cmd);
     my $res = system("$cmd >/dev/null");
     if ($res) {
-        $log->error("Failed: $cmd");
+        $log->error("Failed ($!): $cmd");
         chdir $pwd;
         return;
     }
@@ -73,6 +77,7 @@ sub sas_atoms {
     $line =~ /^TOTAL\s+(\S+)/;
     my $sas = $1;
     chdir $pwd;
+    $log->debug("@_ $sas");
     return unless $sas;
     return $sas;
     
@@ -83,17 +88,23 @@ sub sas_atoms {
 
 Surface area buried by a protein-protein interface.
 
-Not that the area calculated is the sum of the area of the buried interface in the first molecule plus the buried interface of the second molecule. If you want an estimate of the size of the interface itself, you might take the average of this number, i.e. divide it by two. The two halves of the interface are likely of similar size.
+As a percent [0:100]
+
+The area calculated is the sum of the solvent-accessibel surface of the individual domains, minus the solvent-accessible surface of the complex as a whole.
+
 =cut
 sub buried {
-    my ($dom1, $dom2) = @_;
+    my @doms = flatten(@_);
 
-    my $sas1 = sas_atoms($dom1);
-    my $sas2 = sas_atoms($dom2);
-    my $sas_dimer = sas_atoms($dom1, $dom2);
-    # Surface area of the two domains separately, minus that of the dimer
-    # NB, this double counts what it at the interface
-    my $buried_surface = ($sas1 + $sas2 - $sas_dimer);    
+    my $sum = 0;
+    # Each domain individually, i.e. no contacts to partners are seen
+    foreach my $dom (@doms) {
+        $sum += sas_atoms($dom);
+    }
+    # Minus the solve-acessible surface of the complex as a whole
+    my $complex_sas = sas_atoms(@doms) or return;
+    my $buried = $sum - $complex_sas;
+    return 100.0 * $buried / $complex_sas        
 }
 
 

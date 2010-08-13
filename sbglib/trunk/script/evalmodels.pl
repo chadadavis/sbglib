@@ -1,5 +1,94 @@
 #!/usr/bin/env perl
 
+=head1 NAME
+
+B<evalmodels.pl> - Create CSV table output of model statistics
+
+=head1 SYNOPSIS
+
+evalmodels model1.model model2.model ...
+
+=head1 DESCRIPTION
+
+
+=head2 SPECIFIC OPTIONS
+
+=head2 -modelbase <directory>
+
+
+=head2 -target <../path/to/target.model>
+
+Path to target object to be used as benchmark against which a model is compared
+
+=head2 -redo 1
+
+Recalculates all derived statistics, rather than using cached values.
+
+
+=head1 GENERIC OPTIONS
+
+=head2 -h | -help 
+
+Print this help page
+
+=head2 -l | -log <LOG-LEVEL>
+
+Set logging level
+
+In increasing order: TRACE DEBUG INFO WARN ERROR FATAL
+
+I.e. setting B<-l WARN> (the default) will log warnings errors and fatal
+messages, but no info or debug messages to the log file (B<log.log>)
+
+=head2 -f | -file <Log file>
+
+Default: <network name>.log in current directory
+
+=head2 -blocksize <N>
+
+Number of file arguments given on the command line to be processed by each PBS job. 
+
+Default: 1
+
+-blocksize 100 : every 100 files given on the command line will be processed in one synchronous PBS job. 
+
+-blocksize 1 : every single input file is the input to a single PBS job
+
+
+=head2 -J 
+
+PBS array job
+
+Identifies the only command line argument to a file from which to read the input files from. This is most useful when there are more files than can be written on the command line, as that is limited.
+
+=head2 -directives "<directive1> <directive2> ..."
+
+PBS directives to be passed to B<qsub>
+
+E.g.
+
+ -directives "-l cput=04:59:00"
+
+Note that the directives must be quoted.
+
+=head2 -d 1 | -debug 1
+
+Set debug mode. 
+
+
+=head2 -c 0 | -cache 0
+
+Disable caching. On by default.
+
+
+
+=head1 SEE ALSO
+
+
+
+=cut
+
+
 use strict;
 use warnings;
 
@@ -11,7 +100,7 @@ use Log::Any qw/$log/;
 use File::NFSLock;
 use Fcntl qw/LOCK_EX LOCK_NB/;
 use PDL::Lite;
-
+use Data::Dumper;
 
 # Local libraries
 use FindBin qw/$Bin/;
@@ -31,6 +120,9 @@ use SBG::NetworkIO::png;
 
 # the 'models' base directory
 my %ops = getoptions('modelbase=s', 'redo=i', 'target=s');
+# Backwards compat.
+$ops{'redo'} = 1 if defined($ops{'cache'}) && $ops{'cache'} == 0;
+
 
 # Column header labels
 # This is the printing order
@@ -43,8 +135,8 @@ my $allkeys = [
     qw/difficulty/,
     qw/pcclashes/,
     qw/mndoms pdoms mseqlen pseqlen mnias/,
-    qw/n100 n80 n60 n40 n0/,
-    qw/ndockgreat ndockless/,
+#    qw/n100 n80 n60 n40 n0/,
+#    qw/ndockgreat ndockless/,
 #     qw/pias/,
     qw/nsources/,
     qw/ncycles/,
@@ -52,41 +144,54 @@ my $allkeys = [
     qw/homology/,
     qw/scmax scmed scmin/,
     qw/glob/,
+    qw/pcburied/,
     qw/idmax idmed idmin/,
-    qw/dockmax dockmed dockmin/,
-    qw/iptsmax iptsmed iptsmin/,
+#    qw/dockmax dockmed dockmin/,
+#    qw/iptsmax iptsmed iptsmin/,
     qw/ifacelenmax ifacelenmed ifacelenmin/,
     qw/iweightmax iweightmed iweightmin/,
     qw/seqcovermax seqcovermed seqcovermin/,
 #     qw/sas/,
     qw/olmax olmed olmin/,
-    qw/genes/,
+#    qw/genes/,
     ];
     
 # Keys that should be round to 2 decimal places
 my $floatkeys = 
-    [ qw/rmsd score difficulty pdoms pseqlen glob idmin idmax idmed pcclashes
+    [ qw/rmsd score difficulty pdoms pseqlen glob pcburied idmin idmax idmed pcclashes
     iweightmin iweightmax iweightmed
     seqcovermin seqcovermax seqcovermed  
     olmin olmax olmed/ ];
 
 # The order of these keys must match the weights below
 my $scorekeys = [
-    qw/mndoms  mseqlen pdoms   pseqlen  nsources    ncycles/,
-    qw/scmin   scmax   scmed/,
+    qw/pcclashes/,
+    qw/pdoms/,
+    qw/mseqlen pseqlen/,
+    qw/mnias/,
+    qw/nsources/,
+    qw/scmax scmed scmin/,
     qw/glob/,
-    qw/idmin   idmax   idmed/,
-    qw/ifacelenmin ifacelenmax ifacelenmed/,
-    qw/iweightmin iweightmax iweightmed/,
-    qw/olmin   olmax   olmed/,
+    qw/pcburied/,
+    qw/idmax idmed idmin/,
+    qw/ifacelenmax ifacelenmed ifacelenmin/,
+    qw/iweightmax iweightmed iweightmin/,
+    qw/seqcovermax seqcovermed seqcovermin/,
     ];
     
-# The final field is for the constant, requires appending a '1' to the scores
-my $scoreweights = pdl qw/0.43974326 0.00094791232 -0.019256422 0.023119807 0.19064436 -0.80326193 0.0044039123 0.020716519 -0.11126529 -0.029866833 -0.12870892 0.11697604 0.047743678 -0.017364881 -0.010622602 -0.0022507497 -0.029951434 -0.098814945 -0.0068636601 1.5286585 -12.615978 8.8859358 10.618353/;
     
+# The final field is for the constant, requires appending a '1' to the scores
+my $scoreweights = pdl qw/2.4279335 -0.072030122 0.0028711138 -0.077098607  1.6662702 0.72128242 -0.81947812  1.5205748 -1.3691955 -0.084849864 -0.25984416 0.072632933 0.33134922 -0.20674273 -0.018020253 0.0074350965 -0.11063703 0.029250173 -0.2348272 -0.30018245 0.039653483 0.032630528 0.022246411  47.931813/;
+
+
+unless (-r $ARGV[0]) {
+	print STDERR "No model found at: $ARGV[0]\n";
+	exit;
+}
+
 # Try to submit to PBS, for each argument in @ARGV
 # Recreate command line options;
-my @jobids = qsub(throttle=>1000, blocksize=>100, options=>\%ops);
+my @jobids = qsub(throttle=>1000, blocksize=>$ops{'blocksize'}, options=>\%ops);
 
 # @ARGV is empty if all jobs could be submitted
 
@@ -105,16 +210,15 @@ foreach my $file (@ARGV) {
         $file = PBS::ARGV::linen($file, $ops{'J'});
     }
 
+    next unless -r $file;
+    
     # Where we are
     my $basename = basename($file,'.model');
     my $dirname = basename dirname $file;
+    mkdir $dirname;
     my $basepath = "${dirname}/${basename}";
     # Skip if already finished
-    next if !$ops{'debug'} && !$ops{'redo'} && -e $basepath . '.done';
-
-    # Create target-specific directory for its models
-    my $tid = $dirname;
-    mkdir $tid;
+    next if !$ops{'redo'} && -e $basepath . '.done';
 
     # Lock this model from other processes/jobs
     my $lock = start_lock($basepath);
@@ -129,15 +233,12 @@ foreach my $file (@ARGV) {
     open my $tryingfh, ">$tryingfile";
     close $tryingfh;
 
-    my $targetfile = $ops{'target'};
-    $targetfile ||= dirname($file) . "/../../targets/${tid}.target";
+    my $targetfile = $ops{'target'} || '';
     my $target;
-    my $stats = {tid => $tid};
+    my $stats = {};
     if (-r $targetfile) {
         $log->debug("targetfile: $targetfile");
         $target = load_object($targetfile);
-        $target->id($tid) unless defined $target->id;
-        $target->store($targetfile);
     } else {
             $log->info(
             "No target file: $targetfile. Specify via: -target <target>");
@@ -159,55 +260,58 @@ foreach my $file (@ARGV) {
 
 sub do_model {
     my ($target, $modelfile, $stats) = @_;
-    $log->debug($modelfile);
+    
     $log->info("modelfile: $modelfile");
     my $model = load_object($modelfile);
-
+    $log->info("target: ", $model->target || 'undef');
+    $model->{'modelfile'} = $modelfile;
+    
     if ($ops{'redo'}) {
-        $model->scores->delete('benchstats'); 
-        $model->scores->delete('benchrmsd');
-        $model->scores->delete('benchmatrix');
+        $log->info("redo");
+        $model->clear();
         $model->store($modelfile);
         $log->info("model stats and RMSD wiped an re-saved");
     }
     $stats = model_stats($target, $model, $stats);
-
-    # TODO DEL
-    unless ($stats->{'pcclashes'} < 2.0) {
-    	$log->info("Deleting pcclashes=", $stats->{'pcclashes'}, " $modelfile"); 
-    	unlink $modelfile;
-    	return;
-    }
     
     my $basename = basename($modelfile,'.model');
-    my $dirname = basename dirname $modelfile;
+    my $dirname = $model->target || '.';
     my $basepath = "${dirname}/${basename}";
- 
-    open my $fh, ">${basepath}.csv";
+    mkdir $dirname;
+    open my $fh, ">${basepath}.csv" or die;
     # Print the CSV line, using predefined key ordering
     my $fields = $stats->slice($allkeys)->map(sub{defined $_?$_:''});
     print $fh $fields->join("\t"), "\n";
     close $fh;
     
-    modeloutputs($target,$model,$dirname);
+    modeloutputs($target,$model);
 
     # Save any changes
     $model->store($modelfile);
-}
+} # do_model
 
+
+# TODO belongs in Complex::_build_scores
 
 sub model_stats {
     my ($target, $model, $stats) = @_;
 
+    
     my $benchstats = $model->scores->at('benchstats');
 
-    if (!$ops{'debug'} && !$ops{'redo'} && defined $benchstats) {
+        # TODO DEL recalc score
+    $stats->{'score'} = _score($stats);
+        
+    if (!$ops{'redo'} && defined $benchstats) {
+        $log->debug("Using cached benchstats");
+                    
         return $benchstats;
     } 
+    $log->debug($model);
         
     $stats->{'mid'} = $model->id();
     my $tid = $stats->{'tid'};
-    $tid ||= $target ? $target->id : undef;
+    $tid ||= $model->target;
     ($tid) = $model->id =~ /^(.*?)-\d+$/ unless $tid;
     $stats->{'tid'} = $tid;
     $model->target($tid);
@@ -253,7 +357,8 @@ sub model_stats {
     $stats->{'ifacelenmed'} = median $nres;
 
     # Docking, when used
-    my $docked = $mias->map(sub{$_->scores->at('docking')});
+    my $docked = $mias->map(sub{$_->scores->at('docking')})->grep(sub{defined});
+    
     $stats->{'dockmin'} = min $docked;    
     $stats->{'dockmax'} = max $docked;
     $stats->{'dockmed'} = median $docked;
@@ -318,7 +423,9 @@ sub model_stats {
 
     # Globularity of entire model
     $stats->{'glob'} = $model->globularity();
-
+    
+    $stats->{'pcburied'} = $model->buried_area() || 'NaN';
+    
     $stats->{'pcclashes'} = $model->vmdclashes();
 
     # Fraction overlaps between domains for each new component placed, averages
@@ -330,9 +437,7 @@ sub model_stats {
     # Number of closed rings in modelled structure, using known interfaces
     $stats->{'ncycles'} = $model->ncycles();
 
-    if ($ops{'debug'} || $ops{'redo'}) {
-        $model->clear_homology;
-    }
+
     my $homology = $model->homology;
     my $present_homology = $homology->grep(sub{$_>0});
     $stats->{'homo'} = $present_homology->length == 1 ? 1 : 0;
@@ -356,6 +461,8 @@ sub model_stats {
     }
 
     $model->scores->put('benchstats', $stats);
+    $log->debug(Dumper $stats);
+    
     return ($stats);    
 } # model_stats
 
@@ -377,7 +484,7 @@ sub uniprot2gene {
         );
     my $res = $sth_gene->execute($uniprot);
     my $a = $sth_gene->fetchrow_arrayref;
-    return unless @$a;
+    return unless $a && @$a;
     return $a->[0];
 }
 
@@ -394,7 +501,8 @@ sub _score {
 	# Vector product
 	my $prod = $scoreweights * $values;
 	my $sum = $prod->sum;
-	$sum -= $stats->{'dockpenalty'};
+	my $dockpenalty = $stats->{'dockpenalty'} || 0;
+	$sum -= $dockpenalty;
 	return $sum;
 }
 
@@ -422,16 +530,12 @@ sub _difficulty {
 sub modelrmsd {
     my ($model, $target) = @_;
 
-    return unless $target;
+    return unless defined $target;
+    $log->debug("model $model");
+    $log->debug("target ", $model->target);
     
-    my $benchrmsd = $model->scores->at('benchrmsd');
-    my $benchmatrix = $model->scores->at('benchmatrix');
-    my $benchmapping;
-    unless (!$ops{'debug'} && !$ops{'redo'} && 
-            defined $benchrmsd && defined $benchmatrix) {
-        $model->scores->delete('benchrmsd');
-        $model->scores->delete('benchmatrix');
-        ($benchmatrix, $benchrmsd, $benchmapping) = $model->rmsd_class($target);
+    my ($benchmatrix, $benchrmsd, $benchmapping) = $model->rmsd_class($target);
+    $log->debug($benchrmsd);
         if (defined $benchmatrix) {
             $model->transform($benchmatrix);
             $model->scores->put('benchrmsd', $benchrmsd);
@@ -440,25 +544,27 @@ sub modelrmsd {
         } else {
             $benchrmsd = 'NaN';
         }
-    }
     
     return wantarray ? ($benchrmsd, $benchmatrix) : $benchrmsd;
 }
 
 
 sub modeloutputs {
-    my ($target, $model, $tid) = @_;
+    my ($target, $model) = @_;
 
-    my $mbase = $tid . '-' . sprintf("%05d",$model->class);
-    
-    # TODO DES, refactor
-    $tid = '../models/' . $tid;
+    my $tid = $model->target;
+    my $file = $model->{'modelfile'};
+    my $basename = basename($file,'.model');
+    my $dirname = $tid || '.';
+    my $basepath = "${dirname}/${basename}";
     
     mkdir $tid;
-    my $pdbfile = "${tid}/${mbase}.pdb";
-    my $domfile = "${tid}/${mbase}.dom";
-    my $siffile = "${tid}/${mbase}.sif";
-    my $dotfile = "${tid}/${mbase}.png";
+    $log->debug($basepath);
+        
+    my $pdbfile = "${basepath}.pdb";
+    my $domfile = "${basepath}.dom";
+    my $siffile = "${basepath}.sif";
+    my $dotfile = "${basepath}.png";
     my @files = ($pdbfile, $domfile, $siffile, $dotfile);
     my @locks = map { "$_.NFSLock" } @files;
     my $alldone = 1;
@@ -511,6 +617,7 @@ sub _domfile {
     if (-s $domfile) {
         return;
     }
+    $log->debug($domfile);
     my $write_target = 
         $model->scores->exists('benchrmsd') && 
         $model->scores->at('benchrmsd') > 0;
@@ -521,6 +628,16 @@ sub _domfile {
     my $keys = $write_target ? [ $model->coverage($target) ] : $model->keys;
     my $mapping = $model->correspondance;
 
+    # Header details
+    my $report;
+    my $reportio = SBG::ComplexIO::report->new(string=>\$report);
+    $reportio->write($model);
+    $reportio->close;
+    # Prepend a comment
+    $report =~ s/^/% /gm;
+    my $fh = $domio->fh();
+    print $fh $report;
+
     foreach my $key (@$keys) {
         # Write in tandem, with model first: (model, target, model, target, ...)
         $domio->write($model->domains([$key]));
@@ -528,20 +645,19 @@ sub _domfile {
     }
 } # _domfile
 
-
+use Data::Dumper;
 sub _pdbfile {
     my ($pdbfile, $model, $target) = @_;
     if (-s $pdbfile) {
         return;
     }
+    $log->debug($pdbfile);
     my $write_target = 
+        defined($target) && 
         $model->scores->exists('benchrmsd') && 
         $model->scores->at('benchrmsd') > 0;
 
     my $lock = File::NFSLock->new($pdbfile,LOCK_EX|LOCK_NB) or return;
-
-#    my $pdbio = new SBG::DomainIO::pdb(file=>">${pdbfile}", compressed=>1);
-    my $pdbio = new SBG::DomainIO::pdb(file=>">${pdbfile}", compressed=>0);
     
     # Only show common components
     my $keys = $write_target ? [ $model->coverage($target) ] : $model->keys;
@@ -556,8 +672,24 @@ sub _pdbfile {
     my $targetasdom = $write_target ? 
         $target->combine(keys=>$mapped_keys) : undef;
 
+#    my $pdbio = new SBG::DomainIO::pdb(file=>">${pdbfile}", compressed=>1);
+    my $pdbio = new SBG::DomainIO::pdb(file=>">${pdbfile}", compressed=>0);
+    my $fh = $pdbio->fh();
+        
+    # Header details
+    my $report;
+    my $reportio = SBG::ComplexIO::report->new(string=>\$report);
+    $reportio->write($model);
+    $reportio->close;
+    # Prepend a comment
+    $report =~ s/^/REMARK /gm;
+    print $fh $report;
+
     # Write model first (in Rasmol, first is blue, second is red)
-    $pdbio->write($modelasdom);
-    $pdbio->write($targetasdom) if $write_target;
+    if ($write_target) {
+        $pdbio->write($modelasdom, $targetasdom);
+    } else {
+        $pdbio->write($modelasdom);
+    }
 
 } # _pdbfile
