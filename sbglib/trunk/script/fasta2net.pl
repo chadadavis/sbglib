@@ -2,31 +2,108 @@
 
 =head1 NAME
 
-B<sbgfa2net> - 
+B<fasta2net.pl> - Build structure-based interaction network for a complex
 
 =head1 SYNOPSIS
 
-sbgfa2net <fasta-sequences.fa>
+fasta2net -top 20 -l INFO -maxid 75 -directives "-l cput=04:59:00" target-*.fa 
 
 =head1 DESCRIPTION
 
 
-=head1 OPTIONS
+=head1 SPECIFIC OPTIONS
 
-=head2 -m|ethod B<standaloneblast> or B<remoteblast>
+=head2 -s | -searcher 'TransDBc'
 
-=head2 -h|elp Print this help page
+Class name of the method to use for finding templates, must be in B<SBG::Search::> and must implement L<SBG::SearchI>. E.g.
 
-=head2 -l|og Set logging level
+ -searcher <TransDB|TransDBc|3DR|Bench|CSV|PairedBlast>
+
+=head2 -m | -method B<standaloneblast> or B<remoteblast>
+
+Default: standaloneblast
+
+=head2 -x | -maxid Maximum sequence identity allowed for a template [0:100]
+
+Mostly used for benchmarking, otherwise there is no reason to limit the identity
+
+=head2 -n | -minid Minimum sequence identity allowed for a template [0:100]
+
+Minimum sequence identity to consider, e.g.
+
+ fasta2net -n 35 complex-xyz.fa
+
+=head2 o|output
+
+=head2 t|top Take the top N interface templates for any interacting pair.
+
+To get no more than 20 inteface templates per interaction:
+
+ fasta2net.pl -top 20 complex-xyz.fa
+ 
+=head2 -v | -overlap Minimum fractional sequence coverage on a template
+
+Default 0.5
+
+
+=head2 -s | -output
+
+
+=head1 GENERIC OPTIONS
+
+=head2 -h | -help 
+
+Print this help page
+
+=head2 -l | -log <LOG-LEVEL>
+
+Set logging level
 
 In increasing order: TRACE DEBUG INFO WARN ERROR FATAL
 
 I.e. setting B<-l WARN> (the default) will log warnings errors and fatal
 messages, but no info or debug messages to the log file (B<log.log>)
 
-=head2 -f|ile Log file
+=head2 -f | -file <Log file>
 
 Default: <network name>.log in current directory
+
+=head2 -blocksize <N>
+
+Number of file arguments given on the command line to be processed by each PBS job. 
+
+Default: 1
+
+-blocksize 100 : every 100 files given on the command line will be processed in one synchronous PBS job. 
+
+-blocksize 1 : every single input file is the input to a single PBS job
+
+
+=head2 -J 
+
+PBS array job
+
+Identifies the only command line argument to a file from which to read the input files from. This is most useful when there are more files than can be written on the command line, as that is limited.
+
+=head2 -directives "<directive1> <directive2> ..."
+
+PBS directives to be passed to B<qsub>
+
+E.g.
+
+ -directives "-l cput=04:59:00"
+
+Note that the directives must be quoted.
+
+=head2 -d 1 | -debug 1
+
+Set debug mode. 
+
+
+=head2 -c 0 | -cache 0
+
+Disable caching. On by default.
+
 
 
 =head1 SEE ALSO
@@ -34,8 +111,6 @@ Default: <network name>.log in current directory
 L<SBG::Network> , L<SBG::SearchI>
 
 =cut
-
-
 
 
 use strict;
@@ -59,11 +134,11 @@ use SBG::Search::PairedBlast;
 use PBS::ARGV qw/qsub/;
 
 my %ops = getoptions 
-    qw/maxid|x=i minid|n=i output|o=s cache|c=i top|t=i method|m=s overlap|v=f searcher=s/;
+    qw/maxid|x=i minid|n=i output|o=s top|t=i method|m=s overlap|v=f searcher=s/;
 
 
 # Recreate command line options; (seems to work even with long option names)
-my @jobids = qsub(options=>\%ops);
+my @jobids = qsub(throttle=>1000, blocksize=>$ops{'blocksize'}, options=>\%ops);
 
 exit unless @ARGV;
 
@@ -80,7 +155,6 @@ if ($@) {
     warn "Could not load search: $ops{searcher} :\n$@\n";
     exit;
 }
-my $searcher = $ops{searcher}->new(blast=>$blast);
 my $buildops = {%ops}->hslice([qw/maxid minid cache top overlap/]);
 
 foreach my $file (@ARGV) {
@@ -104,6 +178,9 @@ foreach my $file (@ARGV) {
     while (my $seq = $seqio->next_seq) {
         $net->add_seq($seq);
     }
+
+    # One searcher per target complex, to keep track of templates found
+    my $searcher = $ops{searcher}->new(blast=>$blast);
 
     # Create interaction templates on the edges of the network
     $net = $net->build($searcher,%$buildops);
