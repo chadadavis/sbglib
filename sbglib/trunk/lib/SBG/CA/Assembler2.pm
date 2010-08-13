@@ -54,6 +54,17 @@ has 'net' => (
     );
 
 
+=head2 
+
+Complex to begin building from. This should already be contained in the network, but will not be rebuilt.
+
+=cut
+has 'seed' => (
+    is => 'rw',
+    isa => 'SBG::Complex',
+    );
+    
+
 # Number of solved partial solutions
 has 'solutions' => (
     is => 'rw',
@@ -183,8 +194,25 @@ has 'overlap_thresh' => (
     );
 
 
+=head2 clash_thresh
 
+Maximum allowable atomic clashes within a modelled complex. Checked once the model has been finally built. Default: 2.0 Angstrom
 
+=cut
+has 'clash_thresh' => (
+    is => 'rw',
+    isa => 'Num',
+    default => 2.0,
+    );
+    
+
+has 'irmsd_thresh' => (
+    is => 'rw',
+    isa => 'Num',
+    default => 15,
+    );
+    
+    
 =head2 test
 
  Function: 
@@ -218,7 +246,7 @@ sub test {
     my $merged_complex;
     # Score for placing this interaction into the solutions complex forest
     my $merged_score;
-
+    
     if (! $uf->has($src) && ! $uf->has($dest) ) {
         # Neither node present in solutions forest. Create dimer
         $merged_complex = SBG::Complex->new(symmetry=>$self->net->symmetry);
@@ -254,8 +282,13 @@ sub test {
                 $self->_add_monomer($state, $iaction, $dest);
         }
     }
+
+    if (defined($merged_score)) {
+        $log->debug("Result: ", $merged_complex->size, '-mer');
+    }
     
     return ($merged_complex, $merged_score);
+    
 } # test
 
 
@@ -263,7 +296,6 @@ sub test {
 # (i.e. novel interactions not detected at this stage)
 sub _cycle {
     my ($self, $state, $iaction) = @_;
-    $log->debug($iaction);
     # Take either end of the interaction, since they belong to same complex
     my ($src, $dest) = $iaction->nodes;
     my $partition = $state->{'uf'}->find($src);
@@ -274,8 +306,19 @@ sub _cycle {
     my $merged_complex = $complex->clone;
     # Difference from 10 to get something in range [0:10]
     my $irmsd = $merged_complex->cycle($iaction);
-    # TODO this thresh (15) is also hard-coded in SBG::Complex  
-    return unless defined($irmsd) && $irmsd < 15;
+  
+    my $irmsd_thresh = $self->irmsd_thresh();
+    my $size = $complex->size;
+    if (defined($irmsd) && $irmsd <= $irmsd_thresh) {    	
+        $log->debug(
+           "Succeeded ($iaction) in ${size}-mer w/iRMSD ($irmsd) < threshold ($irmsd_thresh)");
+    } else {    	
+    	$irmsd ||= 'undef';
+    	$log->debug(
+    	   "Failed in ($iaction) in ${size}-mer w/iRMSD ($irmsd) > threshold ($irmsd_thresh)");
+        return;
+    }
+
     # Give this a ring bonus of +10, since it closes a ring
     # Normally a STAMP score gives no better than 10
     my $merged_score = 20 - $irmsd;
@@ -300,6 +343,14 @@ sub _merge {
     my $merged_score = $merged_complex->merge_interaction(
         $dest_complex,$iaction, $self->overlap_thresh);
 
+    if (defined($merged_score)) {
+    	$log->debug("Succeeded: ", $merged_complex->size, '-mer');
+    } else {
+    	my $total = $src_complex->size + $dest_complex->size;
+    	$log->debug("Failed on ${total}-mer : ", 
+    	   $src_complex->size, '-mer + ', 
+    	   $dest_complex->size, '-mer');
+    }
     return ($merged_complex, $merged_score);
 } # _merge
 
@@ -332,6 +383,14 @@ sub _add_monomer {
     my $merged_score = $merged_complex->merge_domain(
         $add_complex, $ref, $self->overlap_thresh);
 
+    if (defined($merged_score)) {
+        $log->debug("Succeeded: ", $merged_complex->size, '-mer');
+    } else {
+    	my $size = $merged_complex->size;
+    	my $total = $size + 1;
+    	$log->debug("Failed on ${total}-mer : ${size}-mer + 1-mer");
+    }
+
     return ($merged_complex, $merged_score);
 
 } # _add_monomer
@@ -351,16 +410,21 @@ Really? Maybe it just assumes a 'centroid' method.
 
 TODO output network toplogy of solution interaction network used to build model
 
+Note that component labels are not used by default here, because the components may be structurally equivalent to one another, which would still result in duplicates.
+
 =cut
 sub solution {
     my ($self, $state, $partition,) = @_;
     my $complex = $state->{'models'}->{$partition};
 
-    return -1 if $self->maxsolutions && $self->classes >= $self->maxsolutions;
+    if ($self->maxsolutions && $self->classes >= $self->maxsolutions) {
+    	$log->info("Max solutions reached: ", $self->maxsolutions);
+    	return -1;
+    } 
 
     # Uninteresting unless at least two interfaces in solution
     return 0 unless defined($complex) && $complex->size >= $self->minsize;     
-
+    
     # A new solution
     $self->solutions($self->solutions+1);
 
@@ -373,6 +437,7 @@ sub solution {
 
     # Check if duplicate, based on geometric hash
     # exact() requires that the sizes match on both sides (i.e. no subsets)
+    # Not using labels by default, as components can be homologous
 #     my $class = $self->gh->exact($coords, $componentlabels);
     my $class = $self->gh->exact($coords);
 
@@ -390,9 +455,17 @@ sub solution {
         return 0;
     } else {
         # undef => Don't name the model
+        # Not using labels by default, as components can be homologous
 #         $class = $self->gh->put(undef, $coords, $componentlabels);
         $class = $self->gh->put(undef, $coords);
         return 0 unless defined $class;
+
+        my $clashes = $complex->vmdclashes();
+        unless ($clashes <= $self->clash_thresh) {
+            $log->info("Clashes ($clashes) exceeds threshold ", 
+                $self->clash_thresh);
+            return 0;
+        }
 
         $self->best->put($class, $score);
         # Counter for classes created so far
@@ -448,7 +521,7 @@ sub _status {
         my %stats = $self->stats;
         print "\033[1K\r"; # Carriage return, i.e. w/o linefeed
         # Print without newline
-        print join "\t", $self->stats;
+        print join("\t", $self->stats), " ";
     }
 } # _status
 
