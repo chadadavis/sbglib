@@ -68,6 +68,7 @@ use SBG::DB::res_mapping; # qw/query aln2locations/;
 use SBG::U::DB qw/chain_case/;
 use SBG::Run::PairedBlast qw/gi2pdbid/;
 use SBG::Run::pdbseq qw/pdbseq/;
+use SBG::Run::naccess qw/buried/;
 
 # Complex stores these data structures
 use SBG::Superposition;
@@ -139,6 +140,22 @@ has 'name' => (
 
 
 
+# TODO better as a role 'Clearable', which iterates all attributes and checks 'has_clearer' and calls it.
+sub clear {
+    my ($self) = @_;
+    $self->clear_description();
+    $self->clear_vmdclashes();
+    $self->clear_homology();
+    $self->clear_score();
+    $self->clear_features();
+    $self->clear_modelled_coords();
+    $self->clear_network();
+    $self->clear_globularity();
+    $self->clear_buried_area();
+    
+}
+
+
 =head2 description
 
  Function: 
@@ -150,8 +167,9 @@ has 'name' => (
 =cut
 has 'description' => (
     is => 'rw',
-    isa => 'Str',
+    isa => 'Maybe[Str]',
     lazy_build => 1,
+    clearer => 'clear_description',
     );
 sub _build_description {
     my ($self) = @_;
@@ -289,6 +307,7 @@ has 'vmdclashes' => (
     is => 'rw',
     isa => 'Num',
     lazy_build => 1,
+    clearer => 'clear_vmdclashes',
 );
 use SBG::Run::vmdclashes;
 sub _build_vmdclashes {
@@ -339,6 +358,7 @@ has 'homology' => (
     is => 'rw',
     isa => 'ArrayRef[Int]',
     lazy_build => 1,
+    clearer => 'clear_homology',
 );
 sub _build_homology {
     my ($self, ) = @_;
@@ -373,12 +393,32 @@ Combined score of all domain models in a complex
 has 'score' => (
     is => 'rw',
     lazy_build => 1,
+    clearer => 'clear_score',
     );
 
 sub _build_score {
     my ($self) = @_;
 
     return 1;
+}
+
+
+=head2 features
+
+Any key/value pairs to be used for machine learning
+
+Belongs in a Role::Features
+
+=cut
+has 'features' => (
+    is => 'rw',
+    isa => 'HashRef',
+    lazy_build => 1,
+    clearer => 'clear_features',
+    );
+sub _build_features {
+    my ($self) = @_;
+    
 }
 
 
@@ -445,6 +485,19 @@ sub size {
 } # size
 
 
+sub seqs {
+	my ($self) = @_;
+	return $self->domains()->map(sub{$_->seq()});
+}
+
+=head2 seqlen
+=cut
+sub seqlen {
+	my ($self) = @_;
+	my $seqs = $self->seqs();
+	return $seqs->map(sub{$_->length})->sum();
+	
+}
 
 =head2 set/get/keys
 
@@ -507,6 +560,7 @@ print SBG::U::RMSD::centroid($coords);
 has 'modelled_coords' => (
     is => 'rw',
     lazy_build => 1,
+    clearer => 'clear_modelled_coords',
     );
 sub _build_modelled_coords {
     my ($self) = @_;
@@ -598,9 +652,8 @@ has 'network' => (
     is => 'rw',
     isa => 'SBG::Network',
     lazy_build => 1,
+    clearer => 'clear_network',
     );
-
-
 sub _build_network {
     my ($self) = @_;
 
@@ -705,6 +758,7 @@ complex are arranged. E.g. high for an exosome, low for actin fibers
 has 'globularity' => (
     is => 'rw',
     lazy_build => 1,
+    clearer => 'clear_globularity',
     );
 
 sub _build_globularity {
@@ -720,6 +774,24 @@ sub _build_globularity {
 } # globularity
 
 
+=head2 buried_area
+
+Surface area buried at interfaces.
+
+Depends on NACCESS program.
+
+=cut
+has 'buried_area' => (
+    is => 'rw',
+    isa => 'Maybe[Num]',
+    lazy_build => 1,
+    clearer => 'clear_buried_area',
+    );
+sub _build_buried_area {
+    my ($self) = @_;
+    my $sas = SBG::Run::naccess::buried($self->domains) or return; 
+    return $sas;
+}
 
 =head2 combine
 
@@ -736,6 +808,7 @@ use Module::Load;
 sub combine {
     my ($self,%ops) = @_;
     $ops{keys} ||= $self->keys;
+    $log->debug($ops{'keys'}->join(','));
     my $doms = $self->domains($ops{keys});
     return unless $doms->length > 0;
 
@@ -885,7 +958,7 @@ sub merge_interaction {
 =cut
 sub cycle {
     my ($self, $iaction) = @_;
-    $log->info($iaction);
+    $log->debug($iaction);
 
     my $keys = $iaction->keys;
     # Get domains from self and domains from iaction in corresponding order
@@ -1277,7 +1350,7 @@ sub rmsd_class {
 
         # Test this mapping
         my ($trans, $rmsd) = 
-#             rmsd_mapping($self, $other, $model, \%mapping);
+#            rmsd_mapping($self, $other, \@model, \%mapping);
             rmsd_mapping_backbone($self, $other, \@model, \%mapping);
 
         $log->debug("rmsd \#$icart / $ncarts: ", $rmsd || 'undef');
@@ -1449,9 +1522,10 @@ sub rmsd_mapping_backbone {
     # Make 2-dimensional, if 3-dimensional
     $selfcoords = $selfcoords->clump(1,2) if $selfcoords->dims == 3;
     $othercoords = $othercoords->clump(1,2) if $othercoords->dims == 3;
-    
+        
     # Least squares fit of all coords in each complex
-    my $trans = SBG::U::RMSD::superpose($selfcoords, $othercoords);
+    # Maximum 1000 refinement steps (unless it converges sooner)
+    my $trans = SBG::U::RMSD::superpose($selfcoords, $othercoords, 1000); 
     # Now it has been transformed already. Can measure RMSD of new coords
     my $rmsd = SBG::U::RMSD::rmsd($selfcoords, $othercoords);
     $log->debug("Potential rmsd:", $rmsd, " via: ", join ' ', %$mapping);
