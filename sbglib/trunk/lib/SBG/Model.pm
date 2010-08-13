@@ -12,6 +12,13 @@ SBG::Model - A homologous structural template to model a protein sequence
 =head1 DESCRIPTION
 
 
+
+Model::input : the original full input Bio::Seq
+Model::query : the query sequence, as aligned in the Blast hit
+Model::aln : the alignment from the hit
+Model::subject : the subject of the hit, i.e. the template found
+Model::structure : the structural representation of the template
+
 =head1 SEE ALSO
 
 
@@ -141,7 +148,10 @@ sub _build_coverage {
 
 sub stringify {
     my ($self) = @_;
-    return $self->gene . '(' . $self->subject . ')';
+    my $string = $self->gene;
+    my $subject = $self->subject;
+    $string .= '(' . $subject . ')' if $subject;
+    return $string;
 }
 
 

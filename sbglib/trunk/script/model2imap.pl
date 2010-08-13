@@ -90,7 +90,9 @@ sub _model {
 	
     open my $fh, ">>${base}.html";
     foreach my $iaction ($complex->interactions->values->flatten) {
-        print $fh "<p>$iaction source=", $iaction->source, ' ';
+        print $fh "<p>\n";
+        my $source = $iaction->source();
+        print $fh "$iaction source=", $iaction->source, ' ' if $source;
         foreach my $score ($iaction->scores->keys->flatten) {
             print $fh "${score}=", $iaction->scores->at($score), " ";
         }
