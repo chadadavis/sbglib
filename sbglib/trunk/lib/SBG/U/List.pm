@@ -181,7 +181,7 @@ sub avg { return mean @_ }
 sub average { return mean @_ }
 sub wtavg {
 	my ($a, $weights) = @_;
-    return dotproduct($a, $weights) / $weights->sum;	
+    return dotproduct($a, $weights) / sum($weights);	
 }
 
 
