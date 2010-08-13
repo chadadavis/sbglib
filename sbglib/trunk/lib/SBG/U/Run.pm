@@ -14,6 +14,12 @@ Utilities for executables, including file locking, logging, option processing
 
 =head1 SEE ALSO
 
+=head1 TODO
+
+Should be a Role
+
+See also L<MooseX::Runnable>
+
 
 =cut
 
@@ -34,6 +40,7 @@ use Carp;
 use File::NFSLock;
 use Fcntl qw/LOCK_EX LOCK_NB/;
 use File::Slurp qw/slurp/;
+use File::Temp;
 
 use SBG::U::Log;
 use Log::Any qw/$log/;
@@ -168,7 +175,7 @@ sub getoptions {
     # A list file contains the paths of the inputs to be processed
     # The -J option says which line (0-based) is the current input file
     # The -M option is for an email address (used by PBS, among others)
-    push @ops, qw/help|h debug|d directives=s loglevel|l=s logfile|f=s logdir=s J=s M=s/;
+    push @ops, qw/help|h debug|d=i cache|c=i directives=s blocksize=i loglevel|l=s logfile|f=s logdir=s J=s M=s/;
 
     my %ops;
     # This makes single-char options case-sensitive
@@ -179,10 +186,14 @@ sub getoptions {
         pod2usage(-exitval=>1, -verbose=>2); 
     }
 
-    # Running in debugger? Setup debug mode automatically
-    $ops{'debug'} = 1 if defined $DB::sub;
-    $SIG{__DIE__} = \&confess if $ops{'debug'};
-    $ops{'loglevel'} ||= 'DEBUG' if $ops{'debug'};
+    # Setup debug mode automatically
+    if ($ENV{'DEBUG'} || $ops{'debug'} || defined $DB::sub) {
+        $ops{'debug'} = 1;
+        $SIG{__DIE__} = \&confess;
+        $ops{'loglevel'} ||= 'DEBUG';
+        $DB::deep = 1000;
+        $File::Temp::KEEP_ALL = 1;
+    }
 
     return %ops;
 }
