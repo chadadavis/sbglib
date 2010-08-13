@@ -69,7 +69,6 @@ use SBG::TransformIO::smtry;
 
 use SBG::U::RMSD;
 use SBG::Run::pdbseq;
-use SBG::Run::naccess;
 
 # Some regexs for parsing PDB IDs and descriptors
 use SBG::Types qw/$re_chain $re_chain_seg/;
@@ -361,22 +360,6 @@ sub _build_symops {
 	
 }    
     
-
-=head sas
-
-Solvent Accessible Surface, from SBG::Run::naccess
-
-=cut
-has 'sas' => (
-    is => 'rw',
-    isa => 'Num',
-    lazy_build => 1,
-    );
-sub _build_sas {
-    my ($self) = @_;
-    return naccess($self);
-}
-
 
 =head2 centroid
 
