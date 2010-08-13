@@ -32,9 +32,6 @@ use Graph::UnionFind;
 use Bio::Network::ProteinNet;
 use Storable qw/dclone/;
 
-use SBG::Complex;
-
-
 
 
 =head1 Attributes
@@ -102,23 +99,15 @@ has 'sorter' => (
  Args    : 
 
 
+TODO optimize seeds by removing edges in the interaction network that don't need to be reconsidered.
+
+
 =cut
 sub traverse {
     my ($self) = @_;
 
-    # A new disjoint set data structure, to track which nodes in same sets
-    my $uf = Graph::UnionFind->new;
-    # Graph of current solution topology
-    my $net = SBG::Network->new;
-    # Each connected component in the solution interaction network is a complex
-    my $models = {};
-    # Wrap these three things into a single state object
-    my $state = {
-        uf => $uf,
-        net => $net,
-        models => $models,
-    };
-
+    my $state = $self->_state0();
+    
     # All interaction templates, sorted descending by the field $self->sorter
     my $iactions = $self->interactions_by_field($self->sorter);
     $log->info("interactions: ", $iactions->length);
@@ -131,6 +120,36 @@ sub traverse {
 
 } # traverse
 
+
+sub _state0 {
+	my ($self) = @_;
+	
+    # Starting seed network already given
+    my $seed = $self->assembler()->seed();
+    # Wrap into a single state object
+    # This will be cloned and modified (copy on write) during the traversal
+    my $state;
+    
+    # Create a partition of the components of the seed, if given
+    if (defined $seed) {
+    	my $net = $seed->network();
+        # Put all components into one partition, as it is already connected.
+        my $uf = Graph::UnionFind->new;
+        my ($head, @keys) = $net->nodes();
+        $uf->union($head,$_) for @keys;
+        # Name of the partition. Save the seed here.
+        my $partition = $uf->find($head);
+        my $models = { $partition => $seed };
+        $state = { uf=>$uf, net=>$net, models=>$models };      
+    } else {
+    	$state = {
+    		uf => Graph::UnionFind->new,
+    		net => SBG::Network->new,
+    		models => {},
+    	};
+    }
+    return $state;
+}
 
 sub _recurse {
     my ($self, $iactions, $i, $state, $leftmost) = @_;
@@ -186,7 +205,7 @@ sub _recurse {
 
     } 
 
-    if ($leftmost == $i) {
+    if (defined($leftmost) && $leftmost == $i) {
         $log->info("Done with leftmost: $leftmost");
         $leftmost = undef;
     }
