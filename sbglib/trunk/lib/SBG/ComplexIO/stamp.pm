@@ -31,7 +31,7 @@ use Moose::Autobox;
 use SBG::DomainIO::stamp;
 use SBG::Model;
 use SBG::Complex;
-
+use SBG::ComplexIO::report;
 
 
 =head2 native
@@ -82,6 +82,16 @@ sub write {
     return unless defined $complex;
     my $fh = $self->fh or return;
 
+    my $report;
+    my $reportio = SBG::ComplexIO::report->new(string=>\$report);
+    $reportio->write($complex);
+    $reportio->close;
+    
+    # Prepend a comment
+    $report =~ s/^/% /gm;
+    
+    print $fh $report;
+    
     # Just delegate all domains in the complex to DomainIO::stamp
     my $io = SBG::DomainIO::stamp->new(fh=>$fh);
     $io->write($complex->domains->flatten);
