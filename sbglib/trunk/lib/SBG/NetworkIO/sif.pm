@@ -45,12 +45,12 @@ sub read {
     my ($self,) = @_;
     my $fh = $self->fh;
 
-    warn "Not implemented";
-    my $net = new SBG::Network;
+    my $net = SBG::Network->new();
 
     while (my $line = <$fh>) {
-        next unless $line =~ //;
-        chomp;
+        next if /^\s*$/ || /^\s*#/;
+        my ($u, $v) = split ' ';
+        $net->add_edge($u,$v);
     }
     return $net;
 
@@ -78,7 +78,7 @@ sub write {
         # Names of attributes for this edge
         foreach my $attr ($graph->get_edge_attribute_names($u, $v)) {
             # The actual interaction object for this template
-            my $iaction = $graph->get_interaction_by_id($attr);
+#            my $iaction = $graph->get_interaction_by_id($attr);
             print $fh "$u pp $v\n";
         }
     }
