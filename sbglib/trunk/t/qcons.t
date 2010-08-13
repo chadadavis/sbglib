@@ -28,7 +28,10 @@ my $q = Bio::Tools::Run::QCons->new(
     chains => ['A', 'B'],
 );
 my $contacts = $q->residue_contacts;
-print Dumper $contacts;
+
+is($contacts->length, 288, 'residue_contacts()');
+
+print Dumper $contacts if $DEBUG;
 my $contacts1 = {};
 my $contacts2 = {};
 foreach my $c (@$contacts) {
@@ -41,16 +44,17 @@ foreach my $c (@$contacts) {
 }
 
 
-print Dumper $contacts1;
+print Dumper $contacts1 if $DEBUG;
 # How many contacts from an atom in 1st chain
 my $n_atoms1 = $contacts1->values->map(sub{$_->length})->sum();
 # How many residues of 1st chain have >= 1 contact
 my $n_res1 = $contacts1->values->length;
 my $n_res2 = $contacts2->values->length;
 
-print "n_atoms1:$n_atoms1:\n";
-print "n_res1:$n_res1:\n";
-print "n_res2:$n_res2:\n";
+
+diag "n_atoms1:$n_atoms1:\n";
+diag "n_res1:$n_res1:\n";
+diag "n_res2:$n_res2:\n";
 
 #print Dumper $contacts2;
 
