@@ -47,5 +47,12 @@ $io2->flush;
 ok(-s $tpath2, "Writing to temp file path ( $tpath2 )");
 
 
+# Test writing to a string
+my $str;
+my $iostring = SBG::IO->new(string=>\$str);
+$iostring->write("foo");
+$iostring->flush;
+is($str, 'foo', 'SBG::IO->new(string=>$str)');
+
 
 __END__
