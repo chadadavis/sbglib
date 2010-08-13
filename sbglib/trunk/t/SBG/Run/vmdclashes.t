@@ -22,9 +22,12 @@ use SBG::Run::vmdclashes;
 # Precision (or error tolerance)
 my $prec = '2%';
 
-my $complex = load_object("$Bin/../data/086-00002.model");
-my $res = vmdclashes($complex);
-
+my $res = vmdclashes("$Bin/../data/086-00002.pdb");
 float_is($res->{'pcclashes'}, 0.33969166, "vmdclashes", $prec);
+
+my $complex = load_object("$Bin/../data/3kfi.target");
+$res = vmdclashes($complex);
+float_is($res->{'pcclashes'}, 2.747, "vmdclashes", $prec);
+
 
 done_testing();

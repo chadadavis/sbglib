@@ -16,6 +16,7 @@ SBG::Run::pdbc - Wrapper for running B<pdbc> (to get entry/chain descriptions
 
 =head1 DESCRIPTION
 
+Depends on rlwrap and vmd
 
 =head1 SEE ALSO
 
@@ -33,6 +34,7 @@ use Moose::Autobox;
 use Log::Any qw/$log/;
 
 use File::Basename qw/dirname/;
+use Data::Dumper;
 
 use SBG::ComplexIO::pdb;
 
@@ -45,16 +47,26 @@ use SBG::ComplexIO::pdb;
  Args    : L<SBG::Complex>
 
 
+Can process a path to a PDB file or an SBG::Complex object
+
 =cut
 sub vmdclashes {
-	my ($complex) = @_;
-	my $io = SBG::ComplexIO::pdb->new(tempfile=>1);
-	$io->write($complex);
-	$io->close;
-	my $file = $io->file;
+	my ($thing) = @_;
+	my $file;
+	if ($thing->isa('SBG::Complex')) {
+        my $io = SBG::ComplexIO::pdb->new(tempfile=>1);
+        $io->write($thing);
+        $io->close;
+        $file = $io->file;
+	} elsif (-r $thing) {
+        $file = $thing;
+	} else {
+		$log->error("$thing is neither an SBG::Complex nor a readable file");
+		return;
+	}
 	
     my $script = dirname(__FILE__) . '/../../../script/vmdclashes.tcl';
-	my $cmd = "vmd -dispdev none -e $script -args $file";
+	my $cmd = "vmd -dispdev none -e \"$script\" -args \"$file\"";
     $log->debug($cmd);	
 	my $res = {};
 	open my $vmdfh, "$cmd |";
@@ -65,6 +77,7 @@ sub vmdclashes {
 		$res->{$key} = $value;
 	}
 	close $vmdfh;
+	$log->debug(Dumper $res);
 	return $res;
 	
 } # vmdclashes
