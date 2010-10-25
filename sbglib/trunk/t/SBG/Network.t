@@ -15,11 +15,16 @@ use SBG::Network;
 use SBG::Node;
 use SBG::Seq;
 use SBG::Interaction;
+use SBG::U::Object qw/load_object/;
 
 use SBG::U::Log qw/log/;
 my $DEBUG;
 $DEBUG = 1;
 SBG::U::Log::init( undef, loglevel => 'DEBUG' ) if $DEBUG;
+
+
+my $target = load_object("$Bin/data/3bvi.target");
+my $targetnet = $target->network;
 
 
 # Sequences becomes nodes become networks
