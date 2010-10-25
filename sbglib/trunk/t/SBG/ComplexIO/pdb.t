@@ -21,7 +21,7 @@ my $file = "$Bin/../data/086-00002.model";
 
 my $complex = load_object($file);
 
-is($complex->count, 5, "Complex has 5 domains");
+is($complex->count, 4, "Complex loaded");
 
 # Write out
 my $out = SBG::ComplexIO::pdb->new(tempfile=>1);
