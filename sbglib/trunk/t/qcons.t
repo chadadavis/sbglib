@@ -10,7 +10,7 @@ use Carp;
 $SIG{__DIE__} = \&confess;
 
 use FindBin qw/$Bin/;
-use lib "$Bin/../../qcons/lib/";
+use lib "$Bin/../lib/";
 
 use Moose::Autobox;
 use autobox::List::Util; 
