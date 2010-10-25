@@ -1,5 +1,24 @@
 #!/usr/bin/env perl
 
+=head1 NAME
+
+Test::SBG - Base test class for SBG
+
+=head1 SYNOPSIS
+
+
+=head1 DESCRIPTION
+
+startup() and shutdown() run once for each test class.
+
+setup() and teardown() run once for each test in a test class.
+
+=head1 SEE ALSO
+
+L<Test::Class>
+
+=cut
+
 package Test::SBG;
 use Test::Class;
 use Exporter;
