@@ -10,11 +10,17 @@ SBG::Superposition - Represents a pair of L<DomainI>, superpositioned
 
 =head1 DESCRIPTION
 
-'scores' can contain 
+Stores the transformation matrix and scores associated with a structural alignment between two L<SBG::Domain> objects. If a domain has not been transfromed from its native location, then its transformation and the transformation of the superposition will be the same. However, if the domain had already been transformed to new relative location, these will be different.
+
+The 'scores' attribute is a HashRef and may contain 
 
  Sc RMS len nfit seq_id sec_id q_len d_len n_sec n_equiv
 
 =head1 SEE ALSO
+
+For an explanation of the scores, see
+
+ http://www.compbio.dundee.ac.uk/manuals/stamp.4.4/node36.html
 
 L<SBG::TransformI> , L<SBG::DomainI>
 
