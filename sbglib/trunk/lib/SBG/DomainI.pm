@@ -84,8 +84,8 @@ has 'pdbid' => (
     is       => 'rw',
     isa      => 'Maybe[SBG.PDBID]',
     required => 0,
-	# Coerce to lowercase
-	coerce => 1,
+	# Coerce to lowercase (not necessary, accept both)
+#	coerce => 1,
 );
     
 

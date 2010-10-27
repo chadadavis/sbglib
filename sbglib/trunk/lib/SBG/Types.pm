@@ -59,7 +59,7 @@ subtype
 
 # Force lc (lowercase)
 # This is no longer effective, since we now allow uppercase
-coerce 'SBG.PDBID' => from 'Str' => via { lc $_ };
+#coerce 'SBG.PDBID' => from 'Str' => via { lc $_ };
 
 # Splits e.g. 2nn6A into (2nn6,A)
 # Captures: $1 is PDB ID, $2 is chain ID (possibly 2-char)
