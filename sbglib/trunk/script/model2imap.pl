@@ -28,6 +28,8 @@ use SBG::U::Object qw/load_object/;
 use SBG::U::Run qw/frac_of getoptions start_lock end_lock/;
 use SBG::U::Log;
 
+use SBG::U::HTML qw/rcsb/;
+
 use SBG::NetworkIO::dot;
 
 my %ops = getoptions(
@@ -38,7 +40,7 @@ exit unless @ARGV;
 my $first = $ARGV[0];
 exit unless $first && -s $first;
 my $model = load_object($first);
-my $target = $model->target;
+my $target = $model->targetid;
 my $desc = $model->description;
 
 unless ( -f "${target}.dot") {
@@ -61,15 +63,16 @@ foreach my $file (@ARGV) {
       
     # Our own per-model graphic:
     mkdir $target;
-    my $id = $model->id;
+    my $id = $model->modelid;
     my $base = "${target}/${id}";
-    $net->id($id);
+    $net->targetid($target);
+    $net->modelid($id);
     my $modeldotio = SBG::NetworkIO::dot->new(file=>">${base}.dot");
     $modeldotio->write($net);
     map2html($target, $desc, $id, $base);
     _model($model, $base);
     
-    `cat ${base}.html >> ${target}/${target}.html`;
+#    `cat ${base}.html >> ${target}/${target}.html`;
     
 }
 $io->write_end();
@@ -78,7 +81,7 @@ $io->write_end();
 
 map2html($target,$desc);
 
-`cat ${target}.html >> all.html`;
+#`cat ${target}.html >> all.html`;
 
 exit;
 
@@ -89,6 +92,38 @@ sub _model {
 	my $target = $complex->target;
 	
     open my $fh, ">>${base}.html";
+
+    print $fh "<p>Model file: <a href=\"../${base}.pdb\">PDB</a></p>\n";
+#    print $fh "<p><a href=\"../${base}.dom\">STAMP DOM</a></p>\n";
+    
+    print $fh "<h2>Components</h2>\n";
+    
+    my @keys = $complex->keys->flatten;
+    my $char = ord('A');
+    foreach my $key (@keys) {
+        my $model = $complex->get($key);
+        my $seq = $model->query;
+        my $dom = $model->subject;
+
+        print $fh "<h3>", $model->gene(), "</h3>\n";        
+        print $fh "<p>CHAIN ", chr($char), "\n<p>";
+        foreach my $score ($model->scores->keys->flatten) {
+            print $fh "${score}=", $model->scores->at($score), " ";
+        }
+        print $fh "</p>\n";
+        my $basename = basename $dom->file;
+        my $pdbid = $dom->pdbid;
+        print $fh "<p>Modelled from: ";
+        print $fh "<a href=\"http://www.rcsb.org/pdb/explore/explore.do?structureId=$pdbid\">$pdbid</a></p>\n" if $pdbid;
+        print $fh "<p>", $basename, ' ', $dom->id, 
+            " { ", $dom->descriptor, " }</p>\n";
+        
+        # TODO BUG wrong if model has more than 26 chains
+        $char++;
+    }
+
+    print $fh "<h2>Interactions</h2>\n";
+
     foreach my $iaction ($complex->interactions->values->flatten) {
         print $fh "<p>\n";
         my $source = $iaction->source();
@@ -97,29 +132,6 @@ sub _model {
             print $fh "${score}=", $iaction->scores->at($score), " ";
         }
         print $fh "</p>\n";
-    }
-        
-    print $fh "<p><a href=\"../../models/${base}.pdb\">PDB</a></p>\n";
-    print $fh "<p><a href=\"../../models/${base}.dom\">STAMP DOM</a></p>\n";
-    
-    my @keys = $complex->keys->flatten;
-    my $char = ord('A');
-    foreach my $key (@keys) {
-        my $model = $complex->get($key);
-        my $seq = $model->query;
-        my $dom = $model->subject;
-        
-        print $fh "<p>CHAIN ", chr($char), " ", $model->gene(), " ";
-        foreach my $score ($model->scores->keys->flatten) {
-            print $fh "${score}=", $model->scores->at($score), " ";
-        }
-        print $fh "</p>\n";
-        
-        print $fh "<p>", $dom->file, ' ', $dom->id, " { ", $dom->descriptor, " }</p>\n";
-        
-        
-        # TODO BUG wrong if model has more than 26 chains
-        $char++;
     }
     
     close $fh;
@@ -134,15 +146,26 @@ sub map2html {
 	# Run graphviz, producing PNG and MAP files
     `circo -Tcmapx -o${base}.map -Tpng -o${base}.png ${base}.dot`;
 
+    my $html_fh;
+    
+    open $html_fh, ">>${base}.html";
+    print $html_fh <<EOF;
+<head>
+<style>p{font-family:"Monospace"}</style>
+</head><body>
+EOF
+    close $html_fh; 
+    
     # Note that the map contains the anchor that we want to link to. Put it first.
     `cat ${base}.map >> ${base}.html`;
-    open my $html_fh, ">>${base}.html";
+
+    open $html_fh, ">>${base}.html";
     print $html_fh <<EOF;
 <p>
 3DRepertoire complex <a href="http://3drepertoire.russelllab.org/Thing?db=3DR&type_acc=Complex&acc=${target}&source_acc=3DR">$target</a>
 </p>
 <p>
-$desc
+$desc (<a href="http://wodaklab.org/cyc2008/searchable?q=$desc">search CYC2008</a>)
 </p>
 <img src="${id}.png" usemap="#${id}" />
 <hr />
