@@ -10,8 +10,6 @@ B<load-ols.pl> - ordinary least squares variable weighting
 
 =head1 DESCRIPTION
 
-Need to remove NaN or nan 
-
 
 =head1 OPTIONS
 
@@ -44,14 +42,14 @@ use PDL::NiceSlice;
 use PDL::Stats::GLM;   # qw/ols/;
 use PDL::Stats::Basic; # qw/corr/;
 use PDL::IO::Misc qw/rcols/;
+use Statistics::Contingency;
 
 $PDL::IO::Misc::colsep = "\t";
-
 
 my $csvfile = shift || die;
 
 # Leave undefined to read all lines
-my $nlines = shift;
+my $nlines = shift || '';
 
 # Skip column headers
  my $inputlines = "1:$nlines";
@@ -60,28 +58,25 @@ my $nlines = shift;
 # 0-based column indexing
 my (
     $rmsd, 
-    
     $score, 
     $difficulty,
-    
     $pcclashes,
     
     $mndoms, 
-    $pdoms,
+    $pcdoms,
+    $mniactions,
+    $pciactions,
     $mseqlen, 
-    $pseqlen, 
-    $mnias, 
-    
+    $pcseqlen, 
+         
     $nsources, 
     $ncycles, 
-    $homology, # Non-numeric, belongs right after target
-     
+    $pcburied,
+    $glob,
+
     $scmax, 
     $scmed,
     $scmin,
-     
-    $glob,
-    $pcburied,
      
     $idmax, 
     $idmed,
@@ -103,17 +98,16 @@ my (
     $olmed,
     $olmin, 
     
-    $tid, $tdesc, $tndoms, $tseqlen, $tnias, $mid
+    $tid, $tdesc, $tndoms, $tniactions, $tseqlen, $mid, $homology
     ) = 
     rcols($csvfile, 
-          6..37,
+          7..38,
           {
-              PERLCOLS => [0..5],
+              PERLCOLS => [0..6],
               LINES => $inputlines,
-              EXCLUDE => "/nan/",
+              EXCLUDE => "/\t(nan|inf)\t/",
           },
     );
-
 
 # Dependent variable, object measure of similarity of model to known target
 # benchmark complex
@@ -124,21 +118,22 @@ my ($nmodels) = dims($y);
 # NB Can't use any emtpy columns;
 my $iv = cat 
     $pcclashes,
-#    $mndoms, # Ruins correlation, why? 
-    $pdoms,
+#    $mndoms, # Ruins correlation, why? Too discrete.
+
+    $pcdoms,
+    $mniactions,
+    $pciactions,
     $mseqlen, 
-    $pseqlen,
-    $mnias,
+    $pcseqlen,     
     
     $nsources, 
 #    $ncycles, # too often 0
+    $pcburied,
+    $glob,
      
     $scmax, 
     $scmed,
-    $scmin,
-     
-    $glob,
-    $pcburied,
+#    $scmin, # Ruins correlation, why? Too often 0
      
     $idmax, 
     $idmed,
@@ -175,7 +170,6 @@ print "$_\t$m{$_}\n" for (sort keys %m);
 print "\n";
 
 my $betas = $m{'b'};
-print "Variable weights (last is the constant):\n$betas\n";
 
 # Because betas contains a constant, add a column of ones to each observation
 my $ones = ones($nmodels);
@@ -219,4 +213,102 @@ print "\n";
 
 # Now correlate $m->{y_pred} and $y
 my $corr = $y->corr($m{'y_pred'});
-print "corr: $corr\n";
+print "corr on subset test: $corr\n";
+
+$corr = $rmsd->corr($score);
+print "corr rmsd:score : $corr\n";
+
+print "Variable weights (last is the constant):\n$betas\n";
+
+my @predicted = ($score <= 10)->list;
+my @correct = ($rmsd <= 10)->list;
+
+#print "predicted:\n@predicted\n";
+#print "correct:\n@correct\n";
+
+
+
+# ROC
+# 1 -sp = 1-tn/falses
+# sn = tp/trues
+
+
+my $rthresh = 10;
+my $sthresh = 10;
+my $tp = (($rmsd <= $rthresh) & ($score <= $sthresh))->sum;
+my $fp = (($rmsd  > $rthresh) & ($score <= $sthresh))->sum;
+my $fn = (($rmsd <= $rthresh) & ($score  > $sthresh))->sum;
+my $tn = (($rmsd  > $rthresh) & ($score  > $sthresh))->sum;
+my $sp = $tn/($fp+$tn);
+my $sn = $tp/($fn+$tp);
+my $ppv=$tp/($tp+$fp);
+my $acc = ($tp+$tn)/($tp+$tn+$fp+$fn);
+print "sp: $sp sn: $sn acc $acc\n";
+
+
+my @sp_1;
+my @sn;
+for (my $i=1; $i<=30;$i+=.5) {
+$sthresh = $i;
+my $tp = (($rmsd <= $rthresh) & ($score <= $sthresh))->sum;
+my $fp = (($rmsd  > $rthresh) & ($score <= $sthresh))->sum;
+my $fn = (($rmsd <= $rthresh) & ($score  > $sthresh))->sum;
+my $tn = (($rmsd  > $rthresh) & ($score  > $sthresh))->sum;
+my $sp = $tn/($fp+$tn);
+my $sn = $tp/($fn+$tp);
+#push @sp_1, int 100*( 1-$sp);
+#push @sn, int 100* $sn;
+push @sp_1, ( 1-$sp);
+push @sn, $sn;
+}
+use List::MoreUtils qw/mesh/;
+for (my $i = 0; $i < @sn; $i++) {
+	print $sp_1[$i], "\t", $sn[$i], "\n";
+}
+
+#print join(',', @sp_1), '|', join(',',@sn), "\n\n";
+
+
+use SBG::U::List qw/mapcolors/;
+
+my @r;
+my @s;
+my @sum;
+for (my $i=5; $i<=20;$i+=1.5) {
+    my $rthresh = $i;
+    for (my $j = 5; $j<=20;$j+=1.5) {
+        my $sthresh = $j;
+        
+my $tp = (($rmsd <= $rthresh) & ($score <= $sthresh))->sum;
+my $fp = (($rmsd  > $rthresh) & ($score <= $sthresh))->sum;
+my $fn = (($rmsd <= $rthresh) & ($score  > $sthresh))->sum;
+my $tn = (($rmsd  > $rthresh) & ($score  > $sthresh))->sum;
+my $sp = $tn/($fp+$tn);
+my $sn = $tp/($fn+$tp);
+my $ppv=$tp/($tp+$fp);
+my $acc = ($tp+$tn)/($tp+$tn+$fp+$fn);
+push @r, $i;
+push @s, $j;
+# Map the value [0:2] somewhere between red (0) and green (2)
+my $color = mapcolors($sp+$sn, 0, 2, '#ff0000', '#00ff00');
+$color =~ s/#//;
+#push @sum, $color;
+#push @sum, int 500 *($sp+$sn-1);
+#push @sum, int 100 *($ppv);
+push @sum, int 100 *($acc);
+    }
+}
+
+#print join(',', @r), '|', join(',',@s), '|', join(',', @sum), "\n";
+
+
+#my $cont = Statistics::Contingency->new(categories=>[0,1]);
+#$cont->set_entries($tp, $fp, $fn, $tn);
+##$cont->add_result(\@predicted, \@correct);
+
+#print $cont->stats_table; # Show several stats in table form
+#my $stats = $cont->category_stats;
+#use Data::Dump qw/dump/;
+#dump $stats;
+
+
