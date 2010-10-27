@@ -50,6 +50,8 @@ use Carp;
 
 use PDL::Lite;
 use PDL::Core qw/pdl squeeze zeroes sclr/;
+use Statistics::Lite qw/stddev/;
+
 use Log::Any qw/$log/;
 use bignum; # qw/inf/;
 
@@ -59,7 +61,7 @@ use Bio::Tools::Run::Alignment::Clustalw;
 
 use SBG::Types qw/$pdb41/;
 use SBG::U::List 
-    qw/interval_overlap intersection mean min sum flatten swap cartesian_product/;
+    qw/interval_overlap intersection mean min max median sum flatten swap between cartesian_product/;
 use SBG::U::RMSD;
 use SBG::U::iRMSD; # qw/irmsd/;
 use SBG::STAMP; # qw/superposition/
@@ -69,6 +71,8 @@ use SBG::U::DB qw/chain_case/;
 use SBG::Run::PairedBlast qw/gi2pdbid/;
 use SBG::Run::pdbseq qw/pdbseq/;
 use SBG::Run::naccess qw/buried/;
+use SBG::Run::qcons qw/qcons/;
+
 
 # Complex stores these data structures
 use SBG::Superposition;
@@ -90,7 +94,7 @@ use SBG::U::CartesianPermutation;
 use SBG::Run::pdbc qw/pdbc/;
 
 
-=head2 id
+=head2 modelid
 
  Function: 
  Example : 
@@ -100,22 +104,30 @@ use SBG::Run::pdbc qw/pdbc/;
 Convenience label
 
 =cut
-has 'id' => (
+has 'modelid' => (
     is => 'rw',
     isa => 'Str',
     );
 
 
-=head2 target
+=head2 targetid
 
 The label / accession / idenftifier for the complex we are trying to build
 =cut
-has 'target' => (
+has 'targetid' => (
     is => 'rw',
     isa => 'Str',
     );
-    
 
+=head2 target
+
+For benchmarking the complex representing the native structure can be provided.
+=cut
+has 'target' => (
+    is => 'rw',
+    isa => 'Maybe[SBG::Complex]',
+    );
+    
 # Cluster, for duplicate complexes
 has 'class' => (
     is => 'rw',
@@ -147,8 +159,10 @@ sub clear {
     $self->clear_vmdclashes();
     $self->clear_homology();
     $self->clear_score();
-    $self->clear_features();
+    $self->clear_score_weights();
+    $self->clear_scores();
     $self->clear_modelled_coords();
+    $self->clear_correspondance();
     $self->clear_network();
     $self->clear_globularity();
     $self->clear_buried_area();
@@ -173,7 +187,7 @@ has 'description' => (
     );
 sub _build_description {
     my ($self) = @_;
-    my $target = $self->target;
+    my $target = $self->targetid;
     return unless $target;
     my ($pdbid, $tdrid);
     ($pdbid) = $target =~ /$pdb41/;
@@ -305,7 +319,7 @@ has 'clashes' => (
 # Should not be much more than 1.5 
 has 'vmdclashes' => (
     is => 'rw',
-    isa => 'Num',
+    isa => 'Maybe[Num]',
     lazy_build => 1,
     clearer => 'clear_vmdclashes',
 );
@@ -364,62 +378,224 @@ sub _build_homology {
     my ($self, ) = @_;
     my @cc = $self->symmetry->flatten;
     # The components actually being modelled in this complex, sorted by class,
-    # since we about to generate permutations of each class. The order of the
+    # since we are about to generate permutations of each class. The order of the
     # classes in @cc must be the same as the order of classes in $model I.e. if
     # class [B E] is first in @cc, then any B or E present must also be first in
     # $model
     my $keys = $self->keys;
-    # Model componentspresent, grouped by class
+    # Model components present, grouped by class
     my $model = [ map { scalar _members_by_class($_, $keys) } @cc ];
     # Flat list
     my @model = flatten $model;
     # Counts per class
     my $kclass = $model->map(sub{$_->length});
+    # Number of members in each class, e.g. [1,3,2,1]
     return $kclass;
 }
 
 
-=head2 score
-
- Function: 
- Example : 
- Returns : 
- Args    : 
-
-
-Combined score of all domain models in a complex
-
-=cut
-has 'score' => (
-    is => 'rw',
-    lazy_build => 1,
-    clearer => 'clear_score',
+# The order of these keys must match the weights 
+has '+score_keys' => (
+    default => sub { [
+    qw/pcclashes/,          # % all-atom clashes
+    qw/pcdoms/,             # % of modelled components (of target)
+    qw/mniactions/,         # # of interactions in model
+    qw/pciactions/,         # % of modelled interactions (of target)
+    qw/mseqlen/,            # Length of sequence modelled, over all proteins
+    qw/pcseqlen/,           # % of sequence length coverage
+    qw/nsources/,           # Number of PDB IDs over all templates used
+    qw/pcburied/,           # % of SAS buried in complex
+    qw/glob/,               # Globularity of complex [0:1]
+    qw/scmax/,
+    qw/scmed/,
+#    qw/scmin/,
+    qw/idmax idmed idmin/,
+    qw/ifacelenmax ifacelenmed ifacelenmin/,
+    qw/iweightmax iweightmed iweightmin/,
+    qw/seqcovermax seqcovermed seqcovermin/,
+    ] }, 
     );
-
-sub _build_score {
-    my ($self) = @_;
-
-    return 1;
-}
-
-
-=head2 features
-
-Any key/value pairs to be used for machine learning
-
-Belongs in a Role::Features
-
-=cut
-has 'features' => (
-    is => 'rw',
-    isa => 'HashRef',
-    lazy_build => 1,
-    clearer => 'clear_features',
-    );
-sub _build_features {
-    my ($self) = @_;
     
-}
+# Final values is the constant
+has '+score_weights' => (
+
+# Weight derived from training set
+#default => sub { pdl qw/  
+#    1.0002784 -0.2046164  2.7741565 0.16234106 0.0022509768  -0.120098 -2.0390062 -0.32646872 -0.084590743  2.0155693   -2.62743 -0.055864886   0.193755 0.0080261051 0.030088151 -0.026983958 -0.032871555 0.21712407 -0.30196551 -0.24303391 0.0089509951 0.060238428 0.05075979  47.827834
+#    /},
+    
+# Weights from entire set (training + test sets)
+    default => sub { pdl qw/
+    0.18339077 -0.25231889   2.797613 0.15700415 0.0046757956 -0.10488408 -0.4795089 -0.26835171 -0.059896217  1.4270931 -2.3454635 0.0064867146 0.18846124 0.01793003 -0.015299134 0.023561227 -0.054708354 0.036664054 -0.28909752 -0.21574682 -0.021124081 0.099562617 0.0085258907  55.099234
+    /},
+
+
+    );
+
+
+
+    
+
+# Override from Role::Scorable
+sub _build_scores {
+    my ($model) = @_;
+    my $stats = {};
+    $log->debug($model);
+        
+    $stats->{'mid'} = $model->modelid();
+    $stats->{'tid'} = $model->targetid();
+    $stats->{'tdesc'} = $model->description;    
+
+    # Number of Components that we were trying to model
+    my @tdoms = flatten $model->symmetry;
+    my $tndoms = @tdoms;
+    $stats->{'tndoms'} = $tndoms;
+    # Number of domains modelled 
+    my $dommodels = $model->models->values;
+    my $mndoms = $stats->{'mndoms'} = keys %{$model->models};
+    # Percentage of component coverage, e.g. 3/5 components => 60
+    $stats->{'pcdoms'} = 100.0 * $mndoms / $tndoms;
+
+
+    # Number of interactions modelled
+    my $mniactions = $stats->{'mniactions'} = keys %{$model->interactions};
+    
+    $log->debug("mniactions $mniactions");
+    
+
+    my $target = $model->target();
+    # Number of interactions to be modelled in target
+    my $tniactions = defined($target) ? $model->target->network->edges : 'nan';
+    $stats->{'tniactions'} = $tniactions;
+    $stats->{'pciactions'} = 
+        defined($target) ? 100.0 * $mniactions / $tniactions : 'nan';
+    
+    # TODO need to grep for defined($_) ? (also for n_res ? )
+    my $ids = $dommodels->map(sub{$_->scores->at('seqid')});
+    $stats->{'idmin'} = min $ids;
+    $stats->{'idmax'} = max $ids;
+    $stats->{'idmed'} = median $ids;
+        
+    # Model: interactions
+    my $mias = $model->interactions->values;
+    
+    my $avg_seqids = $mias->map(sub{$_->scores->at('avg_seqid')});
+    
+    $stats->{'n0'}   = $avg_seqids->grep(sub{between($_,  0, 40)})->length;
+    $stats->{'n40'}  = $avg_seqids->grep(sub{between($_, 40, 60)})->length;
+    $stats->{'n60'}  = $avg_seqids->grep(sub{between($_, 60, 80)})->length;
+    $stats->{'n80'}  = $avg_seqids->grep(sub{between($_, 80,100)})->length;
+    $stats->{'n100'} = $avg_seqids->grep(sub{between($_,100,101)})->length;
+            
+    
+    # Number of residues in contact in an interaction, averaged between 2
+    # interfaces.
+    my $nres = $mias->map(sub{$_->scores->at('avg_n_res')});
+    $stats->{'ifacelenmin'} = min $nres;    
+    $stats->{'ifacelenmax'} = max $nres;
+    $stats->{'ifacelenmed'} = median $nres;
+
+    # Docking, when used
+    my $docked = $mias->map(sub{$_->scores->at('docking')})->grep(sub{defined});
+    
+    $stats->{'dockmin'} = min $docked;    
+    $stats->{'dockmax'} = max $docked;
+    $stats->{'dockmed'} = median $docked;
+    $stats->{'ndockless' } = $docked->grep(sub{$_ && $_<1386 })->length;
+    $stats->{'ndockgreat'} = $docked->grep(sub{$_ && $_>=1386})->length;
+    # For each score less than 2000, penalize by the diff/1000
+    # E.g. each score of 1750 is penalized by (2000-1750)/1000 => .25
+    $stats->{'dockpenalty'} = $docked->map(sub{(2000-$_)/1000.0})->sum;
+    
+    # Interprets, when available
+    my $ipts = $mias->map(sub{$_->scores->at('interpretsz')});
+    $stats->{'iptsmin'} = min $ipts;    
+    $stats->{'iptsmax'} = max $ipts;
+    $stats->{'iptsmed'} = median $ipts;
+
+    # Number of template PDB structures used in entire model
+    # TODO belongs in SBG::Complex
+    my $idomains = $mias->map(sub{$_->domains->flatten});
+    my $ipdbs = $idomains->map(sub{$_->file});
+    my $nsources = scalar List::MoreUtils::uniq $ipdbs->flatten;
+    $stats->{'nsources'} = $nsources;
+
+    # This is the sequence from the structural template used
+    my $mseqlen = $dommodels->map(sub{$_->subject->seq->length})->sum;
+    $stats->{'mseqlen'} = $mseqlen;
+    # Length of the sequences that we were trying to model, original inputs
+    # TODO DEL workaround for not having 'input' set for docking templates
+    my $inputs = $dommodels->map(sub{$_->input || $_->query});
+    my $tseqlen = $inputs->map(sub{$_->length})->sum;
+    $stats->{'tseqlen'} = $tseqlen;
+    # Percentage sequence coverage by the complex model
+    my $pcseqlen = 100.0 * $mseqlen / $tseqlen;
+    $stats->{'pcseqlen'} = $pcseqlen;
+
+    # Sequence coverage per domain
+    my $pdomcovers = $dommodels->map(sub{$_->coverage()});
+    $stats->{'seqcovermin'} = min $pdomcovers;
+    $stats->{'seqcovermax'} = max $pdomcovers;
+    $stats->{'seqcovermed'} = median $pdomcovers;
+
+
+    # Edge weight, generally the seqid
+    my $weights = $mias->map(sub{$_->weight});
+    # Average sequence identity of all the templates.
+    # NB linker domains are counted multiple times. 
+    # Given a hub proten and three interacting spoke proteins, there are not 4
+    # values for sequence identity, but rather 2*(3 interactions) => 6
+    $stats->{'iweightmin'} = min $weights;
+    $stats->{'iweightmax'} = max $weights;
+    $stats->{'iweightmed'} = median $weights;
+
+    # Linker superpositions required to build model by overlapping dimers
+    my $superpositions = $model->superpositions->values;
+    # Sc scores of all superpositions done
+    my $scs = $superpositions->map(sub{$_->scores->at('Sc')});
+    $stats->{'scmin'} = min $scs;
+    $stats->{'scmax'} = max $scs;
+    $stats->{'scmed'} = median $scs;
+
+    # Globularity of entire model
+    $stats->{'glob'} = $model->globularity();
+    
+    $stats->{'pcburied'} = $model->buried_area() || 'NaN';
+    
+    $stats->{'pcclashes'} = $model->vmdclashes();
+
+    # Fraction overlaps between domains for each new component placed, averages
+    my $overlaps = $model->clashes->values;
+    $stats->{'olmin'} = min $overlaps;
+    $stats->{'olmax'} = max $overlaps;
+    $stats->{'olmed'} = median $overlaps;
+
+    # Number of closed rings in modelled structure, using known interfaces
+    $stats->{'ncycles'} = $model->ncycles();
+
+    my $homology = $model->homology;
+    my $present_homology = $homology->grep(sub{$_>0});
+    $stats->{'homo'} = $present_homology->length == 1 ? 1 : 0;
+    $stats->{'homology'} = $present_homology->join('-');
+
+    # subjective level of difficulty
+    # TODO DEL
+    $stats->{'difficulty'} = 0;
+    
+#    print Dumper $stats;
+#    exit;
+    
+    # Format any objects/complex numbers as simple numbers again
+    foreach my $key (keys %$stats) {
+    	if (ref($stats->{$key}) =~ /^Math::Big/) {
+    		$stats->{$key} = sprintf "%g", $stats->{$key}->numify();
+    	}
+    }
+    
+    $log->debug(Dumper $stats);
+    
+    return ($stats);    
+} # _build_scores
 
 
 ###############################################################################
@@ -532,6 +708,7 @@ has 'correspondance' => (
     is => 'rw',
     isa => 'HashRef[Str]',
     default => sub { {} },
+    clearer => 'clear_correspondance',
     );
 
 
@@ -670,10 +847,10 @@ sub _build_network {
         } else {
             foreach my $key (@{$i->keys}) {
                 push(@nodes,
-                     SBG::Node->new(SBG::Seq->new(-display_id=>$_)));
+                     SBG::Node->new(SBG::Seq->new(-display_id=>$key)));
             }
         }
-        $net->add_node($_) for @nodes;
+        
         $net->add_interaction(
             -nodes=>[@nodes],-interaction=>$i);
     }
@@ -1315,6 +1492,7 @@ sub rmsd_class {
     my $bestrmsd = $maxnum;
     my $besttrans;
     my $bestmapping;
+    my $bestnatoms;
     my $besti = -1;
 
     # The complex model knows the symmetry of the components being built, even
@@ -1342,44 +1520,65 @@ sub rmsd_class {
     my $icart = 0;
     my $ncarts = $pm->cardinality;
 
+    # Measure the rate of improvement of the RMSD, give up when it flattens
+    my $rate_rmsd;
+    my $ref_rmsd;
+    
     while (my $cart = $pm->next) {
         $icart++;
         my @cart = flatten $cart;
         # Map each component present to a possible component in the benchmark
         my %mapping = mesh(@model, @cart);
 
+        # TODO verify that current connection topology is subgraph of target
+        # Shortcut: for each edge in model, is it in the target?
+        # Use the current mapping. If not, can skip RMSD calculation
+
         # Test this mapping
-        my ($trans, $rmsd) = 
+        my ($trans, $rmsd, $natoms) = 
 #            rmsd_mapping($self, $other, \@model, \%mapping);
             rmsd_mapping_backbone($self, $other, \@model, \%mapping);
 
-        $log->debug("rmsd \#$icart / $ncarts: ", $rmsd || 'undef');
+        if (! defined $rmsd) {
+            $log->debug("RMSD \#$icart undef");
+            next;
+        } 
+        
+        $log->debug("rmsd \#$icart / $ncarts: $rmsd");
         $log->debug("bestrmsd \#$besti: ", $bestrmsd||'undef');
-        $log->debug("rmsd<bestrmsd: ", 
+        $log->debug("is rmsd < bestrmsd: ", 
                     defined($rmsd) && defined($bestrmsd) && $rmsd<$bestrmsd);
-        next unless defined $rmsd;
+
+        # TODO could also do a weighting here:
+        # (slightly worse RMSD over many more atoms could be better choice)
         if (! defined($bestrmsd) || $rmsd < $bestrmsd) {
             $bestrmsd = $rmsd;
             $besttrans = $trans;
+            $bestnatoms = $natoms;
             $bestmapping = \%mapping;
             $besti = $icart;
-            $log->debug("better rmsd \#$icart: $rmsd via: @cart");
+            $log->debug("better rmsd \#$icart: $rmsd ($natoms CAs) via: @cart");
         }
-        # Shortcut for bailing out early, if the answer is already good enough
-        # I.e. accept 10A if 10,000 tries already, or accept < 1A if 1000 tries
-        if (! ($icart % 1000)) {
-            for my $i (1..20) {
-                if ($bestrmsd < $i && $icart > $i * 10_000) {
-                    $log->info("Good enough: $bestrmsd");
-                    return wantarray ? 
-                        ($besttrans, $bestrmsd, $bestmapping) : $bestrmsd;
-                }
-            }
+        
+        # Quit if we're not improving
+        # Start with the first RMSD as a refernce
+        $ref_rmsd ||= $bestrmsd;
+        my $nsteps = 1000;
+        my $thresh = 0.01; # 1%
+        if (0 == $icart % $nsteps) {
+        	my $improved = $ref_rmsd - $bestrmsd;
+        	my $rate = $improved / $ref_rmsd;
+        	# Reset for next round
+        	$ref_rmsd = $bestrmsd;
+        	if ($rate < $thresh) {
+        		# Improved less than $thresh in $nsteps;
+                $log->info("Rate $rate ($improved in $nsteps) < $thresh");
+                last;
+        	}
         }
-        last if $icart > 500_000;
     }
-    
-    return wantarray ? ($besttrans, $bestrmsd, $bestmapping) : $bestrmsd;
+    $log->info("Final RMSD: $bestrmsd");    
+    return wantarray ? ($besttrans, $bestrmsd, $bestmapping, $bestnatoms) : $bestrmsd;
     
 } # rmsd_class
 
@@ -1454,7 +1653,7 @@ sub rmsd_mapping {
  Args    : 
 
 Uses the aligned residue correspondance to determine the RMSD over the aligned
-backbone. The residues correspondance is extracted from the sequence
+backbone. The residue correspondance is extracted from the sequence
 alignment. The sequence coords are then mapped, via DB::res_mapping to residue
 IDs, whose coordinates are extracted from the native structures, then any
 transformation is applied to set the frame of reference. This is done for every
@@ -1483,10 +1682,12 @@ sub rmsd_mapping_backbone {
 
     my $selfdomcoords = [];
     my $otherdomcoords = [];
-
+    # unique object key
+    my $refaddr = refaddr $self;
+    
     foreach my $selflabel (@$keys) {
         my $otherlabel = $mapping->{$selflabel} || $selflabel;
-        my $cachekey = join '--', $self->id, $selflabel, $otherlabel;
+        my $cachekey = join '--', $refaddr, $selflabel, $otherlabel;
         my $mcoords = $modelled_coords->{$cachekey};
         my $ncoords = $native_coords->{$cachekey};
 
@@ -1523,13 +1724,16 @@ sub rmsd_mapping_backbone {
     $selfcoords = $selfcoords->clump(1,2) if $selfcoords->dims == 3;
     $othercoords = $othercoords->clump(1,2) if $othercoords->dims == 3;
         
+    my $natoms = $selfcoords->getdim(1);
+    $log->debug("RMSD over $natoms C-alpha atoms");
+    
     # Least squares fit of all coords in each complex
     # Maximum 1000 refinement steps (unless it converges sooner)
     my $trans = SBG::U::RMSD::superpose($selfcoords, $othercoords, 1000); 
     # Now it has been transformed already. Can measure RMSD of new coords
     my $rmsd = SBG::U::RMSD::rmsd($selfcoords, $othercoords);
     $log->debug("Potential rmsd:", $rmsd, " via: ", join ' ', %$mapping);
-    return wantarray ? ($trans, $rmsd) : $rmsd;
+    return wantarray ? ($trans, $rmsd, $natoms) : $rmsd;
     
 } # rmsd_mapping_backbone {
 
@@ -1691,7 +1895,16 @@ sub _setcrosshairs {
 } # _setcrosshairs
 
 
+# TODO DES belongs in a Role, as there may be many approaches to finding these
+sub contacts {
+    my ($self) = @_;
 
+    my $contacts = qcons($self->domains);
+    
+    return $contacts;    
+}
+
+    
 __PACKAGE__->meta->make_immutable;
 no Moose;
 1;
