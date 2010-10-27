@@ -64,7 +64,11 @@ has 'seed' => (
     isa => 'SBG::Complex',
     );
     
-
+has 'target' => (
+    is => 'rw',
+    isa => 'SBG::Complex',
+    );
+    
 # Number of solved partial solutions
 has 'solutions' => (
     is => 'rw',
@@ -151,28 +155,8 @@ sub _build_gh {
 has 'pattern' => (
     is => 'ro',
     isa => 'Str',
-    default => '%s%05d',
+    default => '%s%02d',
     );
-
-
-has 'name' => (
-    is => 'ro',
-    isa => 'Str',
-    );
-
-
-has 'dir' => (
-    is => 'ro',
-    isa => 'Str',
-    lazy_build => 1,
-    );
-
-
-sub _build_dir {
-    my ($self) = @_;
-    return $self->name || '.';
-}
-
 
 
 =head2 overlap_thresh
@@ -213,6 +197,22 @@ has 'irmsd_thresh' => (
     );
     
     
+=head2 callback 
+
+Function to call with each solution SBG::Complex
+
+Function will be called with:
+ 1) model isa SBG::Complex
+ 2) class isa Int
+ 3) duplicate isa Bool
+  
+=cut
+has 'callback' => (
+    is => 'rw',
+    isa => 'CodeRef',
+);
+  
+  
 =head2 test
 
  Function: 
@@ -249,7 +249,11 @@ sub test {
     
     if (! $uf->has($src) && ! $uf->has($dest) ) {
         # Neither node present in solutions forest. Create dimer
-        $merged_complex = SBG::Complex->new(symmetry=>$self->net->symmetry);
+        $merged_complex = SBG::Complex->new(
+            targetid=>$self->net->targetid(),
+            target=>$self->target(),
+            symmetry=>$self->net->symmetry(),
+            );
         $merged_score = 
             $merged_complex->add_interaction(
                 $iaction, $iaction->keys, $self->overlap_thresh);
@@ -372,7 +376,11 @@ sub _add_monomer {
     my ($self, $state, $iaction, $ref) = @_;
     $log->debug($iaction);
     # Create complex out of a single interaction
-    my $add_complex = SBG::Complex->new(symmetry=>$self->net->symmetry);
+    my $add_complex = SBG::Complex->new(
+            targetid=>$self->net->targetid(),
+            target=>$self->target(),
+            symmetry=>$self->net->symmetry(),
+            );
     $add_complex->add_interaction(
         $iaction, $iaction->keys, $self->overlap_thresh);
 
@@ -419,59 +427,57 @@ sub solution {
 
     if ($self->maxsolutions && $self->classes >= $self->maxsolutions) {
     	$log->info("Max solutions reached: ", $self->maxsolutions);
+    	# Stop entire traversal
     	return -1;
     } 
 
     # Uninteresting unless at least two interfaces in solution
-    return 0 unless defined($complex) && $complex->size >= $self->minsize;     
+    unless (defined($complex) && $complex->size >= $self->minsize) {
+        $log->debug("Complex size ", $complex->size, 
+            " <= minsize ", $self->minsize);
+        return 0;
+    }
     
     # A new solution
     $self->solutions($self->solutions+1);
 
-    # Get domains and their coords out of the complex model
-    my $componentlabels = $complex->keys;
-    my $doms = $complex->domains;
-
-    # Use only the centroid point, less accurate, but sufficient
-    my $coords = $doms->map(sub{$_->centroid});
-
-    # Check if duplicate, based on geometric hash
-    # exact() requires that the sizes match on both sides (i.e. no subsets)
-    # Not using labels by default, as components can be homologous
-#     my $class = $self->gh->exact($coords, $componentlabels);
-    my $class = $self->gh->exact($coords);
+    # Check duplicate
+    my ($class, $coords) = $self->_check_dup($complex);
 
     my $score = $complex->score;
-
+    $log->debug("score $score");
+    
+    # If duplicate
     if (defined $class) {
-        $self->dups($self->dups+1);
-        $log->debug('Duplicate solution. Total duplicates: ', $self->dups);
-        if ($score && $score > $self->best->at($class)) {
+        $self->best->{$class} ||= $score; 
+        # Smaller scores are better (approximates RMSD)
+        if ($score && $score < $self->best->at($class)) {
+            return 0 if $self->_check_clashes($complex);
             $log->info(
-                "Replacing best solution for class: $class, score: $score");
-            $self->_write_solution($complex, $class);
+                "Replacing best solution for class: $class with score: $score");
+            $self->_return_solution($complex, $class, 1);
             $self->best->put($class, $score);
         }
         return 0;
     } else {
-        # undef => Don't name the model
-        # Not using labels by default, as components can be homologous
-#         $class = $self->gh->put(undef, $coords, $componentlabels);
-        $class = $self->gh->put(undef, $coords);
-        return 0 unless defined $class;
-
-        my $clashes = $complex->vmdclashes();
-        unless ($clashes <= $self->clash_thresh) {
-            $log->info("Clashes ($clashes) exceeds threshold ", 
-                $self->clash_thresh);
-            return 0;
+        if ($self->binsize < 0) {
+            # GH redundancy check disabled
+        	$class = $self->solutions;
+        } else {
+            # Not using $componentlabels by default, 
+            # as components can be homologous
+            # undef implies that model is unnamed
+            $class = $self->gh->put(undef, $coords);
         }
+        return 0 unless defined $class;
+        $log->info("New solution class: $class");
 
+        return 0 if $self->_check_clashes($complex);
+    
         $self->best->put($class, $score);
         # Counter for classes created so far
-#         $self->classes($class) unless $class < $self->classes;
         $self->classes($self->classes+1);
-        $log->debug("Class ", $class);
+        $log->debug("Class $class score $score");
 
         # Count number of occurences of unique complex solution *of this size*
         my $sizeclass = $complex->size;
@@ -480,50 +486,103 @@ sub solution {
 
         $log->info(join "\t", $self->stats);
 
-        $self->_write_solution($complex, $class);
+        $self->_return_solution($complex, $class);
     }
 
-    $self->_status();
     # Let caller know that we accepted solution
     return 1;
 
 } # solution
 
 
-sub _write_solution {
-    my ($self, $complex, $class) = @_;
-    
-    # Write solution to file, append an optional name and model solution
-    # counter
-    my $label = sprintf($self->pattern, 
-                        $self->name ? $self->name . '-' : '',
-                       $class, 
-            );
-    $complex->id($label);
-    $complex->class($class);
-    my $file .= $label . '.model';
-    mkdir $self->dir;
-    $file = catfile($self->dir, $file) if -d $self->dir;
+sub _check_dup {
+    my ($self, $complex) = @_;
 
-    $complex->store($file);
-#     $complex->write('pdb', file=>">${file}.pdb");
-
-} # _write_solution
-
-
-sub _status {
-    my ($self) = @_;
-
-
-    # Flush console and setup in-line printing, unless redirected
-    if (-t STDOUT) {
-        local $| = 1;
-        my %stats = $self->stats;
-        print "\033[1K\r"; # Carriage return, i.e. w/o linefeed
-        # Print without newline
-        print join("\t", $self->stats), " ";
+    # Disable GeometricHash filtering of redundant complexes when binsize < 0
+    unless ($self->binsize >= 0) {
+        $log->info("GeometricHash redundancy test disabled");
+        return;
     }
-} # _status
+        
+    # Get domains and their coords out of the complex model
+    my $componentlabels = $complex->keys;
+    my $doms            = $complex->domains;
+    # Use only the centroid point, less accurate, but sufficient
+    my $coords = $doms->map( sub { $_->centroid } );
+
+    # Check if duplicate, based on geometric hash
+    # exact() requires that the sizes match on both sides (i.e. no subsets)
+    # Not using labels by default, as components can be homologous
+    #     my $class = $self->gh->exact($coords, $componentlabels);
+    $log->debug( "binsize ", $self->binsize );
+    my $class = $self->gh->exact($coords);
+    if (defined $class) {
+        $self->dups($self->dups+1);
+        $log->debug("Duplicate of class $class. Duplicates: ", $self->dups);
+    }
+    return wantarray ? ($class, $coords) : $class;
+}
+
+
+sub _check_clashes {
+    my ($self, $complex) = @_;
+
+    my $clashes = $complex->vmdclashes();
+    unless ( $clashes <= $self->clash_thresh ) {
+        $log->info( "Clashes ($clashes) exceeds threshold ",
+            $self->clash_thresh );
+        return 1;
+    }
+    return 0;
+}
+
+
+# Write solution to file, append an optional name and model solution
+# counter
+sub _return_solution {
+    my ($self, $complex, $class, $duplicate) = @_;
+            
+    my $label = sprintf($self->pattern, '', $class);
+    $complex->modelid($label);
+    $complex->class($class);
+        
+    # Superpose to target, if given (do this after setting the model id)
+    _benchmark($complex, $self->target);
+
+    my $callback = $self->callback;
+    return unless defined $callback;
+    $callback->($complex, $class, $duplicate, $self->stats);
+        
+} # _return_solution
+
+
+# TODO belongs in SBG::Complex, called from Complex::_build_scores
+
+sub _benchmark {
+    my ($model, $target) = @_;
+    return unless defined $target;
+    $log->debug("model $model");
+    $log->debug("target ", $model->targetid);
+    
+    # Target complex to be benchmarked against
+    $model->target($target);
+    
+    my ($benchmatrix, $benchrmsd, $benchmapping, $benchnatoms) = 
+        $model->rmsd_class($target);
+    $log->debug($benchrmsd);
+    $log->debug($benchmatrix);
+        if (defined $benchmatrix) {
+            # Do the actual superposition onto the target
+            $model->transform($benchmatrix);
+            $model->scores->put('rmsd', $benchrmsd);
+            $model->scores->put('rmsdnatoms', $benchnatoms);
+            $model->correspondance($benchmapping);
+        } else {
+            $benchrmsd = 'NaN';
+        }
+    
+    return wantarray ? ($benchrmsd, $benchmatrix, $benchnatoms) : $benchrmsd;
+}
 
 
 sub stats {
@@ -537,7 +596,7 @@ sub stats {
         );
     push(@stats, ("${_}mers", $self->sizes->at($_))) for @sizes;
 
-    return @stats;
+    return \@stats;
 }
 
 
@@ -545,5 +604,8 @@ sub stats {
 __PACKAGE__->meta->make_immutable;
 no Moose;
 1;
+
+
+
 
 

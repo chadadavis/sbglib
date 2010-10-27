@@ -53,6 +53,10 @@ Maximum number of models to build per complex
 
 Will using the SBG::Complex in the model file as a starting point. Note that the network will need to include protein components with the same names. I.e. it will not (yet) add abitrary components to arbitrary structures. Rather a smaller subset of an interaction network can be built, with its corresponding complex modls. If one of these models forms a good basis, the larger interaction network can be built, and the time-consumig model builing in the larger interaction network will be reduced, as the seed complex will be the starting point and will not be disassembled.
 
+=head2 -target <some-complex.target>
+
+Will load the structure in the given complex file and use it to benchmark the models generated.
+
 
 =head1 GENERIC OPTIONS
 
@@ -122,6 +126,38 @@ L<SBG::CA::Assembler2> , L<SBG::Network> , L<SBG::SearchI>
 use strict;
 use warnings;
 
+# Send this off to PBS first, if possible, before loading other modules
+use SBG::U::Run 
+    qw/frac_of getoptions start_lock end_lock start_log @generic_options/;
+
+# Options must be hard-coded, unfortunately, as local variables cannot be used
+use PBS::ARGV @generic_options, 
+    (
+    'complete|c',
+    'overlap_thresh|o=f',
+    'minsize|s=s', 
+    'binsize|b=f', 
+    'clash_thresh=f',
+    'maxsolutions=i',
+    'seed=s',
+    'target=s',
+    'outputs=s',
+    );
+    
+my %ops = getoptions @generic_options, 
+    (
+    'complete|c',
+    'overlap_thresh|o=f',
+    'minsize|s=s', 
+    'binsize|b=f', 
+    'clash_thresh=f',
+    'maxsolutions=i',
+    'seed=s',
+    'target=s',
+    'outputs=s',
+    );
+    
+use Moose::Autobox;
 use POSIX qw/ceil/;
 use File::Basename;
 use Hash::MoreUtils qw/slice_def/;
@@ -134,32 +170,11 @@ use FindBin qw/$Bin/;
 use lib "$Bin/../lib/";
 use SBG::Role::Storable qw/retrieve/;
 use SBG::U::Object qw/load_object/;
-use SBG::U::Run qw/frac_of getoptions start_lock end_lock/;
 use SBG::U::Log;
 use SBG::Complex;
 use SBG::CA::Assembler2;
 use Graph::Traversal::GreedyEdges;
-use PBS::ARGV qw/qsub/;
 
-
-
-
-
-my %ops = getoptions(
-    'complete|c',
-    'overlap_thresh|o=f',
-    'minsize|s=s', 
-    'binsize|b=f', 
-    'clash_thresh=f',
-    'maxsolutions=i',
-    'seed=s',
-    );
-
-
-# Try to submit to PBS, for each argument in @ARGV
-# Recreate command line options;
-my @jobids = qsub(throttle=>1000, blocksize=>$ops{'blocksize'}, options=>\%ops);
-# @ARGV is empty if all jobs could be submitted
 
 
 foreach my $file (@ARGV) {
@@ -168,20 +183,18 @@ foreach my $file (@ARGV) {
         $file = PBS::ARGV::linen($file, $ops{'J'});
     }
 
-    my $basename = basename($file,'.network');
-    my $outdir = $basename;
-    $ops{'logdir'} = $outdir;
-    my $basepath = catfile($outdir, $basename);
-    mkdir $outdir;
-    my $lock = start_lock($basepath);
+    my $targetid = basename($file,'.network');
+    mkdir $targetid;
+    my $output = catfile($targetid, $targetid . '.model');
+    my $lock = start_lock($output);
     next if ! $lock && ! $ops{'debug'};
 
-    # Setup new log file specific to given input file
-    SBG::U::Log::init($basename, %ops);
+    start_log($output, %ops);
 
-    # Mark jobs that are tried, but not done, deleted when done
-    open my $triedfile, "$basename.trying";
-    close $triedfile;
+    # A cheap way to track what crashes before finishing
+    my $tryingfile = $output . '.trying';
+    open my $tryingfh, ">$tryingfile";
+    close $tryingfh;
 
     # Load the Network object
     my $net;
@@ -189,7 +202,7 @@ foreach my $file (@ARGV) {
         $log->error("$file is not an object");
         next;
     }
-    _print_net($basename, $net);
+    _print_net($net);
 
     $ops{minsize} = 3 unless defined $ops{minsize};
     # Only full-size (complete coverage) models?
@@ -197,11 +210,10 @@ foreach my $file (@ARGV) {
     $ops{minsize} = ceil frac_of($ops{minsize}, scalar $net->nodes);
 
     # Traverse the network
-    my @stats = _one_net($net, $basename, \%ops);
-
-#     my @modelfiles = <${outdir}/*.model>;
-    end_lock($lock, join("\t", @stats));
-    unlink $triedfile;
+    my $stats = _one_net($net, \%ops);
+    print "\n";
+    end_lock($lock, join("\t", @$stats));
+    unlink $tryingfile;
 
 }
 
@@ -211,12 +223,12 @@ exit;
 
 # 
 sub _print_net {
-    my ($basename, $net, $i, $n) = @_;
+    my ($net, $i, $n) = @_;
     $i ||= 1;
     $n ||= 1;
     my $str = sprintf
         "\n%-20s %4d nodes, %4d edges, %4d interactions \n",
-        $basename,
+        $net->targetid,
         scalar($net->vertices), scalar($net->edges), 
         scalar($net->interactions);
     print "$str";
@@ -227,17 +239,19 @@ sub _print_net {
 
 # Assemble network
 sub _one_net {
-    my ($net,$name, $ops) = @_;
+    my ($net, $ops) = @_;
 
-    my %aops = 
-        slice_def($ops, 'minsize', 'binsize', 'overlap_thresh', 'maxsolutions', 'clash_thresh');
+    my %aops = slice_def($ops, 
+        qw/minsize binsize overlap_thresh maxsolutions clash_thresh/);
 
     my $assembler = SBG::CA::Assembler2->new(
-        name=>$name, 
-        net=>$net, 
-        %aops);
+        net=>$net,callback=>\&_write_solution, %aops
+        );
     if ($ops{'seed'} && -r $ops{'seed'}) {
     	$assembler->seed(load_object $ops{'seed'});
+    }
+    if ($ops{'target'} && -r $ops{'target'}) {
+        $assembler->target(load_object $ops{'target'});
     }
     my $t = Graph::Traversal::GreedyEdges->new(
         assembler=>$assembler,
@@ -247,12 +261,29 @@ sub _one_net {
     # Go!
     $t->traverse();
 
-    print "\n";
-    print join "\t", $assembler->stats;
-    print "\n";
     return $assembler->stats;
 }
 
+sub _write_solution {
+    my ($complex, $class, $duplicate, $stats) = @_;
+    my $targetid = $complex->targetid;
+    mkdir $targetid;
+    my $file = catfile($targetid, $complex->modelid . '.model');
+    $complex->scores->put('mid',$complex->modelid);
+    $complex->store($file);
+    _status($stats);
+}
 
+sub _status {
+    my ($stats) = @_;
+
+    # Flush console and setup in-line printing, unless redirected
+    if (-t STDOUT) {
+        local $| = 1;
+        print "\033[1K\r"; # Carriage return, i.e. w/o linefeed
+        # Print without newline
+        print join("\t", @$stats), " ";
+    }
+} # _status
 
 
