@@ -33,8 +33,6 @@ Minimum sequence identity to consider, e.g.
 
  fasta2net -n 35 complex-xyz.fa
 
-=head2 o|output
-
 =head2 t|top Take the top N interface templates for any interacting pair.
 
 To get no more than 20 inteface templates per interaction:
@@ -44,9 +42,6 @@ To get no more than 20 inteface templates per interaction:
 =head2 -v | -overlap Minimum fractional sequence coverage on a template
 
 Default 0.5
-
-
-=head2 -s | -output
 
 
 =head1 GENERIC OPTIONS
@@ -116,31 +111,33 @@ L<SBG::Network> , L<SBG::SearchI>
 use strict;
 use warnings;
 
+# Send this off to PBS first, if possible, before loading other modules
+use SBG::U::Run 
+    qw/frac_of getoptions start_lock end_lock start_log @generic_options/;
+
+# Options must be hard-coded, unfortunately, as local variables cannot be used
+use PBS::ARGV @generic_options, 
+    qw/maxid|x=i minid|n=i networksize=i top|t=i method|m=s overlap|v=f searcher=s/;
+
+my %ops = getoptions @generic_options, 
+    qw/maxid|x=i minid|n=i networksize=i top|t=i method|m=s overlap|v=f searcher=s/;
+
+
 use File::Basename;
 use Moose::Autobox;
 use Bio::SeqIO;
 use Module::Load qw/load/;
+use File::Spec::Functions;
 
 # Local libraries
 use FindBin qw/$Bin/;
 use lib "$Bin/../lib/";
-
-use SBG::U::Run qw/frac_of getoptions start_lock end_lock start_log/;
+use Log::Any qw/$log/;
 
 use SBG::Network;
 use SBG::Search::TransDB;
 use SBG::Search::PairedBlast;
 
-use PBS::ARGV qw/qsub/;
-
-my %ops = getoptions 
-    qw/maxid|x=i minid|n=i output|o=s top|t=i method|m=s overlap|v=f searcher=s/;
-
-
-# Recreate command line options; (seems to work even with long option names)
-my @jobids = qsub(throttle=>1000, blocksize=>$ops{'blocksize'}, options=>\%ops);
-
-exit unless @ARGV;
 
 # Searcher tries to find interaction templates (edges) to connect seq nodes
 my $blast = SBG::Run::PairedBlast->new(database=>'pdbseq');
@@ -157,6 +154,7 @@ if ($@) {
 }
 my $buildops = {%ops}->hslice([qw/maxid minid cache top overlap/]);
 
+
 foreach my $file (@ARGV) {
     if (defined($ops{'J'})) {
         # The file is actually the Jth line of the list of files
@@ -164,15 +162,17 @@ foreach my $file (@ARGV) {
     }
 
     # Setup new log file specific to given input file
-    my $basename = basename($file,'.fa');
-    my $lock = start_lock($basename);
+    my $targetid = basename($file,'.fa');
+    mkdir $targetid;
+    my $output = catfile($targetid, $targetid . '.network');
+    my $lock = start_lock($output);
     next if ! $lock && ! $ops{'debug'};
-    start_log($basename, %ops);
+    start_log($output, %ops);
 
     # Add each sequence as a node to new network
     my $net = SBG::Network->new();
-    # Cannot pass parameters to constructor as Network is an ArrayRef
-    $net->id($basename);
+    # Cannot pass parameters to constructor, since Network is an ArrayRef
+    $net->targetid($targetid);
     
     my $seqio = Bio::SeqIO->new(-file=>$file);
     while (my $seq = $seqio->next_seq) {
@@ -184,14 +184,22 @@ foreach my $file (@ARGV) {
 
     # Create interaction templates on the edges of the network
     $net = $net->build($searcher,%$buildops);
-    
-    my $iaction_count = $net->edges > 1 ? $net->interactions : 0;
+
+    # TODO split into connected components
+    # These tests much be satisified for each connected component
+    my @partitions = $net->partition;
+    my $nparts = @partitions;
+    if ($nparts > 1) {
+        $log->warn("Network contains $nparts disconnected sub-networks");
+    } 
+
+    # TODO define minsize, as in net2model    
+    my $iaction_count = $net->interactions;
     
     if ($iaction_count) {
         # Pre-load the symmetry information
         $net->symmetry;
-        my $base = $ops{output} || $basename;
-        $net->store($base . '.network');
+        $net->store($output);
     }
     
     end_lock($lock, $iaction_count);
