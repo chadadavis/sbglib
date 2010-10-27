@@ -23,11 +23,13 @@ SBG::Run::cofm - Wrapper for running B<cofm> (centre-of-mass)
 Fetches center of mass, radius of gyration and maximum radius of the centre of
 mass.
 
+Returns a L<SBG::Domain::Sphere> instance, which represents a (very) globular domain, having only a center and a radius (of gyration)
+
 =head1 SEE ALSO
 
-B<cofm> is a program in the STAMP suite.
+B<cofm> is a program in the STAMP package.
 
-L<SBG::U::DB::cofm> , L<SBG::Domain::CofM>
+L<SBG::U::DB::cofm> , L<SBG::Domain::Sphere>
 
 =cut
 
@@ -99,6 +101,7 @@ sub cofm {
     # TODO needs to be contained in Domain::Sphere hook
     my $center = pdl($fields->{Cx}, $fields->{Cy}, $fields->{Cz}, 1);
     # Copy construct, manually
+    # TODO poor design for the case when additional attributes are added
     $sphere = SBG::Domain::Sphere->new(pdbid=>$dom->pdbid,
                                        descriptor=>$dom->descriptor,
                                        file=>$fields->{file},
