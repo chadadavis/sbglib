@@ -124,7 +124,7 @@ sub get {
 }
 sub keys {
     my $self = shift;
-    return $self->_models->keys;
+    return $self->_models->keys->sort;
 }
 
 
@@ -278,6 +278,8 @@ the two models within the Interaction. E.g. if each model in the Interaction has
 a seqid of 40% and 60%, respectively, the there will also be a
 Interaction->scores->at('avg_seqid') with value 50%.
 
+TODO replace with Scores::reduce($_, 'avg') for @keys
+
 =cut
 sub avg_scores {
     my ($self, @keys) = @_;
@@ -295,13 +297,13 @@ sub avg_scores {
 
 sub stringify {
     my ($self) = @_;
-    return $self->_models->values->join('--');
+    return $self->_models->values->sort->join('--');
 }
 
 
 sub _update_id {
     my ($self) = @_;
-    $self->primary_id($self->_models->values->join('--'));
+    $self->primary_id($self->_models->values->sort->join('--'));
 }
 
 
