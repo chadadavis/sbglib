@@ -16,10 +16,15 @@ L<PDL>) contain 7 points: 1 centroid, followed by one additional point in each
 direction of each dimension. I.e. +X, -X, +Y, -Y, +Z, -Z, each of which is
 B<radius> away from the B<center>.
 
+L<SBG::Run::cofm> provides an automated way to get a sphere with the radius and center of mass from a native structure, given a L<SBG::DomainI>.
+
+=head1 BUGS
+
+The linear overlap should be preferred over the volumetric overlap, which still needs further testing.
 
 =head1 SEE ALSO
 
-L<SBG::DomainI> , L<SBG::U::RMSD>
+L<SBG::DomainI> , L<SBG::U::RMSD> , L<SBG::Run::cofm>
 
 =cut
 
