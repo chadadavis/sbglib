@@ -48,6 +48,11 @@ our $host;
 NB contacts are stored in both directions, so we do not need to check 1<->2 and
 2<->1 separately.
 
+Contacts are clustered by iRMSD <= 5.0 via single-linkage clustering
+
+TODO Define 'or_same_chains' :
+This is wrong, we want to be using cluster_sl_irmsd_5_0 as the 'or_same_chains' clusters to many things together, just to reduce the number of cluster, but we'd prefer to have more alternatives here ...
+
 =cut
 sub query {
     my ($entity1, $entity2) = @_;
