@@ -162,18 +162,35 @@ override 'add_interaction' => sub {
 }; # add_interaction
 
 
-sub id {
+sub targetid {
 	my ($self, $value) = @_;
 	if (defined $value) {
-		$self->set_graph_attribute('id', $value);
+		$self->set_graph_attribute('targetid', $value);
 	}
-	return $self->get_graph_attribute('id');
+	return $self->get_graph_attribute('targetid');
 }
 
 
+sub modelid {
+    my ($self, $value) = @_;
+    if (defined $value) {
+        $self->set_graph_attribute('modelid', $value);
+    }
+    return $self->get_graph_attribute('modelid');
+}
+
+
+sub clear_symmetry {
+    my ($self) = @_;
+    $self->delete_graph_attribute('symmetry');
+}
+
+# This just does all-against-all to find the symmetry
+# Some (inadequate) shortcuts are attempted in the following methods
 sub symmetry {
     my ($self,) = @_;
 
+    # A Moose-style attribute, since Moose does not wrap ArrayRef objects
     if ($self->has_graph_attribute('symmetry')) {
         return $self->get_graph_attribute('symmetry');
     }
@@ -207,8 +224,14 @@ sub symmetry {
             $symmetry->add_edge("$pair->[0]", "$pair->[1]");
         }
     }
+    my $str;
     my @sets = $symmetry->connected_components;
-    my $str = join(',', map { '(' . join(',',@$_) . ')' } @sets);
+    $str = join(',', map { '(' . join(',',@$_) . ')' } @sets);
+    $log->debug($str);
+
+    # Sort: smallest sets first (an optimization for Complex::rmsd_class later)
+    @sets = sort { $a->length <=> $b->length } @sets; 
+    $str = join(',', map { '(' . join(',',@$_) . ')' } @sets);
     $log->debug($str);
 
     $self->set_graph_attribute('symmetry', \@sets);
@@ -528,6 +551,9 @@ sub size {
  Example : $net->build();
  Returns : The Network built, which may not be the same as the original object
  Args    : L<SBG::SearchI>
+
+
+Each subedge, i.e. each potential interaction template, needs to have a unique label, across the entire interaction network. This is accomplished by incorporating the source and destination node labels in the subedge label. 
 
 
 =cut
