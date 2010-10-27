@@ -280,8 +280,8 @@ sub search {
     my ($self, $seq1, $seq2, %ops) = @_;
     
     # List of Blast Hits, indexed by PDB ID
-    my $hits1 = $self->_blast1($seq1, %ops);
-    my $hits2 = $self->_blast1($seq2, %ops);
+    my $hits1 = $self->_blast1($seq1, %ops) or return;
+    my $hits2 = $self->_blast1($seq2, %ops) or return;
 
     my @pairs;
     my @common_pdbids = intersection($hits1->keys,$hits2->keys);
@@ -335,7 +335,12 @@ sub _blast1 {
         $log->debug($seq->primary_id, ': ', $hits->length," Hits (cached)");
     } else {
         my $method = $self->method;
-        my $res = $self->$method($seq)->next_result;
+        my $res;
+        eval { $res = $self->$method($seq)->next_result; };
+        if ($@) {
+            $log->error("Blast crashed on seq $seq");
+            return;
+        }        
         $hits = [ $res->hits ];
         # Only take the Hits that have > 0 HSPs
         $hits = $hits->grep(sub{$_->hsps});
