@@ -13,12 +13,6 @@ evalmodels model1.model model2.model ...
 
 =head2 SPECIFIC OPTIONS
 
-=head2 -modelbase <directory>
-
-
-=head2 -target <../path/to/target.model>
-
-Path to target object to be used as benchmark against which a model is compared
 
 =head2 -redo 1
 
@@ -92,25 +86,36 @@ Disable caching. On by default.
 use strict;
 use warnings;
 
+# Send this off to PBS first, if possible, before loading other modules
+use SBG::U::Run 
+    qw/frac_of getoptions start_lock end_lock start_log @generic_options/;
+
+# Options must be hard-coded, unfortunately, as local variables cannot be used
+use PBS::ARGV @generic_options, 
+    qw/redo=i/;
+# the 'models' base directory
+my %ops = getoptions @generic_options,
+    qw/redo=i/;
+    
+
 use Moose::Autobox;
 use autobox::List::Util;
-use List::MoreUtils;
+use List::MoreUtils qw/mesh/;
 use File::Basename;
 use Log::Any qw/$log/;
 use File::NFSLock;
 use Fcntl qw/LOCK_EX LOCK_NB/;
 use PDL::Lite;
 use Data::Dumper;
+use File::Spec::Functions;
 
 # Local libraries
 use FindBin qw/$Bin/;
 use lib "$Bin/../lib/";
 
-use PBS::ARGV qw/qsub/;
 use SBG::U::Object qw/load_object/;
 use SBG::U::Log;
 use SBG::U::List qw/mean avg wtavg median sum min max flatten argmax argmin between/;
-use SBG::U::Run qw/frac_of getoptions start_lock end_lock/;
 use SBG::Run::pdbc qw/pdbc/;
 use SBG::DomainIO::stamp;
 use SBG::DomainIO::pdb;
@@ -118,70 +123,49 @@ use SBG::NetworkIO::sif;
 use SBG::NetworkIO::png;
 
 
-# the 'models' base directory
-my %ops = getoptions('modelbase=s', 'redo=i', 'target=s');
 # Backwards compat.
 $ops{'redo'} = 1 if defined($ops{'cache'}) && $ops{'cache'} == 0;
 
 
 # Column header labels
 # This is the printing order
-my $tkeys = [ qw/tid tdesc tndoms tseqlen tnias/ ];
+my $tkeys = [ qw/tid tdesc tndoms tniactions tseqlen/ ];
 my $allkeys = [ 
     @$tkeys,
     qw/mid/,
+    qw/homology/,
+    
     qw/rmsd/,
     qw/score/,
-    qw/difficulty/,
+#    qw/difficulty/,
     qw/pcclashes/,
-    qw/mndoms pdoms mseqlen pseqlen mnias/,
+    qw/mndoms pcdoms mniactions pciactions mseqlen pcseqlen/,
 #    qw/n100 n80 n60 n40 n0/,
 #    qw/ndockgreat ndockless/,
-#     qw/pias/,
+
     qw/nsources/,
     qw/ncycles/,
-#    qw/homo/,
-    qw/homology/,
-    qw/scmax scmed scmin/,
-    qw/glob/,
     qw/pcburied/,
+    qw/glob/,
+    
+    qw/scmax scmed scmin/,
     qw/idmax idmed idmin/,
-#    qw/dockmax dockmed dockmin/,
-#    qw/iptsmax iptsmed iptsmin/,
+    qw/dockmax dockmed dockmin/,
+    qw/iptsmax iptsmed iptsmin/,
     qw/ifacelenmax ifacelenmed ifacelenmin/,
     qw/iweightmax iweightmed iweightmin/,
     qw/seqcovermax seqcovermed seqcovermin/,
 #     qw/sas/,
     qw/olmax olmed olmin/,
-#    qw/genes/,
+    qw/genes/,
     ];
     
 # Keys that should be round to 2 decimal places
 my $floatkeys = 
-    [ qw/rmsd score difficulty pdoms pseqlen glob pcburied idmin idmax idmed pcclashes
+    [ qw/rmsd score difficulty pcdoms pcseqlen glob pcburied idmin idmax idmed pcclashes
     iweightmin iweightmax iweightmed
     seqcovermin seqcovermax seqcovermed  
     olmin olmax olmed/ ];
-
-# The order of these keys must match the weights below
-my $scorekeys = [
-    qw/pcclashes/,
-    qw/pdoms/,
-    qw/mseqlen pseqlen/,
-    qw/mnias/,
-    qw/nsources/,
-    qw/scmax scmed scmin/,
-    qw/glob/,
-    qw/pcburied/,
-    qw/idmax idmed idmin/,
-    qw/ifacelenmax ifacelenmed ifacelenmin/,
-    qw/iweightmax iweightmed iweightmin/,
-    qw/seqcovermax seqcovermed seqcovermin/,
-    ];
-    
-    
-# The final field is for the constant, requires appending a '1' to the scores
-my $scoreweights = pdl qw/2.4279335 -0.072030122 0.0028711138 -0.077098607  1.6662702 0.72128242 -0.81947812  1.5205748 -1.3691955 -0.084849864 -0.25984416 0.072632933 0.33134922 -0.20674273 -0.018020253 0.0074350965 -0.11063703 0.029250173 -0.2348272 -0.30018245 0.039653483 0.032630528 0.022246411  47.931813/;
 
 
 unless (-r $ARGV[0]) {
@@ -189,13 +173,6 @@ unless (-r $ARGV[0]) {
 	exit;
 }
 
-# Try to submit to PBS, for each argument in @ARGV
-# Recreate command line options;
-my @jobids = qsub(throttle=>1000, blocksize=>$ops{'blocksize'}, options=>\%ops);
-
-# @ARGV is empty if all jobs could be submitted
-
-exit unless @ARGV;
 
 my $headerpath = '00-header.csv';
 unless (-s $headerpath) {
@@ -216,41 +193,26 @@ foreach my $file (@ARGV) {
     my $basename = basename($file,'.model');
     my $dirname = basename dirname $file;
     mkdir $dirname;
-    my $basepath = "${dirname}/${basename}";
+    my $basepath = catfile($dirname, $basename);
+    my $output = $basepath . '.csv';
     # Skip if already finished
     next if !$ops{'redo'} && -e $basepath . '.done';
 
     # Lock this model from other processes/jobs
-    my $lock = start_lock($basepath);
-    next if ! $lock && ! $ops{'debug'};
+    my $lock = start_lock($output);
+    next if ! $lock && ! $ops{'redo'};
 
-    # Start logging
-    SBG::U::Log::init($basepath, %ops);
-
+    start_log($output, %ops);
+    
     # Mark jobs that are tried, but not done, this file deleted when finished
     # A cheap way to track what crashes before finishing
-    my $tryingfile = $basepath . '.trying';
+    my $tryingfile = $output . '.trying';
     open my $tryingfh, ">$tryingfile";
     close $tryingfh;
 
-    my $targetfile = $ops{'target'} || '';
-    my $target;
-    my $stats = {};
-    if (-r $targetfile) {
-        $log->debug("targetfile: $targetfile");
-        $target = load_object($targetfile);
-    } else {
-            $log->info(
-            "No target file: $targetfile. Specify via: -target <target>");
-    }
-    
+    my $stats = {};    
     if (-e $file) {
-        do_model($target, $file, $stats);
-#    } else {
-#        # If no models were produced, just a print a truncated header
-#        open my $fh, ">${tid}/${tid}-00000.csv";        
-#        print $fh $stats->slice($tkeys)->join("\t"), "\n";
-#        close $fh;
+        do_model($file, $stats);
      }
      
     end_lock($lock, 1);
@@ -259,213 +221,83 @@ foreach my $file (@ARGV) {
 
 
 sub do_model {
-    my ($target, $modelfile, $stats) = @_;
+    my ($modelfile, $stats) = @_;
     
     $log->info("modelfile: $modelfile");
     my $model = load_object($modelfile);
-    $log->info("target: ", $model->target || 'undef');
     $model->{'modelfile'} = $modelfile;
+
+    $stats = $model->scores;
     
     if ($ops{'redo'}) {
         $log->info("redo");
-        $model->clear();
+
+        # Clear everything, including the superposition
+#        $model->clear();
+
+
+        $model->clear_score();
+        $model->clear_score_weights();
+        $model->clear_score_keys();
+        # TODO
+        # and vmdclashes
+#        $model->clear_vmdclashes();
+ 
+        # Just save the rmsd
+        my $rmsd = $model->scores->at('rmsd');
+        $model->clear_homology;
+        $model->clear_network;
+        $model->clear_scores;
+        # Calling scores() here rebuilds it
+        $model->scores->put('rmsd', $rmsd);
+        $stats->{'rmsd'} = $rmsd;
+        
         $model->store($modelfile);
         $log->info("model stats and RMSD wiped an re-saved");
     }
-    $stats = model_stats($target, $model, $stats);
+        
+        
+    $stats->{'score'} = $model->score();
+       
+    # Get Genenames (TODO DES need to be a separate annotation module)
+    my $dommodels = $model->models->values;
+    my $inputs = $dommodels->map(sub{$_->input || $_->query});
+    my $genes = $inputs->map(sub{uniprot2gene($_->display_id)});
+    $stats->{'genes'} = $genes->join(',');
+   
+    # TODO DEL why is this missing?
+    $stats->{'mid'} ||= $model->modelid; 
+
+    # TODO DES to become ComplexIO::csv
+    # Format floating point values, just use 'sprintf %g'
+    foreach my $key (@$floatkeys) {
+        my $value = $stats->{$key};
+#        $stats->{$key} = sprintf("%.2f",$value) if defined $value;
+        $stats->{$key} = sprintf("%g",$value) if defined $value;        
+    }
     
-    my $basename = basename($modelfile,'.model');
-    my $dirname = $model->target || '.';
-    my $basepath = "${dirname}/${basename}";
-    mkdir $dirname;
+    my $basepath = _basepath($model);
     open my $fh, ">${basepath}.csv" or die;
     # Print the CSV line, using predefined key ordering
     my $fields = $stats->slice($allkeys)->map(sub{defined $_?$_:''});
     print $fh $fields->join("\t"), "\n";
     close $fh;
     
-    modeloutputs($target,$model);
+    modeloutputs($model);
 
     # Save any changes
     $model->store($modelfile);
 } # do_model
 
 
-# TODO belongs in Complex::_build_scores
-
-sub model_stats {
-    my ($target, $model, $stats) = @_;
-
-    
-    my $benchstats = $model->scores->at('benchstats');
-
-        # TODO DEL recalc score
-    $stats->{'score'} = _score($stats);
-        
-    if (!$ops{'redo'} && defined $benchstats) {
-        $log->debug("Using cached benchstats");
-                    
-        return $benchstats;
-    } 
-    $log->debug($model);
-        
-    $stats->{'mid'} = $model->id();
-    my $tid = $stats->{'tid'};
-    $tid ||= $model->target;
-    ($tid) = $model->id =~ /^(.*?)-\d+$/ unless $tid;
-    $stats->{'tid'} = $tid;
-    $model->target($tid);
-    
-    $stats->{'tdesc'} = $model->description;    
-
-    # Number of Components that we were trying to model
-    my @tdoms = flatten $model->symmetry;
-    my $tndoms = @tdoms;
-    $stats->{'tndoms'} = $tndoms;
-    # Number of domains modelled 
-    my $dommodels = $model->models->values;
-    my $mndoms = $stats->{'mndoms'} = $dommodels->length;
-    # Percentage of component coverage, e.g. 3/5 components => 60
-    $stats->{'pdoms'} = 100.0 * $mndoms / $tndoms;
-
-
-    # TODO need to grep for defined($_) ? (also for n_res ? )
-    my $ids = $dommodels->map(sub{$_->scores->at('seqid')});
-    $stats->{'idmin'} = min $ids;
-    $stats->{'idmax'} = max $ids;
-    $stats->{'idmed'} = median $ids;
-        
-    # Model: interactions
-    my $mias = $model->interactions->values;
-    # Model: number of interactions
-    my $mnias = $stats->{'mnias'} = $mias->length;
-    
-    my $avg_seqids = $mias->map(sub{$_->scores->at('avg_seqid')});
-    
-    $stats->{'n0'}   = $avg_seqids->grep(sub{between($_,  0, 40)})->length;
-    $stats->{'n40'}  = $avg_seqids->grep(sub{between($_, 40, 60)})->length;
-    $stats->{'n60'}  = $avg_seqids->grep(sub{between($_, 60, 80)})->length;
-    $stats->{'n80'}  = $avg_seqids->grep(sub{between($_, 80,100)})->length;
-    $stats->{'n100'} = $avg_seqids->grep(sub{between($_,100,101)})->length;
-    	    
-    
-    # Number of residues in contact in an interaction, averaged between 2
-    # interfaces.
-    my $nres = $mias->map(sub{$_->scores->at('avg_n_res')});
-    $stats->{'ifacelenmin'} = min $nres;    
-    $stats->{'ifacelenmax'} = max $nres;
-    $stats->{'ifacelenmed'} = median $nres;
-
-    # Docking, when used
-    my $docked = $mias->map(sub{$_->scores->at('docking')})->grep(sub{defined});
-    
-    $stats->{'dockmin'} = min $docked;    
-    $stats->{'dockmax'} = max $docked;
-    $stats->{'dockmed'} = median $docked;
-    $stats->{'ndockless' } = $docked->grep(sub{$_ && $_<1386 })->length;
-    $stats->{'ndockgreat'} = $docked->grep(sub{$_ && $_>=1386})->length;
-    # For each score less than 2000, penalize by the diff/1000
-    # E.g. each score of 1750 is penalized by (2000-1750)/1000 => .25
-    $stats->{'dockpenalty'} = $docked->map(sub{(2000-$_)/1000.0})->sum;
-    
-    # Interprets, when available
-    my $ipts = $mias->map(sub{$_->scores->at('interpretsz')});
-    $stats->{'iptsmin'} = min $ipts;    
-    $stats->{'iptsmax'} = max $ipts;
-    $stats->{'iptsmed'} = median $ipts;
-
-    # Number of template PDB structures used in entire model
-    # TODO belongs in SBG::Complex
-    my $idomains = $mias->map(sub{$_->domains->flatten});
-    my $ipdbs = $idomains->map(sub{$_->file});
-    my $nsources = scalar List::MoreUtils::uniq $ipdbs->flatten;
-    $stats->{'nsources'} = $nsources;
-
-    # This is the sequence from the structural template used
-    my $mseqlen = $dommodels->map(sub{$_->subject->seq->length})->sum;
-    $stats->{'mseqlen'} = $mseqlen;
-    # Length of the sequences that we were trying to model, original inputs
-    # TODO DEL workaround for not having 'input' set for docking templates
-    my $inputs = $dommodels->map(sub{$_->input || $_->query});
-    my $tseqlen = $inputs->map(sub{$_->length})->sum;
-    $stats->{'tseqlen'} = $tseqlen;
-    # Percentage sequence coverage by the complex model
-    my $pseqlen = 100.0 * $mseqlen / $tseqlen;
-    $stats->{'pseqlen'} = $pseqlen;
-
-    my $genes = $inputs->map(sub{uniprot2gene($_->display_id)});
-    $stats->{'genes'} = $genes->join(',');
-
-    # Sequence coverage per domain
-    my $pdomcovers = $dommodels->map(sub{$_->coverage()});
-    $stats->{'seqcovermin'} = min $pdomcovers;
-    $stats->{'seqcovermax'} = max $pdomcovers;
-    $stats->{'seqcovermed'} = median $pdomcovers;
-
-
-    # Edge weight, generally the seqid
-    my $weights = $mias->map(sub{$_->weight});
-    # Average sequence identity of all the templates.
-    # NB linker domains are counted multiple times. 
-    # Given a hub proten and three interacting spoke proteins, there are not 4
-    # values for sequence identity, but rather 2*(3 interactions) => 6
-    $stats->{'iweightmin'} = min $weights;
-    $stats->{'iweightmax'} = max $weights;
-    $stats->{'iweightmed'} = median $weights;
-
-    # Linker superpositions required to build model by overlapping dimers
-    my $superpositions = $model->superpositions->values;
-    # Sc scores of all superpositions done
-    my $scs = $superpositions->map(sub{$_->scores->at('Sc')});
-    $stats->{'scmin'} = min $scs;
-    $stats->{'scmax'} = max $scs;
-    $stats->{'scmed'} = median $scs;
-
-    # Globularity of entire model
-    $stats->{'glob'} = $model->globularity();
-    
-    $stats->{'pcburied'} = $model->buried_area() || 'NaN';
-    
-    $stats->{'pcclashes'} = $model->vmdclashes();
-
-    # Fraction overlaps between domains for each new component placed, averages
-    my $overlaps = $model->clashes->values;
-    $stats->{'olmin'} = min $overlaps;
-    $stats->{'olmax'} = max $overlaps;
-    $stats->{'olmed'} = median $overlaps;
-
-    # Number of closed rings in modelled structure, using known interfaces
-    $stats->{'ncycles'} = $model->ncycles();
-
-
-    my $homology = $model->homology;
-    my $present_homology = $homology->grep(sub{$_>0});
-    $stats->{'homo'} = $present_homology->length == 1 ? 1 : 0;
-    $stats->{'homology'} = $present_homology->join('-');
-
-    my ($rmsd, $matrix) = modelrmsd($model, $target);
-    $rmsd = 'NaN' unless defined $matrix;
-    $stats->{'rmsd'} = $rmsd;
-
-    # Intrinsic model score
-    my $score = _score($stats);
-    $stats->{'score'} = $score;
-
-    # subjective level of difficulty
-    $stats->{'difficulty'} = _difficulty($stats);
-    
-    # Format floating point values
-    foreach my $key (@$floatkeys) {
-        my $value = $stats->{$key};
-        $stats->{$key} = sprintf("%.2f",$value) if defined $value;
-    }
-
-    $model->scores->put('benchstats', $stats);
-    $log->debug(Dumper $stats);
-    
-    return ($stats);    
-} # model_stats
-
+sub _basepath {
+    my ($model) = @_;
+    my $targetid = $model->targetid;
+    my $modelid = $model->modelid;
+    mkdir $targetid;
+    my $basepath = catfile($targetid, $modelid);
+    return $basepath;    
+}
 
 # TODO Really needs to be worked in somewhere else: SBG::Seq or SBG::Node maybe
 sub uniprot2gene {
@@ -489,23 +321,6 @@ sub uniprot2gene {
 }
 
 
-sub _score {
-	my ($stats) = @_;
-	my @scores = $stats->slice($scorekeys)->flatten;
-	# Convert any Math::BigInt or Math::BigFloat back to scalar, for PDL
-	my @nums = map { ref($_) =~ /^Math::Big/ ? $_->numify : $_ } @scores;
-    # Append a '1' for the constant multiplier
-    push @nums, 1;
-	# Switch to PDL format
-	my $values = pdl @nums;
-	# Vector product
-	my $prod = $scoreweights * $values;
-	my $sum = $prod->sum;
-	my $dockpenalty = $stats->{'dockpenalty'} || 0;
-	$sum -= $dockpenalty;
-	return $sum;
-}
-
 
 # How interesting (i.e. difficult) is the model, [0:100]
 sub _difficulty {
@@ -527,39 +342,12 @@ sub _difficulty {
 }
 
 
-sub modelrmsd {
-    my ($model, $target) = @_;
-
-    return unless defined $target;
-    $log->debug("model $model");
-    $log->debug("target ", $model->target);
-    
-    my ($benchmatrix, $benchrmsd, $benchmapping) = $model->rmsd_class($target);
-    $log->debug($benchrmsd);
-        if (defined $benchmatrix) {
-            $model->transform($benchmatrix);
-            $model->scores->put('benchrmsd', $benchrmsd);
-            $model->scores->put('benchmatrix', $benchmatrix);
-            $model->correspondance($benchmapping);
-        } else {
-            $benchrmsd = 'NaN';
-        }
-    
-    return wantarray ? ($benchrmsd, $benchmatrix) : $benchrmsd;
-}
 
 
 sub modeloutputs {
-    my ($target, $model) = @_;
-
-    my $tid = $model->target;
-    my $file = $model->{'modelfile'};
-    my $basename = basename($file,'.model');
-    my $dirname = $tid || '.';
-    my $basepath = "${dirname}/${basename}";
-    
-    mkdir $tid;
-    $log->debug($basepath);
+    my ($model) = @_;
+    my $target = $model->target;
+    my $basepath = _basepath($model);
         
     my $pdbfile = "${basepath}.pdb";
     my $domfile = "${basepath}.dom";
@@ -573,10 +361,10 @@ sub modeloutputs {
     }
     return if $alldone;
 
-    _domfile($domfile, $model, $target);
+#    _domfile($domfile, $model, $target);
     _pdbfile($pdbfile, $model, $target);
-    _siffile($siffile, $model);
-    _dotfile($dotfile, $model);
+#    _siffile($siffile, $model);
+#    _dotfile($dotfile, $model);
 
 } # modeloutput
 
@@ -651,31 +439,13 @@ sub _pdbfile {
     if (-s $pdbfile) {
         return;
     }
-    $log->debug($pdbfile);
-    my $write_target = 
-        defined($target) && 
-        $model->scores->exists('benchrmsd') && 
-        $model->scores->at('benchrmsd') > 0;
+    my $rmsd = $model->scores->at('rmsd');
+    my $write_target = defined($target) && defined($rmsd) && $rmsd >= 0;
+
+    $log->debug("$pdbfile write_target: $write_target rmsd: $rmsd") if $rmsd;
 
     my $lock = File::NFSLock->new($pdbfile,LOCK_EX|LOCK_NB) or return;
-    
-    # Only show common components
-    my $keys = $write_target ? [ $model->coverage($target) ] : $model->keys;
-    
-    # Treat model complex as single domain, if compared to target
-    my $modelasdom = $write_target ? 
-        $model->combine(keys=>$keys) : $model->domains;
 
-    my $mapping = $model->correspondance;
-    my $mapped_keys = [ map { $mapping->{$_} } @$keys ];
-    # Get target complex as single domain
-    my $targetasdom = $write_target ? 
-        $target->combine(keys=>$mapped_keys) : undef;
-
-#    my $pdbio = new SBG::DomainIO::pdb(file=>">${pdbfile}", compressed=>1);
-    my $pdbio = new SBG::DomainIO::pdb(file=>">${pdbfile}", compressed=>0);
-    my $fh = $pdbio->fh();
-        
     # Header details
     my $report;
     my $reportio = SBG::ComplexIO::report->new(string=>\$report);
@@ -683,13 +453,52 @@ sub _pdbfile {
     $reportio->close;
     # Prepend a comment
     $report =~ s/^/REMARK /gm;
-    print $fh $report;
 
-    # Write model first (in Rasmol, first is blue, second is red)
-    if ($write_target) {
-        $pdbio->write($modelasdom, $targetasdom);
+    
+    # Only show common components
+    my $keys = $write_target ? [ $model->coverage($target) ] : $model->keys;  
+
+    my $mapping = $model->correspondance;
+    my $mapped_keys = [ map { $mapping->{$_} } @$keys ];
+
+#    my $pdbio = new SBG::DomainIO::pdb(file=>">${pdbfile}", compressed=>1);
+    my $pdbio = new SBG::DomainIO::pdb(file=>">${pdbfile}", compressed=>0);
+    my $fh = $pdbio->fh();
+        
+    print $fh $report;
+    $pdbio->flush;
+    
+    my $combine = 0;
+    if($combine) {
+    	# Treat model complex as single domain, if compared to target
+        my $modelasdom = $write_target ? 
+            $model->combine(keys=>$keys) : $model->domains;
+        # Get target complex as single domain
+        my $targetasdom = $write_target ? 
+            $target->combine(keys=>$mapped_keys) : undef;
+	    # Write model first 
+	    # (in Rasmol, first is blue, second is red)
+	    # (in Pymol, first is green, second is cyan)
+	    if ($write_target) {
+	        $pdbio->write($modelasdom, $targetasdom);
+	    } else {
+	        $pdbio->write($modelasdom);
+	    }
+
     } else {
-        $pdbio->write($modelasdom);
+    	my $models = $model->domains($keys);
+    	my @list;
+    	if ($write_target) {
+        	# Get only the subset modelled, and map to the corresponding chains
+        	my $targets = $target->domains($keys, $mapping);
+    	   # Print alternately, Model A, Target A, Model B, Target B, ...  	
+    	   @list = mesh(@$models, @$targets);
+    	} else {
+    		@list = @$models;
+    	}
+    	$pdbio->write(@list);
+    	
     }
 
 } # _pdbfile
+
