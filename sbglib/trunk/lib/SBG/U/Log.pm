@@ -120,15 +120,15 @@ In order of increasing severity: $TRACE $DEBUG $INFO $WARN $ERROR $FATAL
 =cut
 sub init {
     my ($name, %ops) = @_;
+    $name ||= 'sbg';
     my $level = $ops{'loglevel'} || 'INFO';
     $level = uc $level;
-    my $logfile = $ops{'logfile'} || ($name || 'log') . '.log';
+    my $logfile = $ops{'logfile'} || $name . '.log';
     my $logpath = File::Spec->rel2abs($logfile, $ops{'logdir'}) ;
-
 
     # Initialize system logger
     our $logger;
-    $logger = Log::Log4perl->get_logger("sbg");
+    $logger = Log::Log4perl->get_logger($name);
 
     # Default logging level 
     $logger->level(eval '$' . $level);
