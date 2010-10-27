@@ -119,7 +119,7 @@ sub write {
     $log->debug($self->file);
     
     # A domain defines a subset of structure, write that to a temp file first
-    my $domio = new SBG::DomainIO::stamp(tempfile=>1);
+    my $domio = SBG::DomainIO::stamp->new(tempfile=>1);
     $log->debug("DOM file: ", $domio->file);
     $domio->write(@doms);
     $domio->flush;
