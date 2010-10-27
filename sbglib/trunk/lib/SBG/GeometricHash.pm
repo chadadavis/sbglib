@@ -74,6 +74,8 @@ use Log::Any qw/$log/;
 
 _gh is a HashRef of ArrayRef
 
+Setting B<binsize> to 0 means that objects have to be at the exact same location in space. This probably only makes sense for integer coordinates, as rounding can prevent floating point values from being exactly equal.
+
 =cut
 sub new {
     my ($class, %self) = @_;
@@ -405,8 +407,10 @@ sub _quantize {
     # For rows
     for (my $i = 0; $i < $matrix->dim(1); $i++) {
         my @row = $matrix(,$i)->list;
-        # Round
-        @row = map { nearest($binsize, $_) } @row;
+        # Round (binsize 0 disables binning)
+        if ($binsize > 0) {
+            @row = map { nearest($binsize, $_) } @row;
+        }
         $qmat(,$i) .= pdl(@row);
     }
     return $qmat
