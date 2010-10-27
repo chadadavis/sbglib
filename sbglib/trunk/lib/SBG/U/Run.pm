@@ -27,7 +27,7 @@ See also L<MooseX::Runnable>
 
 package SBG::U::Run;
 use base qw/Exporter/;
-our @EXPORT_OK = qw/start_lock end_lock start_log frac_of getoptions/;
+our @EXPORT_OK = qw/start_lock end_lock start_log frac_of getoptions @generic_options/;
 
 
 use strict;
@@ -153,6 +153,8 @@ sub frac_of {
     my $abs = $frac;
     if ($frac =~ /^([.0-9]+)\%$/) {
         $abs = $of * $1 / 100.0;
+    } elsif ($frac < 1 && $frac > 0) {
+    	$abs = $of * $frac;
     }
     return $abs;
 }
@@ -168,6 +170,7 @@ sub frac_of {
 
 
 =cut
+our @generic_options = qw/help|h debug|d=i cache|c=i loglevel|l=s logfile|f=s logdir=s/;
 sub getoptions {
     my (@ops) = @_;
     # Throw in some standard options
@@ -175,15 +178,15 @@ sub getoptions {
     # A list file contains the paths of the inputs to be processed
     # The -J option says which line (0-based) is the current input file
     # The -M option is for an email address (used by PBS, among others)
-    push @ops, qw/help|h debug|d=i cache|c=i directives=s blocksize=i loglevel|l=s logfile|f=s logdir=s J=s M=s/;
-
+    push @ops, @generic_options;
+        
     my %ops;
     # This makes single-char options case-sensitive
     Getopt::Long::Configure ('no_ignore_case');
     my $result = GetOptions(\%ops, @ops);
-    
-    if (! $result || $ops{'help'}) {
-        pod2usage(-exitval=>1, -verbose=>2); 
+            
+    if (! $result || $ops{'help'}) {        
+        pod2usage(-exitval=>1, -verbose=>2, -noperldoc=>1); 
     }
 
     # Setup debug mode automatically

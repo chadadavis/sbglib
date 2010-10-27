@@ -96,8 +96,6 @@ package PBS::ARGV;
 use strict;
 use warnings;
 
-use base qw/Exporter/;
-our @EXPORT_OK = qw/qsub linen nlines/;
 use vars qw($VERSION);
 $VERSION = 0.01;
 
@@ -107,6 +105,8 @@ use File::Basename;
 use File::Temp qw(tempfile);
 use Log::Any qw/$log/;
 use Getopt::Long;
+use Tie::File;
+use IPC::Cmd; # qw/can_run/;
 
 =head2 qsub
 
@@ -128,17 +128,10 @@ workign directory from when the job was submitted.
 sub qsub {
     my (%ops) = @_;
 
-    # Already running in a PBS job, don't recurse
-    if ( defined $ENV{'PBS_ENVIRONMENT'} ) {
-        $log->debug('Running in PBS job');
-        return;
-    }
-
-    return unless has_permission();
-
     my @jobids;
     my @failures;
-    # Number of command line arguments (e.g. files) to process per job, default: 1
+    # Number of command line arguments (e.g. files) to process per job, 
+    # default: 1
     my $blocksize = $ops{'blocksize'} || 1;
     my $nparams_submitted = 0;
     while (my $param = _block($blocksize)) {
@@ -157,7 +150,8 @@ sub qsub {
     # Restore ARGV with the ones that didn't submit
     @::ARGV = @failures;
     
-    if (! defined $ENV{'PBS_ENVIRONMENT'} ) {
+    # If we're on a TTY and not already in a PBS job
+    if (-t STDOUT && ! defined $ENV{'PBS_ENVIRONMENT'} ) {
     	print 
     	   "Submitted $nparams_submitted args in ", 
     	   scalar(@jobids), " jobs (x$blocksize)\n";
@@ -195,65 +189,61 @@ sub _throttle {
 
 
 sub _njobs {
-	my $njobs = `qstat -u \$USER | wc -l`;
-    chomp $njobs;
-    # Remove header
-    $njobs -= 5 if $njobs;
-	return $njobs;
+	# All job IDs contain the server name
+    our $server = 'cln035';
+	my $jobs = `qstat -u \$USER`;
+    chomp $jobs;
+    my @jobs;
+    tie @jobs, 'Tie::File', $jobs;
+    @jobs = grep { /\.${server}/ } @jobs;
+    my $njobs = @jobs;
+    return $njobs;
 }
 
-
-# Do we have qsub on this system in the $PATH
-sub has_bin {
-    my ($bin) = @_;
-    our $_qsubpath;
-    return $_qsubpath if defined $_qsubpath;
-    foreach my $dir ( File::Spec->path() ) {
-        my $f = File::Spec->catfile( $dir, $bin );
-        $_qsubpath = $f if ( -e $f && -x $f );
-    }
-    $_qsubpath ||= '';
-    $log->debug("bin path: $_qsubpath");
-    return $_qsubpath;
-
-}
 
 # Ability to connect to PBS server
-sub has_permission {
-    my $qstat = has_bin('qstat') or return;
-    return system("$qstat >/dev/null 2>/dev/null") == 0;
+sub can_connect {
+	our $qstat;
+	$qstat ||= IPC::Cmd::can_run('qstat');
+	our $connected;
+	#TODO DES use IPC:Cmd::run() here to set a 5 second timeout on the check
+	$connected ||= system("$qstat >/dev/null 2>/dev/null") == 0; 
+    return $connected;
 }
+
 
 # Write and submit one PBS job script
 sub _submit {
     my ( $fileargs, %ops ) = @_;
+    our @pbs_ops;
 
     # Default: rerun same script
     # NB: this can be a relative path, because we 'cd' to $ENV{PWD} in the job
     my $cmdline = $ops{'cmd'} || $0;
     $cmdline .= " @$fileargs";
 
-    # Command line options to pass on
-    my %cmdops = $ops{'options'} ? %{ $ops{'options'} } : ();
-
     # PBS directives
-    my @directives = $cmdops{'directives'} || ();
+    my @directives = $ops{'directives'} || ();
 
-    # And remove it from the options passed to the job
-    delete $cmdops{'directives'};
+    # Check explicitly for mailing address, append it to directives
+    if ( $ops{'M'} ) {
+        push @directives, "-M $ops{'M'}";
+    }
 
     # Notify on Abort, Begin, End
     #     push @directives, "-m a";
 
-    # Check explicitly for mailing address, append it to directives
-    if ( $cmdops{'M'} ) {
-        push @directives, "-M $cmdops{'M'}";
-    }
+
+    # Command line options to pass on
+    # Remove our own PBS ops, leaving just the caller's own ops
+    my %cmdops = _purge_ops(%ops);
 
     # Array? if -J directive given, also append \$PBS_ARRAY_INDEX to cmdline
-    if ( $cmdops{'J'} ) {
+    if ( $ops{'J'} ) {
     	# NB if using array jobs, can only have one command line param, the file
-        my $lastline = nlines($fileargs->[0]) - 1;
+    	my @lines;
+    	tie @lines, 'Tie::File', $fileargs->[0];
+        my $lastline = $#lines;
         push @directives, "-J 0-$lastline";
 
         # NB this variable will be defined by the PBS environment when started
@@ -278,7 +268,8 @@ sub _submit {
     my @cmdops = map { '-' . $_ => $cmdops{$_} } keys %cmdops;
     $cmdline .= " @cmdops";
 
-# Explicitly inherit TMPDIR from parent process, to prevent PBS from overwriting it
+    # Explicitly inherit TMPDIR from parent process, 
+    # to prevent PBS from overwriting it
     $ENV{'TMPDIR'} ||= File::Spec->tmpdir();
 
     my ( $tmpfh, $jobscript ) = tempfile( "pbs_XXXXX", TMPDIR => 1 );
@@ -310,25 +301,49 @@ sub _submit {
 
 }    # _submit
 
-# Returns the text of line #N of a file
-# Counting is 0-based
-# Line does not end with a newline
-sub linen {
-    my ( $file, $n ) = @_;
-    open( my $fh, $file ) or return;
-    my $line;
-    for ( my $i = 0 ; defined( $line = <$fh> ) && $i < $n ; $i++ ) { }
-    return unless defined $line;
-    chomp $line;
-    return $line;
+
+# Called when the module is loaded, will exit the process if successful
+use Data::Dump qw/dump/;
+sub import {
+    my ($self, @ops) = @_;
+    
+    # Parse out PBS-specific submission ops too
+    our @pbs_ops = qw/cmd=s throttle=i directives=s blocksize=i J=s M=s/;    
+    push @ops, @pbs_ops;
+            
+    # This makes single-char options case-sensitive
+    Getopt::Long::Configure ('no_ignore_case');
+    my %ops;
+    my $result = GetOptions(\%ops, @ops);
+    
+    # Don't submit PBS jobs when:
+    # Already running in a PBS job (i.e. don't recurse)
+    # Only options given, but no arguments
+    # No permission to submit to PBS
+    if (
+        defined $ENV{'PBS_ENVIRONMENT'} ||
+        @ARGV == 0 || 
+        ! can_connect()
+        ) {
+        # Cleanup PBS-specific options
+        %ops = _purge_ops(%ops);
+        push @ARGV, map { '-' . $_ => $ops{$_} } keys %ops;
+        return;
+    }
+    
+    my @jobids = qsub(%ops);
+    exit unless @ARGV;    
 }
 
-sub nlines {
-    my ($file) = @_;
-    open( my $fh, $file ) or return;
-    my $count = 0;
-    $count++ while <$fh>;
-    return $count;
+sub _purge_ops {
+	my %ops = @_;
+	our @pbs_ops;
+    foreach my $key (keys %ops) { 
+        foreach my $op (@pbs_ops) {
+            delete $ops{$key} if $op =~ /^$key=/;
+        }
+    }
+    return %ops;
 }
 
 1;
