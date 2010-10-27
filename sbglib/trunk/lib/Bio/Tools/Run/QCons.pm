@@ -3,7 +3,6 @@ package Bio::Tools::Run::QCons;
 # ABSTRACT: Run Qcons to analyze protein-protein contacts
 
 use Mouse;
-#use v5.10;
 use autodie;
 use namespace::autoclean;
 use Capture::Tiny 'capture_merged';
