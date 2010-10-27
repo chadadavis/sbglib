@@ -75,8 +75,16 @@ has 'docking_dir' => (
     isa => 'Str',
     default => $datadir . '/final_paper/roberto/docking/chopped',
     );
+    
+# From Mosca et al. 2009 (thresh 1386)    
+has 'docking_thresh' => (
+    is => 'rw',
+    isa => 'Num',
+    default => 1386.0,
         
-
+    );
+    
+    
 has 'dbname' => (
     is => 'rw',
     isa => 'Str',
@@ -281,6 +289,8 @@ sub _docking {
 
     my @interactions;
     while ( my $h = $sth->fetchrow_hashref ) {
+    	next unless $h->{score} >= $self->docking_thresh();
+    	
     	# Our docking data provides alternative interaction conformations
     	my $dir = join '/', $self->docking_dir, $h->{directory};
     	# This also finds gzipped files
@@ -302,7 +312,7 @@ sub _docking {
                 scores  => { type => $h->{type2} },
             );
 
-            my $iaction = SBG::Interaction->new(source=>'docking',id=>$h->{'id'});
+            my $iaction = SBG::Interaction->new(source=>'',id=>$h->{'id'});
             $iaction->set( $seq1, $mod1 );
             $iaction->set( $seq2, $mod2 );
         
@@ -352,7 +362,7 @@ sub _structures {
     	# Find each instance of a homology model for the given protein
     	# This will find the files whether gzipped or not
     	push(@struct_files, <${_}/${key}*.pdb*>) for @sources;
-        $log->debug(scalar(@struct_files), " structures for $key");
+        $log->debug(scalar(@struct_files), " structures for $key : @struct_files");
         foreach my $struct (@struct_files) {
             	# Representation of the modelled structure
             	my $struct_dom = SBG::Domain->new(file=>$struct);
