@@ -32,6 +32,7 @@ use SBG::DomainIO::stamp;
 use SBG::Model;
 use SBG::Complex;
 use SBG::ComplexIO::report;
+use SBG::Run::cofm qw/cofm/;
 
 
 =head2 native
@@ -117,10 +118,16 @@ sub read {
 
     my $io = SBG::DomainIO::stamp->new(fh=>$fh,objtype=>$self->objtype);
     my $doms = $io->read_all;
-    my $models = $doms->map(sub{SBG::Model->new(query=>$_, subject=>$_)});
-
+    my $spheres = $doms->map(sub{cofm($_)});
+    my $models = $spheres->map(sub{SBG::Model->new(query=>$_, subject=>$_)});
     my $complex = SBG::Complex->new;
     $models->map(sub{$complex->add_model($_)});
+    
+    my $contacts = $complex->contacts();
+    foreach my $contact ($contacts->flatten) {
+        $complex->interactions->put($contact, $contact);
+    }    
+        
     return $complex;
 
 } # read
