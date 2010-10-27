@@ -148,7 +148,7 @@ sub _build_coverage {
 
 sub stringify {
     my ($self) = @_;
-    my $string = $self->gene;
+    my $string = $self->gene || '';
     my $subject = $self->subject;
     $string .= '(' . $subject . ')' if $subject;
     return $string;
@@ -177,6 +177,7 @@ sub gene {
     my ($self) = @_;
     # Alnternative when no gene name
     my $query = $self->query;
+    return unless defined($query);
     my $gene;
     if ($query->isa('Bio::SeqI')) {
         my $desc = $query->desc() || $query->display_id;
@@ -185,7 +186,6 @@ sub gene {
     # Otherwise just stringify the query objecct
     return $gene || "$query";
     	   
-    
 }
 
 
