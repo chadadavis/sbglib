@@ -135,22 +135,25 @@ sub _config {
     our $cfg;
     return $cfg if $cfg;
     my $cnf = "$ENV{HOME}/.my.cnf";
-    return '' unless -r $cnf;
+    return unless -e $cnf;
     $cfg = Config::IniFiles->new(-file=>$cnf);
+    return unless $cfg;
     return $cfg;
 }
 
 
 sub _default_host {
     my $cfg = _config();
-    my $host = $cfg->val('client', 'host') || '';
+    return unless $cfg;
+    my $host = $cfg->val('client', 'host');
     return $host;
 }
 
 
 sub _default_port {
     my $cfg = _config();
-    my $port = $cfg->val('client', 'port') || '';
+    return unless $cfg;
+    my $port = $cfg->val('client', 'port');
     return $port;
 }
 
