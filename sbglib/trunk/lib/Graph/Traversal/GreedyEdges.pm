@@ -121,26 +121,48 @@ sub traverse {
 } # traverse
 
 
+# TODO much of this belongs in Assembler
 sub _state0 {
 	my ($self) = @_;
 	
     # Starting seed network already given
-    my $seed = $self->assembler()->seed();
+    my $seed = $self->assembler->seed;
     # Wrap into a single state object
     # This will be cloned and modified (copy on write) during the traversal
     my $state;
     
     # Create a partition of the components of the seed, if given
     if (defined $seed) {
-    	my $net = $seed->network();
+        # The target is not the seed's original target, but something bigger
+        $seed->targetid($self->net->targetid);
+    	my $seednet = $seed->network();
+    	my $wholenet = $self->net;
+    	# TODO OPTIMIZE consider removing the correspnding edges in the net
+    	# Make sure that this does not effect semantics of net->symmetry though
+    	# Should generally have already been computed
+    	if (1) {
+    	my $GRAPH_ARRAY_INDEX = 5;
+    	my $interx_map = $wholenet->[$GRAPH_ARRAY_INDEX]->{'_interx_id_map'};
+    	my @edges = $seednet->edges();
+    	foreach my $edge (@edges) {
+    		# TODO DEBUG this breaks on some networks
+    		# Might be related to having many disconnected subnets
+#    		my %interactions = $wholenet->get_interactions(@$edge);
+#    		my @interactions = keys %interactions;
+#    		delete $interx_map->{$_} for @interactions;
+    	}
+        # And just add the interactions actually already used
+        $wholenet->add_interactions_from($seednet);
+    	}
+    	
         # Put all components into one partition, as it is already connected.
         my $uf = Graph::UnionFind->new;
-        my ($head, @keys) = $net->nodes();
+        my ($head, @keys) = $seednet->nodes();
         $uf->union($head,$_) for @keys;
         # Name of the partition. Save the seed here.
         my $partition = $uf->find($head);
         my $models = { $partition => $seed };
-        $state = { uf=>$uf, net=>$net, models=>$models };      
+        $state = { uf=>$uf, net=>$seednet, models=>$models };      
     } else {
     	$state = {
     		uf => Graph::UnionFind->new,
