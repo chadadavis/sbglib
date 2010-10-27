@@ -101,7 +101,7 @@ multiple edges.
 sub write {
     my ($self, $graph, $name) = @_;
        
-    $name ||= $graph->id() || 'network';
+    $name ||= $graph->modelid() || $graph->targetid() || 'network';
     $self->write_begin($name);
     
     $self->write_body($graph, $name);
@@ -202,7 +202,7 @@ sub _write_node {
 
 sub write_body {
 	my ($self, $graph, $name) = @_;
-	$name ||= $graph->id() || 'network';
+	$name ||= $graph->targetid() || 'network';
 	
 	my $str = '';
 	our $tdrurl = "http://3drepertoire.russelllab.org/cgi-bin/final_paper.pl";
