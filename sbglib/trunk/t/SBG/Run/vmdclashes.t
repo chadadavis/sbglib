@@ -17,7 +17,7 @@ my $DEBUG;
 SBG::U::Log::init( undef, loglevel => 'DEBUG' ) if $DEBUG;
 
 use SBG::U::Object qw/load_object/;
-use SBG::Run::vmdclashes;
+use SBG::Run::vmdclashes qw/vmdclashes/;
 
 # Precision (or error tolerance)
 my $prec = '2%';
