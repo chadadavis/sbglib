@@ -71,7 +71,7 @@ use SBG::U::RMSD;
 use SBG::Run::pdbseq;
 
 # Some regexs for parsing PDB IDs and descriptors
-use SBG::Types qw/$re_chain $re_chain_seg/;
+use SBG::Types qw/$re_chain $re_chain_id $re_seg $re_chain_seg/;
 
 =head2 pdbid
 
@@ -438,12 +438,12 @@ sub transform {
 
  Function:
  Example :
- Returns : Whether descriptor corresponds to one-and-only-one full chain
+ Returns : The chain ID, if descriptor corresponds to one-and-only-one full chain
  Args    :
 
 True when this domain consists of only one chain, and that entire chain
 
-See als L<fromchain>
+See als L<onechain>
 =cut
 
 sub wholechain {
@@ -451,6 +451,35 @@ sub wholechain {
 	my ($chain) = $self->descriptor =~ /^\s*CHAIN\s+(.)\s*$/i;
 	return $chain;
 }
+
+
+=head2 onechain
+
+ Function:
+ Example :
+ Returns : The chain ID, if descriptor corresponds to one-and-only-one chain
+ Args    :
+
+True when this domain consists of only one chain, but maybe not the whole chain
+
+See als L<wholechain>
+=cut
+
+sub onechain {
+	my ($self) = @_;
+	
+	my @chains = $self->descriptor =~ /($re_chain)/ig;
+	my @doms = $self->descriptor =~ /($re_seg)/ig;
+	my @all = (@doms, @chains);
+	return unless @all == 1;
+	my $thing = $all[0];
+	# Delete the 'CHAIN ' and any spaces. Then the first char is the chain
+	$thing =~ s/CHAIN\s+//g;
+	$thing =~ s/\s//g;
+	return substr($thing, 0, 1);
+		
+}
+
 
 =head2 id
 

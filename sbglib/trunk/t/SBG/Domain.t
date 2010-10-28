@@ -64,8 +64,16 @@ $dom = SBG::Domain->new(pdbid=>'2nn6', descriptor=>'CHAIN A');
 is($dom->pdbid, '2nn6', 'pdbid');
 is($dom->descriptor, 'CHAIN A', 'descriptor()');
 is($dom->wholechain, 'A', 'wholechain()');
+is($dom->onechain, 'A', 'onechain()');
+
 $dom->descriptor('A 10 _ to A 233 _');
 ok(! $dom->wholechain, '! wholechain()');
+is($dom->onechain, 'A', 'onechain()');
+
+my $multidom = SBG::Domain->new(
+    pdbid=>'2nn6', descriptor=>'CHAIN A B 1 _ to B 100 _ CHAIN C');
+is($multidom->onechain, undef, '! onechain()');
+
 # Equality
 my $equiv = SBG::Domain->new(pdbid=>'2nn6', descriptor=>'A 10 _ to A 233 _');
 ok($equiv == $dom, 'equals');
