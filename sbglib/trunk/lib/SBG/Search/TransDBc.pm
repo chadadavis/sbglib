@@ -34,14 +34,33 @@ use Scalar::Util qw/refaddr/;
 # Must load SBG::Seq to get string overload on Bio::PrimarySeqI
 use SBG::Seq;
 
-use SBG::Run::PairedBlast;
+use SBG::Run::PairedBlast qw/gi2pdbid/;
 use SBG::Model;
 use SBG::Domain;
 use SBG::Interaction;
+use SBG::U::List qw/wtavg/;
 
 # TransDB lookups
 use SBG::DB::entity;
 use SBG::DB::contact;
+
+
+# TODO abstract this out from 3DR and TransDBc
+
+# Count (unique) templates by PDB ID, to prefer templates from common structures
+has 'pdbids' => (
+    is => 'ro',
+    isa => 'HashRef',
+    default => sub { {} },
+); 
+
+# Weights of different aspects of the interaction score
+# nres: Number of residues interacting at interfaces 
+# (average of number of residues interaction from each of the two partners)
+# (divided by 10 to scale it down to roughly [0:100]
+# pdbcount: Number of interaction templates used from the current PDB ID
+# seqid: sequence identity between query and template (average of two partners)
+our ($wtnres, $wtpdbcount, $wtseqcons) = (.1, .2, .7);
 
 
 has 'blast' => (
@@ -82,7 +101,7 @@ sub search {
     return unless @contacts;
 
     # Score the contacts first, without creating full Interaction objects yet
-    _wtcontact($_) for @contacts;
+    $self->_wtcontact($_) for @contacts;
 
     # Get top N contacts, without duplicating contacts from same cluster
     my @toprepcontacts = _top_by_cluster(\@contacts, $ops{'top'});
@@ -122,26 +141,46 @@ sub _hitp2entityp {
 
 # Add a 'weight' field to a contact
 sub _wtcontact {
-    my ($contact) = @_;
+    my ($self, $contact) = @_;
 
-    my $hsp1 = $contact->{'entity1'}{'hit'}->hsp;
-    my $hsp2 = $contact->{'entity2'}{'hit'}->hsp;
-
-    my ($wtnres, $wtcons) = (.1, .9);
+    my ($ent1, $ent2) = map {$contact->{$_}} qw/entity1 entity2/;
+    my ($hsp1, $hsp2) = map {$_->{'hit'}->hsp} ($ent1, $ent2);
+        
     # Scale to 100 (assuming max interface size of 1000
     my $avg_nres = ($contact->{'n_res1'} + $contact->{'n_res2'}) / 2.0 / 10.0;
     my $avg_seqid = 100 * ($hsp1->frac_identical+$hsp2->frac_identical) / 2.0;
     my $avg_seqcons = 100 * ($hsp1->frac_conserved+$hsp2->frac_conserved) / 2.0;
 
-    # TODO use SBG::U::List::wtavg
-    my $score = 100 * 
-        ($wtnres*$avg_nres+$wtcons*$avg_seqcons) / 
-        ($wtnres*100 + $wtcons*100);
+    my $pdbid = $ent1->{'idcode'};
+    my $iaction_label = join '--', _entity_label($ent1), _entity_label($ent2);
+    
+    $self->pdbids->{$pdbid} ||= {};
+    $self->pdbids->{$pdbid}->{$iaction_label} = 1;
+    # How many (unique) templates used from this PDB ID: 
+    my $pdbcount = $self->pdbids->at($pdbid)->keys->length;   
+        
+    our ($wtnres, $wtpdbcount, $wtseqcons);
+    my $weights = [$wtnres, $wtpdbcount, $wtseqcons];
+    my $score = wtavg([$avg_nres,$pdbcount,$avg_seqcons], $weights);
 
+    $log->debug("score: $score");
+    
     $contact->{'weight'} = $score;
     return $contact;
-}
+    
+} # _wtcontact
 
+
+sub _entity_label {
+	   my ($contact) = @_;
+	   my $chain = $contact->{'chain'};
+	   # Just looking for chain--chain contacts here, uniquely per PDB ID
+#	   my $label = $contact->{'idcode'} . 
+#	       $chain . $contact->{'start'} . $chain . $contact->{'end'};
+       my $label = $contact->{'idcode'} . $chain;
+	       
+	   return $label;
+} 
 
 # Get top contacts, per cluster,
 # Take only the top N, when specified

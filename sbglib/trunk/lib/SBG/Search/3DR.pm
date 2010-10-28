@@ -50,13 +50,20 @@ has '_sth' => (
 );
 
 
-# Count templates by PDB ID, to prefer templates from common structures
+# Count (unique) templates by PDB ID, to prefer templates from common structures
 has 'pdbids' => (
     is => 'ro',
     isa => 'HashRef',
     default => sub { {} },
 ); 
 
+# Weights of different aspects of the interaction score
+# nres: Number of residues interacting at interfaces 
+# (average of number of residues interaction from each of the two partners)
+# (divided by 10 to scale it down to roughly [0:100]
+# pdbcount: Number of interaction templates used from the current PDB ID
+# seqid: sequence identity between query and template (average of two partners)
+our ($wtnres, $wtpdbcount, $wtseqid) = (.1, .2, .7);
 
 our $datadir = $ENV{'AG'} . '/3DR/data';
         
@@ -222,25 +229,27 @@ sub _interactions {
         $iaction->avg_scores(qw/seqid n_res/);
         
         my $avg_seqid = $iaction->scores->at('avg_seqid');
-        $log->debug("avg_seqid $avg_seqid");
-
         # Scale to n_res to [0:100] (assuming max interface size of 1000
         my $avg_n_res = $iaction->scores->at('avg_n_res') / 10;
-        $log->debug("avg_n_res $avg_n_res");
-
         # Save interprets z-score in the interaction
         $iaction->scores->put('interpretsz', $h->{z});
       
-        # Increment count of interactions used from this PDB 
-        my $pdbcount = ++ $self->pdbids->{$h->{'pdbid'}};  
-        
-        my $wtnres = .1;
-        my $wtpdbcount = .3;
-        my $wtseqid = .6;
+        # Increment count of (unique) interactions used from this PDB
+        my $pdbid = $h->{'pdbid'};
+        # Each hit is only from a single chain, 
+        # just look at chain--chain uniqueness of interactions within a PDB ID
+        my @chains = sort($dom1->onechain, $dom2->onechain);
+        my $iaction_label = $pdbid . $chains[0] . '--' . $pdbid . $chains[1];
+        $self->pdbids->{$pdbid} ||= {};
+        $self->pdbids->{$pdbid}->{$iaction_label} = 1;
+        # How many (unique) templates used from this PDB ID: 
+        my $pdbcount = $self->pdbids->at($pdbid)->keys->length;   
+        $log->debug("pdbcount $pdbcount");
+        our ($wtnres, $wtpdbcount, $wtseqid);
         my $weights = [$wtnres, $wtpdbcount, $wtseqid];
         
         my $score = wtavg([$avg_n_res,$pdbcount,$avg_seqid], $weights);
-
+        $log->debug("score $score");
         $iaction->weight($score);
 
         push @interactions, $iaction;
