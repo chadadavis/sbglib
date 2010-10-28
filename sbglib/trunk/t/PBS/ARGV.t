@@ -23,10 +23,11 @@ use PBS::ARGV qw/qsub linen nlines/;
 
 # TODO TEST job array -J option
 
-if (PBS::ARGV::has_permission) {
+if (PBS::ARGV::can_connect) {
 
     @ARGV = 1..5;
     my $base = $ENV{'CACHEDIR'} || $ENV{'HOME'};
+    mkdir $base;
     my $dir = tempdir(DIR=>$base, CLEANUP=>!$DEBUG);
     my @jobids = qsub(directives=>["-o $dir", "-e $dir"]);
     if (! defined $ENV{'PBS_ENVIRONMENT'}) {
