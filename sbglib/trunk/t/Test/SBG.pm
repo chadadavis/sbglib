@@ -28,8 +28,12 @@ use FindBin qw/$Bin/;
 use Data::Dump qw/dump/;
 use Data::Dumper qw/Dumper/;
 use Test::Most;
+use File::Spec::Functions;
+
+our $test_data = catfile($Bin, 'test_data');
 
 our @EXPORT = (
+    qw/$test_data/,
     @FindBin::EXPORT,
     qw/$Bin/,
     @Data::Dump::EXPORT,
@@ -37,10 +41,10 @@ our @EXPORT = (
     @Data::Dumper::EXPORT,
     qw/Dumper/,
     @Test::Most::EXPORT,
+    @File::Spec::Functions::EXPORT,
     );
     
     
 INIT { Test::Class->runtests }
     
-
 1;

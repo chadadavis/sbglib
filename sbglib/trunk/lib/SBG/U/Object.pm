@@ -51,14 +51,22 @@ BUGS: Why does Perl not do this automatically when deserializing an object?
 =cut
 sub module_for {
     my ($obj) = @_;
-    UNIVERSAL::isa($obj, 'HASH') or return;
     my $class = blessed($obj) or return;
+    # Load the required class dynamically
     Module::Load::load($class);
     # Bless back into own class (restores 'overload' functionality)
     bless $obj, $class if $class;
+
     # Process all contained objects recursively
-    foreach my $k (keys %$obj) {
-        module_for($obj->{$k});
+    if (UNIVERSAL::isa($obj, 'HASH')) {
+        foreach my $k (keys %$obj) {
+            module_for($obj->{$k});
+        }
+    }
+    if (UNIVERSAL::isa($obj, 'ARRAY')) {
+    	foreach my $val (@$obj) {
+            module_for($val);
+        }
     }
 }
 
