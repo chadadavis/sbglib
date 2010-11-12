@@ -9,11 +9,11 @@ SBG::Run::pdbc - Wrapper for running B<pdbc> (to get entry/chain descriptions
 
  use SBG::Run::pdbc qw/pdbc/;
 
- my $dom = new SBG::DomainI(pdbid=>'2nn6', descriptor=>'A 13 _ to A 331 _');
- my %fields = pdbc($dom);
- print "Entry description:", $fields{'header'};
- print "Chain A description:", $fields{'A'};
-
+ my $templates = '1g3nAC';
+ my $pdbc = pdbc($templates);
+ print 'Annotation for chain A : ', $pdbc->{chain}{A};
+ print 'Annotation for whole complex : ', $pdbc->{header};
+ 
 =head1 DESCRIPTION
 
 
@@ -30,10 +30,9 @@ use base qw/Exporter/;
 our @EXPORT_OK = qw/pdbc/;
 
 use Moose::Autobox;
+use Log::Any qw/$log/;
 
 use SBG::Types qw/$pdb41/;
-use SBG::Model;
-use SBG::Domain;
 
 
 
@@ -50,6 +49,7 @@ B<pdbc> must be in your PATH
 =cut
 sub pdbc {
     my ($str) = @_;
+    $log->debug($str);
     our %cache;
 
     my ($pdb, $chains) = $str =~ /^(\d\w{3})(.*)?/;
@@ -118,32 +118,3 @@ sub _chains {
 }
 
 1;
-
-__END__
-
-=head2 complex
-
- Function: 
- Example : 
- Returns : 
- Args    : 
-
-
-=cut
-sub complex {
-    my ($idstr,) = @_;
-    my $pdbc = pdbc($idstr);
-    my $complex = SBG::Complex->new;
-    my $chainids = $pdbc->{chain}->keys;
-    my $doms = $chainids->map(sub{
-        SBG::Domain->new(
-            pdbid=>$pdbc->{pdbid},
-            descriptor=>"CHAIN $_",
-            description=>$pdbc->{chain}{$_},
-            )
-                              });
-    my $models = $doms->map(sub{SBG::Model->new(query=>$_, subject=>$_)});
-    $models->map(sub{$complex->add_model($_)});
-    return $complex;
-} # complex
-
