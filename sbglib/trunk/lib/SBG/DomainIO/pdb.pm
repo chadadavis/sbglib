@@ -115,8 +115,8 @@ sub write {
     my ($self, @doms) = @_;
     @doms = SBG::U::List::flatten(@doms);
     return unless @doms;
-
-    $log->debug($self->file);
+    return unless $self->fh;
+    $log->debug("file:", $self->file);
     
     # A domain defines a subset of structure, write that to a temp file first
     my $domio = SBG::DomainIO::stamp->new(tempfile=>1);
