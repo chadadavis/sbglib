@@ -51,17 +51,17 @@ L<http://search.cpan.org/dist/sbg>
 
 =back
 
+=head1 LICENSE
 
-
-=head1 COPYRIGHT & LICENSE
-
-Copyright 2009 Chad A Davis, all rights reserved.
+This library is free software. You can redistribute it and/or modify
+it under the same terms as Perl itself.
 
 
 =cut
 
 
-our $VERSION = "1.00";
+our $VERSION = "1.01";
+$VERSION = eval $VERSION;
 
 
 1; # End of SBG
