@@ -72,7 +72,7 @@ use SBG::Run::PairedBlast qw/gi2pdbid/;
 use SBG::Run::pdbseq qw/pdbseq/;
 use SBG::Run::naccess qw/buried/;
 use SBG::Run::qcons qw/qcons/;
-
+use SBG::U::Map qw/tdracc2desc/;
 
 # Complex stores these data structures
 use SBG::Superposition;
@@ -128,6 +128,11 @@ has 'target' => (
     isa => 'Maybe[SBG::Complex]',
     );
     
+has 'networkid' => (
+    is => 'rw',
+    isa => 'Int',
+    );
+        
 # Cluster, for duplicate complexes
 has 'class' => (
     is => 'rw',
@@ -197,12 +202,7 @@ sub _build_description {
     	my $pdbc = pdbc($target);
     	$desc = $pdbc->{'header'};
     } elsif ($target =~ /^\d{3}$/) {
-    	# Looks like a TDR ID
-    	my $dbh = SBG::U::DB::connect('3DR');
-    	my $arr = $dbh->selectall_arrayref(join ' ',
-    	"SELECT description FROM thing",
-    	"where acc=${target} and type_acc='Complex' and source_acc='3DR'");
-    	($desc) = flatten $arr;
+    	$desc = tdracc2desc($target);
     }
     return $desc if $desc;
 }
@@ -349,7 +349,31 @@ has 'models' => (
     default => sub { {} },
     );
 
+# Includes multiple representations, sorted by name/template
+# NB keys() sorts by the ACC of the components, this sorts by their gene/label
+sub all_models {
+	my ($self,) = @_;
+    my $interactions = $self->interactions->values;
+    my $models = $interactions->map(sub{$_->models->flatten});
+    $models = [ sort { 
+    	($a->input . '/' . $a->subject) cmp ($b->input . '/' . $b->subject) 
+    } @$models ];
+	return $models;
+}
 
+
+# Assumes all models (i.e. multiple representatives per component)
+sub chain_of {
+    my ($self, %ops) = @_;
+    our $labels = [ 'A'..'Z', 'a'..'z', 0..9 ];
+    my $index = 0;
+    my $map = {};
+    $map->{$_} = $labels->[$index++] for $self->all_models->flatten;
+    my $key = $ops{'model'};
+    # Though this could also be the 'structure/domain/subject' 
+    # or the 'query/input/component'
+    return $map->{$key};
+}
 
 
 =head2 symmetry
@@ -696,7 +720,8 @@ sub get {
     return $self->models->at(@_);
 }
 
-# Order keys is sorted alphabetically
+
+# Order keys is sorted alphabetically (by the component ACC)
 sub keys {
     my $self = shift;
     return $self->models->keys->sort;
@@ -888,10 +913,14 @@ sub stringify {
 
 =cut
 sub transform {
-    my ($self,$matrix) = @_;
-    foreach my $model (@{$self->models->values}) {
-   	    $model->transform($matrix);
-   }
+   my ($self,$matrix) = @_;
+   
+   # Note that interactions also contain models, but these are different copies
+   # This should be optimized so that they are not duplicated.
+   # In that case, do not transform both of these here, rather just the interaction 
+   $self->models->values->map(sub{$_->transform($matrix)});
+   $self->interactions->values->map(sub{$_->transform($matrix)});
+   
    return $self;
 } # transform
 
@@ -1032,7 +1061,9 @@ sub merge_domain {
     # Product of relative with absolute transformation.
     # Order of application of transformations matters
     $log->debug("Linking:", $linker_superposition->transformation);
-    $linker_superposition->apply($_) for $other->models->values->flatten;
+    
+    # Transform the other complex
+    $linker_superposition->apply($other);
 
     # Now test steric clashes of potential domain against existing domains
     my $clashfrac = $self->check_clashes($other->domains, $ref, $olap);
@@ -1169,7 +1200,8 @@ sub init {
     my $keys = $iaction->keys;
     my $models = $keys->map(sub{$self->_mkmodel($iaction, $_)});
     $self->add_model(@$models);
-    $self->interactions->put($iaction, $iaction);
+    # Save a copy
+    $self->interactions->put($iaction, $iaction->clone);
 
 } # init
 
@@ -1244,7 +1276,10 @@ sub add_interaction {
     $self->clashes->put($destkey, $clashfrac);
     # Cache by destnode, as there may be many for any given refdom
     $self->superpositions->put($destkey, $linker_superposition);
-    $self->interactions->put($iaction, $iaction);
+    # Copy and transform the interaction, to save it
+    my $iaction_clone = $iaction->clone;
+    $linker_superposition->apply($iaction_clone);
+    $self->interactions->put($iaction_clone, $iaction_clone);
     return $linker_superposition->scores->at('Sc');
 
 } # add_interaction
