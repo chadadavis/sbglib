@@ -17,11 +17,11 @@ my $DEBUG;
 $DEBUG = $DB::sub;
 $File::Temp::KEEP_ALL = $DEBUG;
 
-my $file = "$Bin/../data/086-00002.model";
+my $file = "$Bin/../data/10.model";
 
 my $complex = load_object($file);
-
-is($complex->count, 4, "Complex loaded");
+my $mndoms = 12;
+is($complex->count, $mndoms, "Complex loaded");
 
 # Write out
 my $out = SBG::ComplexIO::pdb->new(tempfile=>1);

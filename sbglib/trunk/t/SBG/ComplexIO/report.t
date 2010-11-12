@@ -17,11 +17,11 @@ my $DEBUG;
 $DEBUG = $DB::sub;
 $File::Temp::KEEP_ALL = $DEBUG;
 
-my $file = "$Bin/../data/086-00002.model";
+my $file = "$Bin/../data/10.model";
 
 my $complex = load_object($file);
-
-is($complex->count, 5, "Complex has 5 domains");
+my $ndoms = 12;
+is($complex->count, $ndoms, "Complex has $ndoms domains");
 
 my $str;
 my $out = SBG::ComplexIO::report->new(string=>\$str);
@@ -30,7 +30,7 @@ $out->write($complex);
 $out->flush;
 
 my @chains = $str =~ /^CHAIN \S+/gm;
-is(scalar(@chains), 5, 'report::write() to string');
+is(scalar(@chains), $ndoms, 'report::write() to string');
 
 
 __END__
