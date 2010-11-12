@@ -15,6 +15,12 @@ SBG::U::Test - Tools for testing
 
 L<Test::More>
 
+=head1 TODO
+
+Refactor under Test::SBG:: (not part of distribution)
+
+Or incorporate into Test::PDL CPAN modules
+
 =cut
 
 
