@@ -24,9 +24,8 @@ use Moose;
 with 'SBG::IOI';
 
 use Carp;
-
+use Log::Any qw/$log/;
 use Moose::Autobox;
-
 
 use SBG::DomainIO::pdb;
 use SBG::ComplexIO::report;
@@ -45,7 +44,9 @@ use SBG::ComplexIO::report;
 sub write {
     my ($self, $complex) = @_;
     return unless defined $complex;
+    $log->debug("complex: ", $complex); 
     my $fh = $self->fh or return;
+    $log->debug("file: ", $self->file);
 
     my $report;
     my $reportio = SBG::ComplexIO::report->new(string=>\$report);

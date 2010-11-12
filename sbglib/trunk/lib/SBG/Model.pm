@@ -39,14 +39,13 @@ SBG::Role::Transformable
 # TODO DES needs to implement a StructureI interface, defining e.g. 'transform'
 
 use Scalar::Util qw/refaddr/;
+use Log::Any qw/$log/;
 
 
 use overload (
     '""' => 'stringify',
     fallback => 1,
     );
-
-
 
 
 =head2 query
@@ -148,7 +147,7 @@ sub _build_coverage {
 
 sub stringify {
     my ($self) = @_;
-    my $string = $self->gene || '';
+    my $string = $self->gene || $self->query;
     my $subject = $self->subject;
     $string .= '(' . $subject . ')' if $subject;
     return $string;
@@ -172,16 +171,23 @@ sub transform {
 
 Hack to extract the first word of description, assumed to be the gene name
 
+TODO this needs to be pulled from, e.g.: http://www.uniprot.org/uniprot/Q3E7Y3.xml
+
 =cut
-sub gene {
-    my ($self) = @_;
+sub gene { name(@_) }
+sub name {
+    my ($self) = @_;    
     # Alnternative when no gene name
-    my $query = $self->query;
+#    my $query = $self->query;
+    # Use the original sequence input here, as query is the result of the Blast search
+    my $query = $self->input;
     return unless defined($query);
     my $gene;
-    if ($query->isa('Bio::SeqI')) {
+    if ($query->isa('Bio::PrimarySeqI')) {
         my $desc = $query->desc() || $query->display_id;
+        $log->debug($desc);
         ($gene) = $desc =~ /^(\S+)/;
+        $log->debug($gene);
     }
     # Otherwise just stringify the query objecct
     return $gene || "$query";

@@ -25,6 +25,7 @@ use Moose;
 with 'SBG::IOI';
 
 use Carp;
+use Log::Any qw/$log/;
 
 use Moose::Autobox;
 
@@ -41,9 +42,13 @@ use Moose::Autobox;
 sub write {
     my ($self, $complex) = @_;
     return unless defined $complex;
+    $log->debug("complex: ", $complex);
     my $fh = $self->fh or return;
-
+    $log->debug("file: ", $self->file);
+    
     print $fh "Output from Complex modelling\n\n";
+    print $fh "Target ", $complex->targetid, "\n",
+    print $fh "Model ", $complex->modelid, "\n";
     
     print $fh "Interactions\n\n";
     

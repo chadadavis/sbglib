@@ -25,6 +25,7 @@ our @EXPORT_OK = qw/module_for methods load_object/;
 
 use Scalar::Util qw/blessed/;
 use Module::Load qw/load/;
+use Log::Any qw/$log/;
 
 use SBG::Role::Storable qw/retrieve/;
 use SBG::Role::Dumpable qw/undump/;
@@ -85,6 +86,11 @@ sub load_object {
     my ($path) = @_;
     my $obj = retrieve($path);
     $obj = undump($path) unless defined $obj;
+    if (defined $obj) {
+        $log->debug("Loaded: ", $path);
+    } else {
+    	$log->error("Failed to load: ", $path);
+    }
     return unless defined $obj;
     # Load the module definition for the type of object
     module_for($obj);
