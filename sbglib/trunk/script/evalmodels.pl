@@ -122,6 +122,8 @@ use SBG::DomainIO::pdb;
 use SBG::NetworkIO::sif;
 use SBG::NetworkIO::png;
 
+use SBG::U::Map qw/uniprot2gene/;
+
 
 # Backwards compat.
 $ops{'redo'} = 1 if defined($ops{'cache'}) && $ops{'cache'} == 0;
@@ -299,26 +301,6 @@ sub _basepath {
     return $basepath;    
 }
 
-# TODO Really needs to be worked in somewhere else: SBG::Seq or SBG::Node maybe
-sub uniprot2gene {
-    my ($uniprot) = @_;
-    
-    my $dbh = SBG::U::DB::connect('3dr_complexes');
-    our $sth_gene;
-    $sth_gene ||= $dbh->prepare(
-        join ' ',
-        'SELECT',
-        'gene_name',
-        'FROM',
-        'yeast_proteins',
-        'where',
-        'uniprot_acc=?',
-        );
-    my $res = $sth_gene->execute($uniprot);
-    my $a = $sth_gene->fetchrow_arrayref;
-    return unless $a && @$a;
-    return $a->[0];
-}
 
 
 

@@ -26,7 +26,7 @@ L<Bio::DB::BioFetch>
 
 package SBG::U::Map;
 use base qw/Exporter/;
-our @EXPORT_OK = qw/pdb_chain2uniprot_acc/;
+our @EXPORT_OK = qw/pdb_chain2uniprot_acc uniprot2gene tdracc2desc/;
 
 use strict;
 use warnings;
@@ -36,7 +36,11 @@ use Log::Any qw/$log/;
 use LWP::Simple;
 use IO::String;
 
+use SBG::U::DB;
+use SBG::U::List qw/flatten/;
+
 use XML::XPath;
+
 sub pdb_chain2uniprot_acc {
     my ($id) = @_;
     my $re = '([[:digit:]][[:alnum:]]{3})[[:punct:]]?([[:alnum:]]{1,2})';
@@ -55,6 +59,39 @@ sub pdb_chain2uniprot_acc {
     my $uniprotacc = $node->getAttribute('dbAccessionId');    
     return $uniprotacc;
 }
+
+# Only for S. cerevisiae sequences
+sub uniprot2gene {
+    my ($uniprot) = @_;
+    
+    my $dbh = SBG::U::DB::connect('3dr_complexes');
+    our $sth_gene;
+    $sth_gene ||= $dbh->prepare(
+        join ' ',
+        'SELECT',
+        'gene_name',
+        'FROM',
+        'yeast_proteins',
+        'where',
+        'uniprot_acc=?',
+        );
+    my $res = $sth_gene->execute($uniprot);
+    my $a = $sth_gene->fetchrow_arrayref;
+    return unless $a && @$a;
+    return $a->[0];
+}
+
+sub tdracc2desc {
+	my ($target) = @_;
+    # TODO REFACTOR into an external 3DR module
+    my $dbh = SBG::U::DB::connect('3DR');
+    my $arr = $dbh->selectall_arrayref(join ' ',
+        "SELECT description FROM thing",
+        "where acc=${target} and type_acc='Complex' and source_acc='3DR'");
+    my ($desc) = flatten $arr;
+    return $desc;
+}
+	
 
 1;
 __END__
