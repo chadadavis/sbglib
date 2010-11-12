@@ -175,6 +175,11 @@ use SBG::Complex;
 use SBG::CA::Assembler2;
 use Graph::Traversal::GreedyEdges;
 
+use acaschema;
+use SBG::U::DB; # qw/connect/;
+
+# Use our own library, which does connection caching, to access the schema
+my $schema = acaschema->connect(sub{SBG::U::DB::connect('aca')});
 
 
 foreach my $file (@ARGV) {
@@ -183,12 +188,20 @@ foreach my $file (@ARGV) {
         $file = PBS::ARGV::linen($file, $ops{'J'});
     }
 
-    my $targetid = basename($file,'.network');
-    mkdir $targetid;
-    my $output = catfile($targetid, $targetid . '.model');
+    # Load the Network object
+    my $net;
+    unless ($net = load_object($file)) {
+        warn("$file is not an object");
+        next;
+    }
+    my $dir = dirname $file;
+    my $targetid = $net->targetid;
+    my $partid = $net->partid;
+    my $destdir = catdir($targetid, $partid);
+    mkdir $destdir;
+    my $output = catfile($targetid, $partid, 'model');
     my $lock = start_lock($output);
     next if ! $lock && ! $ops{'debug'};
-
     start_log($output, %ops);
 
     # A cheap way to track what crashes before finishing
@@ -196,15 +209,9 @@ foreach my $file (@ARGV) {
     open my $tryingfh, ">$tryingfile";
     close $tryingfh;
 
-    # Load the Network object
-    my $net;
-    unless ($net = load_object($file)) {
-        $log->error("$file is not an object");
-        next;
-    }
     _print_net($net);
 
-    $ops{minsize} = 3 unless defined $ops{minsize};
+    $ops{minsize} = 2 unless defined $ops{minsize};
     # Only full-size (complete coverage) models?
     $ops{minsize} = '100%' if $ops{complete};
     $ops{minsize} = ceil frac_of($ops{minsize}, scalar $net->nodes);
@@ -264,13 +271,37 @@ sub _one_net {
     return $assembler->stats;
 }
 
+use Data::Dumper;
 sub _write_solution {
-    my ($complex, $class, $duplicate, $stats) = @_;
-    my $targetid = $complex->targetid;
-    mkdir $targetid;
-    my $file = catfile($targetid, $complex->modelid . '.model');
+    my ($complex, $class, $duplicate, $stats, $net) = @_;
+
+    # Lookup record for this complex, or create it
+    my $complex_table = $schema->resultset('Complex');
+    my $complexrec = $complex_table->search({
+        network_id => $net->id, model => $complex->modelid})->next;        
+        
+    if ($complexrec) {
+    	# Already exists in DB, update with better scoring model
+        $complexrec->score($complex->score);
+        $complexrec->nreplaced($complexrec->nreplaced+1);
+        $complexrec->update;
+    } else {
+        $complex_table->create({
+           network_id => $net->id, 
+           model => $complex->modelid, 
+           score=> $complex->score,
+        });
+    }
+
+    my $targetid = $net->targetid;
+    my $partid = $net->partid;
+    my $modelid = $complex->modelid;
+    my $destdir = catdir($targetid, $partid, $modelid);
+    mkdir $destdir;
+    my $file = catfile($destdir, $complex->modelid . '.model');
     $complex->scores->put('mid',$complex->modelid);
     $complex->store($file);
+    
     _status($stats);
 }
 
