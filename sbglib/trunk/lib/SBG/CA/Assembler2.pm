@@ -249,7 +249,9 @@ sub test {
     
     if (! $uf->has($src) && ! $uf->has($dest) ) {
         # Neither node present in solutions forest. Create dimer
+        # TODO REFACTOR
         $merged_complex = SBG::Complex->new(
+            networkid => $self->net->id(),
             targetid=>$self->net->targetid(),
             target=>$self->target(),
             symmetry=>$self->net->symmetry(),
@@ -377,6 +379,7 @@ sub _add_monomer {
     $log->debug($iaction);
     # Create complex out of a single interaction
     my $add_complex = SBG::Complex->new(
+            networkid => $self->net->id(),    
             targetid=>$self->net->targetid(),
             target=>$self->target(),
             symmetry=>$self->net->symmetry(),
@@ -508,7 +511,9 @@ sub _check_dup {
     my $componentlabels = $complex->keys;
     my $doms            = $complex->domains;
     # Use only the centroid point, less accurate, but sufficient
-    my $coords = $doms->map( sub { $_->centroid } );
+#    my $coords = $doms->map( sub { $_->centroid } );
+    # Use the 7-point crosshairs
+    my $coords = $doms->map( sub { $_->coords } );
 
     # Check if duplicate, based on geometric hash
     # exact() requires that the sizes match on both sides (i.e. no subsets)
@@ -551,7 +556,7 @@ sub _return_solution {
 
     my $callback = $self->callback;
     return unless defined $callback;
-    $callback->($complex, $class, $duplicate, $self->stats);
+    $callback->($complex, $class, $duplicate, $self->stats, $self->net);
         
 } # _return_solution
 
