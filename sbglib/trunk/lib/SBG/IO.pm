@@ -78,6 +78,7 @@ sub write {
     my ($self, @a) = @_;
     @a or return;
     my $fh = $self->fh or return;
+    return if defined $self->file && -e $self->file && ! $self->overwrite;
     print $fh @a;
     return $self;
 } # write

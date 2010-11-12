@@ -73,6 +73,14 @@ has 'compressed' => (
     );
 
 
+
+has 'overwrite' => (
+    is => 'rw',
+    isa => 'Bool',
+    default => 1,
+    );
+    
+    
 =head2 file
 
 Do I/O on the given file. 
@@ -87,7 +95,7 @@ Existing files are overwritten (truncated) by the > modifier.
 =cut
 has 'file' => (
     is => 'rw',
-    isa => 'Str',
+    isa => 'Maybe[Str]',
     trigger => \&_file,
     );
 
@@ -102,6 +110,52 @@ around 'file' => sub {
     $val =~ s/^[+<>]*//g;
     return $val;
 };
+
+
+=head2 _file
+
+ Function: 
+ Example : 
+ Returns : 
+ Args    : 
+
+
+=cut
+sub _file {
+    my ($self, $file) = @_;
+    $log->debug($file);
+    # $file contains mode characters here still
+    $file =~ s/^\+//;
+    
+    my $filename = $file;
+    $filename =~ s/^[+<>]*//g;
+    # If in write mode, but not overwrite mode, check for existing file
+    if ($file =~ /^>/ && -e $filename && ! $self->overwrite) {
+        $log->info("Not overwriting existing: ", $filename);
+        $self->fh(undef);
+        return;
+    }
+    
+    if ($self->compressed || $file =~ /\.gz$/) {
+        if ($file =~ /^>/) {
+            # Write to a gzip compressed stream
+            $file =~ s/^[>]+//;
+            $self->fh(IO::Compress::Gzip->new($file));
+        } else {
+            # Read from gunzip uncompressed stream
+            $file =~ s/^[<]+//g;
+            $self->fh(IO::Uncompress::Gunzip->new($file));
+        }
+    } else {
+        $self->fh(IO::File->new($file));
+    }
+
+    unless ($self->fh) {
+        $log->error("Cannot open: $file");
+        return;
+    }
+    return $self;
+}
 
 
 =head2 tempfile
@@ -200,7 +254,8 @@ before 'objtype' => sub {
 =cut
 sub flush {
     my ($self,) = @_;
-    $self->fh->flush if $self->fh->can('flush');
+    return unless defined $self->fh && $self->fh->can('flush');
+    $self->fh->flush; 
 } # flush
 
 
@@ -284,45 +339,6 @@ sub rewind {
 sub reset {
     return rewind(@_);
 }
-
-        
-
-
-=head2 _file
-
- Function: 
- Example : 
- Returns : 
- Args    : 
-
-
-=cut
-sub _file {
-    my ($self, $file) = @_;
-    # $file contains mode characters here still
-    $file =~ s/^\+//;
-    
-    if ($self->compressed || $file =~ /\.gz$/) {
-    	if ($file =~ /^>/) {
-    		# Write to a gzip compressed stream
-            $file =~ s/^[>]+//;
-            $self->fh(IO::Compress::Gzip->new($file));
-    	} else {
-    		# Read from gunzip uncompressed stream
-    		$file =~ s/^[<]+//g;
-    		$self->fh(IO::Uncompress::Gunzip->new($file));
-    	}
-    } else {
-        $self->fh(IO::File->new($file));
-    }
-
-    unless ($self->fh) {
-        $log->error("Cannot open: $file");
-        return;
-    }
-    return $self;
-}
-
 
 
 =head2 _string
