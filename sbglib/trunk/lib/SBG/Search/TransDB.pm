@@ -10,6 +10,7 @@ SBG::Search::TransDB -
 
 =head1 DESCRIPTION
 
+This search module is deprecated. See L<SBG::Search::TransDBc> for the clustered implementation.
 
 =head1 SEE ALSO
 
