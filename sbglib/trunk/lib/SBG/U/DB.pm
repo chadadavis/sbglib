@@ -26,7 +26,7 @@ L<DBI>
 
 package SBG::U::DB;
 use base qw/Exporter/;
-our @EXPORT_OK = qw(connect chain_case);
+our @EXPORT_OK = qw(connect chain_case dsn);
 
 use strict;
 use warnings;
@@ -76,34 +76,32 @@ sub connect {
     my $dbh = $connections{$host}{$dbname};
     return $dbh if $dbh;
 
-    my $dbistr = "dbi:mysql:dbname=$dbname";
-    $dbistr .= ";host=$host" if $host;
-    $dbistr .= ";port=$port" if $port;
+    my $dsn = dsn($dbname, $host);
     $timeout ||= defined($DB::sub) ? 100: 5;
     $user ||= '%';
-    my $password = _password($dbistr) if $usingpassword;
+    my $password = _password($dsn) if $usingpassword;
 
     my $err;
     while (!defined $err || $err =~ /too many connections/i) {
         $dbh = eval { 
             local $SIG{ALRM} = sub { 
-                die "DBI::connect timed out: $dbistr\n"; 
+                die "DBI::connect timed out: $dsn\n"; 
             };
             alarm($timeout);
-            my $dbh = DBI->connect($dbistr, $user, $password);
+            my $dbh = DBI->connect($dsn, $user, $password);
             alarm(0);
             return $dbh;
         };
         last if $dbh;
         $err = $DBI::errstr;
-        $log->info("Waiting for database: $dbistr");
+        $log->info("Waiting for database: $dsn");
         sleep int(rand()*$sleep);            
     }
 
     unless ($dbh) {
         # Some other error
         my $err = $DBI::errstr || '<unidentified error>';
-        carp("Could not connect to $dbistr ($err)\n");
+        carp("Could not connect to $dsn ($err)\n");
         return;
     }
 
@@ -111,6 +109,22 @@ sub connect {
     $connections{$host}{$dbname} = $dbh;
     return $dbh;
 }
+
+
+sub dsn {
+	my ($dbname, $host) = @_;
+	
+    $dbname ||= $default_db;
+    $host ||= _default_host();
+    my $port = _default_port();
+
+    my $dsn = "dbi:mysql:dbname=$dbname";
+    $dsn .= ";host=$host" if $host;
+    $dsn .= ";port=$port" if $port;
+    return $dsn;
+	
+}
+
 
 use Term::ReadKey;
 sub _password {
@@ -202,6 +216,7 @@ Given 'AA', returns 'a';
 
 Else, returns the identity;
 
+TODO REFACTOR belongs in SBG::U::Map
 =cut
 sub chain_case {
     my ($chainid) = @_;
