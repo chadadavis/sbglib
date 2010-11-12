@@ -38,15 +38,3 @@ if (PBS::ARGV::can_connect) {
     ok(1, "No PBS (permissions) skipping");
 }
 
-
-my $file = "$Bin/data/lines.csv";
-is(nlines($file), 4, 'nlines');
-
-# last line of file
-is(linen($file, 3), 'three', "linen");
-
-# first line of file
-is(linen($file, 0), 'zero', "linen");
-
-# Doesn't exist
-ok(! linen($file, 4), "linen");
