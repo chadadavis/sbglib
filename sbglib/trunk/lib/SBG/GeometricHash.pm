@@ -37,6 +37,11 @@ NB testing single points in axis is problematic if X==Y==0 This results in not
 being able to create a non-ambiguous basis for the transformations.
 
 
+=head1 BUGS
+
+Requires at least three 3D points to create a basis. The total number of points is the number of objects times the number of points per object. If you have two objects, but each object is represented by only one 3D point, this will fail. If you have one object, but it contains >= 3 3D points, that can be hashed. Three objects of only one 3D point each can also be hashed. 
+
+
 =head1 SEE ALSO
 
 1. Wolfson, H. & Rigoutsos, I. Geometric hashing: an overview. Computational
@@ -113,7 +118,6 @@ I.e. the answer is always a superset, but not exact. For that, see L<exact>
 =cut
 sub exists {
     my ($self,$points,$labels) = @_;
-    return unless scalar(@$points) >= 3;
     my %h = $self->at($points, $labels);
     # Get models that cover all points of the query
     my @fullcovers = grep { @$points == $h{$_} } keys %h;
@@ -134,7 +138,6 @@ sub exists {
 =cut
 sub class {
     my ($self,$points, $labels) = @_;
-    return unless scalar(@$points) >= 3;
     my $class = $self->exists($points, $labels);
     return unless $class;
     my @a = split / /, $class;
@@ -156,8 +159,7 @@ i.e. query is a subset of found model, and found model is subset of query
 
 =cut
 sub exact {
-    my ($self,$points, $labels) = @_;
-    return unless scalar(@$points) >= 3;
+    my ($self,$points, $labels) = @_;    
     # Models that cover the query
     my @covers = $self->exists($points, $labels);
     # Models the same size as the query:
@@ -186,7 +188,6 @@ Returns a hash of votes for specific models.
 =cut
 sub at {
     my ($self,$points,$labels) = @_;
-    return unless scalar(@$points) >= 3;
     # Get an array of points into a matrix;
     my $model = _model($points);
     $log->debug($model);
@@ -261,7 +262,6 @@ If no model name is provided, generic class ID numbers will be created.
 =cut 
 sub put { 
     my ($self, $modelid, $points, $labels) = @_;
-    return unless scalar(@$points) >= 3;
     unless (defined $modelid) {
         $self->{'classid'}++;
         $modelid = $self->{'classid'};
