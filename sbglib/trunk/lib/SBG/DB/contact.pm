@@ -50,7 +50,7 @@ NB contacts are stored in both directions, so we do not need to check 1<->2 and
 
 Contacts are clustered by iRMSD <= 5.0 via single-linkage clustering
 
-TODO Define 'or_same_chains' :
+TODO Define cluster_sl_irmsd_5_0_or_same_chains
 This is wrong, we want to be using cluster_sl_irmsd_5_0 as the 'or_same_chains' clusters to many things together, just to reduce the number of cluster, but we'd prefer to have more alternatives here ...
 
 =cut
@@ -65,7 +65,7 @@ sub query {
     $sth ||= $dbh->prepare("
 SELECT
 id_entity1,id_entity2,n_res1,n_res2,
-  cluster_sl_irmsd_5_0_or_same_chains as cluster
+  cluster_sl_irmsd_5_0 as cluster
 FROM 
 contact
 WHERE 
