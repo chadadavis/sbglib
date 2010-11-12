@@ -61,7 +61,7 @@ sub cache {
 #             driver=>'Null', 
             root_dir   => $base,
             expires_in => '2 weeks',
-            cache_size => '100m',
+            cache_size => '500m',
             l1_cache => { driver=>'Memory', global=>1, cache_size=>'50m' }
             );
         $log->info("cachedir: $cachedir");
