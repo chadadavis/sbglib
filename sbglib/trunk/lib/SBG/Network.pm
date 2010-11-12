@@ -162,21 +162,44 @@ override 'add_interaction' => sub {
 }; # add_interaction
 
 
+# Primary key
+sub id {
+    my ($self, $value) = @_;
+    my $key = 'id';
+    if (defined $value) {
+        $self->set_graph_attribute($key, $value);
+    }
+    return $self->get_graph_attribute($key);
+}
+
+
 sub targetid {
 	my ($self, $value) = @_;
-	if (defined $value) {
-		$self->set_graph_attribute('targetid', $value);
-	}
-	return $self->get_graph_attribute('targetid');
+	my $key = 'targetid';
+    if (defined $value) {
+        $self->set_graph_attribute($key, $value);
+    }
+    return $self->get_graph_attribute($key);
+}
+
+
+sub partid {
+    my ($self, $value) = @_;
+    my $key = 'partid';
+    if (defined $value) {
+        $self->set_graph_attribute($key, $value);
+    }
+    return $self->get_graph_attribute($key);
 }
 
 
 sub modelid {
     my ($self, $value) = @_;
+    my $key = 'modelid';
     if (defined $value) {
-        $self->set_graph_attribute('modelid', $value);
+        $self->set_graph_attribute($key, $value);
     }
-    return $self->get_graph_attribute('modelid');
+    return $self->get_graph_attribute($key);
 }
 
 
