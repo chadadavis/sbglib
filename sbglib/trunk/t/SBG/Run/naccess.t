@@ -22,7 +22,9 @@ use SBG::Domain;
 
 my $dom = SBG::Domain->new(pdbid=>'1ral');
 my $sas = sas_atoms($dom);
-float_is($sas, 15197.4, 'sas_atoms()');
+# If you get 28241.3 here, then you're erroneously using PQS
+# PDB and Biounit both report one chain, for which naccess gives 15197.4
+float_is($sas, 15197.4, 'sas_atoms() (fails if using PQS)');
 
 done_testing();
 
