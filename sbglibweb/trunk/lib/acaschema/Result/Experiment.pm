@@ -17,13 +17,6 @@ __PACKAGE__->add_columns(
     is_nullable => 1,
     size => 128,
   },
-  "notes",
-  {
-    data_type => "LONGTEXT",
-    default_value => undef,
-    is_nullable => 1,
-    size => 4294967295,
-  },
   "date",
   {
     data_type => "DATETIME",
@@ -40,8 +33,8 @@ __PACKAGE__->has_many(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.04005 @ 2010-11-02 17:53:22
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:oVtG3gz4UUwZueso6JhaYQ
+# Created by DBIx::Class::Schema::Loader v0.04005 @ 2010-11-05 13:48:04
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:ximwnfUyO4mJSY22lYy71Q
 
 
 # You can replace this text with custom content, and it will be preserved on regeneration

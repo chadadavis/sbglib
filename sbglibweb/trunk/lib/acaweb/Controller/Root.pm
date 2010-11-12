@@ -28,9 +28,9 @@ The root page (/)
 
 sub index :Path :Args(0) {
     my ( $self, $c ) = @_;
+    # TODO HOME PAGE
+#    $c->response->body( $c->welcome_message );
 
-    # Hello World
-    $c->response->body( $c->welcome_message );
 }
 
 =head2 default
@@ -45,13 +45,17 @@ sub default :Path {
     $c->response->status(404);
 }
 
-=head2 end
 
-Attempt to render a view, if needed.
-
-=cut
-
+# Forwarding to a view automatic
 sub end : ActionClass('RenderView') {}
+
+# Forwarding will be effective if response->body is not set
+#sub end : Private {
+#    my ( $self, $c ) = @_;
+#    $c->forward( $c->view('TT') );
+#}
+    
+
 
 =head1 AUTHOR
 

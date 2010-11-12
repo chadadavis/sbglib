@@ -36,10 +36,17 @@ __PACKAGE__->config(
     name => 'acaweb',
     # Disable deprecated behavior needed by old applications
     disable_component_resolution_regex_fallback => 1,
+    # Base directory for outputs
+    fsresults => "$ENV{AG}/aca/results",
+    webresults => '/static/results',    
 );
 
 # Start the application
 __PACKAGE__->setup();
+
+# Logging
+use SBG::U::Run qw/start_log/;
+start_log('acaweb', loglevel=>'DEBUG');
 
 
 =head1 NAME
@@ -60,7 +67,7 @@ L<acaweb::Controller::Root>, L<Catalyst>
 
 =head1 AUTHOR
 
-Chad Davis
+Chad A Davis, C<< <chad.a.davis at gmail.com> >>
 
 =head1 LICENSE
 

@@ -1,0 +1,21 @@
+
+<!-- Breadcrumbs to the current path  -->
+<div id="breadcrumbs">
+<a href="[%c.uri_for('/experiment/')%]">My results</a> 
+/ 
+<a href="[%c.uri_for('/experiment/' _ experiment.id)%]">$experiment.label</a>
+[% IF target %]
+/
+<a href="[%c.uri_for('/target/' _ target.id)%]">target $target.label</a>
+[% IF network %]
+/
+<a href="[%c.uri_for('/network/' _ network.id)%]">subnet $network.partition</a>
+[% IF complex %]
+/
+<a href="[%c.uri_for('/complex/' _ complex.id)%]">model $complex.model</a>
+[% END %]
+[% END %]
+[% END %]
+
+</div>
+  

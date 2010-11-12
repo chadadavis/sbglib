@@ -1,0 +1,17 @@
+[% INCLUDE header.tt title="Results - ACA" %]
+
+
+<table id="hor-zebra">
+<tr>
+<th>ID</th>
+<th>Name</th>
+<th>Date</th>
+[% FOREACH hit IN hits %]
+<tr >
+<td><a href="[%c.uri_for('/experiment/' _ hit.id)%]">$hit.id</a></td>
+<td><a href="[%c.uri_for('/experiment/' _ hit.id)%]">$hit.label<a/></td>
+<td>$hit.date</td> 
+</tr>
+[% END %]
+
+[% INCLUDE footer.tt %]

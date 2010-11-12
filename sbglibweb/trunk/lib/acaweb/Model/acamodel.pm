@@ -6,7 +6,7 @@ use base 'Catalyst::Model::DBIC::Schema';
 __PACKAGE__->config(
     schema_class => 'acaschema',
     connect_info => [
-        'dbi:mysql:database=aca;host=pevolution;user=aca',
+        'dbi:mysql:database=aca;host=pevolution;user=%',
         
     ],
 );

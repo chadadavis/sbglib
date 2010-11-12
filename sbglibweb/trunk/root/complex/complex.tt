@@ -1,0 +1,82 @@
+[% INCLUDE header.tt title=experiment.label _ ' - ' _ complex.model %]
+
+[% INCLUDE breadcrumbs.tt %]
+
+<p>
+Description: $target.description
+</p>
+
+<form width="30%" id="jmolForm" style="float:left">
+
+<div style="width:400px;height:400px;border:solid 1px lightgray;padding:5px;margin:10px" id="jmol_box"> 
+
+<script type="text/javascript">
+function selectChain(chain) {
+    if (chain == null || this.selection == chain) {
+        jmolScript("select all;wireframe off;color chain");
+        this.selection = null;
+        return;
+    } else {
+    //var cmd = "select all; color chain; select :" + chain + "; color gold";
+    //var cmd = "halos off;select :" + chain + ";halos on";
+    var cmd = "select all;color chain;wireframe off;select :" + chain + ";wireframe on;color gold"
+    jmolScript(cmd);
+    this.selection = chain;
+    }
+    
+}
+
+jmolInitialize("/static/jmol");
+var script = "background white;set measurementUnits ANGSTROMS;set ChainCaseSensitive;select all;spacefill off; wireframe off; cartoon on; color chain;select ligand;wireframe 0.16;spacefill 0.5; model 0;set antialiasDisplay true;select all;save STATE state_1";
+
+jmolApplet([400,400], "load [%c.uri_for(pdbgzurl)%] ;" + script);
+
+// Both of these succeed in setting the focus, but they're both broken by the jmolApplet
+window.onload = function() { document.getElementById("jmolCommand").focus()}
+//window.onload = function() { window.jmolForm.jmolCommand.focus()}
+
+
+
+</script>
+</div>
+
+<div style="margin:10px">
+<input name="jmolCommand" id="jmolCommand" type="text" width="100%" />
+<input value="Jmol command" type="button" onclick="jmolScript(elements['jmolCommand'].value);" />
+<input value="Reset display" type="button" onclick="jmolScript('restore STATE state_1'); return false;" />
+<p>Download <a href="[%c.uri_for(pdbgzurl)%]">${complex.model}.pdb.gz</a></p>
+</div>
+</form>
+
+<h3>Components</h3>
+<table id="hor-zebra" width="65%">
+<tr>
+<th>ACC</th>
+<th>Name</th>
+<th>Template</th>
+<th>Organism</th>
+<th>Description</th>
+<th>Range</th>
+<th>nAligned</th>
+<th>AA contacts</th>
+<th>Conservation</th>
+</tr>
+[% FOREACH model IN models %]
+[% chain=complexobj.chain_of("model",model) %]
+<tr>
+<td>$model.query <a href="javascript:selectChain('$chain')">($chain)</a> 
+<td>$model.gene</td>
+<td><a href="http://www.rcsb.org/pdb/explore.do?structureId=$model.subject.pdbid" target="_ext">$model.subject.pdbid</a></td>
+<td>$model.subject.organism</td>
+<td>$model.subject.description</td>
+<td>$model.subject.descriptor</td>
+<td>$model.scores.length</td>
+<td>$model.scores.n_res</td>
+<td>[% model.scores.frac_conserved | format('%.02f') %]</td>
+</tr>
+[% END %]
+</table>
+<a href="javascript:selectChain()">Deselect all</a>
+
+
+[% INCLUDE footer.tt %]

@@ -1,0 +1,9 @@
+<html>
+  <head>
+    <title>$title</title>
+    <script type="text/javascript" src="/static/jmol/Jmol.js"></script>
+    <link href="/static/default.css" rel="stylesheet" type="text/css" /> 
+    <link href="/static/tables.css" rel="stylesheet" type="text/css" /> 
+    
+  </head>
+  <body> 

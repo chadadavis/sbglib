@@ -24,13 +24,6 @@ __PACKAGE__->add_columns(
     is_nullable => 1,
     size => 1024,
   },
-  "notes",
-  {
-    data_type => "LONGTEXT",
-    default_value => undef,
-    is_nullable => 1,
-    size => 4294967295,
-  },
   "user",
   {
     data_type => "VARCHAR",
@@ -40,6 +33,8 @@ __PACKAGE__->add_columns(
   },
   "experiment_id",
   { data_type => "INT", default_value => undef, is_nullable => 0, size => 10 },
+  "ndomains",
+  { data_type => "INT", default_value => undef, is_nullable => 1, size => 10 },
 );
 __PACKAGE__->set_primary_key("id", "experiment_id");
 __PACKAGE__->has_many(
@@ -54,8 +49,8 @@ __PACKAGE__->belongs_to(
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.04005 @ 2010-11-02 17:53:22
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:M1SVJs9CrQ4prPSA15Ktug
+# Created by DBIx::Class::Schema::Loader v0.04005 @ 2010-11-05 13:48:04
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:Xfrhy0TdwtQ8pi7BkAPFZQ
 
 
 # You can replace this text with custom content, and it will be preserved on regeneration

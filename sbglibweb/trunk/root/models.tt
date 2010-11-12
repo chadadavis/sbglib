@@ -1,0 +1,28 @@
+[% INCLUDE header.tt title=exp.label %]
+
+[% INCLUDE breadcrumbs.tt %]
+
+<table id="hor-zebra">
+<tr>
+<th>Target</th>
+<th>Subnet</th>
+<th>Model</th>
+</tr>
+[% FOREACH complex IN complexes %]
+[% network = complex.network_id %]
+[% target = network.target_id %]
+<tr>
+<td>
+<a href="[%c.uri_for("/target/" _ target.id)%]">$target.label</a>
+</td>
+<td>
+<a href="[%c.uri_for("/network/" _ network.id)%]">$network.partition</a>
+</td>
+<td>
+<a href="[%c.uri_for("/complex/" _ complex.id)%]">$complex.model</a>
+</td>
+</tr>
+[% END %]
+</table>
+
+[% INCLUDE footer.tt %]
