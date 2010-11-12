@@ -34,6 +34,8 @@ with 'SBG::Role::Dumpable';
 with 'SBG::Role::Scorable';
 with 'SBG::Role::Storable';
 with 'SBG::Role::Writable';
+with 'SBG::Role::Clonable';
+with 'SBG::Role::Transformable';
 
 
 use overload (
@@ -206,6 +208,22 @@ sub domains {
 } # domains
 
 
+=head2 domains
+
+ Function: 
+ Example : 
+ Returns : ArrayRef[SBG::Model]
+ Args    : 
+
+
+=cut
+sub models {
+    my ($self,$keys) = @_;
+    $keys ||= $self->keys;
+    return $keys->map(sub{$self->get($_)});
+
+} # models
+
 
 =head2 pdbid
 
@@ -299,6 +317,26 @@ sub stringify {
     my ($self) = @_;
     return $self->_models->values->sort->join('--');
 }
+
+
+=head2 transform
+
+ Title   : transform
+ Usage   :
+ Function: Transforms each component L<SBG::Model> by a given L<PDL> matrix
+ Example :
+ Returns : 
+ Args    : L<PDL> 4x4 homogenous transformation matrix
+
+
+=cut
+sub transform {
+    my ($self,$matrix) = @_;
+    foreach my $model (@{$self->models->values}) {
+        $model->transform($matrix);
+   }
+   return $self;
+} # transform
 
 
 sub _update_id {
