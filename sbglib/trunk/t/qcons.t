@@ -52,10 +52,4 @@ my $n_res1 = $contacts1->values->length;
 my $n_res2 = $contacts2->values->length;
 
 
-diag "n_atoms1:$n_atoms1:\n";
-diag "n_res1:$n_res1:\n";
-diag "n_res2:$n_res2:\n";
-
-#print Dumper $contacts2;
-
 done_testing();
