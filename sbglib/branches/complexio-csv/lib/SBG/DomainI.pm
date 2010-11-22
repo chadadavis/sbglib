@@ -140,7 +140,7 @@ sub _build_organism {
 
 has '_pdbc' => (
     is => 'rw',
-    isa => 'HashRef',
+    isa => 'Maybe[HashRef]',
     lazy_build => 1,
 );
 
@@ -167,7 +167,7 @@ TODO REFACTOR: use Bio::DB::RCSB here, not SBG::Run::pdbc
 
 has 'description' => (
 	is         => 'rw',
-	isa        => 'Str',
+	isa        => 'Maybe[Str]',
 	lazy_build => 1,
 );
 
