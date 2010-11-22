@@ -117,6 +117,9 @@ package TestAssembler;
 use Moose;
 
 # with 'SBG::AssemblerI';
+# TODO AssemblyI needs to require seed;
+
+sub seed { undef }
 
 # In these callbacks, the default $state will just be a HashRef
 sub solution {

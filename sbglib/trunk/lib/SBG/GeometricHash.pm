@@ -195,7 +195,11 @@ sub at {
     # Determine a basis transformation, to put model in a common frame of ref
     # Arbitrarily use first three points here, but any three would work
 
+    # TODO BUG this can be problematic when using crosshair representation
+    # As the first three points are centre,X+,X- which are on a line
+    # So, try the 2nd,3rd,4th points instead. Need unit tests.
     my $t = _basis($model, 0, 1, 2) or return;
+#    my $t = _basis($model, 1, 2, 3) or return;
     # Transform all points using this basis
     $model = $t->apply($model);
 
