@@ -160,6 +160,7 @@ use File::Spec::Functions;
 use FindBin qw/$Bin/;
 use lib "$Bin/../lib/";
 use Log::Any qw/$log/;
+use Try::Tiny;
 
 use SBG::Network;
 use SBG::Search::TransDB;
@@ -190,7 +191,20 @@ my $dir = basename($ENV{PWD});
 # Strp off any preceeding date
 my (undef, $explabel) = $dir =~ /(\d{4}-\d{2}-\d{2}-)?(.*)/;
 # Lookup existing experiment, otherwise create a new one
-my $exprec = $schema->resultset('Experiment')->find_or_create({label=>$explabel});
+# TODO BUG needs to be done within a transaction
+my $experiment_table = $schema->resultset('Experiment');
+my $txn_find_or_create = sub {
+    my $exprec = $experiment_table->find_or_create({label=>$explabel});
+    return $exprec;
+};
+
+my $exprec;
+try {
+    $exprec = $schema->txn_do($txn_find_or_create);
+} catch {
+    $exprec = $experiment_table->find({label=>$explabel});
+    # TODO BUG need to check this as well
+};
 
 foreach my $file (@ARGV) {
     if (defined($ops{'J'})) {
