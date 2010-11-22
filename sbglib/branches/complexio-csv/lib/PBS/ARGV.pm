@@ -193,8 +193,7 @@ sub _njobs {
     our $server = 'cln035';
 	my $jobs = `qstat -u \$USER`;
     chomp $jobs;
-    my @jobs;
-    tie @jobs, 'Tie::File', $jobs;
+    my @jobs = split "\n", $jobs;
     @jobs = grep { /\.${server}/ } @jobs;
     my $njobs = @jobs;
     return $njobs;
