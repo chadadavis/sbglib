@@ -511,9 +511,9 @@ sub _check_dup {
     my $componentlabels = $complex->keys;
     my $doms            = $complex->domains;
     # Use only the centroid point, less accurate, but sufficient
-#    my $coords = $doms->map( sub { $_->centroid } );
+    my $coords = $doms->map( sub { $_->centroid } );
     # Use the 7-point crosshairs
-    my $coords = $doms->map( sub { $_->coords } );
+#    my $coords = $doms->map( sub { $_->coords } );
 
     # Check if duplicate, based on geometric hash
     # exact() requires that the sizes match on both sides (i.e. no subsets)
