@@ -86,6 +86,10 @@ Disable caching. On by default.
 use strict;
 use warnings;
 
+# Local libraries
+use FindBin qw/$Bin/;
+use lib "$Bin/../lib/";
+
 # Send this off to PBS first, if possible, before loading other modules
 use SBG::U::Run 
     qw/frac_of getoptions start_lock end_lock start_log @generic_options/;
@@ -108,10 +112,6 @@ use Fcntl qw/LOCK_EX LOCK_NB/;
 use PDL::Lite;
 use Data::Dumper;
 use File::Spec::Functions;
-
-# Local libraries
-use FindBin qw/$Bin/;
-use lib "$Bin/../lib/";
 
 use SBG::U::Object qw/load_object/;
 use SBG::U::Log;

@@ -74,6 +74,10 @@ L<PBS::ARGV> ,
 use strict;
 use warnings;
 
+# Local libraries
+use FindBin qw/$Bin/;
+use lib "$Bin/../lib/";
+
 # Send this off to PBS first, if possible, before loading other modules
 use SBG::U::Run qw/getoptions start_lock end_lock start_log @generic_options/;
 # Options must be hard-coded, unfortunately, as local variables cannot be used
@@ -87,9 +91,6 @@ use File::Basename;
 use Moose::Autobox;
 use File::Spec::Functions;
 
-# Local libraries
-use FindBin qw/$Bin/;
-use lib "$Bin/../lib/";
 use Log::Any qw/$log/;
 
 use SBG::ComplexIO::stamp;

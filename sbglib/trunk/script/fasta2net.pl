@@ -118,7 +118,9 @@ L<SBG::Network> , L<SBG::SearchI>
 use strict;
 use warnings;
 
-use POSIX qw/ceil/;
+# Local libraries
+use FindBin qw/$Bin/;
+use lib "$Bin/../lib/";
 
 # Send this off to PBS first, if possible, before loading other modules
 use SBG::U::Run 
@@ -155,12 +157,9 @@ use Moose::Autobox;
 use Bio::SeqIO;
 use Module::Load qw/load/;
 use File::Spec::Functions;
-
-# Local libraries
-use FindBin qw/$Bin/;
-use lib "$Bin/../lib/";
 use Log::Any qw/$log/;
 use Try::Tiny;
+use POSIX qw/ceil/;
 
 use SBG::Network;
 use SBG::Search::TransDB;

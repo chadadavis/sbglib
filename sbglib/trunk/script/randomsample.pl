@@ -27,10 +27,14 @@ use strict;
 use warnings;
 
 use Algorithm::Numerical::Sample  qw /sample/;
-
-use SBG::U::Run qw/frac_of/;
 use Data::Dump qw/dump/;
 use POSIX qw/ceil/;
+
+# Local libraries
+use FindBin qw/$Bin/;
+use lib "$Bin/../lib/";
+
+use SBG::U::Run qw/frac_of/;
 
 my $sample = sample_it(@ARGV);
 print "@$sample\n";

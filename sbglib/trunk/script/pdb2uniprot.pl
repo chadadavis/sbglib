@@ -42,6 +42,7 @@ use Bio::DB::SwissProt;
 # Local libraries
 use FindBin qw/$Bin/;
 use lib "$Bin/../lib/";
+
 use SBG::U::Map qw/pdb_chain2uniprot_acc/;
 
 my $sp = Bio::DB::SwissProt->new;

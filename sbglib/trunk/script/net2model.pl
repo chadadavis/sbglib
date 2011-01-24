@@ -126,6 +126,10 @@ L<SBG::CA::Assembler2> , L<SBG::Network> , L<SBG::SearchI>
 use strict;
 use warnings;
 
+# Local libraries
+use FindBin qw/$Bin/;
+use lib "$Bin/../lib/";
+
 # Send this off to PBS first, if possible, before loading other modules
 use SBG::U::Run 
     qw/frac_of getoptions start_lock end_lock start_log @generic_options/;
@@ -165,9 +169,6 @@ use File::Spec::Functions;
 use Log::Any qw/$log/;
 use Carp;
 
-# Local libraries
-use FindBin qw/$Bin/;
-use lib "$Bin/../lib/";
 use SBG::Role::Storable qw/retrieve/;
 use SBG::U::Object qw/load_object/;
 use SBG::U::Log;
