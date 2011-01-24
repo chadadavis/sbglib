@@ -81,7 +81,7 @@ has 'pdbid' => (
 	required => 0,
 
 	# Coerce to lowercase
-	coerce => 1,
+#	coerce => 1,
 );
 
 =head2 descriptor
