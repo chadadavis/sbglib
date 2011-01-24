@@ -203,7 +203,7 @@ sub _njobs {
 # Ability to connect to PBS server
 sub can_connect {
 	our $qstat;
-	$qstat ||= IPC::Cmd::can_run('qstat');
+	$qstat ||= IPC::Cmd::can_run('qstat') or return;
 	our $connected;
 	#TODO DES use IPC:Cmd::run() here to set a 5 second timeout on the check
 	$connected ||= system("$qstat >/dev/null 2>/dev/null") == 0; 

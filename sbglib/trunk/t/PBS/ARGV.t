@@ -29,7 +29,7 @@ if (PBS::ARGV::can_connect) {
     my $base = $ENV{'CACHEDIR'} || $ENV{'HOME'};
     mkdir $base;
     my $dir = tempdir(DIR=>$base, CLEANUP=>!$DEBUG);
-    my @jobids = qsub(directives=>["-o $dir", "-e $dir"]);
+    my @jobids = PBS::ARGV::qsub(directives=>["-o $dir", "-e $dir"]);
     if (! defined $ENV{'PBS_ENVIRONMENT'}) {
         is(scalar(@ARGV), 0, "All arguments submitted as PBS jobs");
     } 
