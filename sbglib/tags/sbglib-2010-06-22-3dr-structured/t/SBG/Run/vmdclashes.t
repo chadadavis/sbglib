@@ -23,7 +23,7 @@ use SBG::Run::vmdclashes;
 my $prec = '2%';
 
 my $complex = load_object("$Bin/../data/086-00002.model");
-my $res = vmdclashes($complex);
+my $res = SBG::Run::vmdclashes::vmdclashes($complex);
 
 float_is($res->{'pcclashes'}, 0.33969166, "vmdclashes", $prec);
 

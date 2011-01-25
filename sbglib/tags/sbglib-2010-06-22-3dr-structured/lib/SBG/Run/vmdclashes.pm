@@ -27,7 +27,7 @@ L<SBG::DomainI>
 
 package SBG::Run::vmdclashes;
 use base qw/Exporter/;
-our @EXPORT = qw/vmdclashes/;
+our @EXPORT = qw//;
 
 use Moose::Autobox;
 use Log::Any qw/$log/;
@@ -68,4 +68,6 @@ sub vmdclashes {
 	return $res;
 	
 } # vmdclashes
+
+1;
 
