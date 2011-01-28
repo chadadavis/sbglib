@@ -27,10 +27,12 @@ use base qw/Test::Class Exporter/;
 use FindBin qw/$Bin/;
 use Data::Dump qw/dump/;
 use Data::Dumper qw/Dumper/;
+use Carp;
 use Test::Most;
 use File::Spec::Functions;
 use File::Basename;
 use File::Temp;
+$File::Temp::KEEP_ALL = $DB::sub;
 
 use SBG::U::Run qw/start_log/;
 
@@ -83,14 +85,11 @@ sub startup : Tests(startup=>1) {
 
 
 # Make sure that each test object knows where to get test data from
-sub test_data : Tests(startup=>1) {
+sub test_data : Tests(startup) {
 	my $self = shift;
     my $test_data = catfile(dirname(__FILE__), '..', 'test_data');
-    ok(-d $test_data, "test_data dir exists") or die;
     $self->{test_data} = $test_data;
 }
 
-
-    
     
 1;
