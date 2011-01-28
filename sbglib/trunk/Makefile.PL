@@ -57,6 +57,7 @@ requires 'Moose::Autobox' => '0';
 requires 'Moose::Role' => '0';
 requires 'Moose::Util::TypeConstraints' => '0';
 requires 'Mouse' => '0';
+requires 'namespace::autoclean' => 0;
 requires 'PDL' => '0';
 requires 'PDL::LinearAlgebra' => '0';
 requires 'Scalar::Util' => '0';
