@@ -59,13 +59,15 @@ foreach my $file (@ARGV) {
     }
     
     my $net = $model->network;
+    my $netid = $net->id;
     # Append to the target;    
+
     $io->write_body($net);
       
     # Our own per-model graphic:
     mkdir $target;
     my $id = $model->modelid;
-    my $base = "${target}/${id}";
+    my $base = "${target}/${netid}/${id}";
     $net->targetid($target);
     $net->modelid($id);
     my $modeldotio = SBG::NetworkIO::dot->new(file=>">${base}.dot");
