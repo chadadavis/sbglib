@@ -579,6 +579,8 @@ sub size {
 Each subedge, i.e. each potential interaction template, needs to have a unique label, across the entire interaction network. This is accomplished by incorporating the source and destination node labels in the subedge label. 
 
 
+TODO automatically check for homotypic interaction templates
+
 =cut
 sub build {
     my ($self, $searcher, %ops) = @_;
