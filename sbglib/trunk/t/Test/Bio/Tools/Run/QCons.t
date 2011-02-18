@@ -7,7 +7,6 @@ use base qw/Test::SBG/;
 # Just 'use' it to import all the testing functions and symbols 
 use Test::SBG; 
 
-
 use Moose::Autobox;
 use autobox::List::Util; 
 
@@ -16,11 +15,12 @@ use File::Which;
 
 # startup failing will skip other tests
 # Supposed to be true for 'setup' as well, but doesn't seem so
-sub setup : Test(startup) {
+# However, $self is not defined for startup, only for setup
+sub setup: Test(setup) {
     my ($self) = @_;
     # Setup the wrapper
     my $qcons = Bio::Tools::Run::QCons->new(
-        file => "$Bin/SBG/data/docking1.pdb",
+        file => $self->{'test_data'} . "/docking1.pdb",
         chains => ['A', 'B'],
     );
     $self->{qcons} = $qcons;
