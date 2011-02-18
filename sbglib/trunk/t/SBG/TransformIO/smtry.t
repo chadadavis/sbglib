@@ -4,7 +4,7 @@ use strict;
 use warnings;
 use Test::More;
 use Carp;
-use Data::Dumper;
+
 use FindBin;
 use File::Temp qw/tempfile/;
 

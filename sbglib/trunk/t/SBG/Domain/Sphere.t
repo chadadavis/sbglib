@@ -3,7 +3,6 @@
 
 use Test::More 'no_plan';
 use Carp;
-use Data::Dumper;
 use FindBin;
 use File::Temp qw/tempfile/;
 my $dir = $FindBin::RealBin;

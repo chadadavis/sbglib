@@ -25,7 +25,7 @@ use Exporter;
 use base qw/Test::Class Exporter/;
 
 use FindBin qw/$Bin/;
-use Data::Dump qw/dump/;
+
 use Data::Dumper qw/Dumper/;
 use Carp;
 use Test::Most;

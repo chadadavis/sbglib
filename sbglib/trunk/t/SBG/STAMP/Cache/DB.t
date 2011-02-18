@@ -1,8 +1,8 @@
 #!/usr/bin/env perl
 
 use Test::More 'no_plan';
-use Data::Dumper;
-use Data::Dump qw/dump/;
+
+
 use File::Temp;
 
 use FindBin qw/$Bin/;
@@ -14,7 +14,7 @@ use SBG::U::Test qw/float_is pdl_approx/;
 use SBG::U::DB;
 my $dbh = SBG::U::DB::connect();
 unless($dbh) {
-    diag "Could not connect to database. Skipping database tests\n";
+    note "Could not connect to database. Skipping database tests\n";
     exit;
 }
 
@@ -80,6 +80,7 @@ pdl_approx($trans5db, $dtob_ans,
            $toler,
     );
 
+done_testing();
 
 
 

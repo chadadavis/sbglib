@@ -2,7 +2,7 @@
 
 use Test::More 'no_plan';
 use File::Temp qw(tempfile);
-use Data::Dump qw/dump/;
+
 
 use FindBin qw/$Bin/;
 use lib "$Bin/../../lib/";

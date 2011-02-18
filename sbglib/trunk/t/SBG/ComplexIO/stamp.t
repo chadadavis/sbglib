@@ -3,8 +3,6 @@
 use Test::More 'no_plan';
 
 use Carp;
-use Data::Dumper;
-use Data::Dump qw/dump/;
 use FindBin qw/$Bin/;
 
 use FindBin qw/$Bin/;
@@ -27,7 +25,7 @@ is($complex->count, 9, "Complex has 9 domains");
 my $out = SBG::ComplexIO::stamp->new(tempfile=>1);
 $out->write($complex);
 
-diag $out->file if $DEBUG;
+note $out->file if $DEBUG;
 
 # Need to flush to re-read it
 $out->flush;

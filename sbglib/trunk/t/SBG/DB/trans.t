@@ -3,8 +3,6 @@
 use strict;
 use warnings;
 use Test::More 'no_plan';
-use Data::Dumper;
-use Data::Dump qw/dump/;
 use Carp;
 $SIG{__DIE__} = \&confess;
 
@@ -35,7 +33,7 @@ SBG::U::Log::init(undef, loglevel=>'DEBUG') if $DEBUG;
 use SBG::U::DB;
 my $dbh = SBG::U::DB::connect();
 unless($dbh) {
-    diag "Could not connect to database. Skipping database tests\n";
+    note "Could not connect to database. Skipping database tests\n";
     exit;
 }
 

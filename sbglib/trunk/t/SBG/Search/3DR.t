@@ -5,8 +5,8 @@ use warnings;
 use Test::More 'no_plan';
 use Carp;
 $SIG{__DIE__} = \&confess;
-use Data::Dumper;
-use Data::Dump qw/dump/;
+
+
 use File::Temp qw/tempfile/;
 
 use Moose::Autobox;
@@ -45,6 +45,6 @@ unless ( $tdr->_dbh ) {
 $net->build($tdr);
 foreach my $int ( $net->interactions() ) {
 #	next if $int->source eq 'dom_dom';
-#    diag join ' ', $int, $int->source, $int->weight;
+#    note join ' ', $int, $int->source, $int->weight;
 }
 

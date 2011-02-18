@@ -1,8 +1,6 @@
 #!/usr/bin/env perl
 
 use Test::More 'no_plan';
-use Data::Dumper;
-
 
 use PDL;
 use PDL::Matrix;
@@ -14,7 +12,7 @@ use SBG::U::Test qw/float_is/;
 use SBG::U::DB;
 my $dbh = SBG::U::DB::connect();
 unless($dbh) {
-    diag "Could not connect to database. Skipping database tests\n";
+    note "Could not connect to database. Skipping database tests\n";
     exit;
 }
 

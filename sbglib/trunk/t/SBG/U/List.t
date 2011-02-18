@@ -7,7 +7,7 @@ $,=' ';
 use FindBin qw/$Bin/;
 use lib "$Bin/../../../lib/";
 
-use Data::Dump qw/dump/;
+
 
 # Autoboxing native types
 use Moose::Autobox;

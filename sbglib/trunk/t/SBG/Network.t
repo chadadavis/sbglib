@@ -3,8 +3,8 @@
 use Test::More;
 
 use Carp;
-use Data::Dumper;
-use Data::Dump qw/dump/;
+
+
 
 use Moose::Autobox;
 
@@ -76,7 +76,7 @@ sub _get_symm {
     while ( my $seq = $io->next_seq ) { $snet->add_seq($seq); }
     my $cc;
     my $time = timeit(1, sub { $cc = $snet->$method });
-#    diag "$method: ", timestr($time);
+    note "$method: ", timestr($time);
     return $cc;
 }
 
@@ -103,14 +103,14 @@ __END__
 # A (much) larger test (for speed)
 my $cc3 = _get_symm("$Bin/data/522.fa", 'symmetry3');
 my $str3 = _nested2str(@$cc3);
-diag "str3 ", $str3;
+note "str3 ", $str3;
 
 my $cc2 = _get_symm("$Bin/data/522.fa", 'symmetry2');
 my $str2 = _nested2str(@$cc2);
-diag "str2 ", $str2;
+note "str2 ", $str2;
 
 my $cc1 = _get_symm("$Bin/data/522.fa");
 my $str1 = _nested2str(@$cc1);
-diag "str1 ", $str1;
+note "str1 ", $str1;
 
 

@@ -1,8 +1,8 @@
 #!/usr/bin/env perl
 
 use Test::More 'no_plan';
-use Data::Dumper;
-use Data::Dump qw/dump/;
+
+
 
 use Moose::Autobox;
 

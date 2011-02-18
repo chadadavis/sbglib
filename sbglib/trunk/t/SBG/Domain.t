@@ -4,7 +4,7 @@
 use warnings;
 
 use Test::More 'no_plan';
-use Data::Dump qw/dump/;
+
 use Moose::Autobox;
 
 use FindBin qw/$Bin/;

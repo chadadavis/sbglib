@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 use Test::More 'no_plan';
-use Data::Dumper;
+
 use Carp;
 $SIG{__DIE__} = \&confess;
 

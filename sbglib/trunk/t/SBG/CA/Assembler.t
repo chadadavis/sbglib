@@ -3,8 +3,6 @@
 use strict;
 use warnings;
 use Test::More 'no_plan';
-use Data::Dumper;
-use Data::Dump qw/dump/;
 use Carp;
 
 use Moose::Autobox;

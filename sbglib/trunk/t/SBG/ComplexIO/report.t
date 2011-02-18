@@ -3,8 +3,6 @@
 use Test::More 'no_plan';
 
 use Carp;
-use Data::Dumper;
-use Data::Dump qw/dump/;
 use FindBin qw/$Bin/;
 
 use FindBin qw/$Bin/;

@@ -4,7 +4,7 @@ use strict;
 use warnings;
 use Test::More 'no_plan';
 use Carp;
-use Data::Dumper;
+
 use File::Temp qw/tempfile/;
 $File::Temp::KEEP_ALL = 1;
 

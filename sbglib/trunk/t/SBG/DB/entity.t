@@ -3,8 +3,6 @@
 use Test::More 'no_plan';
 
 use Carp;
-use Data::Dumper;
-use Data::Dump qw/dump/;
 use File::Temp qw/tempfile/;
 
 use FindBin qw/$Bin/;
@@ -20,7 +18,7 @@ $File::Temp::KEEP_ALL = $DEBUG;
 use SBG::U::DB;
 my $dbh = SBG::U::DB::connect();
 unless($dbh) {
-    diag "Could not connect to database. Skipping database tests\n";
+    note "Could not connect to database. Skipping database tests\n";
     exit;
 }
 
