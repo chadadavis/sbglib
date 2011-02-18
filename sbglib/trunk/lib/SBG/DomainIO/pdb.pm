@@ -127,7 +127,7 @@ sub write {
     my $tmp = SBG::IO->new(tempfile=>1);
     $log->debug("transform file: ", $tmp->file);
     my $tmppath = $tmp->file;
-    my $cmd = 'transform -g -f ' . $domio->file() . ' -o ' . $tmppath;
+    my $cmd = 'transform -het -g -f ' . $domio->file() . ' -o ' . $tmppath;
     unless (system("$cmd > /dev/null") == 0) {
         warn "$cmd failed: $!";
     }
