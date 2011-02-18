@@ -1566,6 +1566,9 @@ sub rmsd_class {
         my %mapping = mesh(@model, @cart);
 
         # TODO verify that current connection topology is subgraph of target
+        # This is quicker than subgraph isomorphism because the classes of the 
+        # nodes are known. This is just a filter, to skip non-equiv topologies.
+        # Nodes don't have to be the same node, just of the same node class
         # Shortcut: for each edge in model, is it in the target?
         # Use the current mapping. If not, can skip RMSD calculation
 
