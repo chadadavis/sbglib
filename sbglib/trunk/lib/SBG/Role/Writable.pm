@@ -30,10 +30,12 @@ use SBG::IO;
 
 =head2 write
 
- Function:
- Example :
- Returns : 
- Args    :
+ Function: Writes an object using a format plugin
+ Example : $complex->write('pdb'); # Uses ComplexIO::pdb::write($complex);
+ Returns : Path to file written too (which may be a temp file) 
+ Args    : %ops are passed to L<SBG::IOI>, where output file can be given
+
+Goes to Standard output by default.
 
 =cut
 
