@@ -82,9 +82,11 @@ requires_external_bin 'cofm';
 requires_external_bin 'rasmol'; # by SBG::Run::rasmol
 requires_external_bin 'blastpgp';
 requires_external_bin 'clustalw';
-# requires_external_bin 'dot'; # graphviz
-# requires_external_bin 'vmd'; # SBG::Run::vmdclashes
-# requires_external_bin 'rlwrap'; # SBG::Run::vmdclashes (from vmd)
+requires_external_bin 'dot'; # graphviz
+requires_external_bin 'vmd'; # SBG::Run::vmdclashes
+requires_external_bin 'rlwrap'; # SBG::Run::vmdclashes (from vmd)
+requires_external_bin 'naccess';
+requires_external_bin 'Qcontacts';
 
 
 # Automagically install above deps from CPAN
