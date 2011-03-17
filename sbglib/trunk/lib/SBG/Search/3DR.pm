@@ -354,7 +354,6 @@ sub _mkdom {
 
 
 use SBG::Superposition::Cache qw/superposition/;
-use SBG::Run::rasmol;
 use SBG::Run::cofm qw/cofm/;
 
 sub _structures {
