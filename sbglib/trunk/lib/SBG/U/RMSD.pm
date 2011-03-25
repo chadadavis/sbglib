@@ -52,10 +52,13 @@ use Log::Any qw/$log/;
 use PDL::Lite;
 use PDL::Core qw/pdl ones inplace sclr zeroes/;
 use PDL::Reduce qw/reduce/;
-use PDL::Ufunc qw/sumover average max all/;
-use PDL::LinearAlgebra; # qw/crossprod/;
 use PDL::MatrixOps qw/svd det/;
+
 # use PDL::MatrixOps qw/svd det identity/; # identity uses broken diagonal()
+
+# PDL::Ufunc::sumover conflicts with PDL::LinearAlgebra::sumover (auto imports)
+use PDL::Ufunc qw/sumover average max all/;
+use PDL::LinearAlgebra::Real qw/crossprod/;
 
 
 
