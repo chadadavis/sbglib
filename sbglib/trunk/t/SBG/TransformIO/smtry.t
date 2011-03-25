@@ -40,7 +40,10 @@ my $trans_exp = pdl
     [-1,  0,  0,  0],
     [ 0,  0,  0,  1],
     ; 
-pdl_approx($transformations[23], $trans_exp, 'TransformIO::smtry->read', $toler);
+# NB @transformations contains instances of SBG::TransformationI
+# $trans_exp is a PDL
+pdl_approx($transformations[23]->{PDL}, $trans_exp, 
+    'TransformIO::smtry->read', $toler);
 
 
 done_testing();
