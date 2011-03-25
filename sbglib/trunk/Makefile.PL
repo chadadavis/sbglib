@@ -66,10 +66,12 @@ requires 'Sort::Key::Top' => '0';
 requires 'Statistics::Contingency' => '0';
 requires 'Statistics::Lite' => '0';
 requires 'Term::ReadKey' => '0';
+requires 'XML::XPath' => '0';
+
+# TODO Only required for testing
 requires 'Test::Class' => '0';
 requires 'Test::More' => '0';
 requires 'Test::Most' => '0';
-requires 'XML::XPath' => '0';
 
 
 # These STAMP binaries need to be found in the PATH
