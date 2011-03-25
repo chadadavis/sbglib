@@ -1934,12 +1934,12 @@ sub _setcrosshairs {
 
 
 # TODO DES belongs in a Role, as there may be many approaches to finding these
+# And this one is way too slow
 sub contacts {
-    my ($self) = @_;
-
-    my $contacts = qcons($self->domains);
-    
-    return $contacts;    
+    my ($self) = @_;    
+    return [];
+#    my $contacts = qcons($self->domains);
+#    return $contacts;    
 }
 
     
