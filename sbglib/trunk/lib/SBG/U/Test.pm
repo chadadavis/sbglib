@@ -24,16 +24,18 @@ Or incorporate into Test::PDL CPAN modules
 =cut
 
 
-
 package SBG::U::Test;
+
+use strict;
+use warnings;
+
 use base qw(Exporter);
 use Test::More;
-use PDL::Ufunc qw/all any/;
 use PDL::Core qw/approx/;
+use PDL::Ufunc qw/all any/;
 use Carp qw/carp cluck/;
 
 our @EXPORT_OK = qw(float_is pdl_approx pdl_equiv);
-
 
 
 =head2 float_is
@@ -99,7 +101,9 @@ sub pdl_approx ($$;$$) {
 sub pdl_equiv {
     my ($mat1, $mat2, $tol) = @_;
     $tol = '1%' unless defined $tol;
+        
     my $diff = abs($mat1-$mat2);
+    
     if ($tol =~ /(\d+)\%$/) {
         $tol = $1 / 100.0;
         $diff /= abs($mat1);
