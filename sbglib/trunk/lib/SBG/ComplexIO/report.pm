@@ -46,9 +46,10 @@ sub write {
     my $fh = $self->fh or return;
     $log->debug("file: ", $self->file);
     
+    
     print $fh "Output from Complex modelling\n\n";
-    print $fh "Target ", $complex->targetid, "\n",
-    print $fh "Model ", $complex->modelid, "\n";
+    print $fh "Target ", $complex->targetid, "\n" if $complex->targetid;
+    print $fh "Model ", $complex->modelid, "\n" if $complex->modelid;
     
     print $fh "Interactions\n\n";
     
@@ -68,13 +69,13 @@ sub write {
     
     # First write out all the components and the interactions
     my @keys = $complex->keys->flatten;
-    my $char = ord('A');
+    my $chain_i = 0;
     foreach my $key (@keys) {
     	my $model = $complex->get($key);
     	my $seq = $model->query;
     	my $dom = $model->subject;
-    	
-    	print $fh "CHAIN ", chr($char), " ", $model->gene(), " ";
+    	my $chain = chr(ord('A') + $chain_i);
+    	print $fh 'CHAIN ', $chain, ' ', $model->gene(), ' ';
     	foreach my $score ($model->scores->keys->flatten) {
     		print $fh "${score}=", $model->scores->at($score), " ";
     	}
@@ -83,8 +84,10 @@ sub write {
     	print $fh "", $dom->file, ' ', $dom->id, " { ", $dom->descriptor, " }\n";
     	print $fh "\n";
     	
-    	# TODO BUG wrong if model has more than 26 chains
-    	$char++;
+    	# TODO BUG if model has more than 26 chains
+    	$chain_i++;
+    	warn "Chain identifiers unreliable ($chain_i chains)" if 
+    	   $chain_i > 26;
     }
     
     return $self;
