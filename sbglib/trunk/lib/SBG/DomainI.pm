@@ -262,8 +262,8 @@ sub _build_file {
 	my ($self) = @_;
 
 	# The PDB ID in filename is expected to be lowercase
+    return unless $self->pdbid;
 	my $pdbid = lc $self->pdbid;
-	return unless $pdbid;
 	my $str = $pdbid;
 
 	# Append e.g. '-2' for 2nd assembly

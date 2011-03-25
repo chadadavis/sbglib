@@ -23,6 +23,9 @@ ok(! eval { $dom->pdbid('didi') }, "Catching invalid PDB ID");
 # No longer used, since we now allow uppercase as well
 # $dom = SBG::Domain->new(pdbid=>'2NN6');
 # is($dom->pdbid, '2nn6', "PDBID to lowercase");
+my $dom_lower = SBG::Domain->new(pdbid=>'2nn6');
+my $dom_upper = SBG::Domain->new(pdbid=>'2NN6');
+is($dom_lower->file, $dom_upper->file, "PDB ID is not case sensitive");
 
 
 # Default descriptor ALL
