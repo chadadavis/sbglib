@@ -2,7 +2,7 @@
 
 =head1 NAME
 
-SBG::ComplexIO::stamp - 
+SBG::ComplexIO::pdb - 
 
 =head1 SYNOPSIS
 

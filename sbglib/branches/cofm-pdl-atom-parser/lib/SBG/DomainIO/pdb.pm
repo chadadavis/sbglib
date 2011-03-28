@@ -11,6 +11,21 @@ SBG::DomainIO::pdb - IO for L<SBG::Domain> objects, in PDB format
 
 Requires the B<transform> program from the STAMP package.
 
+TODO does not yet have a facility to get a subsegment of a chain, only an 
+explicit list of residue IDs, which all have to be listed explicitly:
+
+ $pdbio->residues([-2,-1,0,1,2,3,4,77,78,79,80,81]);
+ 
+This is intended for pulling out a set of residues that have been mapped from
+a sequence alignment, for example.
+
+=head1 TODO
+
+* Need to index Model as well. More difficult as there is no Model ID in the 
+  column-based format. 
+  NB Residue ID is per chain, Atom ID is per Model
+  
+
 =head1 SEE ALSO
 
 L<SBG::Domain> , L<SBG::IOI> , L<SBG::STAMP>
@@ -78,6 +93,14 @@ has 'atom_type' => (
     );
 
 
+=head2 residues
+
+Subset of residue IDs to be read.
+
+TODO BUG: assumes that residue IDs are integers, which neglects insertion codes.
+If insertion codes are present, the last residue with the residue ID is used.
+
+=cut
 has 'residues' => (
     is => 'ro',
     isa => 'Maybe[ArrayRef[Int]]',
@@ -86,7 +109,9 @@ has 'residues' => (
 
 =head2 homogenous
 
-Whether to use homogenous coordinates, whereby each 3D point is extended to 4D with an additional 1. E.g. the point ( 33.434, -23.003, 129.332 ) becomes the 4D point: ( 33.434, -23.003, 129.332, 1).
+Whether to use homogenous coordinates, whereby each 3D point is extended to 4D 
+with an additional 1. E.g. the point ( 33.434, -23.003, 129.332 ) becomes the 
+4D point: ( 33.434, -23.003, 129.332, 1).
 
 Default: 1 (enabled)
 
@@ -152,6 +177,8 @@ sub write {
 NB This does not set the L<pdbid> or L<descriptor> fields of the L<SBG::DomainI>
 object, as these cannot always be determined from a PDB file.
 
+This returns a single domain representing the whole structure of the file.
+
 =cut
 sub read {
     my ($self) = @_;
@@ -180,9 +207,20 @@ codes.
 See also L<Bio::SeqUtils> for converting amino acid residue codes between
 3-letter and 1-letter versions.
 
-TODO BUG The PDB format is column-defined, not white-space separated. For
+NB The PDB format is column-defined, not white-space separated. For
 certain PDB files, this can break the parsing, if the fields are not white-space
 separated.
+
+TODO Does not consider the chain ID.
+If a Domain is composed of segments of (potentially multiple) chains, need to 
+consider ATOM records from any chain in the set.
+Also need to consider starting and ending resid (including insertion code)
+
+NB The insertion code is nevertheless a separate column in the input
+I.e. when there is no insertion code, we want e.g. '34' and not '34 '
+
+TODO BUG this assumes that only one atom from reach residue is read, e.g. CA.
+Could be problematic if all atoms are read with no restriction. 
 
 =cut
 sub coords {

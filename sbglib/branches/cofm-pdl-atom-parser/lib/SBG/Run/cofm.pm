@@ -73,6 +73,8 @@ the newly created L<SBG::Domain::Sphere>
 
 TODO option to use Rg or Rmax as the resulting radius
 
+TODO DES should use parser from L<SBG::DomainIO::cofm>
+
 =cut
 sub cofm {
     my ($dom, %ops) = @_;
@@ -140,34 +142,7 @@ Runs external B<cofm> appliation. Must be in your environment's B<$PATH>
 
 'descriptor' and 'pdbid' must be defined 
 
-Examples:
-Single chain:
-
- Domain   1 /g/russell3/pqs/1li4.mmol 1li4A
-        chain A 430 CAs =>  430 CAs in total
-
-Multiple chains:
- Domain   1 /g/russell3/pqs/1li4.mmol 1li4a
-        chain A 430 CAs  chain B 430 CAs =>  860 CAs in total
-
-Segment:
- Domain   1 /g/russell3/pqs/1li4.mmol 1li4A-single
-        from A    3   to A  189   187 CAs =>  187 CAs in total
-
-Multiple segments:
- Domain   1 /g/russell3/pqs/1li4.mmol 1li4A-double
-        from A    3   to A  189   187 CAs  from A  353   to A  432    80 CAs =>  267 CAs in total
-
-With insertion codes:
-Domain   1 /usr/local/data/pdb/pdb2frq.ent.gz 2frqB
-        from B  100   to B  131 A  33 CAs =>   33 CAs in total
-
-And then, a few lines later (the header line with the centre of mass):
-
- REMARK Domain 1 Id 1li4a N = 860 Rg = 34.441 Rmax = 58.412 Ro = 44.760 0.000 85.323
-
-All of the ATOM lines are saved, as new-line separated text in the 'description'
-
+TODO DES should use parser from L<SBG::DomainIO::cofm>
 
 =cut
 sub _run {
