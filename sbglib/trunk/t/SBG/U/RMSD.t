@@ -2,16 +2,22 @@
 
 use strict;
 use warnings;
-use Test::More 'no_plan';
+use Test::More;
 use Carp;
 
 use File::Temp qw/tempfile/;
 $File::Temp::KEEP_ALL = 1;
 
-
 use FindBin qw/$Bin/;
 use lib "$Bin/../../../lib/";
+
 use SBG::U::Test qw/pdl_approx float_is/;
+
+use PDL::Lite;
+
+use SBG::U::RMSD qw/
+centroid radius_gyr radius_max superposition rmsd translation identity
+/;
 
 
 # NB could find better test cases in the trans database(s), e.g.:
@@ -19,16 +25,41 @@ use SBG::U::Test qw/pdl_approx float_is/;
 # select h.e_value, e1.idcode, e1.description, e1.start_pdbseq, e1.end_pdbseq, e2.description, e2.start_pdbseq, e2.end_pdbseq from hit h, entity e1, entity e2 where e1.idcode=e2.idcode and h.id_entity1=e1.id and h.id_entity2=e2.id limit 50
 
 
-
-
-use PDL::Lite;
-use SBG::U::RMSD qw/
-centroid radius_gyr radius_max superposition rmsd translation identity
-/;
-
-
 my $id = identity(4);
 pdl_approx($id, pdl([1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]), 'identity');
+
+
+my $numericError = 0.00001;
+
+# Test warning for known bad input
+# Simple triangle
+my $points0a = pdl[[0,0,0,1],[10,0,0,1],[5,20,0,1]];  
+# Same points shifted by 10 in z-direction
+my $points0b = pdl[[0,0,10,1],[10,0,10,1],[5,20,10,1]];
+# Transformation will fail with a warning and return nothing
+my $no_trans = SBG::U::RMSD::superposition($points0a, $points0b);
+ok(! defined $no_trans, "Catch bad input error");
+
+
+# More complex points
+my $pointsA = pdl[[8,4,2,1], [6,2,6,1], [6,4,2,1], [6,6,7,1]];
+# Same points shifted by 10 in z-direction
+my $pointsB = pdl[[8,4,12,1],[6,2,16,1],[6,4,12,1],[6,6,17,1]]; 
+# Test1 (expected result for transformation matrix)
+my $A1 = pdl[[1,0,0,0],[0,1,0,0],[0,0,1,10],[0,0,0,1]];
+pdl_approx($pointsB, ($A1 x $pointsA->transpose)->transpose, 
+    "expected transformation matrix", $numericError);
+
+
+#Test (superposition)
+my $A2 = SBG::U::RMSD::superposition($pointsA, $pointsB);
+my $diff2 = $pointsB - ($A2 x $pointsA->transpose)->transpose;
+pdl_approx($A2, $A1, "superposition", $numericError);
+
+
+#Test (superpose)
+my $A3 = SBG::U::RMSD::superpose($pointsA, $pointsB, 10);
+pdl_approx($pointsB, $pointsA,"superpose", $numericError);
 
 
 my $pdbid = '2br2';
@@ -93,3 +124,6 @@ float_is(rmsd($da->coords, $db->coords), 0.282, 'rmsd', 0.1);
 
 $TODO = "Test globularity()";
 ok(0);
+
+
+done_testing;

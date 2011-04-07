@@ -48,11 +48,12 @@ centroid globularity identity radius_gyr radius_max rmsd superpose superposition
 /;
 
 use Log::Any qw/$log/;
-
+use Carp;
 use PDL::Lite;
 use PDL::Core qw/pdl ones inplace sclr zeroes/;
 use PDL::Reduce qw/reduce/;
 use PDL::MatrixOps qw/svd det/;
+use PDL::Ufunc qw/all any/;
 
 # use PDL::MatrixOps qw/svd det identity/; # identity uses broken diagonal()
 
@@ -202,12 +203,13 @@ sub radius_max {
  Returns : 4x4 Affine matrix defining rotation+translation 
  Args    : Two sets of points, of the same length
 
-Assumes that points are 4D homogenous coordinates
+Assumes that points are 4D homogenous coordinates.
+
+If a singular value decomposition is not possible, nothing is returned.
 
 Simple explanation:
 
  http://en.wikipedia.org/wiki/Kabsch_algorithm
-
 
 Original reference:
 
@@ -230,8 +232,11 @@ sub superposition {
     my $covariance = $copya->crossprod($pointsb - $centroidb);
     # Derive rotation matrix
     my $rot = _rot_svd($covariance);
+    return unless defined $rot;
+
     # Create an affine transformation matrix 4x4 from the 3x3
     my $affine = _affine($rot);
+
 
     # The following steps have to be done in this order to be compatible with
     # the order in which STAMP does it.
@@ -244,7 +249,7 @@ sub superposition {
 
     # Determine the translation required to get the rotated copya onto pointsb
     my $transl = $centroidb - centroid($copya);
-
+    
     # Make the affine matrix: combine rotation and translation
     $affine = _affine($affine, $transl);
 
@@ -325,7 +330,6 @@ sub globularity {
 } # globularity
 
 
-
 sub _apply {
     my ($mat, $vect) = @_;
     return ($mat x $vect->transpose)->transpose;
@@ -345,7 +349,6 @@ sub _affine {
 }
 
 
-
 # Determine rotation matrix based on singular value decomposition
 # From: http://boscoh.com/protein/rmsd-root-mean-square-deviation
 sub _rot_svd {
@@ -359,6 +362,13 @@ sub _rot_svd {
     # for chirality by using right-handed coordinates.  As a shortcut, just
     # invert the signs in the last column, when necessary 
 
+    # Check for bad values (probably more efficient ways to do this...)
+    my $valid = ($V >= 0 | $V < 0);
+    unless (all($valid)) {
+        carp "Cannot superpose. Failed to get singular value decomposition";
+        return;
+    }
+    
     if (det $covariance < 0) {
         $V->slice('-1,') *= -1;
     }
@@ -366,7 +376,6 @@ sub _rot_svd {
     my $rot=$Wt x $V->transpose;
     return $rot;
 }
-
 
 
 =head2 translation
