@@ -188,7 +188,8 @@ sub read {
     # What type of Domain to create:
     my $objtype = $self->objtype;
     # Also note the file that was read from
-    my $dom = $objtype->new(coords=>$coords, file=>$self->file());
+    my $dom = $objtype->new(coords=>$coords);
+    $self->file($self->file) if $self->file;
     return $dom;
 
 }
@@ -225,15 +226,16 @@ Could be problematic if all atoms are read with no restriction.
 =cut
 sub coords {
     my ($self, ) = @_;
+    my $fh = $self->fh or return;
     my $record = 'ATOM  ';
     my $atom = $self->atom_type;
     my $getresids = $self->residues;
 
     our $cache; 
     $cache ||= {};
-    my $cachekey = join '--', $self->file, $self->atom_type;
+    my $cachekey = $self->file ? join('--', $self->file, $self->atom_type) : ''; 
     $log->debug("Cache key: $cachekey");
-    my $cached = $cache->{$cachekey};
+    my $cached = $cachekey ? $cache->{$cachekey} : undef;
     
     # Fields to extract
     my ($resSeq, $x, $y, $z);
@@ -244,12 +246,12 @@ sub coords {
     } else {
         ($resSeq, $x, $y, $z) = rgrep { 
             /^$record..... $atom.... .(....).   (........)(........)(........)/ 
-        } $self->file();
+        } $fh;
 
         return unless defined $resSeq;        
         # Probably faster to leave it as a PDL, but an Array is more flexible
         $resSeq = [ $resSeq->list ];
-        $cache->{$cachekey} =  [ $resSeq, $x, $y, $z ];
+        $cache->{$cachekey} =  [ $resSeq, $x, $y, $z ] if $cachekey;
     }
     # No atoms matching the given pattern?
     return unless $x->nelem > 0;

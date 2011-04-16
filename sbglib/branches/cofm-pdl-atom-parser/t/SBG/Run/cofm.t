@@ -12,8 +12,8 @@ use lib "$Bin/../../../lib/";
 use SBG::U::Test qw/float_is pdl_approx/;
 use SBG::U::Log;
 
-my $DEBUG;
-#$DEBUG = 1;
+my $DEBUG = $ENV{'SBGDEBUG'};
+$DEBUG = $DB::sub if defined $DB::sub;
 SBG::U::Log::init( undef, loglevel => 'DEBUG' ) if $DEBUG;
 
 use SBG::Run::cofm qw/cofm/;
@@ -31,7 +31,7 @@ sub _test {
     my $sphere = cofm($input, cache=>$DEBUG);
     my $exp_center = pdl(@coords, 1.0);
     my $exp_r = $radius;
-    pdl_approx($sphere->center, $exp_center, "center $exp_center", $prec);
+    pdl_approx($sphere->centroid, $exp_center, "center $exp_center", $prec);
     float_is($sphere->radius, $exp_r, "radius $exp_r", $prec);
 }
 

@@ -1,5 +1,6 @@
 #!/usr/bin/env perl
 
+use strict;
 use Test::More 'no_plan';
 
 use Carp;
@@ -14,8 +15,8 @@ use SBG::U::Log;
 
 
 $SIG{__DIE__} = \&confess;
-my $DEBUG;
-$DEBUG = $DB::sub;
+my $DEBUG = $ENV{'SBGDEBUG'};
+$DEBUG = $DB::sub if defined $DB::sub;
 SBG::U::Log::init(undef, loglevel=>'DEBUG') if $DEBUG;
 $File::Temp::KEEP_ALL = $DEBUG;
 

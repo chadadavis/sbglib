@@ -64,15 +64,16 @@ Initial center point
 
 Can subsequently be accessed via L<centroid>
 
-Read-only (can be set from constructor)
+Read-only (can only be initialized from constructor)
 
-NB not possible to set a trigger on 'coords' because it's an attribute from a
-Role and therefore composed, not inherited.
 
 =cut
-has 'center' => (
+# NB not possible to set a trigger on 'coords' because it's an attribute from a
+# Role and therefore composed, not inherited.
+has '_init_center' => (
     is => 'rw',
     isa => 'PDL',
+    init_arg => 'center', # friendly name for constructor
     required => 1,
     default => sub { pdl [[0,0,0,1]] },
     );
@@ -125,7 +126,7 @@ sub _build_coords {
         $coords = $self->coords;
     } else {
         # Use center that was passed as argument
-        $c = $self->center->squeeze;
+        $c = $self->centroid->squeeze;
         $dims = $c->dim(0);
         $coords = zeroes($dims, 7);
     }

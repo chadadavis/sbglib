@@ -358,7 +358,7 @@ has 'transformation' => (
 	is       => 'rw',
 	does     => 'SBG::TransformI',
 	required => 1,
-	default  => sub { new SBG::Transform::Affine },
+	default  => sub { SBG::Transform::Affine->new },
 );
 
 =head2 coords
@@ -562,7 +562,8 @@ sub id {
 	elsif ( $self->file ) {
 
 		# Or use the filename, if this is not a PDB entry
-		$str = basename( $self->file, qw/.pdb .ent .pdb.gz .ent.gz/ );
+		$str = basename( $self->file, qw/.gz .Z .zip/ );
+		$str = basename($str, qw/.pdb .ent .mmol .brk .cofm/);
 	}
 	$str .= $self->_descriptor_short if $self->_descriptor_short;
 	return $str;

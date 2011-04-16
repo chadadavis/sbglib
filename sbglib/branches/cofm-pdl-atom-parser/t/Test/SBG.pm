@@ -20,6 +20,8 @@ L<Test::Class>
 =cut
 
 package Test::SBG;
+use strict;
+use warnings;
 use Test::Class;
 use Exporter;
 use base qw/Test::Class Exporter/;
@@ -35,6 +37,7 @@ use File::Temp;
 $File::Temp::KEEP_ALL = $DB::sub;
 
 use SBG::U::Run qw/start_log/;
+use SBG::U::Test qw/float_is pdl_approx/;
 
 # Re-export everything needed for testing
 our @EXPORT = (
@@ -48,6 +51,8 @@ our @EXPORT = (
     @File::Spec::Functions::EXPORT,
     @File::Basename::EXPORT,
     @File::Temp::EXPORT,
+    qw/float_is/,
+    qw/pdl_approx/,
     );
 
 
@@ -73,7 +78,7 @@ INIT {
 
 # Startup method for every inherited class, loads the testee() class
 # Note, you can override this and then refer to the parent test with:
-#  $test->SUPER::startup;  
+#  $self->SUPER::startup;  
 sub startup : Tests(startup=>1) {
     my $self = shift;
     # Each test class is prefixed with Test::
@@ -81,6 +86,7 @@ sub startup : Tests(startup=>1) {
     return ok 1, "$class already loaded" if $class eq __PACKAGE__;
     use_ok $class or die;
     $self->{class} = $class;
+    return $self;
 }
 
 
@@ -89,6 +95,7 @@ sub test_data : Tests(startup) {
 	my $self = shift;
     my $test_data = catfile(dirname(__FILE__), '..', 'test_data');
     $self->{test_data} = $test_data;
+    return $self;
 }
 
     

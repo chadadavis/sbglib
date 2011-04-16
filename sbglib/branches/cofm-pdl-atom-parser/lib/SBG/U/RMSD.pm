@@ -125,7 +125,7 @@ sub rmsd {
 
  Function: 
  Example : 
- Returns : A L<PDL> of dimension 3 or 4 (if homogenous)
+ Returns : A L<PDL> of dimension 3 (or 4, if homogenous)
  Args    : 
 
 $weights, optional, will be used to weight each point

@@ -1,5 +1,7 @@
 #!/usr/bin/env perl
 
+use strict;
+
 use Test::More 'no_plan';
 
 use Carp;
@@ -11,8 +13,8 @@ use SBG::U::Test 'float_is';
 use SBG::ComplexIO::pdb;
 use SBG::U::Object qw/load_object/;
 
-my $DEBUG;
-$DEBUG = $DB::sub;
+my $DEBUG = $ENV{'SBGDEBUG'};
+$DEBUG = $DB::sub if defined $DB::sub;
 $File::Temp::KEEP_ALL = $DEBUG;
 
 my $file = "$Bin/../data/10.model";
