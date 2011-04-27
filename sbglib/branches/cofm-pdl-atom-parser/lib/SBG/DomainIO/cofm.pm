@@ -166,6 +166,8 @@ sub write {
           
         printf $fh " Assembly = %d", $dom->assembly if defined $dom->assembly;
         printf $fh " Model = %d",    $dom->model    if defined $dom->model;
+        printf $fh " Classification = ", $dom->classification if 
+            defined $dom->classification;
         print $fh "\n";
         
         # Print ATOM records (seven points of the crosshair)
@@ -284,9 +286,9 @@ sub read {
     # Verbose headers are first
     # The each domain has one REMARK line followed by ATOM lines, alternating
     my $doms = $self->_read_header();
-
     # Reset the stream, then read the ATOM lines
     $self->rewind();
+    
     # Read all atoms into a single structure
     my $atoms_in = SBG::DomainIO::pdb->new(fh=>$self->fh);
     my $all_atoms = $atoms_in->read()->coords;
@@ -404,6 +406,9 @@ sub _read_header {
             $dom->radius($fields{'Rg'});
             $dom->assembly($fields{'Assembly'}) if defined $fields{'Assembly'};
             $dom->model($fields{'Model'}) if defined $fields{'Model'};
+            $dom->classification($fields{'Classification'}) if 
+                defined $fields{'Classification'};
+            
             # If the Id looks like it begins with a PDB ID, parse it out
             if ($fields{'Id'} =~ /^($re_pdb)/) { $dom->pdbid($1) };            
         }          
