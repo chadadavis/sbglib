@@ -166,9 +166,10 @@ sub write {
           
         printf $fh " Assembly = %d", $dom->assembly if defined $dom->assembly;
         printf $fh " Model = %d",    $dom->model    if defined $dom->model;
-        printf $fh " Classification = ", $dom->classification if 
+        print  $fh " Classification = ", $dom->classification if 
             defined $dom->classification;
         print $fh "\n";
+        print STDERR 'classification:', $dom->classification, "\n";
         
         # Print ATOM records (seven points of the crosshair)
         my $chain = $self->renumber_chains ? chr(ord('A')+$i) : $dom->onechain;
