@@ -10,7 +10,8 @@ use SBG::DomainIO::cofm;
 my $pdbid = '1e79';
 my $assembly = '2';
 my $label = "$pdbid-$assembly";
-my $output = SBG::DomainIO::cofm->new(file=>">$ENV{'DS'}/cofm-classes/$label.cofm");
+my $file = "$ENV{'DS'}/cofm-classes/$label.cofm";
+my $output = SBG::DomainIO::cofm->new(file=>">$file");
 
 # For each fragment in an assembly:
 
@@ -27,5 +28,17 @@ my $fragment = SBG::Domain::Sphere->new(
     );
 
 $output->write($fragment);
+$output->close;
 
-    
+# Read it back in:
+my $input=SBG::Domain::cofm->new(file=>$file);
+my @doms;
+while (my $dom = $input->read) {
+    push @doms, $dom;
+}
+my $dom = $doms[0];
+# This is a PDL (maybe one point, maybe seven).
+print $dom->coords;
+# If the coords have been transformed, this is the transformation matrix;
+print $dom->transformation if $dom->transformation->has_matrix;
+
