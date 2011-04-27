@@ -219,6 +219,20 @@ has 'model' => (
 	isa => 'Maybe[Int]',
 );
 
+
+=head2 classification
+
+A user-defined classification. This can be any label for grouping Domain 
+instances that should be considered equivalent. It might be a SCOP
+classification or a custom cluster ID, for some clustering method.
+
+=cut
+has 'classification' => (
+    is => 'rw',
+    isa => 'Maybe[Str]',
+);
+
+    
 =head2 entity
 
  Function: 

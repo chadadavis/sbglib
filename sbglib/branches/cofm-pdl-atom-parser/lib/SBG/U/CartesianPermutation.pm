@@ -185,6 +185,7 @@ sub next {
 
 
 # Product of the number of permutations of each iterator
+# I.e. the total number of results before this object returns nothing
 sub cardinality {
     my ($self) = @_;
     my $prod = 1;

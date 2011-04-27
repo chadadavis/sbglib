@@ -41,6 +41,11 @@ sub multi_fragment : Tests {
 }
 
 
+sub classification : Test {
+    local $TODO = "TODO test reading / writing the 'Classifiation'";
+}
+
+
 sub renumber_chains : Test() {
     local $TODO = "TODO test renumber_chains";
 }
