@@ -117,34 +117,25 @@ sub _build_coords {
     my ($self) = @_;
 
     my $c;
-    my $coords;
-    my $dims; 
     if ($self->has_coords) {
         # Use curent center
         $c = $self->centroid;
-        $dims = $c->dim(0);
-        $coords = $self->coords;
     } else {
         # Use center that was passed as argument
-        $c = $self->centroid->squeeze;
-        $dims = $c->dim(0);
-        $coords = zeroes($dims, 7);
+        $c = $self->_init_center->squeeze;
     }
-
-    my $x = zeroes $dims;
-    my $y = zeroes $dims;
-    my $z = zeroes $dims;
-
+    my $dims = $c->dim(0);
+    
+    # If not 3 dimensions, assume 4 (homogenous coords)
+    # Only necessary because PDL lvalues fail in Perl Debugger
+    # Otherwise, we could just set $x=zeroes $dims; $x->slice('0') .= $r;
     my $r = $self->_hair_len;
-    # Fill in just X coord
-    $x->slice('0') .= $r;
-    # Fill in just Y coord
-    $y->slice('1') .= $r;
-    # Fill in just Z coord
-    $z->slice('2') .= $r;
-
+    my $x = $dims == 3 ? pdl($r,0,0) : pdl($r,0,0,0);
+    my $y = $dims == 3 ? pdl(0,$r,0) : pdl(0,$r,0,0);
+    my $z = $dims == 3 ? pdl(0,0,$r) : pdl(0,0,$r,0);
+    
     # Center, followed by X +/- offset, Y +/- offset, Z +/- offset
-    $coords .= pdl [ $c, $c+$x, $c-$x, $c+$y, $c-$y, $c+$z, $c-$z ];
+    my $coords = pdl [ $c, $c+$x, $c-$x, $c+$y, $c-$y, $c+$z, $c-$z ];
 
     return $coords;
 }
