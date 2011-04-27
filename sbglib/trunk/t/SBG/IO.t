@@ -9,6 +9,7 @@ use lib "$Bin/../../lib/";
 
 use SBG::IO;
 
+
 # Open a not-yet-opened file
 my $file = "$Bin/data/2nn6.dom";
 my $iofile = new SBG::IO(file=>"<$file");
@@ -53,6 +54,17 @@ my $iostring = SBG::IO->new(string=>\$str);
 $iostring->write("foo");
 $iostring->flush;
 is($str, 'foo', 'SBG::IO->new(string=>$str)');
+
+
+# Test buffering a pipe
+my $cmd = 'echo hello world';
+open my $cmdfh, "$cmd |";
+my $cmdio = SBG::IO->new(fh=>$cmdfh);
+ok(! $cmdio->reset, "pipe is not seek'able");
+# Buffer it
+$cmdio->buffer;
+ok($cmdio->reset, "Buffered pipe => string is now seek'able");
+
 
 
 __END__

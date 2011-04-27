@@ -34,7 +34,6 @@ use Module::Load;
 use Log::Any qw/$log/;
 
 
-
 # Accessors
 
 =head2 fh
@@ -323,11 +322,10 @@ requires 'write';
 
 =head2 rewind
 
- Function: Rewinds a read-file handle to the beginnnig of its stream
- Example : 
- Returns : 
- Args    : 
+Rewinds a read-file handle to the beginnnig of its stream
 
+Fails when the stream is not seekable, e.g. on a pipe, in which case you may 
+want to consider L<buffer>
 
 =cut
 sub rewind {
@@ -336,8 +334,32 @@ sub rewind {
     return seek($fh, 0, 0);
 
 } # rewind
+
+=head2
+Alias for L<rewind>
+=cut
 sub reset {
     return rewind(@_);
+}
+
+
+=head2 buffer
+
+If a stream is not seekable, e.g. a pipe, buffer it to make it seekable.
+
+Returns true on success.
+
+=cut
+sub buffer {
+    my ($self) = @_;
+    # Stream is already seekable?
+    return 1 if $self->rewind;
+    my $fh = $self->fh or return;
+    # Suck everything into an in-memory string stream
+    my $str = join '', <$fh>;
+    $self->string(\$str);
+    # Test it
+    return $self->rewind;
 }
 
 

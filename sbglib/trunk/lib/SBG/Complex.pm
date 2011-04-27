@@ -1530,6 +1530,9 @@ sub rmsd_class {
     my $bestnatoms;
     my $besti = -1;
 
+    # TODO DES all of this set intersection business needs to be factored out
+    # E.g. @set_of_classes = $complex->intersect($other_complex);
+    
     # The complex model knows the symmetry of the components being built, even
     # the ones that were not explicitly modelled in this complex.
     # Group components into homologous classes (a component is in just one class)

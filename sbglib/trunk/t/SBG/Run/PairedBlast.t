@@ -1,5 +1,6 @@
 #!/usr/bin/env perl
 
+use strict;
 use Test::More 'no_plan';
 
 use Carp;
@@ -14,8 +15,8 @@ use SBG::U::Log;
 
 
 $SIG{__DIE__} = \&confess;
-my $DEBUG;
-$DEBUG = $DB::sub;
+my $DEBUG = $ENV{'SBGDEBUG'};
+$DEBUG = $DB::sub if defined $DB::sub;
 SBG::U::Log::init(undef, loglevel=>'DEBUG') if $DEBUG;
 $File::Temp::KEEP_ALL = $DEBUG;
 
@@ -26,8 +27,8 @@ use Bio::SeqIO;
 
 my $iop = new Bio::SeqIO(-file=>"$Bin/../data/P25359.fa");
 my $seqp = $iop->next_seq;
-#$blast = SBG::Run::PairedBlast->new(method=>'remoteblast',e=>0.01,database=>'pdbaa');
-$blast = SBG::Run::PairedBlast->new(method=>'standaloneblast',e=>0.01,database=>'pdbaa');
+#my $blast = SBG::Run::PairedBlast->new(method=>'remoteblast',e=>0.01,database=>'pdbaa');
+my $blast = SBG::Run::PairedBlast->new(method=>'standaloneblast',e=>0.01,database=>'pdbaa');
 my $hits = $blast->_blast1($seqp)->{'2NN6'};
 my $nhits = @$hits;
 ok($nhits > 0, "Blast -e bug workaround: RRP43 hits on 2NN6: $nhits");

@@ -27,7 +27,10 @@ with 'SBG::IOI';
 
 
 use PDL::Core qw/zeroes pdl/;
+use PDL::Ufunc qw/all/;
+use PDL::Core qw/approx/;
 
+use SBG::U::RMSD qw/identity/;
 use SBG::TransformI;
 use SBG::Transform::Affine;
 
@@ -85,6 +88,10 @@ sub read {
     push @rows, [ 0, 0, 0, 1 ];
     my $mat = pdl(@rows);
 
+    # Don't save it if it's just the identity;
+    my $identity = identity(4);
+    return $objtype->new() if all(approx($mat, $identity));
+    
     return $objtype->new(matrix=>$mat);
 
 } # read
@@ -102,9 +109,9 @@ Writes in row-major order
 
 =cut
 sub write {
-    my ($self, $trans) = @_;
+    my ($self, $trans, %ops) = @_;
     my $fh = $self->fh or return;
-    return "" unless $trans->has_matrix;
+    return "" if ! $trans->has_matrix && ! defined $ops{'verbose'};
     my $mat = $trans->matrix;
 
     my $line_format = '%10.5f ' x 4;

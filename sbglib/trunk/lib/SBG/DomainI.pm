@@ -219,6 +219,20 @@ has 'model' => (
 	isa => 'Maybe[Int]',
 );
 
+
+=head2 classification
+
+A user-defined classification. This can be any label for grouping Domain 
+instances that should be considered equivalent. It might be a SCOP
+classification or a custom cluster ID, for some clustering method.
+
+=cut
+has 'classification' => (
+    is => 'rw',
+    isa => 'Maybe[Str]',
+);
+
+    
 =head2 entity
 
  Function: 
@@ -358,7 +372,7 @@ has 'transformation' => (
 	is       => 'rw',
 	does     => 'SBG::TransformI',
 	required => 1,
-	default  => sub { new SBG::Transform::Affine },
+	default  => sub { SBG::Transform::Affine->new },
 );
 
 =head2 coords
@@ -376,6 +390,7 @@ Set of homogenous 4D coordinates. The 4th dimension of each point must be 1.
 
 TODO: considering coercing coordinates from 3D to 4D here, for convenience
 
+TODO This implementation should not be in the interface
 =cut
 
 has 'coords' => (
@@ -562,7 +577,8 @@ sub id {
 	elsif ( $self->file ) {
 
 		# Or use the filename, if this is not a PDB entry
-		$str = basename( $self->file, qw/.pdb .ent .pdb.gz .ent.gz/ );
+		$str = basename( $self->file, qw/.gz .Z .zip/ );
+		$str = basename($str, qw/.pdb .ent .mmol .brk .cofm/);
 	}
 	$str .= $self->_descriptor_short if $self->_descriptor_short;
 	return $str;

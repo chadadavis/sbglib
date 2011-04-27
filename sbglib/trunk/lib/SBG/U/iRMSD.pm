@@ -63,6 +63,7 @@ sub irmsd {
 
     # NB these superpositions are unidirectional (always from 1 to 2)
     # Only difference, relative to A or B component of interaction
+
     my $supera = superposition($doms1->[0], $doms2->[0]);
     my $superb = superposition($doms1->[1], $doms2->[1]);
     return unless defined($supera) && defined($superb);
@@ -81,8 +82,15 @@ sub irmsd {
 sub _irmsd_rel {
     my ($origdoms, $superp) = @_;
 
-    my $spheres = $origdoms->map(sub{SBG::Run::cofm::cofm($_)});
-
+    # TODO BUG
+    # This step will not work if you 'map' @$origdoms to $spheres
+    # May be a bug in garbage collection of weak references.
+    # This works as long as objects are created explicitly
+    my $spheres = [];
+    foreach my $d (@$origdoms) {
+        $spheres->push(SBG::Run::cofm::cofm($d));
+    }
+    
     # Apply superposition to each of the domains
     $spheres->map(sub{$superp->apply($_)});
 
