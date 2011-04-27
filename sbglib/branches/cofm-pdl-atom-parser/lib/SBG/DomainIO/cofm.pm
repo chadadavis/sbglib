@@ -216,7 +216,8 @@ sub _print_atoms {
     my $fh = $self->fh;
     
     # This is a column-based format (defined by the PDB specification)
-    for (my $j = 0; $j < 7; $j++) {
+    my $rows = $dom->coords->dim(1);
+    for (my $j = 0; $j < $rows; $j++) {
         # Vary the temparature, to be able to visualize relative orientation
         # But only display every second one, to be able to identify +x vs -x
         # Temperatures: 0, 4, 0, 12, 0, 20, 0
