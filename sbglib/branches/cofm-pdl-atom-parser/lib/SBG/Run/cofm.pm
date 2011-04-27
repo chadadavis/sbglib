@@ -44,6 +44,7 @@ use PDL::Lite;
 use PDL::Core qw/pdl/;
 use Log::Any qw/$log/;
 use Digest::MD5 qw/md5_base64/;
+use File::Temp qw/tempfile/;
 
 use SBG::Domain::Sphere;
 use SBG::DomainIO::stamp;
@@ -97,6 +98,7 @@ sub cofm {
         cache_set($cachename, $key, []) if $cache;
         return;
     }
+        
     # Success, positive cache
     cache_set($cachename, $key, $sphere) if $cache;
 
@@ -111,7 +113,7 @@ sub _hash {
     my ($dom) = @_;
     my $domstr = "$dom";
     my $trans = $dom->transformation;
-    my $transstr = md5_base64 "$trans";
+    my $transstr = $trans ? md5_base64("$trans") : '';
     $domstr .= '(' . $transstr . ')' if $transstr;
     return $domstr;
 }
@@ -127,7 +129,7 @@ sub _hash {
 =cut
 sub _run {
     my ($dom) = @_;
-
+    
     # Get dom into a stamp-formatted file
     my $io = SBG::DomainIO::stamp->new(tempfile=>1);
     $io->write($dom);
@@ -136,16 +138,16 @@ sub _run {
 
     # NB the -v option is necessary if you want the filename of the PDB file
     # TODO consider using Capture::Tiny or IPC::Cmd
-    my $cmd = "$cofm -f $path -v |";
-    my $fh;
-    unless (open $fh, $cmd) {
+    my (undef, $tempfile) = tempfile();
+    my $cmd = "$cofm -f $path -v > $tempfile";
+    unless(system($cmd)) { 
         $log->error("Failed:\n\t$cmd\n\t$!");
         return;
     }
-    
-    my $in = SBG::DomainIO::cofm->new(fh=>$fh);
+
+    my $in = SBG::DomainIO::cofm->new(file=>$tempfile);
     # Assumes a single domain
-    my $sphere = $in->read;
+    my $sphere = $in->read;   
     return $sphere;
     
 } # _run
