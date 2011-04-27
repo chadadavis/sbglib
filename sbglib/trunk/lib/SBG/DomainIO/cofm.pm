@@ -171,14 +171,22 @@ sub write {
         print $fh "\n";
         
         # Print ATOM records (seven points of the crosshair)
-        my $chain = $self->renumber_chains ? chr(ord('A')+$i) : $dom->onechain;
+        my $chain = $self->renumber_chains ? $self->next_chain : $dom->onechain; 
         $chain ||= ' ';
         $self->_print_atoms($dom, $chain);
     }
-
+    
     return $self;
 } # write
 
+
+sub next_chain {
+    my ($self) = @_;
+    my $index = $self->_index;
+    # This will be the index (for chain renumbering) next time we're called
+    $self->_index($index + 1);
+    chr(ord('A')+($index % 26));
+}
 
 # Print file names and transformations
 sub _verbose_header {
@@ -191,13 +199,15 @@ sub _verbose_header {
     for (my $i = 0; $i < @doms; $i++) {
         my $dom = $doms[$i];
         my $domain = $i+1;
-        my $chain = $self->renumber_chains ? chr(ord('A')+$i) : $dom->onechain;
+        my $chain = $self->renumber_chains ? $self->next_chain : $dom->onechain; 
         $chain ||= '_';
         # Header
-        printf $fh "Domain %3d %s %s\n", $domain, $dom->file, $dom->id;
+        printf $fh "Domain %3d %s %s\n", $domain, $dom->file||'undef', $dom->id;
         # Chain counts
+        my $descriptor = $dom->descriptor;
+        $descriptor = "from $descriptor" if $descriptor =~ /to/; # cofm format
         printf $fh "        %s %d CAs => %4d CAs in total\n",
-            $dom->descriptor, $dom->length, $dom->length;
+            $descriptor, $dom->length, $dom->length;
         print  $fh "Applying the transformation...\n";
         $self->flush;
         my $out = SBG::TransformIO::stamp->new(fh=>$self->fh);
@@ -206,6 +216,7 @@ sub _verbose_header {
         $out->flush;
         print  $fh "     ...to these coordinates.\n";
     }
+    $self->_index($self->_index + @doms);
     print $fh "\n\n";    
 }
     
@@ -241,7 +252,7 @@ sub _print_atoms {
             '%6.2f'.   # B-Occupancy
             '%6.2f'.   # Temperature factor
             "\n",
-            'ATOM', ceil($j/2.0), 'CA', ' ', 'ALA', $chain, ceil($j/2.0), ' ',
+            'ATOM', ceil($j/2.0), ' CA ', ' ', 'ALA', $chain, ceil($j/2.0), ' ',
             $dom->coords->slice("0:2,$j")->list, 1.0, $temp;
     }     
 }
@@ -298,8 +309,10 @@ sub read {
     for (my $i = 0; $i < @$doms; $i++) {
         my $dom = $doms->[$i];
         my $start = 7 * $i; 
-        # Dont' include dummy atoms if they haven't been oriented
-        my $end = $dom->transformation->has_matrix ? $start + 6 : $start + 0;
+        # TODO potential optimization
+        # Ignore redundant atoms if they haven't been oriented
+#        my $end = $dom->transformation->has_matrix ? $start + 6 : $start + 0;
+        my $end = $start + 6;
         # Column-major indexing (rows in the second dimension)
         $dom->coords($all_atoms->slice(",$start:$end"));
     }
@@ -360,6 +373,9 @@ sub _read_header {
     my ($self) = @_;
     my $fh = $self->fh;
     return unless $fh;
+
+    # What type of Domain to create:
+    my $objtype = $self->objtype;
                                               
     my $doms = [ undef ];         
     # All header lines come first, if any
@@ -369,11 +385,9 @@ sub _read_header {
         if ($line =~ /^Domain\s+(\d+)\s+(\S+)/i) {
             # Found a new domain, this line has the file name
             $index = $1; # 1-based index
-            my $file = $2;
-            # What type of Domain to create:
-            my $objtype = $self->objtype;
+            my $dom = $objtype->new;
             # Also note the file that was read from
-            my $dom = $objtype->new(file=>$file);
+            $dom->file($2) if defined $2 && -r $2;      
             $doms->[$index - 1] = $dom;
         } elsif ($line =~ /\s+(.*?)=>\s+\d+\s+CAs in total$/) {          
             my @matches = $1 =~ /from\s+(.*?)\s+\d+ CAs|(chain .)\s+\d+ CAs/ig;
@@ -402,7 +416,8 @@ sub _read_header {
             }
             
             $index = $fields{'Domain'};
-            my $dom = $doms->[$index - 1];
+            $doms->[$index-1] = $objtype->new unless defined $doms->[$index-1];
+            my $dom = $doms->[$index-1];
             $dom->length($fields{'N'});
             $dom->radius($fields{'Rg'});
             $dom->assembly($fields{'Assembly'}) if defined $fields{'Assembly'};

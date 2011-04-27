@@ -25,7 +25,7 @@ use SBG::U::List qw/flatten/;
 use SBG::Run::rasmol;
 
 
-my $DEBUG;
+my $DEBUG = $ENV{'SBGDEBUG'} || $DB::sub;
 #$DEBUG = 1;
 SBG::U::Log::init(undef, loglevel=>'DEBUG') if $DEBUG;
 $File::Temp::KEEP_ALL = $DEBUG;
@@ -235,7 +235,6 @@ ok($complex1->merge_interaction($complex2, $iaction),
 is($complex1->count, 6, "Merged complex is a hexamer");
 rasmol($complex1->domains) if $DEBUG;
 
-
 # Close cycle, implicitly by adding the last interaction, cycle is detected
 $iaction = new SBG::Interaction;
 $iaction->set('MTR3', $mmtr3a);
@@ -243,8 +242,6 @@ $iaction->set('RRP43', $mrrp43d);
 my $cycle_score = $complex1->merge_interaction($complex1, $iaction);
 ok($cycle_score > 8, 
    "Merging within a complex to close cycle: $cycle_score");
-
-
 
 
 # Test RMSD of crosshairs of (matching) components of complexes
@@ -263,7 +260,6 @@ $file = $iocofm->file;
 @tdoms = map { $true_complex->get($_)->subject } @names;
 $iocofm->write(@mdoms, @tdoms);
 
-
 # Looks like this is commutative too!
 # ($transmat, $rmsd) = $complex->rmsd($true_complex);
 my ($transmat1, $rmsd1) = $true_complex->rmsd($complex);
@@ -271,6 +267,7 @@ $true_complex->transform($transmat1);
 rasmol($complex->domains, $true_complex->domains) if $DEBUG;
 # Revert
 $true_complex->transform($transmat1->inv);
+
 
 my ($transmat2, $rmsd2) = $complex->rmsd($true_complex);
 $complex->transform($transmat2);
