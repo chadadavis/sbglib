@@ -390,6 +390,7 @@ Set of homogenous 4D coordinates. The 4th dimension of each point must be 1.
 
 TODO: considering coercing coordinates from 3D to 4D here, for convenience
 
+TODO This implementation should not be in the interface
 =cut
 
 has 'coords' => (
