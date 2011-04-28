@@ -363,9 +363,9 @@ sub _rot_svd {
     # invert the signs in the last column, when necessary 
 
     # Check for bad values (probably more efficient ways to do this...)
-    my $valid = ($V >= 0 | $V < 0);
+    my $valid = ($V >= 0) | ($V < 0);
     unless (all($valid)) {
-        carp "Cannot superpose. Failed to get singular value decomposition";
+        carp "Cannot superpose. No singular value decomposition";
         return;
     }
     
