@@ -37,9 +37,12 @@ my $points0a = pdl[[0,0,0,1],[10,0,0,1],[5,20,0,1]];
 # Same points shifted by 10 in z-direction
 my $points0b = pdl[[0,0,10,1],[10,0,10,1],[5,20,10,1]];
 # Transformation will fail with a warning and return nothing
-my $no_trans = SBG::U::RMSD::superposition($points0a, $points0b);
-ok(! defined $no_trans, "Catch bad input error");
-
+{
+    # Make warnings fatal, so that eval can catch them and we can test them:
+    local $SIG{__WARN__} = sub { die $_[0] };
+    eval { SBG::U::RMSD::superposition($points0a, $points0b) };
+    like($@, qr/cannot superpose/i, "Catch no SVD error");
+}
 
 # More complex points
 my $pointsA = pdl[[8,4,2,1], [6,2,6,1], [6,4,2,1], [6,6,7,1]];
