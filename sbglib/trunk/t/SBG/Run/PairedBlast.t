@@ -24,10 +24,10 @@ $File::Temp::KEEP_ALL = $DEBUG;
 use SBG::Run::PairedBlast qw/gi2pdbid/;
 use Bio::SeqIO;
 
+my $blast;
 
 my $iop = new Bio::SeqIO(-file=>"$Bin/../data/P25359.fa");
 my $seqp = $iop->next_seq;
-my $blast;
 #$blast = SBG::Run::PairedBlast->new(method=>'remoteblast',e=>0.01,database=>'pdbaa');
 $blast = SBG::Run::PairedBlast->new(method=>'standaloneblast',e=>0.01,database=>'pdbaa');
 my $hits = $blast->_blast1($seqp)->{'2NN6'};
@@ -56,7 +56,6 @@ my $seq2 = $io->next_seq;
 
 # Get pairs of hits from common PDB structure
 #$blast = SBG::Run::PairedBlast->new();
-$blast;
 my $method;
 $method = 'standaloneblast';
 ok(blastmethod($method, $seq1, $seq2), "$method");
