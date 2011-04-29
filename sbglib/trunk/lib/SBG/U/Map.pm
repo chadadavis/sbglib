@@ -39,7 +39,7 @@ use IO::String;
 use SBG::U::DB;
 use SBG::U::List qw/flatten/;
 
-use XML::XPath;
+#use XML::XPath;
 
 sub pdb_chain2uniprot_acc {
     my ($id) = @_;
@@ -52,13 +52,32 @@ sub pdb_chain2uniprot_acc {
         warn "Failed to get UniProt Acc for $id\n";
         return;
     }
-    my $io = IO::String->new($content);
-    my $xp = XML::XPath->new(ioref=>$io); 
-    my $query = '//alignObject[@dbSource="UniProt"]';    
-    my ($node) = $xp->findnodes($query);
-    my $uniprotacc = $node->getAttribute('dbAccessionId');    
+    # regex approach is less stable (assumes order of attributes), but faster
+    my $uniprotacc = _xml_regex($content); 
+    # And the XPath produces a warning in IO::String, but is also correct
+#    my $uniprotacc = _xml_xpath($content);
     return $uniprotacc;
 }
+
+
+sub _xml_regex {
+    my $content = shift;
+    my ($id) = $content =~ 
+        m|<alignObject.*?dbAccessionId="(.*?)".*?dbSource="UniProt".*?/>|;
+    return $id;
+}
+
+
+sub _xml_xpath {
+    my $content = shift;
+    my $io = IO::String->new($content);
+    my $xp = XML::XPath->new(ioref=>$io); 
+    my $query = '//alignObject[@dbSource="UniProt"]';  
+    my ($node) = $xp->findnodes($query);
+    my $uniprotacc = $node->getAttribute('dbAccessionId');
+    return $uniprotacc;    
+}
+    
 
 # Only for S. cerevisiae sequences
 sub uniprot2gene {
