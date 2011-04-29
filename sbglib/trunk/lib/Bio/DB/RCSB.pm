@@ -47,7 +47,7 @@ extends qw/Moose::Object Bio::Root::Root/;
 our $MODVERSION = '0.0.1';
 
 use LWP::UserAgent;
-use XML::XPath;
+#use XML::XPath;
 use Moose::Autobox;
 use Log::Any qw/$log/;
 use IO::String;
@@ -117,11 +117,11 @@ sub link_for {
 # TODO BUG: cannot get the organism for a single chain explicitly
 sub organism {
     my ($self, %ops) = @_;
-    my $xml = $self->describePDB(%ops);          
-    my $xmlio = IO::String->new($xml);
-    my $xp = XML::XPath->new(ioref=>$xmlio); 
-    my $query = '/PDBdescription/PDB/@organism';    
-    my $organismtext = $xp->getNodeText($query);
+    my $xml = $self->describePDB(%ops);     
+
+#    my $organismtext = _xml_xpath($xml);
+    my $organismtext = _xml_regex($xml);
+         
     # May be multiple comma-separated organisms
     my @organisms = split /, /, $organismtext;
     my $counts = {};
@@ -131,6 +131,23 @@ sub organism {
     return $sorted[0];
     
 }
+
+
+sub _xml_regex {
+    my $xml = shift;
+    my ($organismtext) = $xml =~ m|organism="(.*?)"|s;
+    return $organismtext;   
+}
+
+
+#sub _xml_xpath {
+#    my $xml = shift;
+#    my $xmlio = IO::String->new($xml);
+#    my $xp = XML::XPath->new(ioref=>$xmlio); 
+#    my $query = '/PDBdescription/PDB/@organism';    
+#    my $organismtext = $xp->getNodeText($query);
+#    return $organismtext;
+#}    
 
 
 sub _method {

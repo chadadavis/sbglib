@@ -68,15 +68,15 @@ sub _xml_regex {
 }
 
 
-sub _xml_xpath {
-    my $content = shift;
-    my $io = IO::String->new($content);
-    my $xp = XML::XPath->new(ioref=>$io); 
-    my $query = '//alignObject[@dbSource="UniProt"]';  
-    my ($node) = $xp->findnodes($query);
-    my $uniprotacc = $node->getAttribute('dbAccessionId');
-    return $uniprotacc;    
-}
+#sub _xml_xpath {
+#    my $content = shift;
+#    my $io = IO::String->new($content);
+#    my $xp = XML::XPath->new(ioref=>$io); 
+#    my $query = '//alignObject[@dbSource="UniProt"]';  
+#    my ($node) = $xp->findnodes($query);
+#    my $uniprotacc = $node->getAttribute('dbAccessionId');
+#    return $uniprotacc;    
+#}
     
 
 # Only for S. cerevisiae sequences
