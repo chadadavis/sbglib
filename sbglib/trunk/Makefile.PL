@@ -66,7 +66,7 @@ requires 'Sort::Key::Top' => '0';
 requires 'Statistics::Contingency' => '0';
 requires 'Statistics::Lite' => '0';
 requires 'Term::ReadKey' => '0';
-requires 'XML::XPath' => '0';
+#requires 'XML::XPath' => '0';
 
 # TODO Only required for testing
 requires 'Test::Class' => '0';
