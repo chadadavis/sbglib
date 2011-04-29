@@ -389,10 +389,13 @@ sub _read_header {
             # Also note the file that was read from
             $dom->file($2) if defined $2 && -r $2;      
             $doms->[$index - 1] = $dom;
-        } elsif ($line =~ /\s+(.*?)=>\s+\d+\s+CAs in total$/) {          
-            my @matches = $1 =~ /from\s+(.*?)\s+\d+ CAs|(chain .)\s+\d+ CAs/ig;
+        } elsif ($line =~ /\s+(.*?)=>\s+\d+\s+CAs in total$/) {      
+            # One of: 'from A 33 _ to A 566 B' or 'CHAIN X' or 'all residues'    
+            my @matches = $1 =~ 
+                /from\s+(.*?)\s+\d+ CAs|(chain .)|(all residues)\s+\d+ CAs/ig;
             @matches = grep { defined } @matches;
             my $descriptor = "@matches";
+            $descriptor =~ s/all residues/ALL/;
             # cofm uses lowercase, but STAMP uses uppercase
             $descriptor =~ s/chain/CHAIN/g;
             my $dom = $doms->[$index - 1];
