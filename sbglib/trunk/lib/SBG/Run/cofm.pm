@@ -140,14 +140,14 @@ sub _run {
     # TODO consider using Capture::Tiny or IPC::Cmd
     my (undef, $tempfile) = tempfile();
     my $cmd = "$cofm -f $path -v > $tempfile";
-    unless(system($cmd)) { 
+    unless(system($cmd)==0) { 
         $log->error("Failed:\n\t$cmd\n\t$!");
         return;
     }
 
     my $in = SBG::DomainIO::cofm->new(file=>$tempfile);
     # Assumes a single domain
-    my $sphere = $in->read;   
+    my $sphere = $in->read;
     return $sphere;
     
 } # _run
