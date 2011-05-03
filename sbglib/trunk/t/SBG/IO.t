@@ -66,5 +66,15 @@ $cmdio->buffer;
 ok($cmdio->reset, "Buffered pipe => string is now seek'able");
 
 
+# Test file indexing
+my $texttoindex = "$Bin/data/texttoindex.txt";
+my $ioindexed = SBG::IO->new(file=>$texttoindex);
+my $index = $ioindexed->index;
+my $index3 = $ioindexed->index->[3];
+$ioindexed->seek($index3);
+my $thing = $ioindexed->read;
+is($thing, '678', 'IOI::index');
+
+
 
 __END__

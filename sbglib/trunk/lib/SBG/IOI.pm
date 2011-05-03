@@ -363,6 +363,55 @@ sub buffer {
 }
 
 
+=head2 tell
+See perldoc -f tell
+=cut
+sub tell {
+    tell shift->fh;
+}
+
+
+=head2 seek
+See perldoc -f seek
+=cut
+sub seek {
+    my ($self, $pos, $whence) = @_;
+    my $fh = $self->fh;
+    seek $fh, $pos || 0, $whence || 0;
+    
+}
+
+
+=head2 index
+
+Track starting position of objects in file.
+To then read an object at index $n later:
+
+ $io->seek($io->index($n));
+ my $thing = $io->read;
+ 
+$n ranges from 0 to the number of objects in the file
+
+=cut
+has 'index' => (
+    is => 'rw',
+    isa => 'ArrayRef[Int]',
+    lazy_build => 1,
+);
+sub _build_index {
+    my ($self) = @_;
+    my $index = [];
+    my $i = 0;
+    my $tell = $self->tell;
+    while (defined(my $thing = $self->read)) {
+        $index->[$i] = $tell;
+        $tell = $self->tell;
+        $i++; 
+    }
+    return $index;
+}
+
+
 =head2 _string
 
  Function: 
