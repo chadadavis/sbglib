@@ -3,7 +3,10 @@ use strict;
 use FindBin qw/$Bin/;
 use lib "$Bin/../lib/";
 
-use SBG::STAMP qw/superposition/;
+#use SBG::STAMP qw/superposition/;
+# Prefer the cached version
+use SBG::Superposition::Cache qw/superposition/;
+
 use SBG::Domain;
 
 # Logging
@@ -24,6 +27,8 @@ $File::Temp::KEEP_ALL = $ENV{'SBGDEBUG'} || defined $DB::sub;
 #         "-scancut $scancut",#$SBG::STAMP::scancut = 2.0
 # To change them:
 #$SBG::STAMP::parameters = "-treewise F -pairoutput_to_log T -pairoutput T -v";
+# If you change the default params, you should also use a different cache:
+# SBG::Superposition::Cache::cachename = 'myanalysis';
 
 my $domfile = shift or die;
 use SBG::DomainIO::stamp;
@@ -70,7 +75,7 @@ for (my $i = 0; $i < @$index; $i++) {
             
             # See SBG::Superposition for details of the score names
             # E.g. 'RMS', 'Sc', ...
-            print "Score: RMS", $super->scores->{'RMS'}, ' Sc:', $super->scores->{'Sc'}, "\n";
+            print "RMS: ", $super->scores->{'RMS'}, ' Sc: ', $super->scores->{'Sc'}, "\n";
             # Or do your own thing
             my %scores = %{$super->scores};
             print join ' ', %scores, "\n";
