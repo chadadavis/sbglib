@@ -385,12 +385,20 @@ sub seek {
 =head2 index
 
 Track starting position of objects in file.
+ 
+  $io->index;
+or
+  my $index = $io->index;
+  
 To then read an object at index $n later:
 
- $io->seek($io->index($n));
- my $thing = $io->read;
- 
-$n ranges from 0 to the number of objects in the file
+ for (my $i = 0; $i < @$index; $i++) {
+     my $pos = $io->index->[$i];
+     $io->seek($pos);
+     my $thing = $io->read;
+     # ...
+ }
+  
 
 =cut
 has 'index' => (
