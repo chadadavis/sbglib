@@ -14,24 +14,20 @@ use SBG::Domain;
 # To change them:
 # $SBG::STAMP::prameters = "-s -n 3 -scancut 3";
 
-# Example:
-my $data = [
-    { pdbid=>'1tim', descriptor=>'CHAIN A' },
-    { pdbid=>'1tim', descriptor=>'CHAIN B' },
-    { pdbid=>'1dkw', descriptor=>'CHAIN A' },
-    { pdbid=>'1dkw', descriptor=>'CHAIN B' },
-    # ...
-    ];
-    
+my $domfile = shift or die;
+use SBG::DomainIO::stamp;
+my $input = SBG::DomainIO::stamp->new(file=>$domfile);
+my @doms;
+while (my $dom = $input->read) {
+    push @doms, $dom;
+}
     
 # All pairs
-for (my $i = 0; $i < @$data; $i++) {
-    my $domi = SBG::Domain->new(
-        pdbid=>$data->[$i]->{pdbid}, descriptor=>$data->[$i]->{descriptor});
+for (my $i = 0; $i < @doms; $i++) {
+    my $domi = $doms[$i];
     
-    for (my $j = $i + 1; $j < @$data; $j++) {
-        my $domj = SBG::Domain->new(
-            pdbid=>$data->[$j]->{pdbid}, descriptor=>$data->[$j]->{descriptor});
+    for (my $j = $i + 1; $j < @doms; $j++) {
+        my $domj = $doms[$j];
         
             # This is always the transformation from i onto j (j is fixed)
             my $super = superposition($domi, $domj);
@@ -44,7 +40,7 @@ for (my $i = 0; $i < @$data; $i++) {
             
             # See SBG::Superposition for details of the score names
             # E.g. 'RMS', 'Sc', ...
-            print $super->scores('RMS'), ' ', $super->scores('Sc');
+            print "Score: RMS", $super->scores->{'RMS'}, ' Sc:', $super->scores->{'Sc'}, "\n";
             # Or do your own thing
             my %scores = %{$super->scores};
             
