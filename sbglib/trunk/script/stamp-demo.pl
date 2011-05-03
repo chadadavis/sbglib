@@ -37,7 +37,10 @@ sub _domi {
     my $i = shift;
     my $pos = $input->index->[$i];
     $input->seek($pos);
-    return $input->read;
+    my $dom = $input->read;
+    #Optionally wipe out the transformation (reset to identity)
+    $dom->transformation->reset;
+    return $dom;
 }
 
 # If you don't need indexing, if you have enough memory, you can also do:
@@ -62,6 +65,8 @@ for (my $i = 0; $i < @$index; $i++) {
             # If you also want to apply the transformation permanently
             # $super->transformation->apply($domi);
             # And then print a STAMP-formatted DOM file with SBG::DomainIO::stamp
+            # And then the absolute transformation is 
+            # $domi->transformation
             
             # See SBG::Superposition for details of the score names
             # E.g. 'RMS', 'Sc', ...

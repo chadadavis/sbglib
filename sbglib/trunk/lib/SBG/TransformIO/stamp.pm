@@ -64,7 +64,9 @@ sub BUILD {
 
 Reads in row-major order
 
-Does not tolerate any comment lines. Transform must be exactly three lines, four columns. Leading and trailing whitespace is tolerated.
+Does not tolerate any comment lines within the transformation block
+Transform must be exactly three lines, four columns. 
+Leading and trailing whitespace is tolerated.
 
 =cut
 sub read {
