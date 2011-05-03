@@ -35,20 +35,25 @@ for (my $i = 0; $i < @$data; $i++) {
         
             # This is always the transformation from i onto j (j is fixed)
             my $super = superposition($domi, $domj);
+            # If you want the inverse, it's;
+            # print $super->transformation->inverse;
             
             # If you also want to apply the transformation permanently
             # $super->transformation->apply($domi);
+            # And then print a STAMP-formatted DOM file with SBG::DomainIO::stamp
             
-            # See SBG::Superposition for details
+            # See SBG::Superposition for details of the score names
             # E.g. 'RMS', 'Sc', ...
-            print join(' ', %{$super->scores}), "\n";
+            print $super->scores('RMS'), ' ', $super->scores('Sc');
+            # Or do your own thing
+            my %scores = %{$super->scores};
             
             # Prints the matrix, which is in $super->transformation
-            # It's an instance of SBG::Transformation
+            # It's an instance of SBG::TransformationI
             # The raw matrix (a PDL) would be: $super->transformation->matrix
 #            print $super, "\n";          
             
-            # if you want it in block formatted text with newlines
+            # if you want it in block-formatted text with newlines (no headers)
             use SBG::TransformIO::stamp;
             my $string;
             my $io = SBG::TransformIO::stamp->new(string=>\$string);
