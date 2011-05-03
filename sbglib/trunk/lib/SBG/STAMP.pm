@@ -85,7 +85,6 @@ our $parameters =
          "-minfit $minfit",
          "-scancut $scancut", 
     );
-our $cmd = "$stamp $parameters";
 
 
 
@@ -119,6 +118,8 @@ sub superposition_native {
         $log->debug("Identity: $fromdom");
         return SBG::Superposition->identity($fromdom);
     }
+
+    my $cmd = "$stamp $parameters";
 
     my ($fullcmd, $prefix) = _setup_input($cmd, $ontodom, $fromdom);
     my $scanfile = "${prefix}.scan";

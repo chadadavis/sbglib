@@ -6,6 +6,14 @@ use lib "$Bin/../lib/";
 use SBG::STAMP qw/superposition/;
 use SBG::Domain;
 
+# Logging
+use SBG::U::Log qw/log/;
+log()->init('stamp-demo', loglevel=>'DEBUG', logfile=>'/tmp/sbg.log');
+
+# Debugging:
+$File::Temp::KEEP_ALL = $ENV{'SBGDEBUG'} || defined $DB::sub;
+
+
 # Default options: 
 #         "-s",               # scan mode: only query compared to each DB sequence
 #         "-secscreen F",     # Do not perform initial secondary structure screen
@@ -15,7 +23,7 @@ use SBG::Domain;
 #         "-minfit $minfit",  # $SBG::STAMP::minfit = 30
 #         "-scancut $scancut",#$SBG::STAMP::scancut = 2.0
 # To change them:
-# $SBG::STAMP::prameters = "-s -n 3 -scancut 3";
+#$SBG::STAMP::parameters = "-treewise F -pairoutput_to_log T -pairoutput T -v";
 
 my $domfile = shift or die;
 use SBG::DomainIO::stamp;
@@ -42,7 +50,7 @@ sub _domi {
 # All pairs
 for (my $i = 0; $i < @$index; $i++) {
     my $domi = _domi($i);
-    
+        
     for (my $j = $i + 1; $j < @$index; $j++) {
         my $domj = _domi($j);
         
@@ -60,6 +68,7 @@ for (my $i = 0; $i < @$index; $i++) {
             print "Score: RMS", $super->scores->{'RMS'}, ' Sc:', $super->scores->{'Sc'}, "\n";
             # Or do your own thing
             my %scores = %{$super->scores};
+            print join ' ', %scores, "\n";
             
             # Prints the matrix, which is in $super->transformation
             # It's an instance of SBG::TransformationI

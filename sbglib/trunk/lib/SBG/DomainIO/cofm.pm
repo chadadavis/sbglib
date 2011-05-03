@@ -382,13 +382,14 @@ sub _read_header {
     # These have to be matched to one another by the domain counter (Int, from 1)
     my $index;
     while (my $line = <$fh>) {
-        if ($line =~ /^Domain\s+(\d+)\s+(\S+)/i) {
+        if ($line =~ /^Domain\s+(\d+)\s+(\S+)\s*(\S+)?/i) {
             # Found a new domain, this line has the file name
             $index = $1; # 1-based index
             my $dom = $objtype->new;
             # Also note the file that was read from
             $dom->file($2) if defined $2 && -r $2;      
             $doms->[$index - 1] = $dom;
+            $dom->label($3) if defined $3;
         } elsif ($line =~ /\s+(.*?)=>\s+\d+\s+CAs in total$/) {      
             # One of: 'from A 33 _ to A 566 B' or 'CHAIN X' or 'all residues'    
             my @matches = $1 =~ 

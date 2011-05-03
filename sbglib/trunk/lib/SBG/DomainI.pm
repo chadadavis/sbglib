@@ -607,6 +607,17 @@ sub uniqueid {
 	return $str;
 }
 
+
+=head2 label
+
+A user-defined label, which might not be defined, and might not be unique
+=cut
+has 'label' => (
+    is => 'rw',
+    isa => 'Maybe[Str]',
+);
+
+
 =head2 stringify
 
  Function: Resturns a string representation of this domain.

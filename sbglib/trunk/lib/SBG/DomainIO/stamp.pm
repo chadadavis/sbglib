@@ -211,8 +211,10 @@ sub read {
         my ($pdbid) = $label =~ /^($re_pdb)/;
         # TODO DES any assembly or model info cannot be stored in STAMP format
         # Get only the params that are defined
-        my $params = {pdbid=>$pdbid, descriptor=>$descr};
+        my $params = {descriptor=>$descr};
+        $params->{pdbid} = $pdbid if $pdbid;
         $params->{file} = $file if $file;
+        $params->{label} = $label;
         my $exists = $params->keys->grep(sub{defined $params->{$_}});
         $params = $params->hslice($exists);
 

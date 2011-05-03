@@ -16,7 +16,7 @@ plan skip_all => "Pod::Coverage $min_pc required for testing POD coverage"
     if $@;
 
 if ( not $ENV{TEST_AUTHOR} ) {
-     my $msg = 'Set $ENV{TEST_AUTHOR} to test POD.';
+     my $msg = 'To test POD coverage, set $ENV{TEST_AUTHOR}';
      plan( skip_all => $msg );
 }
 
