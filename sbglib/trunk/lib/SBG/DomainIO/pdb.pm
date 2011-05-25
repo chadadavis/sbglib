@@ -77,6 +77,13 @@ sub BUILD {
 }
 
 
+has 'cache' => (
+    is => 'rw',
+    isa => 'Bool',
+    default => 1,
+);
+
+    
 =head2 atom_type
 
 A regular expression for the atom type code, e.g. 'CA' of atoms to read in from
@@ -240,7 +247,7 @@ sub coords {
     # Fields to extract
     my ($resSeq, $x, $y, $z);
 
-    if (defined $cached) {
+    if (defined($cached) && $self->cache) {
         $log->debug("Cache hit: $cachekey");
         ($resSeq, $x, $y, $z) = @$cached;
     } else {
