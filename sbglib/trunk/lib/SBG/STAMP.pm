@@ -55,9 +55,6 @@ use Log::Any qw/$log/;
 
 use SBG::DomainIO::stamp;
 use SBG::Superposition;
-use SBG::Domain::Sphere;
-use SBG::Run::cofm qw/cofm/;
-
 
 # TODO DES need to be set in a Run object
 
