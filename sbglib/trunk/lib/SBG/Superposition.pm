@@ -202,6 +202,18 @@ sub inverse {
 } # inverse
 
 
+=head2 coverage
+
+The query is covered by the hit by X% [0:100]
+Eg. if the query is 50 residues and the hit is 30 residues, then coverage is 60
+Eg. if the query is 30 residues and the hit is 50 residues, then coverage is 100
+
+=cut
+sub coverage {
+    my ($self,) = @_;
+    my $ratio = 100.0 * $self->scores->at('q_len') / $self->scores->at('d_len');
+    return $ratio > 100.0 ? 100.0 : $ratio;
+}
 
 =head2 stringify
 
