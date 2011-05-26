@@ -3,16 +3,18 @@ use Modern::Perl;
 use Moose::Autobox;
 use Algorithm::Cluster qw/treecluster/;
 
+use Algorithm::Cluster::Matrix; # from Sbglib
 use SBG::Superposition::Cache qw/superposition/;
 use SBG::DomainIO::stamp;
-use Data::Dumper;
+
 
 my $dom_file = shift or die "Gimme a STAMP DOM file\n";
 my $io = SBG::DomainIO::stamp->new(file=>$dom_file);
 my @doms = $io->read_all;
 
 # Provide a call-back function to measure the distance
-my $distmat = distancematrix(sub { mydistance(@_) }, @doms);
+my $m = Algorithm::Cluster::Matrix->new(measure=>\&mydistance,objects=>\@doms);
+my $distmat = $m->distancematrix;
 
 # method=>
 # s: pairwise single-linkage clustering
@@ -22,12 +24,14 @@ my $tree = treecluster(data=>$distmat, method=>'a');
 
 
 # Clustering using a predifined number of clusters
-my $cut = $tree->cut(5);
-say "cut";
+my $cuts = 5; 
+my $cut = $tree->cut($cuts);
+say "cut into $cuts clusters";
 # These are the indexes of your structures
 say join ' ', 0..$#doms;
 # These are the corresponding cluster IDs for each structure
 say "@$cut";
+
 
 # Clustering using a distance threshold
 my $thresh = shift;
@@ -35,13 +39,13 @@ $thresh //= 3.5;
 
 # This is the XS (compiled C code) API
 my $clusters = $tree->cutthresh($thresh);
-say "XS";
+say "XS for inter-cluster distance <= $thresh";
 say join ' ', 0..$#doms;
 say "@$clusters";
 
 # A Pure Perl implementaion of the same thing (verification)
 my @clusterids = cutthresh($tree, $thresh);
-say "Pure Perl";
+say "Pure Perl for inter-cluster distance <= $thresh";
 say join ' ', 0..$#doms;
 say "@clusterids";
 
@@ -61,25 +65,6 @@ sub mydistance {
     $superposition->coverage > 75 or return 'Inf';
     # The rest of the scores (e.g. 'RMS') are: $superposition->scores->keys
     return 10 - $superposition->scores->at('Sc');
-}
-
-
-# All pairs distances between some objects, given a distance function (generic)
-# Matrix is lower-diagonal
-sub distancematrix {
-    my ($method, @things) = @_;
-    # Lower diagonal distance matrix
-    my $distances = [];
-    for (my $i = 0; $i < @things; $i++) {
-        $distances->[$i] ||= [];
-        for (my $j = $i+1; $j < @things; $j++) {
-            # Column-major order, to produce a lower-diagonal distance matrix      
-            $distances->[$j][$i] = $method->($things[$i], $things[$j]);
-        }
-        # Print lower-diagonal distance matrix
-        say $things[$i], "\t", $distances->[$i]->map(sub{sprintf "%.3f",$_})->join("\t");
-    }
-    return $distances;
 }
 
 
