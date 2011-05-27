@@ -3,17 +3,18 @@ use Modern::Perl;
 use Moose::Autobox;
 use Algorithm::Cluster qw/treecluster/;
 
-use Algorithm::Cluster::Matrix; # from Sbglib
+use Algorithm::DistanceMatrix;
 use SBG::Superposition::Cache qw/superposition/;
 use SBG::DomainIO::stamp;
 
 
 my $dom_file = shift or die "Gimme a STAMP DOM file\n";
+
 my $io = SBG::DomainIO::stamp->new(file=>$dom_file);
 my @doms = $io->read_all;
 
 # Provide a call-back function to measure the distance
-my $m = Algorithm::Cluster::Matrix->new(measure=>\&mydistance,objects=>\@doms);
+my $m = Algorithm::DistanceMatrix->new(metric=>\&mydistance,objects=>\@doms);
 my $distmat = $m->distancematrix;
 
 # method=>
@@ -21,7 +22,6 @@ my $distmat = $m->distancematrix;
 # m: pairwise maximum- (or complete-) linkage clustering
 # a: pairwise average-linkage clustering
 my $tree = treecluster(data=>$distmat, method=>'a');
-
 
 # Clustering using a predifined number of clusters
 my $cuts = 5; 
