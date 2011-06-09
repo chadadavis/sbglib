@@ -2,5 +2,6 @@
 <includepath>
   <includepathentry path="${project_loc}/lib" />
   <includepathentry path="${project_loc}/t" />
+  <includepathentry path="/home/bq_cdavis/Documents/src/Algorithm-DistanceMatrix/lib" />
 </includepath>
 

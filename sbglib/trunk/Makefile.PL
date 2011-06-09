@@ -59,7 +59,6 @@ requires 'Moose::Util::TypeConstraints' => '0';
 requires 'Mouse' => '0';
 requires 'namespace::autoclean' => 0; # Only for Qcons (TODO refactor)
 requires 'PDL' => '0';
-requires 'PDL::LinearAlgebra' => '0';
 requires 'Scalar::Util' => '0';
 requires 'Sort::Key' => '0';
 requires 'Sort::Key::Top' => '0';

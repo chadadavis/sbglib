@@ -53,15 +53,7 @@ use PDL::Lite;
 use PDL::Core qw/pdl ones inplace sclr zeroes/;
 use PDL::Reduce qw/reduce/;
 use PDL::MatrixOps qw/svd det/;
-use PDL::Ufunc qw/all any/;
-
-# use PDL::MatrixOps qw/svd det identity/; # identity uses broken diagonal()
-
-# PDL::Ufunc::sumover conflicts with PDL::LinearAlgebra::sumover (auto imports)
-use PDL::Ufunc qw/sumover average max all/;
-use PDL::LinearAlgebra::Real qw/crossprod/;
-
-
+use PDL::Ufunc qw/all any sumover average max all/;
 
 
 =head2 identity
@@ -77,6 +69,7 @@ use PDL::LinearAlgebra::Real qw/crossprod/;
 sub identity {
     my ($n) = @_;
     pdl([1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1])
+    # diagonal() was broken in recent PDL
 #     $z = zeroes($n,$n);
 #     $z->diagonal(0,1) .= $z->diagonal(0,1) + 1;
 #     $z;
@@ -210,7 +203,7 @@ If a singular value decomposition is not possible, nothing is returned.
 Simple explanation:
 
  http://en.wikipedia.org/wiki/Kabsch_algorithm
-
+ 
 Original reference:
 
  Kabsch, Wolfgang, (1976) "A solution of the best rotation to relate two sets of
@@ -228,8 +221,10 @@ sub superposition {
     $copya -= $centroida;
 
     # Covariance matrix. Does crossprod on the matrix after being placed at
-    # commone centre.
-    my $covariance = $copya->crossprod($pointsb - $centroidb);
+    # commone centre. The Kabsch algorithm calls this covariance, but it's 
+    # really just a matrix product.
+    my $covariance = $copya->transpose x ($pointsb - $centroidb);
+
     # Derive rotation matrix
     my $rot = _rot_svd($covariance);
     return unless defined $rot;
