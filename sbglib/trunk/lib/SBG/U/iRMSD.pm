@@ -44,7 +44,7 @@ use PDL::Core qw/pdl/;
 
 use SBG::U::RMSD qw/rmsd/;
 use SBG::Superposition::Cache qw/superposition/;
-
+use SBG::Run::cofm qw/cofm/;
 
 
 =head2 irmsd
