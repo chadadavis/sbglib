@@ -112,33 +112,6 @@ sub write {
 }
 
 
-# TODO Really needs to be worked in somewhere else: SBG::Seq or SBG::Node maybe
-use SBG::U::DB;
-sub uniprot2gene {
-    my ($uniprot) = @_;
-        
-    my $dbh = SBG::U::DB::connect('3dr_complexes');
-    our $sth_gene;
-    $sth_gene ||= $dbh->prepare(
-        join ' ',
-        'SELECT',
-        join(',',qw/uniprot_acc gene_name description uniprot_id/),
-        'FROM',
-        'yeast_proteins',
-        'where',
-        'uniprot_acc=?',
-        );
-    our %cache;
-    my $cached = $cache{$uniprot};
-    return $cached if $cached;
-    my $res = $sth_gene->execute($uniprot);
-    my $a = $sth_gene->fetchrow_hashref;
-    return unless $a && %$a;
-    $cache{$uniprot} = $a;
-    return $a;
-}
-
-
 sub write_begin {
 	my ($self, $name) = @_;
 	$name ||= 'network';
@@ -165,6 +138,26 @@ sub write_end {
     return $str;
 }
 
+# Example annotations from Uniprot:
+#    # Uniprot, using uniprot acc
+#    # Pfam, via uniprot acc
+#    our $nodeurl = "http://pfam.sanger.ac.uk/protein";
+#    my ($acc, $id, $gene, $desc) = ('') x 4;     
+#    my $up = uniprot2gene($u);
+#    if ($up) {
+#        ($acc, $id, $gene, $desc) = 
+#            ($up->{'uniprot_acc'}, $up->{'uniprot_id'}, 
+#            $up->{'gene_name'}, $up->{'description'});
+#    }           
+#    my $ulabel = $gene || $u;  
+#    my $str .= 
+#        "\t\"$ulabel\" [ " . 
+#        join(', ',
+#        "URL=\"$nodeurl/$acc\"",
+#        "tooltip=\"" . join($newline, $gene, $acc, $id, $desc) . "\"",
+#        ) .
+#        " ]\n";
+
 sub _write_node {
 	my ($self, $u) = @_;
     # Keep track of what's been done to avoid duplicates
@@ -172,25 +165,13 @@ sub _write_node {
     
     return '' if $nodes->{$u};
 	
-	# Uniprot, using uniprot acc
-#	our $nodeurl = "http://www.uniprot.org/uniprot";
-    # Pfam, via uniprot acc
-	our $nodeurl = "http://pfam.sanger.ac.uk/protein";
-	
+	# TODO allow annotations to be passed in	
 	my ($acc, $id, $gene, $desc) = ('') x 4; 
-	
-	my $up = uniprot2gene($u);
-    if ($up) {
-        ($acc, $id, $gene, $desc) = 
-            ($up->{'uniprot_acc'}, $up->{'uniprot_id'}, 
-            $up->{'gene_name'}, $up->{'description'});
-    }           
-    my $ulabel = $gene || $u;
-   
+	my $ulabel = $gene || $u;   
     my $str .= 
         "\t\"$ulabel\" [ " . 
         join(', ',
-        "URL=\"$nodeurl/$acc\"",
+#        "URL=\"$nodeurl/$acc\"",
         "tooltip=\"" . join($newline, $gene, $acc, $id, $desc) . "\"",
         ) .
         " ]\n";
@@ -248,8 +229,8 @@ sub write_body {
             $scorelabel .= sprintf("%s\t%f$newline", 'weight', $iaction->weight);
 
             my ($ulabel, $vlabel) = ('') x 2;
-            my $up_u = uniprot2gene($u);
-            my $up_v = uniprot2gene($v);
+            my $up_u = ''; #uniprot2gene($u);
+            my $up_v = ''; #uniprot2gene($v);
             $ulabel = $up_u->{'gene_name'} if $up_u;
             $vlabel = $up_v->{'gene_name'} if $up_v;
             my $usubject = $iaction->get($u)->subject;
