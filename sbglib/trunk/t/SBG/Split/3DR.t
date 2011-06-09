@@ -26,7 +26,7 @@ use Bio::SeqIO;
 
 my $splitter = SBG::Split::3DR->new(mingap=>30);
 unless ($splitter->_dbh) {
-    ok(1, 'Skipping tests that require database');
+    ok warn "skip : no database\n";
     exit;
 }
 

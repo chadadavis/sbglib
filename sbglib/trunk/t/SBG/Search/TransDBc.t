@@ -21,7 +21,7 @@ $File::Temp::KEEP_ALL = $DEBUG;
 use SBG::U::DB;
 my $dbh = SBG::U::DB::connect();
 unless($dbh) {
-    note "Could not connect to database. Skipping database tests\n";
+    ok warn "skip : no database\n";
     exit;
 }
 

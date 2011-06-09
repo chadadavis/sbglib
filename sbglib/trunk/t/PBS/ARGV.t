@@ -23,18 +23,18 @@ use PBS::ARGV qw/qsub linen nlines/;
 
 # TODO TEST job array -J option
 
-if (PBS::ARGV::can_connect) {
-
-    @ARGV = 1..5;
-    my $base = $ENV{'CACHEDIR'} || $ENV{'HOME'};
-    mkdir $base;
-    my $dir = tempdir(DIR=>$base, CLEANUP=>!$DEBUG);
-    my @jobids = PBS::ARGV::qsub(directives=>["-o $dir", "-e $dir"]);
-    if (! defined $ENV{'PBS_ENVIRONMENT'}) {
-        is(scalar(@ARGV), 0, "All arguments submitted as PBS jobs");
-    } 
-
-} else {
-    ok(1, "No PBS (permissions) skipping");
+unless (PBS::ARGV::can_connect) {
+    ok warn "skip : No permissions to PBS\n";
+    exit;
 }
+
+
+@ARGV = 1..5;
+my $base = $ENV{'CACHEDIR'} || $ENV{'HOME'};
+mkdir $base;
+my $dir = tempdir(DIR=>$base, CLEANUP=>!$DEBUG);
+my @jobids = PBS::ARGV::qsub(directives=>["-o $dir", "-e $dir"]);
+if (! defined $ENV{'PBS_ENVIRONMENT'}) {
+    is(scalar(@ARGV), 0, "All arguments submitted as PBS jobs");
+} 
 

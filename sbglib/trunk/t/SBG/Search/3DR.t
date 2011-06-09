@@ -36,7 +36,7 @@ is( scalar( $net->nodes ), 4, "nodes" );
 
 my $tdr = SBG::Search::3DR->new;
 unless ( $tdr->_dbh ) {
-    ok( 1, 'Skipping tests that require database' );
+    ok warn "skip : no database\n";
     exit;
 }
 

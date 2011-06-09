@@ -33,9 +33,10 @@ SBG::U::Log::init(undef, loglevel=>'DEBUG') if $DEBUG;
 use SBG::U::DB;
 my $dbh = SBG::U::DB::connect();
 unless($dbh) {
-    note "Could not connect to database. Skipping database tests\n";
+    ok warn "skip : no database\n";
     exit;
 }
+
 
 # Tolerate rounding differences between stamp (using clib) and PDL
 my $toler = '15%';

@@ -74,7 +74,8 @@ sub connect {
     my $port = _default_port();
     # This is also OK, if $host is not defined
     my $dbh = $connections{$host}{$dbname};
-    return $dbh if $dbh;
+    # Use exists rather than defined to allow for negative caching
+    return $dbh if exists $connections{$host}{$dbname};
 
     my $dsn = dsn($dbname, $host);
     $timeout ||= defined($DB::sub) ? 100: 5;
@@ -82,7 +83,10 @@ sub connect {
     my $password = _password($dsn) if $usingpassword;
 
     my $err;
-    while (!defined $err || $err =~ /too many connections/i) {
+    for (; 
+        !defined($dbh) && (!defined($err) || $err =~ /too many connections/i);
+        sleep int(rand()*$sleep)
+        ) {
         $dbh = eval { 
             local $SIG{ALRM} = sub { 
                 die "DBI::connect timed out: $dsn\n"; 
@@ -92,20 +96,16 @@ sub connect {
             alarm(0);
             return $dbh;
         };
-        last if $dbh;
         $err = $DBI::errstr;
-        $log->info("Waiting for database: $dsn");
-        sleep int(rand()*$sleep);            
-    }
-
-    unless ($dbh) {
+    } 
+            
+    unless (defined $dbh) {
         # Some other error
         my $err = $DBI::errstr || '<unidentified error>';
-        carp("Could not connect to $dsn ($err)\n");
-        return;
+        $log->error("Could not connect to $dsn ($err)");
     }
 
-    # Update cache
+    # Update cache (negative cache of failed connections)
     $connections{$host}{$dbname} = $dbh;
     return $dbh;
 }

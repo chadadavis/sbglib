@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 
-use Test::More;
+use Test::More qw/no_plan/;
 
 
 use File::Temp;
@@ -14,7 +14,7 @@ use SBG::U::Test qw/float_is pdl_approx/;
 use SBG::U::DB;
 my $dbh = SBG::U::DB::connect();
 unless($dbh) {
-    note "Could not connect to database. Skipping database tests\n";
+    ok warn "skip : no database\n";
     exit;
 }
 

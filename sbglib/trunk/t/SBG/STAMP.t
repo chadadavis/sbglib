@@ -25,7 +25,8 @@ use SBG::Run::cofm qw/cofm/;
 use SBG::Run::rasmol;
 use SBG::U::Log qw/log/;
 
-my $DEBUG = $ENV{'SBGDEBUG'} || defined $DB::sub;
+my $DEBUG = $ENV{'SBGDEBUG'};
+$DEBUG = $DB::sub if defined $DB::sub;
 SBG::U::Log::init(undef, loglevel=>'DEBUG') if $DEBUG;
 $File::Temp::KEEP_ALL = $DEBUG;
 
