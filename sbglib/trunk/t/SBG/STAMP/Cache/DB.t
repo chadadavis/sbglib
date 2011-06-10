@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 
-use Test::More qw/no_plan/;
+use Test::More;
 
 
 use File::Temp;
@@ -46,6 +46,7 @@ sub _query {
 
 my $domb5 = _query('2br2', 'B');
 my $domd5 = _query('2br2', 'D');
+
 
 my $trans5bd = SBG::DB::trans::superposition($domb5, $domd5);
 my $trans5db = SBG::DB::trans::superposition($domd5, $domb5);
