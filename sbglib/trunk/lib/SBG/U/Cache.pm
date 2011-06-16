@@ -12,7 +12,7 @@ SBG::U::Cache -
 
 =head1 SEE ALSO
 
-L<Cache::File>
+L<CHI>
 
 =cut
 
