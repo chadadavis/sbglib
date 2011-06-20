@@ -56,8 +56,8 @@ sub qcons {
 
     # Map domain names to the chain that they have been written to
     my %domainmap;
-    for (my $i = 0; $i < @doms; $i++) {
-        $domainmap{$doms[$i]} = chr(ord('A') + $i);
+    for (my $i = 0, $chain = 'A'; $i < @doms; $i++, $chain++) {
+        $domainmap{$doms[$i]} = $chain;
     } 
     my $ndoms = @doms; 
 

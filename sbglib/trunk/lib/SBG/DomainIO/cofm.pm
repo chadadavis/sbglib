@@ -185,6 +185,7 @@ sub next_chain {
     my $index = $self->_index;
     # This will be the index (for chain renumbering) next time we're called
     $self->_index($index + 1);
+    # TODO index into the array ('A'..'Z','a'..'z',0..9) and mod 62
     chr(ord('A')+($index % 26));
 }
 

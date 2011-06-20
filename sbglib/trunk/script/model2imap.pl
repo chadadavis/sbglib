@@ -102,14 +102,14 @@ sub _model {
     print $fh "<h2>Components</h2>\n";
     
     my @keys = $complex->keys->flatten;
-    my $char = ord('A');
+    my $char = 'A';
     foreach my $key (@keys) {
         my $model = $complex->get($key);
         my $seq = $model->query;
         my $dom = $model->subject;
 
         print $fh "<h3>", $model->gene(), "</h3>\n";        
-        print $fh "<p>CHAIN ", chr($char), "\n<p>";
+        print $fh "<p>CHAIN $char\n<p>";
         foreach my $score ($model->scores->keys->flatten) {
             print $fh "${score}=", $model->scores->at($score), " ";
         }
@@ -121,7 +121,7 @@ sub _model {
         print $fh "<p>", $basename, ' ', $dom->id, 
             " { ", $dom->descriptor, " }</p>\n";
         
-        # TODO BUG wrong if model has more than 26 chains
+        # Bug After 'Z' becomes 'AA' and later 'AAA'
         $char++;
     }
 
