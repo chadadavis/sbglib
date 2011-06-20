@@ -298,13 +298,14 @@ sub _build_file {
 		my $filename = $prefix . $str . $suffix;
 		my $filepath;
 
+        # Try hierarchical directories (first, because faster to index)
+        $filepath = $base . '/' . $subdir . '/' . $filename;
+        return $filepath if -f $filepath;
+
 		# Try flat directory structure
 		$filepath = $base . '/' . $filename;
 		return $filepath if -f $filepath;
 
-		# Try hierarchical directories
-		$filepath = $base . '/' . $subdir . '/' . $filename;
-		return $filepath if -f $filepath;
 	}
 	return;
 }
