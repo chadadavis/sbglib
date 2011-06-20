@@ -94,8 +94,8 @@ sub _header {
     # Remove leading comment
     shift @fields if $fields[0] eq '%';
     # Remove date and entry 24-OCT-00   1G3N
-    pop @fields if $fields[$#fields] eq uc($pdb);
-    pop @fields if $fields[$#fields] =~ /\d{2}-[A-Z]{3}-\d{2}/;
+    pop @fields if $fields[-1] eq uc($pdb);
+    pop @fields if $fields[-1] =~ /\d{2}-[A-Z]{3}-\d{2}/;
     # Concate the rest back together
     my $desc = join(' ', @fields);
     return $desc;

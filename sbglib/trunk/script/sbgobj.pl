@@ -96,7 +96,7 @@ my @stringified = map { my $s="$_"; $s=~/0x/ ? dump($_) : $s } @res;
 # All results of method call, either self-stringified, or dump()ed
 print "@stringified";
 # Add a newline, if one was not already printed by the given method
-print "\n" unless $stringified[$#stringified] =~ /\n$/;
+print "\n" unless $stringified[-1] =~ /\n$/;
 
 exit;
 
