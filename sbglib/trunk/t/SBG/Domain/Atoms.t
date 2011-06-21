@@ -8,7 +8,7 @@ use PDL::Core qw/pdl/;
 
 use FindBin qw/$Bin/;
 use lib "$Bin/../../../lib/";
-use SBG::U::Test qw/float_is pdl_approx/;
+use SBG::U::Test qw/pdl_approx/;
 
 use SBG::Domain::Atoms;
 use SBG::DomainIO::stamp;

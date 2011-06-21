@@ -10,8 +10,8 @@ $File::Temp::KEEP_ALL = 1;
 
 use FindBin qw/$Bin/;
 use lib "$Bin/../../../lib/";
-
-use SBG::U::Test qw/pdl_approx float_is/;
+use Test::Approx;
+use SBG::U::Test qw/pdl_approx/;
 
 use PDL::Lite;
 
@@ -84,12 +84,12 @@ pdl_approx($cofm->slice('0:2'), $cofmexpect, "Centre of mass", 1.0);
 
 # Test radius of gyration
 my $rg = radius_gyr($da->coords, $cofm);
-float_is($rg, 17.745 , "Radius of gyration", 1.5);
+is_approx($rg, 17.745 , "Radius of gyration", 1.5);
 
 
 # Test radius maximum
 my $rmax = radius_max($da->coords, $cofm);
-float_is($rmax, 30.581, "Radius maximum", 1.5);
+is_approx($rmax, 30.581, "Radius maximum", 1.5);
 
 
 # Must have same number of points to do optimal superimposition
@@ -122,7 +122,7 @@ use SBG::Transform::Affine;
 my $t = new SBG::Transform::Affine(matrix=>$rot);
 $t->apply($da);
 # rmsd() seems to have low precision, vs. expected vals from STAMP
-float_is(rmsd($da->coords, $db->coords), 0.282, 'rmsd', 0.1);
+is_approx(rmsd($da->coords, $db->coords), 0.282, 'rmsd', 0.1);
 
 
 $TODO = "Test globularity()";

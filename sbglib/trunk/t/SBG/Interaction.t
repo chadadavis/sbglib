@@ -8,7 +8,6 @@ use Moose::Autobox;
 use FindBin qw/$Bin/;
 use lib "$Bin/../../lib/";
 
-use SBG::U::Test 'float_is';
 use SBG::Interaction;
 use SBG::Model;
 use SBG::Node;

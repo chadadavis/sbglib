@@ -13,7 +13,6 @@ use Moose::Autobox;
 
 use FindBin qw/$Bin/;
 use lib "$Bin/../../../lib/";
-use SBG::U::Test 'float_is';
 
 use SBG::U::Log qw/log/;
 my $DEBUG;

@@ -9,7 +9,6 @@ use File::Temp qw/tempfile/;
 
 use FindBin qw/$Bin/;
 use lib "$Bin/../../../lib/";
-use SBG::U::Test 'float_is';
 use SBG::Domain;
 use SBG::Role::Writable;
 use SBG::DomainIO::stamp;

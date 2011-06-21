@@ -7,7 +7,7 @@ use FindBin qw/$Bin/;
 
 use FindBin qw/$Bin/;
 use lib "$Bin/../../../lib/";
-use SBG::U::Test qw/float_is pdl_approx/;
+use SBG::U::Test qw/pdl_approx/;
 
 use SBG::DomainIO::pdb;
 my $file = "$Bin/../data/1timA.pdb";

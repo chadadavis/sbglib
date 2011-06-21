@@ -37,7 +37,8 @@ sub multi_fragment : Tests {
     is $dom->length, 251;
     ok ! $dom->transformation->has_matrix;
     ok -e $dom->file;
-    float_is $dom->radius, 39.1;
+    my $rad = $dom->radius;
+    is_approx 39.1, $rad, "radius (39.1 ~(1%) $rad)", '1%';
 }
 
 

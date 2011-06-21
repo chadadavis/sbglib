@@ -11,7 +11,6 @@ $File::Temp::KEEP_ALL = 1;
 
 use FindBin qw/$Bin/;
 use lib "$Bin/../../../lib/";
-use SBG::U::Test qw/pdl_approx float_is/;
 
 use SBG::U::DB qw/connect chain_case/;
 use Scalar::Util qw/refaddr/;

@@ -11,7 +11,7 @@ use PDL::Lite;
 
 use FindBin qw/$Bin/;
 use lib "$Bin/../../../lib/";
-use SBG::U::Test 'float_is';
+use Test::Approx;
 
 use SBG::Domain::Sphere;
 
@@ -29,8 +29,8 @@ my $s1 = new SBG::Domain::Sphere(center=>pdl qw(-6.61  -32.62  -53.18));
 my $s2 = new SBG::Domain::Sphere(center=>pdl qw/80.86   12.45  122.08/);
 my $diff = $s1->rmsd($s2);
 my $expectdist = 200.99;
-my $tolerance = 0.01;
-float_is($diff, $expectdist, 
+my $tolerance = '1%';
+is_approx($diff, $expectdist, 
          "rmsd() between domains: $diff", $tolerance);
 
 
@@ -41,7 +41,7 @@ $s1->radius(34.1);
 $s2->radius(56.66);
 my $expectoverlap = -1 * $expectdist + ($s1->radius + $s2->radius);
 my $overlap_lin = $s1->overlap_lin($s2);
-float_is($overlap_lin, $expectoverlap, 
+is_approx($overlap_lin, $expectoverlap, 
          "overlap_lin : no overlap : $overlap_lin", $tolerance);
 
 
@@ -50,7 +50,7 @@ $s1->radius(96.1);
 $s2->radius(123.66);
 $expectoverlap = -1 * $expectdist + ($s1->radius + $s2->radius);
 $overlap_lin = $s1->overlap_lin($s2);
-float_is($overlap_lin, $expectoverlap, 
+is_approx($overlap_lin, $expectoverlap, 
          "overlap_lin : some overlap : $overlap_lin", $tolerance);
 
 
@@ -58,7 +58,7 @@ float_is($overlap_lin, $expectoverlap,
 my $overlap_frac = $s1->overlap_lin_frac($s2);
 my $overlap_max = $s1->overlap_lin_max($s2);
 $expectoverlap = $overlap_lin / $overlap_max;
-float_is($overlap_frac, $expectoverlap, 
+is_approx($overlap_frac, $expectoverlap, 
          "overlap_lin_frac: $expectoverlap ($overlap_lin / $overlap_max)", 
          $tolerance);
 
@@ -69,7 +69,7 @@ $s2->radius(26.66);
 # What's the maximum linear overlap
 $expectoverlap = $s2->overlap_lin_max($s1);
 $overlap_lin = $s1->overlap_lin($s2);
-float_is($overlap_lin, $expectoverlap, 
+is_approx($overlap_lin, $expectoverlap, 
          "overlap_lin : max overlap : $overlap_lin", $tolerance);
 
 
@@ -86,7 +86,7 @@ $TODO = "test overlap_vol()";
 $s1->radius(100);
 $s2->radius(200);
 $expectoverlap = $s1->radius + $s2->radius - $expectdist;
-# float_is($s1->overlap_vol($s2), $expectoverlap, 'overlap_vol()', $tolerance);
+# is_approx($s1->overlap_vol($s2), $expectoverlap, 'overlap_vol()', $tolerance);
 ok 0;
 
 

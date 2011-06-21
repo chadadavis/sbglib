@@ -9,7 +9,7 @@ use Test::More;
 
 use FindBin qw/$Bin/;
 use lib "$Bin/../../../lib/";
-use SBG::U::Test qw/float_is pdl_approx/;
+use Test::Approx;
 use SBG::U::Log;
 
 my $DEBUG;
@@ -24,7 +24,7 @@ my $dom = SBG::Domain->new(pdbid=>'1ral');
 my $sas = sas_atoms($dom);
 # If you get 28241.3 here, then you're erroneously using PQS
 # PDB and Biounit both report one chain, for which naccess gives 15197.4
-float_is($sas, 15197.4, 'sas_atoms() (fails if using PQS)');
+is_approx($sas, 15197.4, 'sas_atoms() (fails if using PQS)');
 
 done_testing();
 

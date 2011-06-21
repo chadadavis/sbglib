@@ -17,7 +17,7 @@ use autobox ARRAY => 'SBG::U::List';
 use SBG::U::List 
     qw/union intersection nsort sum flatten lcp pairs mean swap argmin argmax/;
 
-use SBG::U::Test qw/float_is/;
+use Test::Approx;
 
 # Single element
 my ($elem, $max) = argmax { $_ } (5);
@@ -89,7 +89,7 @@ is_deeply(scalar($x->union), [4..15,2..3]);
 is_deeply(scalar($x->union->nsort), [2..15]);
 
 my @sumtest = qw/77.34 3 66.1610268378063 12.5 0 40/;
-float_is(sum(@sumtest), 199.001027, 'sum()');
+is_approx(sum(@sumtest), 199.001027, 'sum()');
 
 # swap scalars
 my ($a, $b) = 1..2;

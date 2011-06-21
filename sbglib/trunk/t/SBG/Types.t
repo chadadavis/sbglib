@@ -8,7 +8,6 @@ use Carp;
 
 use FindBin qw/$Bin/;
 use lib "$Bin/../../lib/";
-use SBG::U::Test 'float_is';
 use SBG::Types qw/$pdb41 $re_descriptor/;
 
 

@@ -7,7 +7,6 @@ use FindBin qw/$Bin/;
 
 use FindBin qw/$Bin/;
 use lib "$Bin/../../../lib/";
-use SBG::U::Test 'float_is';
 
 use SBG::DomainIO::stamp;
 my $file = "$Bin/../data/2nn6.dom";

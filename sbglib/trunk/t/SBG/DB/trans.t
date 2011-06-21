@@ -11,7 +11,8 @@ use PDL;
 
 use FindBin qw/$Bin/;
 use lib "$Bin/../../../lib/";
-use SBG::U::Test qw/float_is pdl_approx/;
+use Test::Approx;
+use SBG::U::Test qw/pdl_approx/;
 
 use SBG::DB::trans qw/superposition/;
 use SBG::DB::entity qw/id2dom/;
@@ -186,7 +187,7 @@ $sup2->apply($movingb);
 
 # Now check RMSD between b and f
 my $rmsd = $movingb->rmsd($staticf);
-float_is($rmsd, 6.55, "RMSD after transformation", $toler);
+is_approx($rmsd, 6.55, "RMSD after transformation", $toler);
 
 
 # Test iRMSD
@@ -198,7 +199,7 @@ my $doms2 = [id2dom(174395),id2dom(174402)];
 
 my $irmsd;
 $irmsd = SBG::U::iRMSD::irmsd($doms1, $doms2);
-float_is($irmsd, 5.11, "iRMSD", $toler);
+is_approx($irmsd, 5.11, "iRMSD", $toler);
 $irmsd = SBG::U::iRMSD::irmsd($doms2, $doms1);
-float_is($irmsd, 5.11, "iRMSD reverse", $toler);
+is_approx($irmsd, 5.11, "iRMSD reverse", $toler);
 

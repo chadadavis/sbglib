@@ -9,7 +9,8 @@ use Test::More 'no_plan';
 
 use FindBin qw/$Bin/;
 use lib "$Bin/../../../lib/";
-use SBG::U::Test qw/float_is pdl_approx/;
+use Test::Approx;
+use SBG::U::Test qw/pdl_approx/;
 use SBG::U::Log;
 
 my $DEBUG = $ENV{'SBGDEBUG'};
@@ -32,7 +33,7 @@ sub _test {
     my $exp_center = pdl(@coords, 1.0);
     my $exp_r = $radius;
     pdl_approx($sphere->centroid, $exp_center, "center $exp_center", $prec);
-    float_is($sphere->radius, $exp_r, "radius $exp_r", $prec);
+    is_approx($sphere->radius, $exp_r, "radius $exp_r", $prec);
 }
 
 my $input;

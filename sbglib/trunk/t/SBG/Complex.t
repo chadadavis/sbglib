@@ -11,7 +11,7 @@ $SIG{__DIE__} = \&confess;
 
 use FindBin qw/$Bin/;
 use lib "$Bin/../../lib/";
-use SBG::U::Test 'float_is';
+use Test::Approx;
 use SBG::U::Log qw/log/;
 
 use SBG::Complex;
@@ -184,7 +184,7 @@ sub _mkmodel {
 # Test coverage
 my @cover = $complex->coverage($true_complex);
 my $coverage = @cover / $true_complex->count;
-float_is($coverage, 1.00, "coverage: $coverage", 0.01);
+is_approx($coverage, 1.00, "coverage: $coverage", 0.01);
 
 
 # Test merging of complexes
@@ -275,7 +275,7 @@ rasmol($complex->domains, $true_complex->domains) if $DEBUG;
 # Revert
 $complex->transform($transmat2->inv);
 
-float_is($rmsd1, $rmsd2, "rmsd() is commutative");
+is_approx($rmsd1, $rmsd2, "rmsd() is commutative");
 
 
 # TODO more realistic test needed

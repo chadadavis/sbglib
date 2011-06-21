@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 use Test::More 'no_plan';
-
+use SBG::U::Test qw/pdl_approx/;
 
 use File::Temp;
 use Carp;
@@ -15,7 +15,7 @@ use PDL;
 use FindBin qw/$Bin/;
 use lib "$Bin/../../lib/";
 
-use SBG::U::Test qw/float_is pdl_approx/;
+use Test::Approx;
 use SBG::STAMP qw/superposition/;
 use SBG::Domain;
 use SBG::DomainIO::pdb;
@@ -207,7 +207,7 @@ $sup2->apply($movingb);
 
 # Now check RMSD between b and f
 my $rmsd = $movingb->rmsd($staticf);
-float_is($rmsd, 6.55, "RMSD after transformation", $toler);
+is_approx($rmsd, 6.55, "RMSD after transformation", $toler);
 
 
 my $ass2_1_a = SBG::Domain->new(pdbid=>'3bct', assembly=>2, model=>1);

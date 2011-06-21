@@ -10,7 +10,6 @@ $SIG{__DIE__} = \&confess;
 use PDL;
 use FindBin qw/$Bin/;
 use lib "$Bin/../../../lib/";
-use SBG::U::Test qw/float_is pdl_approx/;
 use SBG::Transform::Affine;
 
 

@@ -31,13 +31,14 @@ use FindBin qw/$Bin/;
 use Data::Dumper qw/Dumper/;
 use Carp;
 use Test::Most;
+use Test::Approx;
 use File::Spec::Functions;
 use File::Basename;
 use File::Temp;
 $File::Temp::KEEP_ALL = $DB::sub;
 
 use SBG::U::Run qw/start_log/;
-use SBG::U::Test qw/float_is pdl_approx/;
+use SBG::U::Test qw/pdl_approx/;
 
 # Re-export everything needed for testing
 our @EXPORT = (
@@ -48,10 +49,10 @@ our @EXPORT = (
     @Data::Dumper::EXPORT,
     qw/Dumper/,
     @Test::Most::EXPORT,
+    @Test::Approx::EXPORT,
     @File::Spec::Functions::EXPORT,
     @File::Basename::EXPORT,
     @File::Temp::EXPORT,
-    qw/float_is/,
     qw/pdl_approx/,
     );
 

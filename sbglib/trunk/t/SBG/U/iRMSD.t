@@ -11,8 +11,7 @@ $File::Temp::KEEP_ALL = 1;
 
 use FindBin qw/$Bin/;
 use lib "$Bin/../../../lib/";
-use SBG::U::Test qw/pdl_approx float_is/;
-
+use Test::Approx;
 use SBG::U::iRMSD qw/irmsd/;
 use SBG::Domain;
 
@@ -28,9 +27,9 @@ my $doms1 = [ _d(qw/1vor K/), _d(qw/1vor R/) ];
 my $doms2 = [ _d(qw/1vp0 K/), _d(qw/1vp0 R/) ];
 my $irmsd;
 $irmsd = irmsd($doms1, $doms2);
-float_is($irmsd, 5.11, "iRMSD", $toler);
+is_approx($irmsd, 5.11, "iRMSD", $toler);
 $irmsd = irmsd($doms2, $doms1);
-float_is($irmsd, 5.11, "iRMSD reverse", $toler);
+is_approx($irmsd, 5.11, "iRMSD reverse", $toler);
 
 
 $TODO = "Test STAMP::irmsd for domains with an existing transformation";

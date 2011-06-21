@@ -7,8 +7,7 @@ use Test::More 'no_plan';
 
 use FindBin qw/$Bin/;
 use lib "$Bin/../../../lib/";
-use SBG::U::Test qw/float_is/;
-
+use Test::Approx;
 use SBG::U::Log qw/log/;
 
 my $DEBUG;
@@ -38,4 +37,4 @@ ok($lock3, "Redoing lock");
 
 my $percent = '52%';
 my $total = 33;
-float_is(frac_of($percent, $total), 17.16, 'frac_of')
+is_approx(frac_of($percent, $total), 17.16, 'frac_of')

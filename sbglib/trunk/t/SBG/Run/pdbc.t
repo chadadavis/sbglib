@@ -1,7 +1,6 @@
 #!/usr/bin/env perl
 
 use Test::More 'no_plan';
-use SBG::U::Test qw/float_is pdl_approx/;
 
 
 
