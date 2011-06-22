@@ -94,7 +94,7 @@ sub startup : Tests(startup=>1) {
 # Make sure that each test object knows where to get test data from
 sub test_data : Tests(startup) {
 	my $self = shift;
-    my $test_data = catfile(dirname(__FILE__), '..', 'test_data');
+    my $test_data = catfile(dirname(__FILE__), '..', '..', 'test_data');
     $self->{test_data} = $test_data;
     return $self;
 }
