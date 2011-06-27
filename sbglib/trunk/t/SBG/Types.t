@@ -20,20 +20,20 @@ is($ch, 'A', "Split label into PDB ID and chain");
 my $desc;
 
 $desc = 'A 3 _ to A 189 _';
-ok($desc =~ /^\s*($re_descriptor)\s*$/, "Multi-segment descriptor");
+like($desc, qr/^\s*($re_descriptor)\s*$/, "Multi-segment descriptor");
 
 $desc = 'A 3 _ to A 189 _ CHAIN A';
-ok($desc =~ /^\s*($re_descriptor)\s*$/, "Multi-segment descriptor");
+like($desc, qr/^\s*($re_descriptor)\s*$/, "Multi-segment descriptor");
 
 $desc = 'A 3 _ to A 189 _ A 353 _ to A 432 _';
-ok($desc =~ /^\s*($re_descriptor)\s*$/, "Multi-segment descriptor");
+like($desc, qr/^\s*($re_descriptor)\s*$/, "Multi-segment descriptor");
 
 $desc = 'A 3 A to A 189 B A 353 B to A 432 _';
-ok($desc =~ /^\s*($re_descriptor)\s*$/, 
+like($desc, qr/^\s*($re_descriptor)\s*$/, 
    "Multi-segment descriptor with insertion codes");
 
 $desc = 'AA 3 A to AA 189 B AA 353 B to AA 432 _';
-ok($desc =~ /^\s*($re_descriptor)\s*$/, 
+like($desc, qr/^\s*($re_descriptor)\s*$/, 
    "Multi-segment descriptor with insertion codes and double-char chain IDs");
 
 
