@@ -1,0 +1,8 @@
+Revision history for sbg
+
+1.1.0   2011-04-28
+        Added DomainIO::cofm reader/writer
+
+0.01    2009-03-30
+        First version, released on an unsuspecting world.
+
