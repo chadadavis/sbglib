@@ -276,6 +276,7 @@ sub union {
 
 # All one-directional paired combinations of a list:
 # pairs(a,b,c) => ([a,b],[a,c],[b,c])
+# cf. List::Pairwise (consider submitting a patch)
 sub pairs {
     # For all indices 0 through $#_ of the @_ array:
     #   And then for all indices $_+1 through $#_ of the @_ array:

@@ -19,6 +19,9 @@ L<CHI>
 
 
 package SBG::U::Cache;
+use strict;
+use warnings;
+
 use base qw/Exporter/;
 our @EXPORT_OK = qw/cache cache_get cache_set/;
 
