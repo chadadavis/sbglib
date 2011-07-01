@@ -1,9 +1,0 @@
-A       B       1tmp { CHAIN A } 1tmp { CHAIN B } default 1.0
-A       B       2tmp { CHAIN A } 2tmp { CHAIN B } default 2.3
-A       C       3tmp { CHAIN A } 3tmp { CHAIN B } default 4.1
-B       C       5tmp { CHAIN A } 5tmp { CHAIN B } default 3.1
-B       C       6tmp { CHAIN A } 6tmp { CHAIN B } default 1.2
-B       D       4tmp { CHAIN A } 4tmp { CHAIN B } default 1.1
-C       D       7tmp { CHAIN A } 7tmp { CHAIN B } default 2.4
-C       D       8tmp { CHAIN A } 8tmp { CHAIN B } default 5.1
-C       D       9tmp { CHAIN A } 9tmp { CHAIN B } default 2.6
