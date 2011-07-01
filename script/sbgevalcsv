@@ -1,0 +1,288 @@
+#!/usr/bin/env perl
+
+use strict;
+use warnings;
+
+use Moose::Autobox;
+use autobox::List::Util;
+use List::MoreUtils;
+use File::Basename;
+use Log::Any qw/$log/;
+use File::NFSLock;
+use Fcntl qw/LOCK_EX LOCK_NB/;
+
+
+# Local libraries
+use FindBin qw/$Bin/;
+use lib "$Bin/../lib/";
+
+use SBG::U::Object qw/load_object/;
+use SBG::U::Log;
+use SBG::U::List qw/mean avg median sum min max flatten argmax argmin/;
+use PBS::ARGV qw/qsub/;
+use SBG::U::Run qw/frac_of getoptions start_lock end_lock/;
+use SBG::Run::pdbc qw/pdbc/;
+use SBG::DomainIO::stamp;
+use SBG::DomainIO::pdb;
+
+
+# the 'models' base directory
+my %ops = getoptions('modelbase=s');
+
+# Try to submit to PBS, for each argument in @ARGV
+# Recreate command line options;
+my @jobids = qsub(options=>\%ops);
+# @ARGV is empty if all jobs could be submitted
+
+exit unless @ARGV;
+
+
+foreach my $file (@ARGV) {
+    if (defined($ops{'J'})) {
+        # The file is actually the Jth line of the list of files
+        $file = PBS::ARGV::linen($file, $ops{'J'});
+    }
+    
+
+    my $basename = basename($file,'.target');
+    my $lock = start_lock($basename);
+    next if ! $lock && ! $ops{'debug'};
+    SBG::U::Log::init($basename, %ops);
+
+    my $modelbase = $ops{'modelbase'};
+    unless ($modelbase) {
+        my $dirname = dirname $file;
+        if ($dirname =~ s/targets/models/) {
+            $modelbase = $dirname;
+        } else {
+            die "Cannot find model files to evaluate. Use --modebase ./path\n";
+        }
+    }
+    $log->debug('modelbase ', $modelbase);
+
+    do_target($basename, $file, $modelbase);
+
+}
+
+################################################################################
+
+sub do_target {
+    my ($basename, $targetfile, $modelbase) = @_;
+
+    # Looks for models in $modelbase/$basename/*.model
+    my $modeldir = $modelbase . '/' . $basename;
+    $log->debug('modeldir ', $modeldir);
+
+    my $target = load_object($targetfile);
+    $target->id($basename);
+
+    unless ($target->description) {
+        my $pdbc = pdbc($target->id);
+        $target->description($pdbc->{'header'});
+    }
+
+
+    my $seqlength = 
+        $target->models->values->map(sub{$_->subject->seq->length})->sum;
+    $target->{'seqlength'} = $seqlength;
+    $log->debug("target sequence length: $seqlength");
+
+    open my $fh, ">${basename}.csv";
+
+    foreach my $modelfile (<$modeldir/*.model>) {
+        do_model($target, $modelfile, $fh);
+        if (0) {
+            # TODO
+            # new top model?
+        }
+    }
+    close $fh;
+#     $target->store($targetfile);
+}
+
+
+sub do_model {
+    my ($target, $modelfile, $fh) = @_;
+    
+    $log->debug($modelfile);
+
+    my $acc = $target->id;
+    # Number of components we want to model
+    my $ncomps = $target->size;
+    my $seqlength = $target->{'seqlength'};
+    my $model = load_object($modelfile);
+    # Two formats
+    my ($class, $modelid) = $modelfile =~ /$acc-(\d+)-(\d+).model$/;
+    if ($class) {
+        $model->class($class);
+    } else {
+        ($modelid) = $modelfile =~ /$acc-(\d+).model$/;
+    }
+    $model->id($modelid);
+
+
+    # domain models within this complex model
+    my $models = $model->models->values;
+    # Number of domain components in this complex model
+    my $nmcomps = $models->length;
+    # Percentage of component coverage
+    my $pcomps = sprintf "%0.2f", 100.0 * $nmcomps / $ncomps;
+    # Interactions in model
+    my $miactions = $model->interactions->values;
+    my $nmiactions = $miactions->length;
+    # Linker superpositions required to build model by overlapping dimers
+    my $superpositions = $model->superpositions->values;
+    my $nsup = $superpositions->length;
+
+    # Number of template PDB structures used in entire model
+    my $idomains = $miactions->map(sub{$_->domains->flatten});
+#     print dump $idomains;
+
+    my $ipdbs = $idomains->map(sub{$_->pdbid});
+    my $nsources = scalar List::MoreUtils::uniq $ipdbs->flatten;
+
+    # NB getting length from the SBG::DomainI here, not the Bio::Seq
+    # This is the sequence from the structural template used
+    my $mseqlength = $models->map(sub{$_->subject->seq->length})->sum;
+    # Percentage sequence coverage by the complex model
+    my $pseqlength = sprintf "%0.2f", 100.0 * $mseqlength / $seqlength;
+    # TODO BUG this $pseqlength printed is not the $iseqlength that goes into
+    # Complex score
+
+    # Edge weight, generally the seqid
+    my $weights = $miactions->map(sub{$_->weight})->grep(sub{defined $_});
+    # Average sequence identity of all the templates.
+    # NB linker domains are counted multiple times. 
+    # Given a hub proten and three interacting spoke proteins, there are not 4
+    # values for sequence identity, but rather 6=2*(3 interactions)
+    my $avg_wt = sprintf "%0.2f", (1.0*$weights->sum/$weights->length);
+    # Average Sc of all superpositions done
+    my $msc = 
+        sprintf "%0.2f", 
+        $superpositions->map(sub{$_->scores->at('Sc')})->sum / $nsup;
+
+    my ($rmsd, $matrix) = modelrmsd($model, $target);
+    $rmsd = sprintf("%0.4f", $rmsd);
+    $rmsd = 'NaN' unless defined $matrix;
+
+    my ($wtcover, $wtseqid, $wtsc) = (1, 2, 1.5);
+#     my $score = 
+#         ($wtcover*$pseqlength + $wtseqid*$avg_wt**2 + $wtsc*(10*$msc)**2) /
+#         ($wtcover*100 + $wtseqid*100**2 + $wtsc*100^2);
+    my $score = sprintf "%0.2f", $model->score;
+
+    print $fh join("\t", 
+                   $target->id, $target->description, $target->size, $seqlength,
+                   $modelid, 
+                   $nmcomps, $pcomps, 
+                   $nmiactions, $nsources,
+                   $pseqlength, $avg_wt, $msc, 
+                   $score,
+                   $rmsd,
+
+                   "\n",
+        );
+    
+    modeloutputs($target,$model);
+
+    # Save any changes
+    $model->store($modelfile);
+
+    # TODO %stats
+    return ();
+}
+
+
+
+sub modelrmsd {
+    my ($model, $target) = @_;
+
+    my $benchrmsd = $model->scores->at('benchrmsd');
+    my $benchmatrix = $model->scores->at('benchmatrix');
+
+    unless (!$ops{'debug'} && defined $benchrmsd && defined $benchmatrix) {
+        ($benchmatrix, $benchrmsd) = $model->rmsd_class($target);
+        if (defined $benchmatrix) {
+            $model->transform($benchmatrix);
+            $model->scores->put('benchrmsd', $benchrmsd);
+            $model->scores->put('benchmatrix', $benchmatrix);
+        }
+    }
+    
+    return wantarray ? ($benchrmsd, $benchmatrix) : $benchrmsd;
+}
+
+
+sub modeloutputs {
+    my ($target, $model) = @_;
+
+    my $acc = $target->id;
+    my @fields = ($target->id, $model->id);
+    my $mbase = join('-', @fields);
+    mkdir $acc;
+    my $pdbfile = "${acc}/${mbase}.pdb.gz";
+    my $domfile = "${acc}/${mbase}.dom";
+    my @files = ($pdbfile, $domfile);
+    my @locks = map { "$_.NFSLock" } @files;
+    my $alldone = 1;
+    foreach (@files) {
+        unless (-e $_ || -e "$_.NFSLock") { $alldone = 0 }
+    }
+    return if $alldone;
+
+    _domfile($domfile, $model, $target);
+#     _pdbfile($pdbfile, $model, $target);
+
+} # modeloutput
+
+
+sub _domfile {
+    my ($domfile, $model, $target) = @_;
+
+    if (-s $domfile) {
+        return;
+    }
+    my $write_target = 
+        $model->scores->exists('benchrmsd') && 
+        $model->scores->at('benchrmsd') > 0;
+
+    my $lock = File::NFSLock->new($domfile,LOCK_EX|LOCK_NB) or return;
+
+    my $domio = new SBG::DomainIO::stamp(file=>">$domfile");
+    my $keys = [ $model->coverage($target) ];
+    my $mapping = $model->correspondance;
+
+    foreach my $key (@$keys) {
+        # Write in tandem (model, target, model, target)
+        $domio->write($model->domains([$key]));
+        $domio->write($target->domains([$mapping->{$key}])) if $write_target;
+    }
+}
+
+
+sub _pdbfile {
+    my ($pdbfile, $model, $target) = @_;
+    if (-s $pdbfile) {
+        return;
+    }
+    return unless ($model->scores->at('benchrmsd') > 0);
+    my $lock = File::NFSLock->new($pdbfile,LOCK_EX|LOCK_NB) or return;
+
+    my $pdbio = new SBG::DomainIO::pdb(file=>">${pdbfile}", compressed=>1);
+
+    # Only show common components
+    my $keys = [ $model->coverage($target) ];
+
+    # Treat model complex as single domain
+    my $modelasdom = $model->combine(keys=>$keys);
+
+    my $mapping = $model->correspondance;
+    my $mapped_keys = [ map { $mapping->{$_} } @$keys ];
+    # Get target complex as single domain
+    my $targetasdom = $target->combine(keys=>$mapped_keys);
+
+    # Write model first
+    $pdbio->write($modelasdom, $targetasdom);
+
+}
+
