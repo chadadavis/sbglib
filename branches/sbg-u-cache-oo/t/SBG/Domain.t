@@ -79,7 +79,7 @@ is($multidom->onechain, undef, '! onechain()');
 
 # Equality
 my $equiv = SBG::Domain->new(pdbid=>'2nn6', descriptor=>'A 10 _ to A 233 _');
-ok($equiv == $dom, 'equals');
+cmp_ok($equiv, '==', $dom, 'equals');
 
 # Smtry operators
 is($dom->symops->length, 24, 'symops()');

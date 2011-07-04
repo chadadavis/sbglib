@@ -89,7 +89,6 @@ my %ops = getoptions @generic_options,
 
 use File::Basename;
 use Moose::Autobox;
-use File::Spec::Functions;
 
 use Log::Any qw/$log/;
 

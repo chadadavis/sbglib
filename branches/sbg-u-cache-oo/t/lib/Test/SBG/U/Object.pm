@@ -11,7 +11,7 @@ use Test::SBG;
 # Thi is not the case for 'setup' methods, however (continues on failure)
 sub load_network : Tests(4) {
 	my $self = shift;
-	my $file = catfile($self->{test_data}, '1a4e.network');
+	my $file = file($self->{test_data}, '1a4e.network');
 	ok(-r $file, 'Found Storable object');
 	$x = SBG::U::Object::load_object($file);
 	ok(defined $x, 'Loaded Storable object');

@@ -10,7 +10,6 @@ use strict;
 use warnings;
 
 use File::Basename;
-use File::Spec::Functions;
 use Log::Any qw/$log/;
 use Carp;
 

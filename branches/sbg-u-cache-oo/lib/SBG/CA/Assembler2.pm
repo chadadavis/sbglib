@@ -37,7 +37,6 @@ This will pass from Assembler::solution to Traversal, then back to client
 package SBG::CA::Assembler2;
 use Moose;
 
-use File::Spec::Functions;
 use Moose::Autobox;
 use Log::Any qw/$log/;
 use Sort::Key qw/nsort/;
@@ -45,7 +44,6 @@ use Sort::Key qw/nsort/;
 use SBG::STAMP qw/superposition/;
 use SBG::GeometricHash;
 use SBG::Complex;
-
 
 has 'net' => (
     is => 'rw',

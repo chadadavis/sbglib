@@ -12,14 +12,14 @@ use SBG::IO;
 
 # Open a not-yet-opened file
 my $file = "$Bin/data/2nn6.dom";
-my $iofile = new SBG::IO(file=>"<$file");
-ok($iofile && $iofile->fh, "new(file=>\"<$file\")");
+my $iofile = new SBG::IO(file=>$file);
+ok($iofile && $iofile->fh, "new(file=>$file)");
 ok($iofile->close, "close()");
 
 
 # Open an already-opened filehandle
-open my $fh, "<$file";
-ok($fh, "Opening <$file first");
+open my $fh, '<', $file;
+ok($fh, "Opening $file first");
 my $iofh = new SBG::IO(fh=>$fh);
 is($iofh->fh, $fh, "Filehandle reused");
 ok($iofh && $iofh->fh, "new(fh=>\$fh)");

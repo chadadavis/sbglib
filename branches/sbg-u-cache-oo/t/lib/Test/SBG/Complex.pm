@@ -11,7 +11,7 @@ use Moose::Autobox;
 
 sub setup : Test(setup) {
 	my $self = shift;
-	my $obj = load_object(catfile($self->{test_data}, "10.model"));
+	my $obj = load_object(file($self->{test_data}, "10.model"));
 	$self->{obj} = $obj;
 }
 

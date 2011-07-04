@@ -14,13 +14,13 @@ my $io;
 
 
 # Test reading all at once, array context
-$io = new SBG::DomainIO::stamp(file=>"<$file");
+$io = new SBG::DomainIO::stamp(file=>$file);
 my @doms = $io->read;
 is(@doms, 9, "Read in " . scalar(@doms) . " domains, array context");
 
 
 # Test reading one by one, scalar context
-my $io2 = new SBG::DomainIO::stamp(file=>"<$file");
+my $io2 = new SBG::DomainIO::stamp(file=>$file);
 my @doms2;
 while (my $dom2 = $io2->read) {
     push @doms2, $dom2;
