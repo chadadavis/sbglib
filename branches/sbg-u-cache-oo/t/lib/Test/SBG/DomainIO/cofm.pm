@@ -1,11 +1,8 @@
 #!/usr/bin/env perl
 
 package Test::SBG::DomainIO::cofm;
-use strict;
-# Inheritance
-use base qw/Test::SBG/;
-# Just 'use' it to import all the testing functions and symbols 
-use Test::SBG; 
+use base 'Test::SBG';
+use Test::SBG;
 
 use SBG::DomainIO::cofm;
 use Moose::Autobox;

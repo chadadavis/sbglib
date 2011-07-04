@@ -4,8 +4,8 @@ package Test::SBG::Complex;
 
 # Inheritance
 use base qw/Test::SBG/;
-# Just 'use' it to import all the testing functions and symbols 
-use Test::SBG; 
+use Test::SBG;
+
 use SBG::U::Object qw/load_object/;
 use Moose::Autobox;
 

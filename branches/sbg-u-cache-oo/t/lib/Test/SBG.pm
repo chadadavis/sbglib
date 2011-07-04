@@ -6,8 +6,17 @@ Test::SBG - Base test class for SBG
 
 =head1 SYNOPSIS
 
+ use base 'Test::SBG';
+ Test::SBG->import;
+ 
+ sub mytest : Tests {
+     ok(1+1==2);
+     ok(0!=1);
+ }
 
 =head1 DESCRIPTION
+
+Provides functions from many test modules.
 
 startup() and shutdown() run once for each test class.
 
@@ -22,10 +31,8 @@ L<Test::Class>
 package Test::SBG;
 use strict;
 use warnings;
-#use Test::Class;   
 use base qw/Test::Class Exporter/;
 
-use Carp;
 
 use FindBin qw/$Bin/;
 use Data::Dumper qw/Dumper/;
@@ -40,7 +47,6 @@ $File::Temp::KEEP_ALL = $DB::sub;
 use SBG::U::Run qw/start_log/;
 use SBG::U::Test qw/pdl_approx/;
 
-# Re-export everything needed for testing
 # Re-export everything needed for testing
 our @EXPORT = (
     @FindBin::EXPORT,

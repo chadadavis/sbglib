@@ -3,7 +3,6 @@
 package Test::SBG::U::Object;
 # Inheritance
 use base qw/Test::SBG/;
-# Just 'use' it to import all the testing functions and symbols 
 use Test::SBG;
 
 	

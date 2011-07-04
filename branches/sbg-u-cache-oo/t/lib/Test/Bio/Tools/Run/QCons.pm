@@ -4,8 +4,7 @@ package Test::Bio::Tools::Run::QCons;
 
 # Inheritance
 use base qw/Test::SBG/;
-# Just 'use' it to import all the testing functions and symbols 
-use Test::SBG; 
+use Test::SBG;
 
 use Moose::Autobox;
 use autobox::List::Util; 
