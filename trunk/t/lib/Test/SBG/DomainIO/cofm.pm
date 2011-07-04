@@ -13,9 +13,9 @@ use Moose::Autobox;
 sub multi_domain : Tests {
     my ($self) = @_;
     my $file = 'cofm-verbose.cofm';
-    my $path = catfile $self->{test_data}, $file;
+    my $path = file $self->{test_data}, $file;
     ok -e $path or die "Can't read $path";
-    my $io = SBG::DomainIO::cofm->new(file=>$path);
+    my $io = SBG::DomainIO::cofm->new(file=>"$path");
     my $doms = [];
     while (my $dom=$io->read) { $doms->push($dom) };
     is($doms->length, 2) or die "No domains in $file";
@@ -27,9 +27,9 @@ sub multi_domain : Tests {
 sub multi_fragment : Tests {
     my ($self) = @_;
     my $file = 'cofm-multi.cofm';
-    my $path = catfile $self->{test_data}, $file;
+    my $path = file $self->{test_data}, $file;
     ok -e $path or die "Can't read $path";
-    my $io = SBG::DomainIO::cofm->new(file=>$path);
+    my $io = SBG::DomainIO::cofm->new(file=>"$path");
     my $doms = [];
     while (my $dom=$io->read) { $doms->push($dom) };
     is($doms->length, 1) or die "No domains in $file";

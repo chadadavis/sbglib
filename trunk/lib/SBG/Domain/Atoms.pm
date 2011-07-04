@@ -36,7 +36,6 @@ use overload (
     );
 
 use Carp;
-use File::Spec;
 
 use SBG::DomainIO::pdb;
 use SBG::U::RMSD;
@@ -88,18 +87,16 @@ Note any transformation present in the Domain will be applied before the writing
 =cut
 sub BUILD {
     my ($self) = @_;
-    my $outfile = File::Spec->catfile(File::Spec->tmpdir, "$self" . '.pdb');
-    my $io = new SBG::DomainIO::pdb(file=>">$outfile");
-    $io->write($self);
-    $io->close;
+    my $out = SBG::DomainIO::pdb->new(
+        tempfile=>1,suffix=>'.pdb',pattern=>$self . 'X'x5);
+    $out->write($self);
+    $out->close;
     # Open the file for reading now
-    $io = new SBG::DomainIO::pdb(file=>$io->file,
-                                 atom_type=>$self->atom_type,
-                                 residues=>$self->residues,
-        );
-    
+    my $in = SBG::DomainIO::pdb->new(
+        file=>$out->file,atom_type=>$self->atom_type,residues=>$self->residues);
+        
     # Get the coords directly from the IO obj.
-    my $coords = $io->coords;
+    my $coords = $in->coords;
     $self->coords($coords);
     $self->_centroid(SBG::U::RMSD::centroid($coords));
 

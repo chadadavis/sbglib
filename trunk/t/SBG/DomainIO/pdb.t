@@ -14,7 +14,7 @@ my $file = "$Bin/../data/1timA.pdb";
 
 
 # Read all atoms:
-my $io = new SBG::DomainIO::pdb(file=>"<$file",atom_type=>'....');
+my $io = new SBG::DomainIO::pdb(file=>$file,atom_type=>'....');
 my $dom = $io->read;
 # Number of records (2nd dimension, i.e. number of rows in matrix)
 is($dom->coords->dim(1), 1870, "Reading all atoms");

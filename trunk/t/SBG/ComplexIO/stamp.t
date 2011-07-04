@@ -16,7 +16,7 @@ $File::Temp::KEEP_ALL = $DEBUG;
 my $file = "$Bin/../data/2nn6.dom";
 
 # Test reading all at once, array context
-my $io = SBG::ComplexIO::stamp->new(file=>"<$file");
+my $io = SBG::ComplexIO::stamp->new(file=>$file);
 my $complex = $io->read;
 is($complex->count, 9, "Complex has 9 domains");
 

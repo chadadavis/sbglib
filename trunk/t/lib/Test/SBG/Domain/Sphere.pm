@@ -9,7 +9,7 @@ use Test::SBG;
 
 use SBG::Domain::Sphere;
 
-sub sphere : Test(1) {
+sub sphere : Tests {
     local $TODO = "Not yet implemented";
 }
 

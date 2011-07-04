@@ -22,17 +22,17 @@ L<Test::Class>
 package Test::SBG;
 use strict;
 use warnings;
-use Test::Class;
-use Exporter;
+#use Test::Class;   
 use base qw/Test::Class Exporter/;
 
-use FindBin qw/$Bin/;
-
-use Data::Dumper qw/Dumper/;
 use Carp;
+
+use FindBin qw/$Bin/;
+use Data::Dumper qw/Dumper/;
 use Test::Most;
 use Test::Approx;
 use File::Spec::Functions;
+use Path::Class;
 use File::Basename;
 use File::Temp;
 $File::Temp::KEEP_ALL = $DB::sub;
@@ -40,6 +40,7 @@ $File::Temp::KEEP_ALL = $DB::sub;
 use SBG::U::Run qw/start_log/;
 use SBG::U::Test qw/pdl_approx/;
 
+# Re-export everything needed for testing
 # Re-export everything needed for testing
 our @EXPORT = (
     @FindBin::EXPORT,
@@ -51,11 +52,11 @@ our @EXPORT = (
     @Test::Most::EXPORT,
     @Test::Approx::EXPORT,
     @File::Spec::Functions::EXPORT,
+    @Path::Class::EXPORT,
     @File::Basename::EXPORT,
     @File::Temp::EXPORT,
     qw/pdl_approx/,
     );
-
 
 our $DEBUG = $DB::sub;
 $File::Temp::KEEP_ALL = $DEBUG;
@@ -67,7 +68,7 @@ $File::Temp::KEEP_ALL = $DEBUG;
 INIT { 
 
     # Start logging 
-    my $logfile = catfile(dirname(__FILE__), '..', 'test.log');
+    my $logfile = file(__FILE__)->dir->parent->file('test.log');
     start_log('test', loglevel=>'DEBUG', logfile=>$logfile);
 
     Test::Class->runtests;
@@ -94,7 +95,7 @@ sub startup : Tests(startup=>1) {
 # Make sure that each test object knows where to get test data from
 sub test_data : Tests(startup) {
 	my $self = shift;
-    my $test_data = catfile(dirname(__FILE__), '..', '..', 'test_data');
+    my $test_data = file(__FILE__)->dir->parent->parent->subdir('test_data');
     $self->{test_data} = $test_data;
     return $self;
 }

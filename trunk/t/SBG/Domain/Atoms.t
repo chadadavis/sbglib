@@ -28,7 +28,7 @@ pdl_approx($dom1->coords->slice('0:2,0'), $first_atom, "Coords of first AA");
 # Load a modelw with multiple domains, some with transformations
 my $file = "$Bin/data/model.dom";
 my $io = new SBG::DomainIO::stamp(
-    file=>"<$file", objtype=>'SBG::Domain::Atoms');
+    file=>$file, objtype=>'SBG::Domain::Atoms');
 # By default only CA coords
 my @doms2 = $io->read;
 is(@doms2, 6, "Read in " . scalar(@doms2) . " domains, array context");

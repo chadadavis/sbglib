@@ -23,7 +23,6 @@ our @EXPORT_OK = qw/qcons/;
 
 use Cwd;
 use File::Basename;
-use File::Spec;
 use Log::Any qw/$log/;
 use Moose::Autobox;
 

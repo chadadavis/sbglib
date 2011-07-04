@@ -14,7 +14,6 @@ use strict;
 use warnings;
 
 use File::Basename;
-use File::Spec::Functions;
 use Log::Any qw/$log/;
 use Carp;
 
@@ -94,7 +93,7 @@ sub _model {
 	
 	my $target = $complex->target;
 	
-    open my $fh, ">>${base}.html";
+    open my $fh, '>>', $base . '.html';
 
     print $fh "<p>Model file: <a href=\"../${base}.pdb\">PDB</a></p>\n";
 #    print $fh "<p><a href=\"../${base}.dom\">STAMP DOM</a></p>\n";
@@ -151,7 +150,7 @@ sub map2html {
 
     my $html_fh;
     
-    open $html_fh, ">>${base}.html";
+    open $html_fh, '>>', $base . '.html';
     print $html_fh <<EOF;
 <head>
 <style>p{font-family:"Monospace"}</style>
@@ -162,7 +161,7 @@ EOF
     # Note that the map contains the anchor that we want to link to. Put it first.
     `cat ${base}.map >> ${base}.html`;
 
-    open $html_fh, ">>${base}.html";
+    open $html_fh, '>>', $base . '.html';
     print $html_fh <<EOF;
 <p>
 3DRepertoire complex <a href="http://3drepertoire.russelllab.org/Thing?db=3DR&type_acc=Complex&acc=${target}&source_acc=3DR">$target</a>

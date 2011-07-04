@@ -54,7 +54,7 @@ is ($seqcoords2->[-1], 122, 'aln2locations end');
 
 ($pdbid, $chainid) = $key =~ /^pdb\|(....)\|(\S*)$/;
 $resids = query($pdbid, $chainid, $seqcoords2);
-ok ($resids->length == $seqcoords2->length, 'mapping same length');
+cmp_ok ($resids->length, '==', $seqcoords2->length, 'mapping same length');
 is ($resids->[0], 24, 'res_mapping start');
 is ($resids->[-1], 122, 'res_mapping end');
 

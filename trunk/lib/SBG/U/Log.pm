@@ -63,8 +63,7 @@ our @EXPORT_OK = qw(log);
 use Log::Log4perl qw(:levels);
 use Log::Any qw/$log/;
 use Log::Any::Adapter;
-use File::Spec::Functions;
-
+use Path::Class;
 
 
 =head2 logger
@@ -123,9 +122,11 @@ sub init {
     $name ||= 'sbg';
     my $level = $ops{'loglevel'} || 'INFO';
     $level = uc $level;
-    my $logfile = $ops{'logfile'} || $name . '.log';
-    my $logpath = File::Spec->rel2abs($logfile, $ops{'logdir'}) ;
-
+    my $logfile = file($ops{'logfile'} || $name . '.log');
+    my $logpath = $logfile->is_absolute ? 
+        $logfile : file($ops{logdir}, $logfile);
+    $logpath = $logpath->resolve;
+        
     # Initialize system logger
     our $logger;
     $logger = Log::Log4perl->get_logger($name);
@@ -141,7 +142,7 @@ sub init {
     	$appendertype = 'Log::Dispatch::File';
     }
     my $appender = Log::Log4perl::Appender->
-        new($appendertype, filename => $logpath, mode => "append");
+        new($appendertype, filename => "$logpath", mode => "append");
 
     my $h = `hostname --short`;
     chomp $h;
@@ -202,7 +203,6 @@ sub error {
 sub debug {1;}
 *trace = \&debug;
 *info = \&debug;
-
 
 
 1;
