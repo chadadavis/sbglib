@@ -1,13 +1,8 @@
 #!/usr/bin/env perl
 
 package Test::SBG::Run::rasmol;
-
-# Inheritance
 use base qw/Test::SBG/;
 use Test::SBG;
-
-# Testing:
-use SBG::Run::rasmol;
 
 
 sub setup : Test(setup) {

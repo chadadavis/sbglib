@@ -1,13 +1,8 @@
 #!/usr/bin/env perl
-
 package Test::SBG::Complex;
+use base 'Test::SBG';
+use Test::SBG::Tools;
 
-# Inheritance
-use base qw/Test::SBG/;
-use Test::SBG;
-
-use SBG::U::Object qw/load_object/;
-use Moose::Autobox;
 
 sub setup : Test(setup) {
 	my $self = shift;
@@ -24,5 +19,6 @@ sub chain_of : Test {
 	is($obj->chain_of(model=>$last_model), 'V');
 	
 }
+
 
 1;

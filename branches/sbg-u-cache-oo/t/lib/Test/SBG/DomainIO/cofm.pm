@@ -4,7 +4,6 @@ package Test::SBG::DomainIO::cofm;
 use base 'Test::SBG';
 use Test::SBG;
 
-use SBG::DomainIO::cofm;
 use Moose::Autobox;
 
 sub multi_domain : Tests {

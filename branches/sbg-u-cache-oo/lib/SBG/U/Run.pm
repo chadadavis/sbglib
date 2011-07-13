@@ -46,7 +46,7 @@ use SBG::U::Log;
 use Log::Any qw/$log/;
 use Log::Any::Adapter;
 
-
+use SBG::Debug;
 
 =head2 start_lock
 
@@ -115,25 +115,6 @@ sub end_lock {
 
 
 
-=head2 start_log
-
- Function: 
- Example : 
- Returns : 
- Args    : 
-
-Deprecated
-
-=cut
-sub start_log {
-    my ($name, %ops) = @_;
-    SBG::U::Log::init($name, %ops);
-    Log::Any::Adapter->set('+SBG::U::Log');
-    $log->info("$0 $name " . join ' ', %ops);
-}
-
-
-
 =head2 frac_of
 
  Function: 
@@ -189,15 +170,8 @@ sub getoptions {
         pod2usage(-exitval=>1, -verbose=>2, -noperldoc=>1); 
     }
 
-    # Setup debug mode automatically
-    if ($ENV{'DEBUG'} || $ops{'debug'} || defined $DB::sub) {
-        $ops{'debug'} = 1;
-        $SIG{__DIE__} = \&confess;
-        $ops{'loglevel'} ||= 'DEBUG';
-        $DB::deep = 1000;
-        $File::Temp::KEEP_ALL = 1;
-    }
-
+    SBG::Debug->debug($ops{debug});
+    
     return %ops;
 }
 

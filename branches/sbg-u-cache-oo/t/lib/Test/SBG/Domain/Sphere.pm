@@ -6,8 +6,6 @@ package Test::SBG::Domain::Sphere;
 use base qw/Test::SBG/;
 use Test::SBG;
 
-use SBG::Domain::Sphere;
-
 sub sphere : Tests {
     local $TODO = "Not yet implemented";
 }

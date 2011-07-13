@@ -5,7 +5,6 @@ package Test::Bio::DB::RCSB;
 # Inheritance
 use base qw/Test::SBG/;
 use Test::SBG; 
-use Bio::DB::RCSB;
 
 use LWP::UserAgent;
 

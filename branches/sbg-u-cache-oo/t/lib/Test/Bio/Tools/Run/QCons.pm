@@ -8,8 +8,6 @@ use Test::SBG;
 
 use Moose::Autobox;
 use autobox::List::Util; 
-
-use Bio::Tools::Run::QCons;
 use File::Which;
 
 # startup failing will skip other tests
