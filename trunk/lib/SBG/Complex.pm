@@ -368,7 +368,7 @@ sub chain_of {
     our $labels = [ 'A'..'Z', 'a'..'z', 0..9 ];
     my $index = 0;
     my $map = {};
-    $map->{$_} = $labels->[$index++] for $self->all_models->flatten;
+    $map->{$_} = $labels->[$index++ % @$labels] for $self->all_models->flatten;
     my $key = $ops{'model'};
     # Though this could also be the 'structure/domain/subject' 
     # or the 'query/input/component'
