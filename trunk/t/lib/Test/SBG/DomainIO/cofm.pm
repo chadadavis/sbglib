@@ -42,6 +42,16 @@ sub multi_fragment : Tests {
 }
 
 
+sub all_single : Test {
+    local $TODO = "TODO test 'ALL' residues in a structure with single chain";
+}
+
+
+sub all_multi : Test {
+    local $TODO = "TODO test 'ALL' residues in a structure with multiple chains";
+}
+
+
 sub classification : Test {
     local $TODO = "TODO test reading / writing the 'Classifiation'";
 }
