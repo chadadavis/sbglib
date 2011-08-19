@@ -334,8 +334,8 @@ sub overlap_vol {
     my ($a, $b) = ($self->radius, $obj->radius);
     # Need to find the plane (a circle) of intersection between spheres
     # Law of cosines to get one angle of triangle created by intersection
-    my $alpha = acos( ($b**2 + $lin**2 - $a**2) / (2 * $b * $lin) );
-    my $beta  = acos( ($a**2 + $lin**2 - $b**2) / (2 * $a * $lin) );
+    my $alpha = acos_real( ($b**2 + $lin**2 - $a**2) / (2 * $b * $lin) );
+    my $beta  = acos_real( ($a**2 + $lin**2 - $b**2) / (2 * $a * $lin) );
 
     # The *length* of $obj that is inside $self
     my $overb;
