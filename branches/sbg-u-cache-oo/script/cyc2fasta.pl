@@ -30,7 +30,7 @@ use LWP::Simple;
 use FindBin qw/$Bin/;
 use lib "$Bin/../lib/";
 
-use SBG::U::Run qw/getoptions start_log/;
+use SBG::U::Run qw/getoptions/;
 
 # Read from STDIN or from a (single) file 
 my $file = shift;

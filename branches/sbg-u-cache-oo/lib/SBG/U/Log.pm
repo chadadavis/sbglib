@@ -6,20 +6,20 @@ SBG::U::Log - Simple logging setup for Russell group
 
 =head1 SYNOPSIS
 
-    # In your modules, use the logger, without worrying about where the messages go
-    use Log::Any '$log';
-    $log->warn("might be something bad");
-    $log->error("definitely something bad") and die;
-    $log->debug("this won't be logged by default, you can put them everywhere");
-    
-    # In your scripts, define where the messages go
-    # By default error and warn messages go to stderr. Other messages ignored
-    use Log::Any::Adapter; 
-    Log::Any::Adapter->set('+SBG::U::Log')
-    
-    # Or log to a file (in the current directory), and set the level to debug
-    # This captures debug, info, warn, error and fatal messages. trace is ignored
-    Log::Any::Adapter->set('+SBG::U::Log',level=>'debug',file=>'myapp.log') 
+ # In your modules, use the logger, without worrying about where the messages go
+ use Log::Any '$log';
+ $log->warn("might be something bad");
+ $log->error("definitely something bad") and die;
+ $log->debug("this won't be logged by default, you can put them everywhere");
+ 
+ # In your scripts, define where the messages go
+ # By default error and warn messages go to stderr. Other messages ignored
+ use Log::Any::Adapter; 
+ Log::Any::Adapter->set('+SBG::U::Log')
+ 
+ # Or log to a file (in the current directory), and set the level to debug
+ # This captures debug, info, warn, error and fatal messages. trace is ignored
+ Log::Any::Adapter->set('+SBG::U::Log',level=>'debug',file=>'myapp.log') 
   
 =head1 DESCRIPTION
 
@@ -134,9 +134,11 @@ sub new {
     $logger->level(eval '$' . $level);
     
     # Log appenders (i.e. where the logs get sent)
-    my $appender = $file eq '-' ?
-        Log::Log4perl::Appender->new('Log::Log4perl::Appender::Screen',stderr=>1) :
-        Log::Log4perl::Appender->new('Log::Dispatch::File',filename=>$file,mode=>'append');
+    my $appender = $file eq '-' 
+        ? Log::Log4perl::Appender->new(
+            'Log::Log4perl::Appender::Screen',stderr=>1) 
+        : Log::Log4perl::Appender->new(
+            'Log::Dispatch::File',filename=>$file,mode=>'append');
         
     # Define log format for appender
     # $h host, %d date %M method %m message %n newline

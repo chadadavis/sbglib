@@ -10,12 +10,7 @@ use Test::More;
 use FindBin qw/$Bin/;
 use lib "$Bin/../../../lib/";
 use Test::Approx;
-use SBG::U::Log;
-
-my $DEBUG;
-$DEBUG = 1;
-SBG::U::Log::init( undef, loglevel => 'DEBUG' ) if $DEBUG;
-
+use SBG::Debug;
 use SBG::Run::naccess qw/sas_atoms/;
 use SBG::Domain;
 

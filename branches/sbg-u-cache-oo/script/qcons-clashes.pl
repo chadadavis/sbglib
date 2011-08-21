@@ -7,19 +7,13 @@ use Data::Dumper;
 use Data::Dump qw/dump/;
 use File::Temp;
 use Carp;
-$SIG{__DIE__} = \&confess;
+use Moose::Autobox;
+use autobox::List::Util; 
 
 use FindBin qw/$Bin/;
 use lib "$Bin/../lib";
 
-use Moose::Autobox;
-use autobox::List::Util; 
-use SBG::U::Log qw/log/;
-
-my $DEBUG;
-$DEBUG = 1;
-SBG::U::Log::init(undef, loglevel=>'DEBUG') if $DEBUG;
-$File::Temp::KEEP_ALL = $DEBUG;
+use SBG::Debug;
 
 use Bio::Tools::Run::QCons;
 

@@ -92,7 +92,7 @@ use lib "$Bin/../lib/";
 
 # Send this off to PBS first, if possible, before loading other modules
 use SBG::U::Run 
-    qw/frac_of getoptions start_lock end_lock start_log @generic_options/;
+    qw/frac_of getoptions start_lock end_lock @generic_options/;
 
 # Options must be hard-coded, unfortunately, as local variables cannot be used
 use PBS::ARGV @generic_options, 
@@ -183,6 +183,7 @@ unless (-s $headerpath) {
 }
 
 
+my $log_handle;
 foreach my $file (@ARGV) {
     if (defined($ops{'J'})) {
         # The file is actually the Jth line of the list of files
@@ -204,7 +205,10 @@ foreach my $file (@ARGV) {
     my $lock = start_lock($output);
     next if ! $lock && ! $ops{'redo'};
 
-    start_log($output, %ops);
+    Log::Any::Adapter->remove($log_handle);
+    # A log just for this input file:
+    $log_handle = Log::Any::Adapter->set(
+        '+SBG::Log',level=>'trace',file=>$output . '.log');
     
     # Mark jobs that are tried, but not done, this file deleted when finished
     # A cheap way to track what crashes before finishing

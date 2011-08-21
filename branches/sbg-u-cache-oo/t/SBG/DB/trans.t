@@ -25,11 +25,7 @@ use SBG::STAMP;
 use SBG::U::iRMSD;
 use SBG::Run::cofm qw/cofm/;
 use SBG::Run::rasmol;
-use SBG::U::Log qw/log/;
-
-my $DEBUG;
-# $DEBUG = 1;
-SBG::U::Log::init(undef, loglevel=>'DEBUG') if $DEBUG;
+use SBG::Debug qw(debug);
 
 use SBG::U::DB;
 my $dbh = SBG::U::DB::connect();
@@ -95,7 +91,7 @@ my $supcccd = superposition($cc, $cd);
 $supcacc->apply($ca);
 $supcccd->apply($ca);
 # How to verify non-visually?
-rasmol [$ca, $cd] if $DEBUG;
+rasmol [$ca, $cd] if debug();
 
 
 # Now change up the order
@@ -110,7 +106,7 @@ $supcacc->apply($ca);
 $supcccd = superposition($ca, $cd);
 $supcccd->apply($ca);
 # How to verify non-visually?
-rasmol [$ca, $cd] if $DEBUG;
+rasmol [$ca, $cd] if debug();
 
 
 # Finally, do it on both sides, parallel superpositions
@@ -132,7 +128,7 @@ my $supcacb = superposition($ca, $cb);
 $supcacb->apply($ca);
 
 # How to verify non-visually?
-rasmol [$ca, $cd] if $DEBUG;
+rasmol [$ca, $cd] if debug();
 
 
 
@@ -173,7 +169,7 @@ $double->apply($d2br2a2);
 
 # Collect all 6 domains, 2 native, 2 transformed once, 2 transformed twice
 my @doms = ($d2br2d0,$d2br2a0,$d2br2d1,$d2br2a1,$d2br2d2,$d2br2a2);
-rasmol \@doms if $DEBUG;
+rasmol \@doms if debug();
 
 
 my $movingb = id2dom(125752);

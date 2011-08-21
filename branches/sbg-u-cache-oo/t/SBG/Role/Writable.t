@@ -13,10 +13,6 @@ use SBG::Domain;
 use SBG::Role::Writable;
 use SBG::DomainIO::stamp;
 
-my $DEBUG;
-# $DEBUG = 1;
-$File::Temp::KEEP_ALL = $DEBUG;
-
 my $dom = SBG::Domain->new(pdbid=>'1tim', descriptor=>'CHAIN A');
 
 # $dom->write('stamp');

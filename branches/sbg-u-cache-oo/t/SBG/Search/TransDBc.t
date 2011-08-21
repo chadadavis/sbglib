@@ -10,13 +10,7 @@ use File::Temp qw/tempfile/;
 use FindBin qw/$Bin/;
 use lib "$Bin/../../../lib/";
 
-use SBG::U::Log qw/log/;
-$SIG{__DIE__} = \&confess;
-my $DEBUG;
-# $DEBUG = 1;
-SBG::U::Log::init(undef, loglevel=>'DEBUG') if $DEBUG;
-$File::Temp::KEEP_ALL = $DEBUG;
-
+use SBG::Debug;
 use SBG::U::DB;
 my $dbh = SBG::U::DB::connect();
 unless($dbh) {

@@ -37,7 +37,7 @@ use Bio::SeqIO;
 use FindBin qw/$Bin/;
 use lib "$Bin/../lib/";
 
-use SBG::U::Run qw/getoptions start_log/;
+use SBG::U::Run qw/getoptions/;
 use SBG::Split::3DR;
 
 # Read from STDIN or from a (single) file 

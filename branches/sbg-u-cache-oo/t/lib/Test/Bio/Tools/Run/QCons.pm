@@ -1,10 +1,7 @@
 #!/usr/bin/env perl
-
 package Test::Bio::Tools::Run::QCons;
-
-# Inheritance
 use base qw/Test::SBG/;
-use Test::SBG;
+use Test::SBG::Tools;
 
 use Moose::Autobox;
 use autobox::List::Util; 

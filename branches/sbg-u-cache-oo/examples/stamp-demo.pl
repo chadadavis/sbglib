@@ -10,11 +10,11 @@ use SBG::Superposition::Cache qw/superposition/;
 use SBG::Domain;
 
 # Logging
-use SBG::U::Log qw/log/;
-log()->init('stamp-demo', loglevel=>'DEBUG', logfile=>'/tmp/sbg.log');
+use Log::Any::Adapter; 
+Log::Any::Adapter->set('+SBG::U::Log', level=>'debug', file=>'stamp-demo.log');
 
-# Debugging:
-$File::Temp::KEEP_ALL = $ENV{'SBGDEBUG'} || defined $DB::sub;
+# Debugging: (auto enabled when SBGDEBUG defined in shell environment
+use SBG::Debug; 
 
 
 # Default options: 
@@ -30,7 +30,7 @@ $File::Temp::KEEP_ALL = $ENV{'SBGDEBUG'} || defined $DB::sub;
 # If you change the default params, you should also use a different cache:
 # SBG::Superposition::Cache::cachename = 'myanalysis';
 
-my $domfile = shift or die;
+my $domfile = shift or die "Give me a STAMP DOM file\n";
 use SBG::DomainIO::stamp;
 my $input = SBG::DomainIO::stamp->new(file=>$domfile);
 

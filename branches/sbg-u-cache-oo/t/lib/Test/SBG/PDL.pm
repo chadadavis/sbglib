@@ -6,10 +6,10 @@ Test::SBG::PDL - Tools for testing PDLs
 
 =head1 SYNOPSIS
 
-    use Test::SBG::PDL qw/pdl_approx/;
-    
-    # Test::More test on PDL matrices, to within a certain rounding threshold
-    pdl_approx($pdl_1, $pdl2, "transformations equal", '5%');   
+ use Test::SBG::PDL qw/pdl_approx/;
+ 
+ # Test::More test on PDL matrices, to within a certain rounding threshold
+ pdl_approx($pdl_1, $pdl2, "transformations equal", '5%');   
 
 =head1 DESCRIPTION
 
@@ -20,7 +20,7 @@ answers the question: are the matrices basically the same, withing a few percent
 It does in a way that fits into a regular test harness, so that C<make test>
 works the same. If you want the general function, it's
 
-    my $are_the_same = pdl_equiv($pdl_1, $pdl_2, '5%');
+ my $are_the_same = pdl_equiv($pdl_1, $pdl_2, '5%');
     
 
 =head1 SEE ALSO
@@ -38,7 +38,7 @@ works the same. If you want the general function, it's
 =cut
 
 
-package SBG::U::Test;
+package Test::SBG::PDL;
 use strict;
 use warnings;
 
@@ -54,7 +54,7 @@ our @EXPORT_OK = qw(pdl_approx pdl_equiv);
 
 Approximate matrix equality
 
-    my $bool = pdl_approx($mat1, $mat2, "These are equal to within +/- 1.5", 1.5);
+ my $bool = pdl_approx($mat1, $mat2, "These are equal to within +/- 1.5", 1.5);
 
 Tolerance is a float or a percent (default '1%')
 
@@ -80,7 +80,7 @@ sub pdl_approx ($$;$$) {
 This is not a L<Test::More> function. It simply returns a boolean. There is no
 message argument.
 
-    my $bool = pdl_equiv($mat1, $mat2, 1.5);
+ my $bool = pdl_equiv($mat1, $mat2, 1.5);
 
 =cut
 sub pdl_equiv {

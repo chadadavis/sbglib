@@ -27,7 +27,7 @@ See also L<MooseX::Runnable>
 
 package SBG::U::Run;
 use base qw/Exporter/;
-our @EXPORT_OK = qw/start_lock end_lock start_log frac_of getoptions @generic_options/;
+our @EXPORT_OK = qw/start_lock end_lock frac_of getoptions @generic_options/;
 
 
 use strict;

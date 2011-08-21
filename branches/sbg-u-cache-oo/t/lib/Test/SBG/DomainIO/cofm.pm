@@ -2,7 +2,7 @@
 
 package Test::SBG::DomainIO::cofm;
 use base 'Test::SBG';
-use Test::SBG;
+use Test::SBG::Tools;
 
 use Moose::Autobox;
 

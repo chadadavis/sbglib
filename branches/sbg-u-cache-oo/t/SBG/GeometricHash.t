@@ -13,14 +13,7 @@ $SIG{__DIE__} = \&confess;
 use FindBin qw/$Bin/;
 use lib "$Bin/../../lib/";
 
-use SBG::U::Log;
-
-my $DEBUG;
-# $DEBUG = 1;
-SBG::U::Log::init(undef, loglevel=>'DEBUG') if $DEBUG;
-
-
-
+use SBG::Debug;
 
 use PDL::Lite;
 use PDL::Core;

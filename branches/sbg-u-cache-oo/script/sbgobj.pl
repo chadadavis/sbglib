@@ -73,7 +73,6 @@ use Getopt::Complete (
 
 $SIG{__DIE__} = \&confess if $ARGS{debug};
 $File::Temp::KEEP_ALL = 1 if $ARGS{keep};
-SBG::U::Log::init(undef, loglevel=>$ARGS{log});
 
 # Non-option arguments
 my (@params) = @{$ARGS{'<>'}};

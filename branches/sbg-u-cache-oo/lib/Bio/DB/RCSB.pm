@@ -117,10 +117,10 @@ sub link_for {
 # TODO BUG: cannot get the organism for a single chain explicitly
 sub organism {
     my ($self, %ops) = @_;
-    my $xml = $self->describePDB(%ops);     
+    my $xml = $self->describeMol(%ops);     
 
 #    my $organismtext = _xml_xpath($xml);
-    my $organismtext = _xml_regex($xml);
+    my $organismtext = _xml_regex($xml) or die "\n$xml\n";
          
     # May be multiple comma-separated organisms
     my @organisms = split /, /, $organismtext;
@@ -129,13 +129,12 @@ sub organism {
     # Sort the hash by value (descending) to find the most frequent organism
     my @sorted = sort { $counts->{$b} <=> $counts->{$a} } $counts->keys->flatten;
     return $sorted[0];
-    
 }
 
 
 sub _xml_regex {
     my $xml = shift;
-    my ($organismtext) = $xml =~ m|organism="(.*?)"|s;
+    my ($organismtext) = $xml =~ m|Taxonomy name="(.*?)"|is;
     return $organismtext;   
 }
 
@@ -150,26 +149,18 @@ sub _xml_regex {
 #}    
 
 
-sub _method {
-	# Who called us
-    my $verb = (caller(1))[3];
-    # Just get the bit after the last :: (if any)
-    $verb =~ s/.*:://;
-    return $verb;   
-}
-
-
-sub describePDB {
+# Call any REST method
+sub AUTOLOAD {
 	my ($self, %ops) = @_;	
 	# Name of this function
-	my $verb = _method;
+    my ($verb) = our $AUTOLOAD =~ /::(\w+)$/;
 	# Assembly URI based on verb and (sorted) options
 	my $uri = $self->_rest . $verb . '?' . 
 	   join('&', map {$_ . '=' . $ops{$_} } sort keys %ops);
+    $log->debug($uri);
 	my $res = $self->_fetch($uri);
 	return $res;
 }
-
 
 
 1;

@@ -3,6 +3,7 @@ package Test::SBG::Complex;
 use base 'Test::SBG';
 use Test::SBG::Tools;
 
+use SBG::U::Object qw(load_object);
 
 sub setup : Test(setup) {
 	my $self = shift;

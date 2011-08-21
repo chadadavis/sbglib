@@ -10,12 +10,7 @@ use lib "$Bin/../../../lib/";
 use Graph::Traversal::GreedyEdges;
 use SBG::NetworkIO::csv;
 
-use SBG::U::Log;
-$SIG{__DIE__} = \&confess;
-my $DEBUG;
-$DEBUG = 1;
-SBG::U::Log::init(undef, loglevel=>'DEBUG') if $DEBUG;
-$File::Temp::KEEP_ALL = $DEBUG;
+use SBG::Debug;
 
 
 # Load up a network

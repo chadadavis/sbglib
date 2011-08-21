@@ -18,11 +18,7 @@ use SBG::Seq;
 use SBG::Node;
 use SBG::Search::Bench;
 use SBG::Network;
-
-use SBG::U::Log qw/log/;
-my $DEBUG;
-# $DEBUG = 1;
-SBG::U::Log::init(undef, loglevel=>'DEBUG') if $DEBUG;
+use SBG::Debug;
 
 my @accnos;
 my @seqs;
