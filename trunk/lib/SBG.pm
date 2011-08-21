@@ -60,7 +60,7 @@ it under the same terms as Perl itself.
 =cut
 
 
-our $VERSION = "1.1.0";
+our $VERSION = "1.11";
 $VERSION = eval $VERSION;
 
 

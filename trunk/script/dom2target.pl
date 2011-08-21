@@ -79,7 +79,7 @@ use FindBin qw/$Bin/;
 use lib "$Bin/../lib/";
 
 # Send this off to PBS first, if possible, before loading other modules
-use SBG::U::Run qw/getoptions start_lock end_lock start_log @generic_options/;
+use SBG::U::Run qw/getoptions start_lock end_lock @generic_options/;
 # Options must be hard-coded, unfortunately, as local variables cannot be used
 use PBS::ARGV @generic_options, 
     ;
@@ -91,18 +91,26 @@ use File::Basename;
 use Moose::Autobox;
 
 use Log::Any qw/$log/;
+use Log::Any::Adapter;
 
 use SBG::ComplexIO::stamp;
 
 
-
+# Separate log file for each input
+my $log_handle;
 foreach my $file (@ARGV) {
     my $base = basename($file, '.dom');
     my $output = $base . '.target';
     next if -e $output . '.done';
     my $lock = start_lock($output);
     next if ! $lock && ! $ops{'debug'};
-    start_log($output, %ops);
+
+    Log::Any::Adapter->remove($log_handle);
+      
+    # A log just for this input file:
+    $log_handle = Log::Any::Adapter->set(
+        '+SBG::Log',level=>'trace',file=>$output . '.log');
+
     print $base, "\n" if -t STDOUT;
     my $io = SBG::ComplexIO::stamp->new(file=>$file);
     my $complex = $io->read;    

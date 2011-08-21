@@ -6,8 +6,21 @@ Test::SBG - Base test class for SBG
 
 =head1 SYNOPSIS
 
+ use base 'Test::SBG';
+ 
+ sub mytest : Tests {
+     ok(1+1==2);
+     ok(0!=1);
+ }
 
 =head1 DESCRIPTION
+
+Test all the loaded classes.
+
+Calling this in the parent allows individual classes to be tested. Preferrable
+over simply calling Test::Class->runtests in a *.t script    
+
+Note that the test methods here are inherited and run for each child class
 
 startup() and shutdown() run once for each test class.
 
@@ -17,70 +30,37 @@ setup() and teardown() run once for each test in a test class.
 
 L<Test::Class>
 
+=head1 METHODS
+
 =cut
 
 package Test::SBG;
 use strict;
 use warnings;
-#use Test::Class;   
-use base qw/Test::Class Exporter/;
-
-use Carp;
-
-use FindBin qw/$Bin/;
-use Data::Dumper qw/Dumper/;
-use Test::Most;
-use Test::Approx;
-use File::Spec::Functions;
+use base qw/Test::Class/;
+use Test::More;
 use Path::Class;
-use File::Basename;
-use File::Temp;
-$File::Temp::KEEP_ALL = $DB::sub;
+use Log::Any::Adapter;
+use SBG::Debug; 
 
-use SBG::U::Run qw/start_log/;
-use SBG::U::Test qw/pdl_approx/;
-
-# Re-export everything needed for testing
-# Re-export everything needed for testing
-our @EXPORT = (
-    @FindBin::EXPORT,
-    qw/$Bin/,
-    @Data::Dump::EXPORT,
-    qw/dump/,
-    @Data::Dumper::EXPORT,
-    qw/Dumper/,
-    @Test::Most::EXPORT,
-    @Test::Approx::EXPORT,
-    @File::Spec::Functions::EXPORT,
-    @Path::Class::EXPORT,
-    @File::Basename::EXPORT,
-    @File::Temp::EXPORT,
-    qw/pdl_approx/,
-    );
-
-our $DEBUG = $DB::sub;
-$File::Temp::KEEP_ALL = $DEBUG;
-
-
-# Test all the loaded classes
-# Calling this in the parent allows individual classes to be tested
-# Preferred over simply calling Test::Class->runtests in a *.t script    
 INIT { 
 
-    # Start logging 
-    my $logfile = file(__FILE__)->dir->parent->file('test.log');
-    start_log('test', loglevel=>'DEBUG', logfile=>$logfile);
+    # Enable logging to t/tests.log 
+    my $logfile = file(__FILE__)->dir->parent->parent->file('tests.log');
+    Log::Any::Adapter->set('+SBG::U::Log',file=>"$logfile");
 
     Test::Class->runtests;
 }
 
 
-# Note that the test methods here are inherited and run for each child class
+=head2 startup
 
+Startup method for every inherited class, loads the testee() class
 
-# Startup method for every inherited class, loads the testee() class
-# Note, you can override this and then refer to the parent test with:
-#  $self->SUPER::startup;  
+Note, you can override this and then refer to the parent test with:
+
+    $self->SUPER::startup;  
+=cut
 sub startup : Tests(startup=>1) {
     my $self = shift;
     # Each test class is prefixed with Test::
@@ -92,8 +72,17 @@ sub startup : Tests(startup=>1) {
 }
 
 
-# Make sure that each test object knows where to get test data from
-sub test_data : Tests(startup) {
+=head2 test_data
+
+Common directory for test data at: t/test_data
+
+    sub some_test : Tests {
+        my $self = shift;
+        my $data_dir = $self->{tests_data}
+        open my $fh, '<', file($data_dir, 'data_for_this_test.dat');
+    }
+=cut
+sub _test_data : Tests(startup) {
 	my $self = shift;
     my $test_data = file(__FILE__)->dir->parent->parent->subdir('test_data');
     $self->{test_data} = $test_data;

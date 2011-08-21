@@ -19,10 +19,7 @@ use SBG::Seq;
 use SBG::Network;
 use SBG::Search::3DR;
 
-use SBG::U::Log qw/log/;
-my $DEBUG = $ENV{'SBGDEBUG'} || $DB::sub;
-SBG::U::Log::init( undef, loglevel => 'DEBUG' ) if $DEBUG;
-
+use SBG::Debug;
 use FindBin qw/$Bin/;
 my $file = shift || "$Bin/030.fa";
 

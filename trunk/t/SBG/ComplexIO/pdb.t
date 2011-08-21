@@ -12,10 +12,6 @@ use lib "$Bin/../../../lib/";
 use SBG::ComplexIO::pdb;
 use SBG::U::Object qw/load_object/;
 
-my $DEBUG = $ENV{'SBGDEBUG'};
-$DEBUG = $DB::sub if defined $DB::sub;
-$File::Temp::KEEP_ALL = $DEBUG;
-
 my $file = "$Bin/../data/10.model";
 
 my $complex = load_object($file);

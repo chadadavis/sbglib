@@ -12,7 +12,6 @@ $SIG{__DIE__} = \&confess;
 use FindBin qw/$Bin/;
 use lib "$Bin/../../lib/";
 use Test::Approx;
-use SBG::U::Log qw/log/;
 
 use SBG::Complex;
 use SBG::Domain;
@@ -23,13 +22,7 @@ use SBG::DomainIO::stamp;
 use SBG::DomainIO::pdb;
 use SBG::U::List qw/flatten/;
 use SBG::Run::rasmol;
-
-
-my $DEBUG = $ENV{'SBGDEBUG'} || $DB::sub;
-#$DEBUG = 1;
-SBG::U::Log::init(undef, loglevel=>'DEBUG') if $DEBUG;
-$File::Temp::KEEP_ALL = $DEBUG;
-
+use SBG::Debug;
 
 # Create Domains to use as templates
 # One hexameric ring of 2br2: CHAINS ADCFEB 
@@ -98,7 +91,7 @@ $iaction->set('RRP46', $mrrp46a);
 $complex->add_interaction($iaction, @{$iaction->keys});
 my $got_iaction = $complex->interactions->values->head;
 is_deeply($got_iaction, $iaction, "add_interaction: $iaction");
-rasmol($complex->domains) if $DEBUG;
+rasmol($complex->domains) if SBG::Debug->debug;
 
 
 # First check overlap independently
@@ -118,7 +111,7 @@ $iaction->set('RRP45', $mrrp45d);
 ok($complex->add_interaction($iaction, 'RRP46', 'RRP45'),
    "Add 2nd Interaction");
 is($complex->count, 3, "Got 3rd domain from 2nd interaction");
-rasmol($complex->domains) if $DEBUG;
+rasmol($complex->domains) if SBG::Debug->debug;
 
 
 # Use Interaction templates requiring a non-identity transformation
@@ -129,7 +122,7 @@ $iaction->set('RRP41', $mrrp41a);
 ok($complex->add_interaction($iaction, 'RRP45', 'RRP41'),
    "Add 3rd Interaction");
 is($complex->count, 4, "Got 4th domain from 3rd interaction");
-rasmol($complex->domains) if $DEBUG;
+rasmol($complex->domains) if SBG::Debug->debug;
 
 
 # Test chaining of transformations (verfies matrix multiplication)
@@ -140,7 +133,7 @@ $iaction->set('RRP42', $mrrp42d);
 ok($complex->add_interaction($iaction, 'RRP41', 'RRP42'),
    "Add 4th Interaction");
 is($complex->count, 5, "Got 5th domain from 4th interaction");
-rasmol($complex->domains) if $DEBUG;
+rasmol($complex->domains) if SBG::Debug->debug;
 
 
 # Verify ring closure doesn't create unacceptable clashes
@@ -151,7 +144,7 @@ $iaction->set('MTR3', $mmtr3a);
 ok($complex->add_interaction($iaction, 'RRP42', 'MTR3'),
    "Add 5th Interaction");
 is($complex->count, 6, "Got 6th domain from 5th interaction");
-rasmol($complex->domains) if $DEBUG;
+rasmol($complex->domains) if SBG::Debug->debug;
 
 
 # Close cycle
@@ -206,7 +199,7 @@ $iaction->set('RRP45', $mrrp45d);
 ok($complex1->add_interaction($iaction, 'RRP46', 'RRP45'),
    "2nd Interaction of 1st Complex");
 is($complex1->count, 3, "Got 3rd domain from 2nd interaction");
-rasmol($complex1->domains) if $DEBUG;
+rasmol($complex1->domains) if SBG::Debug->debug;
 
 # Create second complex (later we will merge them on RRP45, which will be based
 # on superposing 2br2/B and 2br2/D
@@ -223,7 +216,7 @@ $iaction->set('MTR3', $mmtr3a);
 ok($complex2->add_interaction($iaction, 'RRP42', 'MTR3'),
    "2nd Interaction of 2nd Complex");
 is($complex2->count, 3, "Got 3rd domain from 2nd interaction");
-rasmol($complex2->domains) if $DEBUG;
+rasmol($complex2->domains) if SBG::Debug->debug;
 
 
 # Merge
@@ -233,7 +226,7 @@ $iaction->set('RRP41', $mrrp41a);
 ok($complex1->merge_interaction($complex2, $iaction),
    "Merging two trimers");
 is($complex1->count, 6, "Merged complex is a hexamer");
-rasmol($complex1->domains) if $DEBUG;
+rasmol($complex1->domains) if SBG::Debug->debug;
 
 # Close cycle, implicitly by adding the last interaction, cycle is detected
 $iaction = new SBG::Interaction;
@@ -264,14 +257,14 @@ $iocofm->write(@mdoms, @tdoms);
 # ($transmat, $rmsd) = $complex->rmsd($true_complex);
 my ($transmat1, $rmsd1) = $true_complex->rmsd($complex);
 $true_complex->transform($transmat1);
-rasmol($complex->domains, $true_complex->domains) if $DEBUG;
+rasmol($complex->domains, $true_complex->domains) if SBG::Debug->debug;
 # Revert
 $true_complex->transform($transmat1->inv);
 
 
 my ($transmat2, $rmsd2) = $complex->rmsd($true_complex);
 $complex->transform($transmat2);
-rasmol($complex->domains, $true_complex->domains) if $DEBUG;
+rasmol($complex->domains, $true_complex->domains) if SBG::Debug->debug;
 # Revert
 $complex->transform($transmat2->inv);
 

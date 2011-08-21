@@ -47,7 +47,7 @@ use overload (
 
 
 use PDL::Core qw/pdl zeroes/;
-use Math::Trig qw/:pi acos_real/;
+use Math::Trig;
 use List::Util; # qw/min/; # min() clashes with PDL::min
 use Log::Any qw/$log/;
 

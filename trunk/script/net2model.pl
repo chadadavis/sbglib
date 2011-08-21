@@ -132,7 +132,7 @@ use lib "$Bin/../lib/";
 
 # Send this off to PBS first, if possible, before loading other modules
 use SBG::U::Run 
-    qw/frac_of getoptions start_lock end_lock start_log @generic_options/;
+    qw/frac_of getoptions start_lock end_lock @generic_options/;
 
 # Options must be hard-coded, unfortunately, as local variables cannot be used
 use PBS::ARGV @generic_options, 
@@ -182,7 +182,8 @@ use SBG::U::DB; # qw/connect/;
 # Use our own library, which does connection caching, to access the schema
 my $schema = acaschema->connect(sub{SBG::U::DB::connect('aca')});
 
-
+# Separate log file for each input
+my $log_handle;
 foreach my $file (@ARGV) {
     if (defined($ops{'J'})) {
         # The file is actually the Jth line of the list of files
@@ -203,7 +204,11 @@ foreach my $file (@ARGV) {
     my $output = catfile($targetid, $partid, 'model');
     my $lock = start_lock($output);
     next if ! $lock && ! $ops{'debug'};
-    start_log($output, %ops);
+
+    Log::Any::Adapter->remove($log_handle);
+    # A log just for this input file:
+    $log_handle = Log::Any::Adapter->set(
+        '+SBG::Log',level=>'trace',file=>$output . '.log');
 
     # A cheap way to track what crashes before finishing
     my $tryingfile = $output . '.trying';

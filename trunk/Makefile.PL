@@ -12,6 +12,7 @@ name 'SBG';
 all_from 'lib/SBG.pm';
 
 
+requires 'autodie' => '0'; # Qcons
 requires 'Algorithm::Cluster' => '0';
 requires 'Algorithm::Combinatorics' => '0';
 requires 'Algorithm::Numerical::Sample' => '0';
@@ -46,6 +47,7 @@ requires 'IPC::Cmd' => '0';
 requires 'List::MoreUtils' => '0';
 requires 'List::Util' => '0';
 requires 'Log::Any' => '0';
+requires 'Log::Any::Adapter' => '0';
 requires 'Log::Log4perl' => '0';
 requires 'LWP::Simple' => '0';
 requires 'Math::Round' => '0';
@@ -68,6 +70,7 @@ requires 'Term::ReadKey' => '0';
 #requires 'XML::XPath' => '0';
 
 # TODO Only required for testing
+requires 'Test::Approx' => '0';
 requires 'Test::Class' => '0';
 requires 'Test::More' => '0';
 requires 'Test::Most' => '0';
@@ -84,7 +87,7 @@ requires_external_bin 'rasmol'; # by SBG::Run::rasmol
 requires_external_bin 'blastpgp';
 requires_external_bin 'clustalw';
 requires_external_bin 'dot'; # graphviz
-requires_external_bin 'vmd'; # SBG::Run::vmdclashes
+#requires_external_bin 'vmd'; # SBG::Run::vmdclashes
 requires_external_bin 'naccess';
 requires_external_bin 'Qcontacts';
 

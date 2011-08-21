@@ -1,12 +1,7 @@
 #!/usr/bin/env perl
-
 package Test::Bio::DB::RCSB;
-
-# Inheritance
 use base qw/Test::SBG/;
-# Just 'use' it to import all the testing functions and symbols 
-use Test::SBG; 
-use Bio::DB::RCSB;
+use Test::SBG::Tools;
 
 use LWP::UserAgent;
 
@@ -38,12 +33,17 @@ sub _url : Test {
 	
 sub organism :Test {
 	my $self = shift;
-    my $id = '1g3n';
     my $rcsb = $self->{rcsb};
+    my $id = '4hhb';
     my $organism = $rcsb->organism(structureId=>$id);
-    is($organism, 'Homo sapiens');    
+    # Use 'like' because it may be suffixed with common name, e.g. ' (man)'
+    like($organism, qr/^Homo sapiens/);
 }
 
+
+sub multiple_organisms : Tests {
+    local $TODO = "Find an entry with multiple organisms";
+}
 
 
 1;

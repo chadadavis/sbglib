@@ -10,16 +10,7 @@ use File::Temp qw/tempfile/;
 
 use FindBin qw/$Bin/;
 use lib "$Bin/../../../lib/";
-use SBG::U::Log;
-
-
-$SIG{__DIE__} = \&confess;
-my $DEBUG = $ENV{'SBGDEBUG'};
-$DEBUG = $DB::sub if defined $DB::sub;
-SBG::U::Log::init(undef, loglevel=>'DEBUG') if $DEBUG;
-$File::Temp::KEEP_ALL = $DEBUG;
-
-
+use SBG::Debug qw(debug);
 use SBG::Run::PairedBlast qw/gi2pdbid/;
 use Bio::SeqIO;
 
@@ -66,7 +57,7 @@ sub blastmethod {
     my ($method, $seq1, $seq2) = @_;
     
     my $database = $method =~ /standalone/i ? 'pdbseq' : 'pdbaa';
-    my $blast = SBG::Run::PairedBlast->new(verbose=>$DEBUG, 
+    my $blast = SBG::Run::PairedBlast->new(verbose=>debug(), 
                                            method=>$method,
                                            database=>$database,
                                            );
@@ -80,7 +71,7 @@ sub blastmethod {
 # NB this does not imply that always 10 pairs are returned
 # Only that each monomer has 10 hits, max
 # Pairing them generally results in more than 10 hits
-$blast =SBG::Run::PairedBlast->new(verbose=>$DEBUG, 
+$blast =SBG::Run::PairedBlast->new(verbose=>debug(), 
                                    method=>'remoteblast',
                                    database=>'pdbaa',
                                    );

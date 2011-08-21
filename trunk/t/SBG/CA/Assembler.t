@@ -11,7 +11,6 @@ use List::MoreUtils qw/mesh/;
 use FindBin qw/$Bin/;
 use lib "$Bin/../../../lib/";
 
-use SBG::U::Log qw/log/;
 use SBG::Seq;
 use SBG::Node;
 use SBG::Domain;
@@ -27,11 +26,7 @@ $TODO = 'update to Assembler2';
 ok(0);
 exit;
 
-
-my $DEBUG;
-# $DEBUG= 1;
-SBG::U::Log::init(undef, loglevel=>'DEBUG') if $DEBUG;
-$SIG{__DIE__} = \&confess if $DEBUG;
+use SBG::Debug;
 
 # Similar to example in STAMP.t but use at least two chained superpositions
 # Do not simply multiply transform twice, rather: chain them
@@ -74,7 +69,7 @@ ok($assembler->test($complex, $net, 'c3', 'c4', $interactions->[2]),'Add interac
 ok($assembler->test($complex, $net, 'c4', 'c5', $interactions->[3]),'Add interaction');
 ok($assembler->test($complex, $net, 'c5', 'c6', $interactions->[4]),'Add interaction');
 
-rasmol($complex->domains) if $DEBUG;
+rasmol($complex->domains) if SBG::Debug->debug;
 
 my $solutionfile = 
     $assembler->solution($complex, $net, [$net->nodes], $interactions, 0);

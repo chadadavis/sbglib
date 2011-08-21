@@ -11,12 +11,7 @@ use FindBin qw/$Bin/;
 use lib "$Bin/../../../lib/";
 use Test::Approx;
 use SBG::U::Test qw/pdl_approx/;
-use SBG::U::Log;
-
-my $DEBUG = $ENV{'SBGDEBUG'};
-$DEBUG = $DB::sub if defined $DB::sub;
-SBG::U::Log::init( undef, loglevel => 'DEBUG' ) if $DEBUG;
-
+use SBG::Debug qw(debug);
 use SBG::Run::cofm qw/cofm/;
 use SBG::Domain;
 
@@ -29,7 +24,7 @@ my $prec = '2%';
 
 sub _test {
     my ($input, $radius, @coords) = @_;
-    my $sphere = cofm($input, cache=>$DEBUG);
+    my $sphere = cofm($input, cache=>debug());
     my $exp_center = pdl(@coords, 1.0);
     my $exp_r = $radius;
     pdl_approx($sphere->centroid, $exp_center, "center $exp_center", $prec);

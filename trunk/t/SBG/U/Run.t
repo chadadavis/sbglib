@@ -10,11 +10,9 @@ use lib "$Bin/../../../lib/";
 use Test::Approx;
 use SBG::U::Log qw/log/;
 
-my $DEBUG;
-$DEBUG = 1;
-SBG::U::Log::init(undef, loglevel=>'DEBUG') if $DEBUG;
+use SBG::Debug;
 
-use SBG::U::Run qw/start_lock end_lock start_log frac_of getoptions/;
+use SBG::U::Run qw/start_lock end_lock frac_of getoptions/;
 use File::Slurp qw/slurp/;
 
 my $lock = start_lock('lockname');

@@ -1,16 +1,10 @@
 #!/usr/bin/env perl
-
 package Test::Bio::Tools::Run::QCons;
-
-# Inheritance
 use base qw/Test::SBG/;
-# Just 'use' it to import all the testing functions and symbols 
-use Test::SBG; 
+use Test::SBG::Tools;
 
 use Moose::Autobox;
 use autobox::List::Util; 
-
-use Bio::Tools::Run::QCons;
 use File::Which;
 
 # startup failing will skip other tests

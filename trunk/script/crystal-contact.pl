@@ -58,7 +58,6 @@ use FindBin qw/$Bin/;
 use lib "$Bin/../lib/";
 
 use SBG::U::Run qw/getoptions/;
-use SBG::U::Log;
 use SBG::U::DB qw/connect/;
 use SBG::U::List qw/pairs2/;
 
@@ -70,7 +69,8 @@ my ($pdbid, $chain1, $chain2) = @ARGV;
 unless (defined $chain2) { pod2usage(-exitval=>1, -verbose=>2); }
 
 # Setup new log file specific to given input file
-SBG::U::Log::init($pdbid, %ops);
+use Log::Any::Adapter;
+Log::Any::Adapter->set('+SBG::U::Log', file=>$pdbid . '.log');
 
 
 my @chains1 = split ' ', $chain1;

@@ -23,13 +23,7 @@ use SBG::DomainIO::stamp;
 
 use SBG::Run::cofm qw/cofm/;
 use SBG::Run::rasmol;
-use SBG::U::Log qw/log/;
-
-my $DEBUG = $ENV{'SBGDEBUG'};
-$DEBUG = $DB::sub if defined $DB::sub;
-SBG::U::Log::init(undef, loglevel=>'DEBUG') if $DEBUG;
-$File::Temp::KEEP_ALL = $DEBUG;
-
+use SBG::Debug qw(debug);
 
 # Tolerate rounding differences between stamp (using clib) and PDL
 my $toler = 0.5;
@@ -91,7 +85,7 @@ my $supcccd = superposition($cc, $cd);
 $supcacc->apply($ca);
 $supcccd->apply($ca);
 # How to verify non-visually?
-rasmol [$ca, $cd] if $DEBUG;
+rasmol [$ca, $cd] if debug();
 
 
 # Now change up the order
@@ -106,7 +100,7 @@ $supcacc->apply($ca);
 $supcccd = superposition($ca, $cd);
 $supcccd->apply($ca);
 # How to verify non-visually?
-rasmol [$ca, $cd] if $DEBUG;
+rasmol [$ca, $cd] if debug();
 
 
 # Finally, do it on both sides, parallel superpositions
@@ -127,7 +121,7 @@ my $supcacb = superposition($ca, $cb);
 $supcacb->apply($ca);
 
 # How to verify non-visually?
-rasmol [$ca, $cd] if $DEBUG;
+rasmol [$ca, $cd] if debug();
 
 
 # Test sub-segments of chains
@@ -185,7 +179,7 @@ $double->apply($d2br2a2);
 
 # Collect all 6 domains, 2 native, 2 transformed once, 2 transformed twice
 my @doms = ($d2br2d0,$d2br2a0,$d2br2d1,$d2br2a1,$d2br2d2,$d2br2a2);
-rasmol \@doms if $DEBUG;
+rasmol \@doms if debug();
 
 
 

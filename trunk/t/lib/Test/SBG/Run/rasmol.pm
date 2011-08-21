@@ -1,14 +1,7 @@
 #!/usr/bin/env perl
-
 package Test::SBG::Run::rasmol;
-
-# Inheritance
 use base qw/Test::SBG/;
-# Just 'use' it to import all the testing functions and symbols
-use Test::SBG;
-
-# Testing:
-use SBG::Run::rasmol;
+use Test::SBG::Tools;
 
 
 sub setup : Test(setup) {
@@ -30,7 +23,6 @@ sub pdb2img : Test {
     my ( undef, $img ) = 
         File::Temp::tempfile( 'sbg_XXXXX', TMPDIR => 1, SUFFIX => '.ppm' );
     SBG::Run::rasmol::pdb2img( pdb => $file, script => $optstr, img => $img );
-    
     
     ok( $img && -s $img, "pdb2img() $file => $img" );
     

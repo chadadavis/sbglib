@@ -9,9 +9,7 @@ use FindBin qw/$Bin/;
 use lib "$Bin/../../../lib/";
 use SBG::ComplexIO::stamp;
 
-my $DEBUG;
-$DEBUG = $DB::sub;
-$File::Temp::KEEP_ALL = $DEBUG;
+use SBG::Debug;
 
 my $file = "$Bin/../data/2nn6.dom";
 
@@ -24,7 +22,7 @@ is($complex->count, 9, "Complex has 9 domains");
 my $out = SBG::ComplexIO::stamp->new(tempfile=>1);
 $out->write($complex);
 
-note $out->file if $DEBUG;
+note $out->file if SBG::Debug->debug;
 
 # Need to flush to re-read it
 $out->flush;
