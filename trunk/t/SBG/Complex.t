@@ -241,7 +241,6 @@ ok($cycle_score > 8,
 # TODO DES assuming Domain::Sphere implementation
 
 use SBG::DomainIO::cofm;
-use SBG::DomainIO::pdbcofm;
 my $iocofm;
 my $file;
 my ($rmsd, $transmat);
