@@ -38,20 +38,17 @@ package Test::SBG;
 use strict;
 use warnings;
 use base qw/Test::Class/;
-
 use Test::More;
 use Path::Class;
 use Log::Any::Adapter;
-
 use SBG::Debug; 
-
 
 INIT { 
 
     # Enable logging to t/tests.log 
     my $logfile = file(__FILE__)->dir->parent->parent->file('tests.log');
     Log::Any::Adapter->set('+SBG::U::Log',file=>"$logfile");
-    
+
     Test::Class->runtests;
 }
 

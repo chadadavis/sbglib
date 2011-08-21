@@ -110,6 +110,7 @@ use warnings;
 use Log::Log4perl qw(:levels);
 use Log::Any qw/$log/;
 use Log::Any::Adapter;
+use Path::Class;
 
 
 sub new {
@@ -120,6 +121,7 @@ sub new {
     $file ||= '-'; 
     $level ||= 'WARN';
     $level = uc $level;
+
     my $h = `hostname --short`;
     chomp $h;
     $h = sprintf "%-15s", $h;
