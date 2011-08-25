@@ -18,28 +18,22 @@ L<SBG::DomainI>
 
 =cut
 
-
-
 package SBG::Domain::Atoms;
 use Moose;
 
 # Defines what must be implemented to represent a 3D structure
-with (
-    'SBG::DomainI',
-    );
-
+with('SBG::DomainI',);
 
 use overload (
-    '""' => 'stringify',
-    '==' => 'equal',
+    '""'     => 'stringify',
+    '=='     => 'equal',
     fallback => 1,
-    );
+);
 
 use Carp;
 
 use SBG::DomainIO::pdb;
 use SBG::U::RMSD;
-
 
 =head2 atom_type
 
@@ -51,24 +45,22 @@ explicit trailing space). Likewise, 'C' will match 'CA', 'CB', 'CG', 'CG1',
 'CG2', etc
 
 =cut
-has 'atom_type' => (
-    is => 'rw',
-    default =>  ' CA ',
-    );
 
+has 'atom_type' => (
+    is      => 'rw',
+    default => ' CA ',
+);
 
 # Coords of center of mass
 has '_centroid' => (
-    is => 'rw',
+    is  => 'rw',
     isa => 'PDL',
-    );
-
+);
 
 has 'residues' => (
-    is => 'ro',
+    is  => 'ro',
     isa => 'Maybe[ArrayRef[Int]]',
-    );
-
+);
 
 =head2 BUILD
 
@@ -85,16 +77,24 @@ segment).
 Note any transformation present in the Domain will be applied before the writing. Therefore the coordinates will be already transformed when read back in.
 
 =cut
+
 sub BUILD {
     my ($self) = @_;
     my $out = SBG::DomainIO::pdb->new(
-        tempfile=>1,suffix=>'.pdb',pattern=>$self . 'X'x5);
+        tempfile => 1,
+        suffix   => '.pdb',
+        pattern  => $self . 'X' x 5
+    );
     $out->write($self);
     $out->close;
+
     # Open the file for reading now
     my $in = SBG::DomainIO::pdb->new(
-        file=>$out->file,atom_type=>$self->atom_type,residues=>$self->residues);
-        
+        file      => $out->file,
+        atom_type => $self->atom_type,
+        residues  => $self->residues
+    );
+
     # Get the coords directly from the IO obj.
     my $coords = $in->coords;
     $self->coords($coords);
@@ -106,9 +106,6 @@ sub BUILD {
     return $self;
 }
 
-
-
-
 =head2 centroid
 
  Function: 
@@ -118,13 +115,12 @@ sub BUILD {
 
 
 =cut
+
 sub centroid {
     my ($self,) = @_;
     return $self->_centroid;
 
-} # centroid
-
-
+}    # centroid
 
 =head2 overlap
 
@@ -135,12 +131,11 @@ sub centroid {
 
 
 =cut
+
 sub overlap {
     carp "overlap() not implemented in " . __PACKAGE__;
     return;
 }
-
-
 
 __PACKAGE__->meta->make_immutable;
 no Moose;

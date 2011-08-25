@@ -72,11 +72,12 @@ use SBG::TransformIO::smtry;
 
 use SBG::U::RMSD;
 use SBG::Run::pdbseq;
+
 # Parse PDB info out of text header
 use SBG::Run::pdbc qw/pdbc/;
+
 # Explicit PDB metadata from RCSB
 use Bio::DB::RCSB;
-
 
 # Some regexs for parsing PDB IDs and descriptors
 use SBG::Types qw/$re_chain $re_chain_id $re_seg $re_chain_seg/;
@@ -89,12 +90,12 @@ Will be coerced to lowercase.
 =cut
 
 has 'pdbid' => (
-	is       => 'rw',
-	isa      => 'Maybe[SBG.PDBID]',
-	required => 0,
+    is       => 'rw',
+    isa      => 'Maybe[SBG.PDBID]',
+    required => 0,
 
-	# Coerce to lowercase (not necessary, accept both)
-	#	coerce => 1,
+    # Coerce to lowercase (not necessary, accept both)
+    #	coerce => 1,
 );
 
 =head2 descriptor
@@ -115,42 +116,38 @@ See L<SBG::Types>
 =cut
 
 has 'descriptor' => (
-	is      => 'rw',
-	isa     => 'SBG.Descriptor',
-	default => 'ALL',
+    is      => 'rw',
+    isa     => 'SBG.Descriptor',
+    default => 'ALL',
 
-	# Coerce from 'Str', defined in SBG::Types
-	coerce => 1,
+    # Coerce from 'Str', defined in SBG::Types
+    coerce => 1,
 );
 
-
-
 has 'organism' => (
-    is => 'rw',
-    isa => 'Maybe[Str]',
+    is         => 'rw',
+    isa        => 'Maybe[Str]',
     lazy_build => 1,
 );
 
 sub _build_organism {
-	my $self = shift;
-	my $rcsb = Bio::DB::RCSB->new;
-    return $rcsb->organism(structureId=>$self->pdbid);
+    my $self = shift;
+    my $rcsb = Bio::DB::RCSB->new;
+    return $rcsb->organism(structureId => $self->pdbid);
 }
 
-
 has '_pdbc' => (
-    is => 'rw',
-    isa => 'Maybe[HashRef]',
+    is         => 'rw',
+    isa        => 'Maybe[HashRef]',
     lazy_build => 1,
 );
 
 sub _build__pdbc {
-	my ($self) = @_;
+    my ($self) = @_;
     my $id = $self->pdbid or return;
     my $pdbc = pdbc($id);
-	return $pdbc;
+    return $pdbc;
 }
-
 
 =head2 description
 
@@ -166,19 +163,19 @@ TODO REFACTOR: use Bio::DB::RCSB here, not SBG::Run::pdbc
 =cut
 
 has 'description' => (
-	is         => 'rw',
-	isa        => 'Maybe[Str]',
-	lazy_build => 1,
+    is         => 'rw',
+    isa        => 'Maybe[Str]',
+    lazy_build => 1,
 );
 
 sub _build_description {
-	my ($self) = @_;
-	my $chain = $self->onechain;
-	my $pdbc = $self->_pdbc;
-	# Return first line of file, if chain has no description
-	return $chain ? $pdbc->{chain}{$chain} : $pdbc->{header};
-}
+    my ($self) = @_;
+    my $chain  = $self->onechain;
+    my $pdbc   = $self->_pdbc;
 
+    # Return first line of file, if chain has no description
+    return $chain ? $pdbc->{chain}{$chain} : $pdbc->{header};
+}
 
 =head2 assembly
 
@@ -194,8 +191,8 @@ Which PDB biounit assembly this domain is contained in
 =cut
 
 has 'assembly' => (
-	is  => 'rw',
-	isa => 'Maybe[Int]',
+    is  => 'rw',
+    isa => 'Maybe[Int]',
 );
 
 =head2 model
@@ -215,10 +212,9 @@ NB Has nothing to do with SBG::Model
 =cut
 
 has 'model' => (
-	is  => 'rw',
-	isa => 'Maybe[Int]',
+    is  => 'rw',
+    isa => 'Maybe[Int]',
 );
-
 
 =head2 classification
 
@@ -227,12 +223,12 @@ instances that should be considered equivalent. It might be a SCOP
 classification or a custom cluster ID, for some clustering method.
 
 =cut
+
 has 'classification' => (
-    is => 'rw',
+    is  => 'rw',
     isa => 'Maybe[Str]',
 );
 
-    
 =head2 entity
 
  Function: 
@@ -247,8 +243,8 @@ TODO should be a subclass
 =cut
 
 has 'entity' => (
-	is  => 'rw',
-	isa => 'Str',
+    is  => 'rw',
+    isa => 'Str',
 );
 
 =head2 file
@@ -266,69 +262,69 @@ NB In filenames, the PDB ID is expected to always be lowercase
 =cut
 
 has 'file' => (
-	is         => 'rw',
-	isa        => 'Maybe[SBG.File]',
-	clearer    => 'clear_file',
-	lazy_build => 1,
+    is         => 'rw',
+    isa        => 'Maybe[SBG.File]',
+    clearer    => 'clear_file',
+    lazy_build => 1,
 );
 
 sub _build_file {
-	my ($self) = @_;
+    my ($self) = @_;
 
-	# The PDB ID in filename is expected to be lowercase
+    # The PDB ID in filename is expected to be lowercase
     return unless $self->pdbid;
-	my $pdbid = lc $self->pdbid;
-	my $str = $pdbid;
+    my $pdbid = lc $self->pdbid;
+    my $str   = $pdbid;
 
-	# Append e.g. '-2' for 2nd assembly
-	$str .= '-' . $self->assembly if $self->assembly;
+    # Append e.g. '-2' for 2nd assembly
+    $str .= '-' . $self->assembly if $self->assembly;
 
-	# Append model number in the biounit assembly
-	$str .= '-' . $self->model if $self->model;
+    # Append model number in the biounit assembly
+    $str .= '-' . $self->model if $self->model;
 
-	# If PDB files are stored hierarchically e.g. pdb/xy/1xyz.pdb
-	my $subdir = substr( $pdbid, 1, 2 );
-	my $paths = $self->_path_specs or return;
-	foreach my $path (@$paths) {
-		my ( $base, $prefix, $suffix ) = @$path;
+    # If PDB files are stored hierarchically e.g. pdb/xy/1xyz.pdb
+    my $subdir = substr($pdbid, 1, 2);
+    my $paths = $self->_path_specs or return;
+    foreach my $path (@$paths) {
+        my ($base, $prefix, $suffix) = @$path;
 
-		# An underscore means no prefix / suffix
-		$prefix =~ s/_//;
-		$suffix =~ s/_//;
-		my $filename = $prefix . $str . $suffix;
-		my $filepath;
+        # An underscore means no prefix / suffix
+        $prefix =~ s/_//;
+        $suffix =~ s/_//;
+        my $filename = $prefix . $str . $suffix;
+        my $filepath;
 
         # Try hierarchical directories (first, because faster to index)
         $filepath = $base . '/' . $subdir . '/' . $filename;
         return $filepath if -f $filepath;
 
-		# Try flat directory structure
-		$filepath = $base . '/' . $filename;
-		return $filepath if -f $filepath;
+        # Try flat directory structure
+        $filepath = $base . '/' . $filename;
+        return $filepath if -f $filepath;
 
-	}
-	return;
+    }
+    return;
 }
 
 has '_path_specs' => (
-	is         => 'rw',
-	isa        => 'Maybe[ArrayRef]',
-	lazy_build => 1,
+    is         => 'rw',
+    isa        => 'Maybe[ArrayRef]',
+    lazy_build => 1,
 );
 
 sub _build__path_specs {
-	our @paths;
-	return \@paths if @paths;
-	return unless $ENV{STAMPDIR};
-	my $pdb_directories = $ENV{STAMPDIR} . '/pdb.directories';
-	my $fh;
-	open $fh, $pdb_directories;
-	while (<$fh>) {
-		my @values = split ' ';
-		push @paths, [@values];
-	}
-	close $fh;
-	return \@paths;
+    our @paths;
+    return \@paths if @paths;
+    return unless $ENV{STAMPDIR};
+    my $pdb_directories = $ENV{STAMPDIR} . '/pdb.directories';
+    my $fh;
+    open $fh, $pdb_directories;
+    while (<$fh>) {
+        my @values = split ' ';
+        push @paths, [@values];
+    }
+    close $fh;
+    return \@paths;
 }
 
 =head2 length
@@ -347,16 +343,16 @@ ending residue ID as PDB entry may skip residues.
 =cut
 
 has 'length' => (
-	is         => 'rw',
-	isa        => 'Int',
-	lazy_build => 1,
+    is         => 'rw',
+    isa        => 'Int',
+    lazy_build => 1,
 );
 
 sub _build_length {
-	my ($self) = @_;
+    my ($self) = @_;
 
-	# TODO DES use SBG::Domain::Atoms and then count the dims of ->coords
-	return 0;
+    # TODO DES use SBG::Domain::Atoms and then count the dims of ->coords
+    return 0;
 }
 
 =head2 transformation
@@ -370,10 +366,10 @@ This defines where the domain is in space at any point in time.
 =cut
 
 has 'transformation' => (
-	is       => 'rw',
-	does     => 'SBG::TransformI',
-	required => 1,
-	default  => sub { SBG::Transform::Affine->new },
+    is       => 'rw',
+    does     => 'SBG::TransformI',
+    required => 1,
+    default  => sub { SBG::Transform::Affine->new },
 );
 
 =head2 coords
@@ -395,15 +391,15 @@ TODO This implementation should not be in the interface
 =cut
 
 has 'coords' => (
-	is         => 'rw',
-	isa        => 'PDL',
-	lazy_build => 1,
+    is         => 'rw',
+    isa        => 'PDL',
+    lazy_build => 1,
 );
 
 # Default: a single point at 0,0,0
 # Final 1 is to create homogenous coordinate in 4D for affine transformation
 sub _build_coords {
-	return pdl [ [ 0, 0, 0, 1 ] ];
+    return pdl [ [ 0, 0, 0, 1 ] ];
 }
 
 =head2 symmops
@@ -413,20 +409,20 @@ Symmetry operator matrices, defined in PDB file
 =cut
 
 has 'symops' => (
-	is         => 'rw',
-	isa        => 'ArrayRef[SBG::Transform::Affine]',
-	lazy_build => 1,
+    is         => 'rw',
+    isa        => 'ArrayRef[SBG::Transform::Affine]',
+    lazy_build => 1,
 );
 
 sub _build_symops {
-	my ($self) = @_;
-	my $file = $self->file;
-	my $io = SBG::TransformIO::smtry->new( file => $self->file );
-	my $transformations = [];
-	while ( my $trans = $io->read ) {
-		$transformations->push($trans);
-	}
-	return $transformations;
+    my ($self) = @_;
+    my $file = $self->file;
+    my $io = SBG::TransformIO::smtry->new(file => $self->file);
+    my $transformations = [];
+    while (my $trans = $io->read) {
+        $transformations->push($trans);
+    }
+    return $transformations;
 
 }
 
@@ -457,7 +453,7 @@ requires 'overlap';
 # Implicitly thread-safe: cloning (i.e. threading) is disallowed.
 # This prevents double free bugs. Spawned thread only has undef references then.
 # See man perlmod
-sub CLONE_SKIP { 1 }
+sub CLONE_SKIP {1}
 
 =head2 rmsd
 
@@ -471,8 +467,8 @@ RMSD between the points of B<$self>'s representation and B<$other>
 =cut
 
 sub rmsd {
-	my ( $self, $other ) = @_;
-	return SBG::U::RMSD::rmsd( $self->coords, $other->coords );
+    my ($self, $other) = @_;
+    return SBG::U::RMSD::rmsd($self->coords, $other->coords);
 }
 
 =head2 transform
@@ -488,18 +484,18 @@ coordinates).
 =cut
 
 sub transform {
-	my ( $self, $matrix ) = @_;
-	return $self unless defined($matrix);
+    my ($self, $matrix) = @_;
+    return $self unless defined($matrix);
 
-	# Transform coords
-	my $coords = $self->coords;
-	$coords .= transpose( $matrix x transpose($coords) );
+    # Transform coords
+    my $coords = $self->coords;
+    $coords .= transpose($matrix x transpose($coords));
 
-	# Update the cumulative transformation
-	# I.e. transform the current transformation by the given matrix
-	$self->transformation->transform($matrix);
+    # Update the cumulative transformation
+    # I.e. transform the current transformation by the given matrix
+    $self->transformation->transform($matrix);
 
-	return $self;
+    return $self;
 
 }    # transform
 
@@ -516,9 +512,9 @@ See als L<onechain>
 =cut
 
 sub wholechain {
-	my ($self) = @_;
-	my ($chain) = $self->descriptor =~ /^\s*CHAIN\s+(.)\s*$/i;
-	return $chain;
+    my ($self) = @_;
+    my ($chain) = $self->descriptor =~ /^\s*CHAIN\s+(.)\s*$/i;
+    return $chain;
 }
 
 =head2 onechain
@@ -534,18 +530,18 @@ See als L<wholechain>
 =cut
 
 sub onechain {
-	my ($self) = @_;
+    my ($self) = @_;
 
-	my @chains = $self->descriptor =~ /($re_chain)/ig;
-	my @doms   = $self->descriptor =~ /($re_seg)/ig;
-	my @all = ( @doms, @chains );
-	return unless @all == 1;
-	my $thing = $all[0];
+    my @chains = $self->descriptor =~ /($re_chain)/ig;
+    my @doms   = $self->descriptor =~ /($re_seg)/ig;
+    my @all = (@doms, @chains);
+    return unless @all == 1;
+    my $thing = $all[0];
 
-	# Delete the 'CHAIN ' and any spaces. Then the first char is the chain
-	$thing =~ s/CHAIN\s+//g;
-	$thing =~ s/\s//g;
-	return substr( $thing, 0, 1 );
+    # Delete the 'CHAIN ' and any spaces. Then the first char is the chain
+    $thing =~ s/CHAIN\s+//g;
+    $thing =~ s/\s//g;
+    return substr($thing, 0, 1);
 
 }
 
@@ -568,21 +564,21 @@ See also L<uniqueid>
 =cut
 
 sub id {
-	my ($self) = @_;
-	my $str;
-	if ( $self->pdbid ) {
-		$str = $self->pdbid;
-		$str .= '-' . $self->assembly . '-' if $self->assembly;
-		$str .= $self->model . '-' if $self->model;
-	}
-	elsif ( $self->file ) {
+    my ($self) = @_;
+    my $str;
+    if ($self->pdbid) {
+        $str = $self->pdbid;
+        $str .= '-' . $self->assembly . '-' if $self->assembly;
+        $str .= $self->model . '-' if $self->model;
+    }
+    elsif ($self->file) {
 
-		# Or use the filename, if this is not a PDB entry
-		$str = basename( $self->file, qw/.gz .Z .zip/ );
-		$str = basename($str, qw/.pdb .ent .mmol .brk .cofm/);
-	}
-	$str .= $self->_descriptor_short if $self->_descriptor_short;
-	return $str;
+        # Or use the filename, if this is not a PDB entry
+        $str = basename($self->file, qw/.gz .Z .zip/);
+        $str = basename($str,        qw/.pdb .ent .mmol .brk .cofm/);
+    }
+    $str .= $self->_descriptor_short if $self->_descriptor_short;
+    return $str;
 }
 
 =head2 uniqueid
@@ -599,25 +595,24 @@ different for two copies of the same transform.
 =cut
 
 sub uniqueid {
-	my ($self) = @_;
-	my $str = $self->id();
+    my ($self) = @_;
+    my $str = $self->id();
 
-	# Get the memory address of some relevant attribute object,
-	my $rep = $self;
-	$str .= $rep ? sprintf( "-0x%x", refaddr($rep) ) : '';
-	return $str;
+    # Get the memory address of some relevant attribute object,
+    my $rep = $self;
+    $str .= $rep ? sprintf("-0x%x", refaddr($rep)) : '';
+    return $str;
 }
-
 
 =head2 label
 
 A user-defined label, which might not be defined, and might not be unique
 =cut
+
 has 'label' => (
-    is => 'rw',
+    is  => 'rw',
     isa => 'Maybe[Str]',
 );
-
 
 =head2 stringify
 
@@ -629,8 +624,8 @@ has 'label' => (
 =cut
 
 sub stringify {
-	my ($self) = @_;
-	return $self->id;
+    my ($self) = @_;
+    return $self->id;
 }
 
 =head2 equal
@@ -648,31 +643,31 @@ implementation, and not what is being represented.
 =cut
 
 sub equal {
-	my ( $self, $other ) = @_;
+    my ($self, $other) = @_;
 
-	return 0 unless defined $other;
+    return 0 unless defined $other;
 
-	# Equal if pointing to same underlying object
-	return 1 if refaddr($self) == refaddr($other);
+    # Equal if pointing to same underlying object
+    return 1 if refaddr($self) == refaddr($other);
 
-	# Fields, from most general to more specific
-	my @fields = qw/pdbid assembly model descriptor file/;
-	foreach (@fields) {
+    # Fields, from most general to more specific
+    my @fields = qw/pdbid assembly model descriptor file/;
+    foreach (@fields) {
 
-		# If both undefined, then they are not necessarily unequal
-		next if !defined( $self->$_ ) && !defined( $other->$_ );
+        # If both undefined, then they are not necessarily unequal
+        next if !defined($self->$_) && !defined($other->$_);
 
-		# If one is defined but the other undefined, they are unequal
-		return 0 if defined( $self->$_ ) ^ defined( $other->$_ );
+        # If one is defined but the other undefined, they are unequal
+        return 0 if defined($self->$_) ^ defined($other->$_);
 
-		# Here both are defined, are they equal
-		return 0 if $self->$_ ne $other->$_;
-	}
+        # Here both are defined, are they equal
+        return 0 if $self->$_ ne $other->$_;
+    }
 
-	# Assume equal if metadata is same and transformations are same
-	my $transeq = $self->transformation == $other->transformation;
+    # Assume equal if metadata is same and transformations are same
+    my $transeq = $self->transformation == $other->transformation;
 
-	return $transeq;
+    return $transeq;
 
 }    # equal
 
@@ -691,12 +686,12 @@ Converts: first line to second:
 =cut
 
 sub _descriptor_short {
-	my ($self) = @_;
-	my $descriptor = $self->descriptor;
-	$descriptor =~ s/CHAIN//g;
-	$descriptor =~ s/to//gi;
-	$descriptor =~ s/\s+//g;
-	return $descriptor;
+    my ($self) = @_;
+    my $descriptor = $self->descriptor;
+    $descriptor =~ s/CHAIN//g;
+    $descriptor =~ s/to//gi;
+    $descriptor =~ s/\s+//g;
+    return $descriptor;
 }
 
 =head2 seq
@@ -710,9 +705,9 @@ sub _descriptor_short {
 =cut
 
 sub seq {
-	my ( $self, ) = @_;
-	my $seq = SBG::Run::pdbseq::pdbseq($self);
-	return $seq;
+    my ($self,) = @_;
+    my $seq = SBG::Run::pdbseq::pdbseq($self);
+    return $seq;
 
 }    # seq
 

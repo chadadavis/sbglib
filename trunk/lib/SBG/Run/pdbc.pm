@@ -26,6 +26,8 @@ L<SBG::DomainI>
 =cut
 
 package SBG::Run::pdbc;
+use strict;
+use warnings;
 use base qw/Exporter/;
 our @EXPORT_OK = qw/pdbc/;
 
@@ -75,7 +77,9 @@ sub pdbc {
 
 sub _run {
     my ($pdb,) = @_;
-    open my $pdbcfh, "pdbc -d ${pdb}|";
+    open my $pdbcfh, '-|', "pdbc -d ${pdb}";
+
+    #    open my $pdbcfh, "pdbc -d ${pdb} |";
 
     # Process header first
     my $header = _header($pdbcfh, $pdb);

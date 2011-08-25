@@ -39,8 +39,6 @@ L<Getopt:Complete>
 
 =cut
 
-
-
 package SBG::U::Complete;
 
 use base qw/Exporter/;
@@ -50,19 +48,19 @@ use SBG::U::Object qw/methods load_object/;
 
 sub complete_methods {
     my ($cmd, $current, $opt, $ops) = @_;
-    my @objects = @{$ops->{'<>'}};
-    my $last = $objects[-1];
+    my @objects = @{ $ops->{'<>'} };
+    my $last    = $objects[-1];
     return [] unless defined $last;
+
     # Actual program is being run, not tab completion
-    return \@objects if $opt =~ /<>/; 
+    return \@objects if $opt =~ /<>/;
+
     # Get methods;
-    my $obj = SBG::U::Object::load_object($last);
+    my $obj     = SBG::U::Object::load_object($last);
     my @methods = SBG::U::Object::methods($obj);
     return \@methods;
 
-} # 
-
-
+}    #
 
 1;
 

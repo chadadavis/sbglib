@@ -11,11 +11,10 @@ use SBG::Debug;
 
 use SBG::U::DB;
 my $dbh = SBG::U::DB::connect();
-unless($dbh) {
+unless ($dbh) {
     ok warn "skip : no database\n";
     exit;
 }
-
 
 use SBG::DB::entity;
 
@@ -25,11 +24,19 @@ my $chain = 'A';
 # query()
 my @hits;
 
-@hits = SBG::DB::entity::query($pdbid, $chain, pdbseq=>[1, 300], overlap=>0);
+@hits = SBG::DB::entity::query(
+    $pdbid, $chain,
+    pdbseq  => [ 1, 300 ],
+    overlap => 0
+);
 is(scalar(@hits), 3, "query(overlap=>0.0)");
 
 # With a overlap min thresh of 50% of each sequence
-@hits = SBG::DB::entity::query($pdbid, $chain, pdbseq=>[1, 300], overlap=>0.5);
+@hits = SBG::DB::entity::query(
+    $pdbid, $chain,
+    pdbseq  => [ 1, 300 ],
+    overlap => 0.5
+);
 is(scalar(@hits), 1, "query(overlap=>0.5)");
 
 my $dom = SBG::DB::entity::id2dom(2579998);

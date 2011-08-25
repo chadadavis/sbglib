@@ -23,18 +23,13 @@ L<SBG::DomainI>, L<Moose::Role>
 
 =cut
 
-
-
 package SBG::DomainSetI;
 use Moose::Role;
-
 
 with 'SBG::Role::Clonable';
 with 'SBG::Role::Dumpable';
 with 'SBG::Role::Storable';
 with 'SBG::Role::Transformable';
-
-
 
 =head2 domains
 
@@ -45,11 +40,8 @@ with 'SBG::Role::Transformable';
 
 
 =cut
+
 requires 'domains';
-
-
-
-
 
 no Moose::Role;
 1;

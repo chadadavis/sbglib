@@ -16,8 +16,6 @@ L<SBG::SearchI> , L<SBG::Network> , L<SBG::Interaction>
 
 =cut
 
-
-
 package SBG::Search::Bench;
 use Moose;
 
@@ -26,7 +24,7 @@ our @EXPORT_OK = qw/components pdbids search/;
 
 with 'SBG::SearchI';
 
-use Text::ParseWords; # qw/parse_line/;
+use Text::ParseWords;    # qw/parse_line/;
 use File::Basename;
 use Log::Any qw/$log/;
 
@@ -37,9 +35,7 @@ use SBG::Interaction;
 use SBG::DB::scop qw/scopdomain/;
 use SBG::U::List qw/uniq/;
 
-
 our $templatedb = dirname(__FILE__) . "/Bench.csv.gz";
-
 
 =head2 components
 
@@ -51,21 +47,22 @@ our $templatedb = dirname(__FILE__) . "/Bench.csv.gz";
 See L<SBG::DB::scop> to create L<SBG::Domain> objects from these identifiers
 
 =cut
+
 sub components {
     my ($pdbid) = @_;
     $pdbid = lc $pdbid;
+
     # Grep the lines from database
-    my $cmd = "zcat $templatedb | egrep \'^ -- Can model $pdbid (([^[:space:]]+)) (([^[:space:]]+))\'";
+    my $cmd =
+        "zcat $templatedb | egrep \'^ -- Can model $pdbid (([^[:space:]]+)) (([^[:space:]]+))\'";
     open my $fh, "$cmd|";
     my @components;
     while (my $line = <$fh>) {
         my @fields = split ' ', $line;
-        push @components, @fields[4,5];
+        push @components, @fields[ 4, 5 ];
     }
     return uniq @components;
 }
-
-
 
 =head2 pdbids
 
@@ -76,9 +73,12 @@ sub components {
 
 
 =cut
+
 sub pdbids {
+
     # Grep the lines from database
-    my $cmd = "zcat $templatedb | egrep -o \'^ -- Can model (....)\' | sort | uniq";
+    my $cmd =
+        "zcat $templatedb | egrep -o \'^ -- Can model (....)\' | sort | uniq";
     open my $fh, "$cmd|";
     my @ids;
     while (my $line = <$fh>) {
@@ -87,8 +87,6 @@ sub pdbids {
     }
     return uniq @ids;
 }
-
-
 
 =head2 search
 
@@ -121,9 +119,10 @@ Greps the benchmark text file from Rob for templates.
 # 
 
 =cut
+
 sub search {
     my ($self, $seq1, $seq2) = @_;
-    my ($accno1, $accno2) = map {$_->display_id} ($seq1, $seq2);
+    my ($accno1, $accno2) = map { $_->display_id } ($seq1, $seq2);
     return unless $accno1 && $accno2;
 
     # Expliciting grepping the $pdb should make this a little faster
@@ -132,8 +131,9 @@ sub search {
     open my $fh, "zcat $templatedb|";
     while (my $line = <$fh>) {
 
-        next unless $line =~ 
-            /^ -- Can model $pdb (($accno1) ($accno2)|($accno2) ($accno1)) on (\S+) (\S+)\s+(.*)/;
+        next
+            unless $line
+                =~ /^ -- Can model $pdb (($accno1) ($accno2)|($accno2) ($accno1)) on (\S+) (\S+)\s+(.*)/;
 
         # Could have matched either way around, split the grouped match
         my ($comp1, $comp2) = split ' ', $1;
@@ -142,34 +142,39 @@ sub search {
         $log->debug("$comp1($templ1)--$comp2($templ2)");
 
         # Parse score line
-        my ($eval1, $sid1, $eval2, $sid2, 
-            $coverage, $coverage_frac, 
-            undef, $irmsd,
-            undef, $ok_n, $ok_tot, $ok_frac,
-            undef, undef, $i2z, undef, $i2p,
-            ) = parse_line('\s+', 0, $scores);
+        my ($eval1,    $sid1,          $eval2,  $sid2,
+            $coverage, $coverage_frac, undef,   $irmsd,
+            undef,     $ok_n,          $ok_tot, $ok_frac,
+            undef,     undef,          $i2z,    undef,
+            $i2p,
+        ) = parse_line('\s+', 0, $scores);
 
         # Now we can create some domain models
-        my $model1 = new SBG::Model(query=>$seq1,subject=>scopdomain($templ1),
-                                    scores=>{'eval'=>$eval1,'seqid'=>$sid1});
-        my $model2 = new SBG::Model(query=>$seq2,subject=>scopdomain($templ2),
-                                    scores=>{'eval'=>$eval2,'seqid'=>$sid2});
+        my $model1 = new SBG::Model(
+            query   => $seq1,
+            subject => scopdomain($templ1),
+            scores  => { 'eval' => $eval1, 'seqid' => $sid1 }
+        );
+        my $model2 = new SBG::Model(
+            query   => $seq2,
+            subject => scopdomain($templ2),
+            scores  => { 'eval' => $eval2, 'seqid' => $sid2 }
+        );
 
         # Save interaction-specific scores in the interaction template
-        my $iaction = new SBG::Interaction(
-            scores=>{irmsd=>$irmsd, zscore=>$i2z, pval=>$i2p}
-            );
+        my $iaction =
+            new SBG::Interaction(
+            scores => { irmsd => $irmsd, zscore => $i2z, pval => $i2p });
+
         # Lookup model based on sequence ID
         $iaction->set($seq1, $model1);
         $iaction->set($seq2, $model2);
 
         push @interactions, $iaction;
 
-    } # while
+    }    # while
     return @interactions;
-} # search
-
-
+}    # search
 
 __PACKAGE__->meta->make_immutable;
 no Moose;

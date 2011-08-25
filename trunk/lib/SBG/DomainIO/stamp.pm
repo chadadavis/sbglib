@@ -48,8 +48,6 @@ L<SBG::Domain> , L<SBG::IOI>
 
 =cut
 
-
-
 package SBG::DomainIO::stamp;
 use Moose;
 
@@ -65,8 +63,6 @@ use SBG::TransformIO::stamp;
 use SBG::Types qw/$re_pdb $re_descriptor/;
 use SBG::U::List qw/flatten/;
 
-
-
 =head2 native
 
  Function: Prevents writing the L<SBG::TransformI> of the domain
@@ -77,12 +73,12 @@ use SBG::U::List qw/flatten/;
 
 
 =cut
-has 'native' => (
-    is => 'ro',
-    isa => 'Bool',
-    default => 0,
-    );
 
+has 'native' => (
+    is      => 'ro',
+    isa     => 'Bool',
+    default => 0,
+);
 
 =head2 objtype
 
@@ -90,6 +86,7 @@ The sub-objtype to use for any dynamically created objects. Should implement
 L<SBG::DomainI> role. Default "L<SBG::Domain>" .
 
 =cut
+
 # has '+objtype' => (
 #     default => 'SBG::Domain',
 #     );
@@ -98,8 +95,6 @@ sub BUILD {
     my ($self) = @_;
     $self->objtype('SBG::Domain') unless $self->objtype;
 }
-    
-
 
 =head2 write
 
@@ -121,6 +116,7 @@ space, STAMP handles this to mean that it should look for the file in it's own
 list of PDB directories.
 
 =cut
+
 sub write {
     my ($self, @doms) = @_;
     return unless @doms;
@@ -128,37 +124,36 @@ sub write {
 
     my $fh = $self->fh or return;
 
-
     foreach my $dom (@doms) {
         $log->debug($dom);
-        my $str = 
-            join(" ",
-                 $dom->file  || '',
-                 $dom->uniqueid || '',
-                 '{',
-                 $dom->descriptor || '',
-            );
+        my $str = join(" ",
+            $dom->file            || '',
+            $dom->uniqueid        || '',
+            '{', $dom->descriptor || '',
+        );
         print $fh $str;
-        
+
         # Append transformation, if any
         my $trans = $dom->transformation;
+
         # Don't print transformations in native mode
-        if ($trans->has_matrix && ! $self->native) {
+        if ($trans->has_matrix && !$self->native) {
             print $fh "\n";
-            my $io = new SBG::TransformIO::stamp(fh=>$fh);
+            my $io = new SBG::TransformIO::stamp(fh => $fh);
             $io->write($trans);
+
             # With a line break before the closing brace here
             print $fh "\}\n";
-        } else {
+        }
+        else {
+
             # With a space before the closing brace here
             print $fh " \}\n";
         }
-    } 
+    }
 
     return $self;
-} # write
-
-
+}    # write
 
 =head2 read
 
@@ -186,12 +181,14 @@ Called in an array context, returns an array of all domains in the file
 NB any assembly or model number cannot be stored in STAMP format
 
 =cut
+
 sub read {
     my ($self) = @_;
     my $fh = $self->fh or return;
     my @doms;
     while (my $line = <$fh>) {
         chomp $line;
+
         # Comments and blank lines
         next if $line =~ /^\s*\%/;
         next if $line =~ /^\s*\#/;
@@ -199,23 +196,24 @@ sub read {
         next if $line =~ /^\s*\}/;
 
         # Create/parse new domain header, May not always have a file name
-        unless ($line =~ 
-                /^(\S*)\s+(\S+)\s*\{\s*($re_descriptor)(\s*\})?\s*$/) {
+        unless ($line =~ /^(\S*)\s+(\S+)\s*\{\s*($re_descriptor)(\s*\})?\s*$/)
+        {
             carp("Cannot parse STAMP domain: $line");
-            
+
             # Want an array of domains, then skip to next one, otherwise abort
             wantarray ? next : last;
         }
 
         my ($file, $label, $descr) = ($1, $2, $3);
         my ($pdbid) = $label =~ /^($re_pdb)/;
+
         # TODO DES any assembly or model info cannot be stored in STAMP format
         # Get only the params that are defined
-        my $params = {descriptor=>$descr};
+        my $params = { descriptor => $descr };
         $params->{pdbid} = $pdbid if $pdbid;
-        $params->{file} = $file if $file;
+        $params->{file}  = $file  if $file;
         $params->{label} = $label;
-        my $exists = $params->keys->grep(sub{defined $params->{$_}});
+        my $exists = $params->keys->grep(sub { defined $params->{$_} });
         $params = $params->hslice($exists);
 
         my $objtype = $self->objtype();
@@ -224,9 +222,10 @@ sub read {
 
         # Parse transformtion, if any
         # Header ends?, i.e. contains no transformation
-        if ($line !~ /\}\s*$/) { 
-            my $transio = new SBG::TransformIO::stamp(fh=>$self->fh);
+        if ($line !~ /\}\s*$/) {
+            my $transio = new SBG::TransformIO::stamp(fh => $self->fh);
             my $transformation = $transio->read;
+
             # Since a transformation was found, apply it
             $dom->transform($transformation->matrix);
         }
@@ -238,9 +237,7 @@ sub read {
     }
     return wantarray ? @doms : shift @doms;
 
-} # read
-
-
+}    # read
 
 __PACKAGE__->meta->make_immutable;
 no Moose;

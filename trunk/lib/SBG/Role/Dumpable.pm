@@ -18,8 +18,6 @@ L<Moose>
 
 =cut
 
-
-
 package SBG::Role::Dumpable;
 use Moose::Role;
 use base qw/Exporter/;
@@ -31,13 +29,11 @@ use Data::Dumper;
 $Data::Dumper::Indent = 1;
 $Data::Dumper::Purity = 1;
 
-# Any contained PDL objects need this to de-serialize, 
+# Any contained PDL objects need this to de-serialize,
 # but probably not via Dumper and Dump, which probably don't even work with PDL
 use PDL::IO::Storable;
 
 use File::Slurp qw/slurp/;
-
-
 
 =head2 dump
 
@@ -49,21 +45,20 @@ use File::Slurp qw/slurp/;
 Intended to be able to use $obj->dump as a method
 
 =cut
-sub dump {
-   my ($self,$fh) = @_;
-   $fh ||= \*STDOUT;
-   print $fh Data::Dump::dump $self;
-   return;
-} # dump
 
+sub dump {
+    my ($self, $fh) = @_;
+    $fh ||= \*STDOUT;
+    print $fh Data::Dump::dump $self;
+    return;
+}    # dump
 
 sub dumper {
-   my ($self,$fh) = @_;
-   $fh ||= \*STDOUT;
-   print $fh Data::Dumper::Dumper $self;
-   return;
-} # dump
-
+    my ($self, $fh) = @_;
+    $fh ||= \*STDOUT;
+    print $fh Data::Dumper::Dumper $self;
+    return;
+}    # dump
 
 sub undump {
     my ($path) = @_;
@@ -74,9 +69,6 @@ sub undump {
     return $obj;
 }
 
-
-
 no Moose::Role;
 1;
-
 

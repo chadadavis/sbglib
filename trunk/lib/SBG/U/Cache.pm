@@ -16,8 +16,6 @@ L<CHI>
 
 =cut
 
-
-
 package SBG::U::Cache;
 use strict;
 use warnings;
@@ -34,9 +32,6 @@ use CHI;
 # Cache cache  ;-)
 our %cache_hash;
 
-
-
-
 =head2 cache
 
  Function: 
@@ -46,6 +41,7 @@ our %cache_hash;
 
 
 =cut
+
 sub cache {
     my ($name) = @_;
     our %cache_hash;
@@ -60,22 +56,21 @@ sub cache {
     unless (defined $cache_hash{$name}) {
         $cache_hash{$name} = CHI->new(
             namespace => "${name}_${arch}",
-            driver=>'File', 
-#             driver=>'Null', 
+            driver    => 'File',
+
+            #             driver=>'Null',
             root_dir   => $base,
             expires_in => '2 weeks',
             cache_size => '500m',
-            l1_cache => { driver=>'Memory', global=>1, cache_size=>'50m' }
-            );
+            l1_cache =>
+                { driver => 'Memory', global => 1, cache_size => '50m' }
+        );
         $log->info("cachedir: $cachedir");
     }
 
     return $cache_hash{$name};
 
 }
-
-
-
 
 =head2 cache_get
 
@@ -87,28 +82,29 @@ sub cache {
 Cache claims to even work between concurrent processes!
 
 =cut
+
 sub cache_get {
-    my ($cachename, $key) = @_;
-    my ($cache,$lock) = cache($cachename);
+    my ($cachename, $key)  = @_;
+    my ($cache,     $lock) = cache($cachename);
 
     if (my $data = $cache->get($key)) {
 
         my $status;
+
         # (NB [] means negative cache)
         if (ref($data) eq 'ARRAY') {
             $status = 'negative';
-        } else {
+        }
+        else {
             $status = 'positive';
         }
         $log->debug("$cachename: $status get:", $key);
         return $data;
-    } 
+    }
     $log->info("$cachename: miss:", $key);
     return;
 
-} # cache_get
-
-
+}    # cache_get
 
 =head2 cache_set
 
@@ -120,29 +116,30 @@ sub cache_get {
 Cache claims to even work between concurrent processes!
 
 =cut
+
 sub cache_set {
     my ($cachename, $key, $data) = @_;
-    my ($cache,$lock) = cache($cachename);
+    my ($cache, $lock) = cache($cachename);
 
     my $status;
+
     # (NB [] means negative cache)
     if (ref($data) eq 'ARRAY') {
         $status = 'negative';
-    } else {
+    }
+    else {
         $status = 'positive';
     }
 
     $log->debug("$cachename: $status set:", $key);
     $log->debug(ref($data), "\n", $data);
-    
+
     $cache->set($key, $data);
 
     # Verification;
     return $cache->is_valid($key);
 
-} # cache_set
-
-
+}    # cache_set
 
 1;
 __END__

@@ -19,8 +19,6 @@ L<SBG::Domain::Sphere> , L<SBG::Run::cofm>
 
 =cut
 
-
-
 package SBG::DB::cofm;
 use base qw/Exporter/;
 our @EXPORT_OK = qw/query/;
@@ -30,11 +28,9 @@ use Log::Any qw/$log/;
 
 use SBG::U::DB qw/chain_case/;
 
-
 # TODO DES OO
 our $database = "trans_3_0";
 our $host;
-
 
 =head2 query
 
@@ -57,13 +53,15 @@ Checks for PDB chain IDs, but not PQS chain IDs.  It is not feasible to naively
 check PQS as the chain ID might differ from the PDB.
 
 =cut
+
 sub query {
     my ($pdbid, $chainid) = @_;
     our $database;
     our $host;
 
-    $chainid = chain_case($chainid); 
+    $chainid = chain_case($chainid);
     my $dbh = SBG::U::DB::connect($database, $host);
+
     # Static handle, prepare it only once
     our $cofm_sth;
 
@@ -84,15 +82,13 @@ chain=?
         return;
     }
 
-    if (! $cofm_sth->execute($pdbid, $chainid)) {
+    if (!$cofm_sth->execute($pdbid, $chainid)) {
         $log->error($cofm_sth->errstr);
         return;
     }
+
     # (Cx, Cy, Cz, Rg, Rmax);
     return $cofm_sth->fetchrow_hashref();
-} # query
-
-
-
+}    # query
 
 1;

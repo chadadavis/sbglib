@@ -27,27 +27,26 @@ use SBG::Run::pdbc qw/pdbc/;
 use base qw(Exporter);
 
 our @EXPORT_OK = qw/
-formattd
-rcsb
-/;
-
-
+    formattd
+    rcsb
+    /;
 
 sub formattd {
     my ($val, $format, $range) = @_;
     $val = sprintf($format, $val) if $format;
     if (ref $range) {
         my $color = mapcolor($val, @$range);
-        return td({-bgcolor=>$color}, $val);
-    } else {
+        return td({ -bgcolor => $color }, $val);
+    }
+    else {
         return td($val);
     }
 }
 
-
 sub rcsb {
     my ($str) = @_;
     my ($pre, $pdb, $chain, $post) = $str =~ /^(.*?)(\d\w{3})(\w?)(.*?)$/;
+
     # If there is a chain, get its chain description, otherwise entry header
     my $pdbc = pdbc($pdb);
     my $title;
@@ -55,13 +54,14 @@ sub rcsb {
     $title ||= $pdbc->{header};
 
     my $base = 'http://www.rcsb.org/pdb/explore.do?structureId=';
-    my $url = $base . $pdb;
-    my $a = a({-title=>$title,-target=>'_blank',-href=>$url}, $pdb.$chain);
+    my $url  = $base . $pdb;
+    my $a    = a({ -title => $title, -target => '_blank', -href => $url },
+        $pdb . $chain);
+
     # Return the prematch, if any, the new link, and the postmatch
-    return $pre . $a . $post; 
+    return $pre . $a . $post;
 
 }
-
 
 sub mapcolor {
     my ($val, $min, $max, $colora, $colorb) = @_;
@@ -72,9 +72,6 @@ sub mapcolor {
     my $hexstr = '#' . ($hex x 3);
     return $hexstr;
 }
-
-
-
 
 1;
 __END__

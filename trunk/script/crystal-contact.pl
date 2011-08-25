@@ -44,13 +44,12 @@ L<SBG::DB::contact> , L<SBG::DB::entity>
 
 =cut
 
-
 use strict;
 use warnings;
 use Carp;
 use Pod::Usage;
 use Log::Any qw/$log/;
-use Data::Dumper; 
+use Data::Dumper;
 use Moose::Autobox;
 
 # Local libraries
@@ -66,12 +65,11 @@ our $dbname = 'trans_3_0';
 my %ops = getoptions();
 
 my ($pdbid, $chain1, $chain2) = @ARGV;
-unless (defined $chain2) { pod2usage(-exitval=>1, -verbose=>2); }
+unless (defined $chain2) { pod2usage(-exitval => 1, -verbose => 2); }
 
 # Setup new log file specific to given input file
 use Log::Any::Adapter;
-Log::Any::Adapter->set('+SBG::U::Log', file=>$pdbid . '.log');
-
+Log::Any::Adapter->set('+SBG::U::Log', file => $pdbid . '.log');
 
 my @chains1 = split ' ', $chain1;
 my @chains2 = split ' ', $chain2;
@@ -86,11 +84,11 @@ foreach my $pair (@pairs) {
 
 exit;
 
-
 sub crystal_contact {
     my ($pdbid, $chain1, $chain2) = @_;
 
     print "$chain1--$chain2: ";
+
     # Bug makes this necessary, otherwise SELECT after UPDATE fails
     existing_contacts(@_);
 
@@ -98,7 +96,8 @@ sub crystal_contact {
 
     # Both of these approaches appear to work
     $nupdated += set_crystal($pdbid, $chain1, $chain2);
-#     $nupdated += set_crystal_do($pdbid, $chain1, $chain2);
+
+    #     $nupdated += set_crystal_do($pdbid, $chain1, $chain2);
 
     print "$nupdated rows\n";
 
@@ -107,14 +106,13 @@ sub crystal_contact {
 
 }
 
-
 sub print_contacts {
     while (my $row = existing_contacts(@_)) {
-        my $values = $row->slice([qw/crystal id_entity1 id_entity2 dom1 dom2/]);
+        my $values =
+            $row->slice([qw/crystal id_entity1 id_entity2 dom1 dom2/]);
         print $values->join("\t"), "\n";
     }
 }
-
 
 sub set_crystal_do {
     my ($pdbid, $chain1, $chain2) = @_;
@@ -135,7 +133,6 @@ AND e2.chain='$chain2'
     my $nupdated = $dbh->do($sql);
     return $nupdated;
 }
-
 
 sub set_crystal {
     my ($pdbid, $chain1, $chain2) = @_;
@@ -162,8 +159,7 @@ AND e2.chain=?
 
     my $nupdated = $sth->execute($pdbid, $chain1, $chain2);
     return $nupdated;
-} 
-
+}
 
 sub existing_contacts {
     my ($pdbid, $chain1, $chain2) = @_;
@@ -196,14 +192,12 @@ AND e2.chain=?
     }
 
     # Iterator semantics
-    if (! $sth->execute($pdbid, $chain1, $chain2)) {
+    if (!$sth->execute($pdbid, $chain1, $chain2)) {
         $log->error($sth->errstr);
         return;
     }
 
     return $sth->fetchrow_hashref();
 
-} 
-
-
+}
 

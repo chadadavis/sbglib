@@ -45,11 +45,10 @@ L<Test::Class> , L<Test::Class::Load>
 use FindBin qw/$Bin/;
 use Path::Class;
 
-# Alternatively, automatically load all classes in a directory 
+# Alternatively, automatically load all classes in a directory
 # Load all *.pm test classes under ../t/*
 use Test::Class::Load dir $Bin, 'lib';
 
 # Prefer to call this from the INIT {} block of the root class Test::SBG
 #Test::Class->runtests();
-
 

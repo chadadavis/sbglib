@@ -121,8 +121,6 @@ L<SBG::CA::Assembler2> , L<SBG::Network> , L<SBG::SearchI>
 
 =cut
 
-
-
 use strict;
 use warnings;
 
@@ -131,36 +129,27 @@ use FindBin qw/$Bin/;
 use lib "$Bin/../lib/";
 
 # Send this off to PBS first, if possible, before loading other modules
-use SBG::U::Run 
-    qw/frac_of getoptions start_lock end_lock @generic_options/;
+use SBG::U::Run qw/frac_of getoptions start_lock end_lock @generic_options/;
 
 # Options must be hard-coded, unfortunately, as local variables cannot be used
-use PBS::ARGV @generic_options, 
+use PBS::ARGV @generic_options,
     (
-    'complete|c',
-    'overlap_thresh|o=f',
-    'minsize|s=s', 
-    'binsize|b=f', 
-    'clash_thresh=f',
-    'maxsolutions=i',
-    'seed=s',
-    'target=s',
+    'complete|c',     'overlap_thresh|o=f',
+    'minsize|s=s',    'binsize|b=f',
+    'clash_thresh=f', 'maxsolutions=i',
+    'seed=s',         'target=s',
     'outputs=s',
     );
-    
-my %ops = getoptions @generic_options, 
+
+my %ops = getoptions @generic_options,
     (
-    'complete|c',
-    'overlap_thresh|o=f',
-    'minsize|s=s', 
-    'binsize|b=f', 
-    'clash_thresh=f',
-    'maxsolutions=i',
-    'seed=s',
-    'target=s',
+    'complete|c',     'overlap_thresh|o=f',
+    'minsize|s=s',    'binsize|b=f',
+    'clash_thresh=f', 'maxsolutions=i',
+    'seed=s',         'target=s',
     'outputs=s',
     );
-    
+
 use Moose::Autobox;
 use POSIX qw/ceil/;
 use File::Basename;
@@ -177,15 +166,16 @@ use SBG::CA::Assembler2;
 use Graph::Traversal::GreedyEdges;
 
 use acaschema;
-use SBG::U::DB; # qw/connect/;
+use SBG::U::DB;    # qw/connect/;
 
 # Use our own library, which does connection caching, to access the schema
-my $schema = acaschema->connect(sub{SBG::U::DB::connect('aca')});
+my $schema = acaschema->connect(sub { SBG::U::DB::connect('aca') });
 
 # Separate log file for each input
 my $log_handle;
 foreach my $file (@ARGV) {
     if (defined($ops{J})) {
+
         # The file is actually the Jth line of the list of files
         $file = PBS::ARGV::linen($file, $ops{J});
     }
@@ -196,19 +186,23 @@ foreach my $file (@ARGV) {
         warn("$file is not an object");
         next;
     }
-    my $dir = dirname $file;
+    my $dir      = dirname $file;
     my $targetid = $net->targetid;
-    my $partid = $net->partid;
-    my $destdir = catdir($targetid, $partid);
+    my $partid   = $net->partid;
+    my $destdir  = catdir($targetid, $partid);
     mkdir $destdir;
     my $output = catfile($targetid, $partid, 'model');
     my $lock = start_lock($output);
-    next if ! $lock && ! $ops{debug};
+    next if !$lock && !$ops{debug};
 
     Log::Any::Adapter->remove($log_handle);
+
     # A log just for this input file:
     $log_handle = Log::Any::Adapter->set(
-        '+SBG::Log',level=>'trace',file=>$output . '.log');
+        '+SBG::Log',
+        level => 'trace',
+        file  => $output . '.log'
+    );
 
     # A cheap way to track what crashes before finishing
     my $tryingfile = $output . '.trying';
@@ -218,6 +212,7 @@ foreach my $file (@ARGV) {
     _print_net($net);
 
     $ops{minsize} = 2 unless defined $ops{minsize};
+
     # Only full-size (complete coverage) models?
     $ops{minsize} = '100%' if $ops{complete};
     $ops{minsize} = ceil frac_of($ops{minsize}, scalar $net->nodes);
@@ -232,9 +227,7 @@ foreach my $file (@ARGV) {
 
 exit;
 
-
-
-# 
+#
 sub _print_net {
     my ($net, $i, $n) = @_;
     $i ||= 1;
@@ -242,34 +235,34 @@ sub _print_net {
     my $str = sprintf
         "\n%-20s %4d nodes, %4d edges, %4d interactions \n",
         $net->targetid,
-        scalar($net->vertices), scalar($net->edges), 
+        scalar($net->vertices), scalar($net->edges),
         scalar($net->interactions);
     print "$str";
     $log->info($str);
 }
 
-
-
 # Assemble network
 sub _one_net {
     my ($net, $ops) = @_;
 
-    my %aops = slice_def($ops, 
+    my %aops = slice_def($ops,
         qw/minsize binsize overlap_thresh maxsolutions clash_thresh/);
 
     my $assembler = SBG::CA::Assembler2->new(
-        net=>$net,callback=>\&_write_solution, %aops
-        );
+        net      => $net,
+        callback => \&_write_solution,
+        %aops
+    );
     if ($ops{seed} && -r $ops{seed}) {
-    	$assembler->seed(load_object $ops{seed});
+        $assembler->seed(load_object $ops{seed});
     }
     if ($ops{target} && -r $ops{target}) {
         $assembler->target(load_object $ops{target});
     }
     my $t = Graph::Traversal::GreedyEdges->new(
-        assembler=>$assembler,
-        net=>$net, # TODO DEL should come from Assembler
-        ); 
+        assembler => $assembler,
+        net       => $net,         # TODO DEL should come from Assembler
+    );
 
     # Go!
     $t->traverse();
@@ -278,36 +271,40 @@ sub _one_net {
 }
 
 use Data::Dumper;
+
 sub _write_solution {
     my ($complex, $class, $duplicate, $stats, $net) = @_;
 
     # Lookup record for this complex, or create it
     my $complex_table = $schema->resultset('Complex');
-    my $complexrec = $complex_table->search({
-        network_id => $net->id, model => $complex->modelid})->next;        
-        
+    my $complexrec    = $complex_table->search(
+        { network_id => $net->id, model => $complex->modelid })->next;
+
     if ($complexrec) {
-    	# Already exists in DB, update with better scoring model
+
+        # Already exists in DB, update with better scoring model
         $complexrec->score($complex->score);
-        $complexrec->nreplaced($complexrec->nreplaced+1);
+        $complexrec->nreplaced($complexrec->nreplaced + 1);
         $complexrec->update;
-    } else {
-        $complex_table->create({
-           network_id => $net->id, 
-           model => $complex->modelid, 
-           score=> $complex->score,
-        });
+    }
+    else {
+        $complex_table->create(
+            {   network_id => $net->id,
+                model      => $complex->modelid,
+                score      => $complex->score,
+            }
+        );
     }
 
     my $targetid = $net->targetid;
-    my $partid = $net->partid;
-    my $modelid = $complex->modelid;
-    my $destdir = catdir($targetid, $partid, $modelid);
+    my $partid   = $net->partid;
+    my $modelid  = $complex->modelid;
+    my $destdir  = catdir($targetid, $partid, $modelid);
     mkdir $destdir;
     my $file = catfile($destdir, $complex->modelid . '.model');
-    $complex->scores->put('mid',$complex->modelid);
+    $complex->scores->put('mid', $complex->modelid);
     $complex->store($file);
-    
+
     _status($stats);
 }
 
@@ -317,10 +314,9 @@ sub _status {
     # Flush console and setup in-line printing, unless redirected
     if (-t STDOUT) {
         local $| = 1;
-        print "\033[1K\r"; # Carriage return, i.e. w/o linefeed
-        # Print without newline
+        print "\033[1K\r";    # Carriage return, i.e. w/o linefeed
+                              # Print without newline
         print join("\t", @$stats), " ";
     }
-} # _status
-
+}    # _status
 

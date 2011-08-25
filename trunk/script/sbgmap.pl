@@ -26,8 +26,6 @@ sbgmap SBG::Domain::descriptor files.stor [more-files.stor]
 
 =cut
 
-
-
 # Don't use strict/warnings here, as that would enforce the incoming function
 # use strict;
 # use warnings;
@@ -42,14 +40,12 @@ use SBG::Role::Storable qw/retrieve_files/;
 use SBG::U::List qw/flatten/;
 
 my %ops;
-my $result = GetOptions(\%ops, 
-                        'h|help',
-    );
-if ($ops{h}) { pod2usage(-exitval=>1, -verbose=>2); }
+my $result = GetOptions(\%ops, 'h|help',);
+if ($ops{h}) { pod2usage(-exitval => 1, -verbose => 2); }
 
 my $function = eval shift;
-my @files = @ARGV;
-@files or pod2usage(-exitval=>2);
+my @files    = @ARGV;
+@files or pod2usage(-exitval => 2);
 my @objs = flatten retrieve_files(@files);
 my $res;
 

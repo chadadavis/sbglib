@@ -40,8 +40,6 @@ ATOM records:
 
 =cut
 
-
-
 package SBG::DomainIO::pdb;
 use Moose;
 use Moose::Autobox;
@@ -59,31 +57,28 @@ use SBG::U::List qw/flatten/;
 
 use File::Slurp qw/slurp/;
 
-
 =head2 objtype
 
 The sub-objtype to use for any dynamically created objects. Should implement
 L<SBG::DomainI> role. Default "L<SBG::Domain>" .
 
 =cut
+
 # has '+objtype' => (
 #     default => 'SBG::Domain',
 #     );
-
 
 sub BUILD {
     my ($self) = @_;
     $self->objtype('SBG::Domain') unless $self->objtype;
 }
 
-
 has 'cache' => (
-    is => 'rw',
-    isa => 'Bool',
+    is      => 'rw',
+    isa     => 'Bool',
     default => 1,
 );
 
-    
 =head2 atom_type
 
 A regular expression for the atom type code, e.g. 'CA' of atoms to read in from
@@ -94,11 +89,11 @@ explicit trailing space). Likewise, 'C' will match 'CA', 'CB', 'CG', 'CG1',
 'CG2', etc
 
 =cut
-has 'atom_type' => (
-    is => 'rw',
-    default =>  ' CA ',
-    );
 
+has 'atom_type' => (
+    is      => 'rw',
+    default => ' CA ',
+);
 
 =head2 residues
 
@@ -108,11 +103,11 @@ TODO BUG: assumes that residue IDs are integers, which neglects insertion codes.
 If insertion codes are present, the last residue with the residue ID is used.
 
 =cut
-has 'residues' => (
-    is => 'ro',
-    isa => 'Maybe[ArrayRef[Int]]',
-    );
 
+has 'residues' => (
+    is  => 'ro',
+    isa => 'Maybe[ArrayRef[Int]]',
+);
 
 =head2 homogenous
 
@@ -123,13 +118,12 @@ with an additional 1. E.g. the point ( 33.434, -23.003, 129.332 ) becomes the
 Default: 1 (enabled)
 
 =cut
+
 has 'homogenous' => (
-    is => 'rw',
-    isa => 'Bool',
+    is      => 'rw',
+    isa     => 'Bool',
     default => 1,
-    );
-
-
+);
 
 =head2 write
 
@@ -143,20 +137,22 @@ Depends on the B<transform> program from the STAMP suite
 http://www.compbio.dundee.ac.uk/Software/Stamp/stamp.html
 
 =cut
+
 sub write {
     my ($self, @doms) = @_;
     @doms = SBG::U::List::flatten(@doms);
     return unless @doms;
     return unless $self->fh;
     $log->debug("file:", $self->file);
-    
+
     # A domain defines a subset of structure, write that to a temp file first
-    my $domio = SBG::DomainIO::stamp->new(tempfile=>1);
+    my $domio = SBG::DomainIO::stamp->new(tempfile => 1);
     $log->debug("DOM file: ", $domio->file);
     $domio->write(@doms);
     $domio->flush;
+
     # Need to redirect to a tempfile, in case stream goes e.g. to stdout
-    my $tmp = SBG::IO->new(tempfile=>1);
+    my $tmp = SBG::IO->new(tempfile => 1);
     $log->debug("transform file: ", $tmp->file);
     my $tmppath = $tmp->file;
     my $cmd = 'transform -het -g -f ' . $domio->file() . ' -o ' . $tmppath;
@@ -165,14 +161,12 @@ sub write {
     }
     $tmp->flush;
     my $fh = $self->fh;
-    
+
     print $fh slurp($tmppath);
     $fh->flush;
-    
+
     return $self;
-} # write
-
-
+}    # write
 
 =head2 read
 
@@ -187,6 +181,7 @@ object, as these cannot always be determined from a PDB file.
 This returns a single domain representing the whole structure of the file.
 
 =cut
+
 sub read {
     my ($self) = @_;
 
@@ -194,13 +189,13 @@ sub read {
 
     # What type of Domain to create:
     my $objtype = $self->objtype;
+
     # Also note the file that was read from
-    my $dom = $objtype->new(coords=>$coords);
+    my $dom = $objtype->new(coords => $coords);
     $self->file($self->file) if $self->file;
     return $dom;
 
 }
-
 
 =head2 coords
 
@@ -231,64 +226,72 @@ TODO BUG this assumes that only one atom from reach residue is read, e.g. CA.
 Could be problematic if all atoms are read with no restriction. 
 
 =cut
+
 sub coords {
-    my ($self, ) = @_;
-    my $fh = $self->fh or return;
-    my $record = 'ATOM  ';
-    my $atom = $self->atom_type;
+    my ($self,) = @_;
+    my $fh        = $self->fh or return;
+    my $record    = 'ATOM  ';
+    my $atom      = $self->atom_type;
     my $getresids = $self->residues;
 
-    our $cache; 
+    our $cache;
     $cache ||= {};
-    my $cachekey = $self->file ? join('--', $self->file, $self->atom_type) : ''; 
+    my $cachekey =
+        $self->file ? join('--', $self->file, $self->atom_type) : '';
     $log->debug("Cache key: $cachekey");
     my $cached = $cachekey ? $cache->{$cachekey} : undef;
-    
+
     # Fields to extract
     my ($resSeq, $x, $y, $z);
 
     if (defined($cached) && $self->cache) {
         $log->debug("Cache hit: $cachekey");
         ($resSeq, $x, $y, $z) = @$cached;
-    } else {
-        ($resSeq, $x, $y, $z) = rgrep { 
-            /^$record..... $atom.... .(....).   (........)(........)(........)/ 
-        } $fh;
+    }
+    else {
+        ($resSeq, $x, $y, $z) = rgrep {
+            /^$record..... $atom.... .(....).   (........)(........)(........)/;
+        }
+        $fh;
 
-        return unless defined $resSeq;        
+        return unless defined $resSeq;
+
         # Probably faster to leave it as a PDL, but an Array is more flexible
         $resSeq = [ $resSeq->list ];
-        $cache->{$cachekey} =  [ $resSeq, $x, $y, $z ] if $cachekey;
+        $cache->{$cachekey} = [ $resSeq, $x, $y, $z ] if $cachekey;
     }
+
     # No atoms matching the given pattern?
     return unless $x->nelem > 0;
 
     # Subset residue IDs, if given
     if ($getresids) {
+
         # Create a map from residue ID to array index
-        my %resmap = map { $resSeq->[$_] => $_ } 0..@$resSeq-1;
-        my $select = $getresids->map(sub{$resmap{$_}})->grep(sub{defined});
+        my %resmap = map { $resSeq->[$_] => $_ } 0 .. @$resSeq - 1;
+        my $select =
+            $getresids->map(sub { $resmap{$_} })->grep(sub {defined});
 
         $resSeq = $resSeq->slice($select);
-        $x = $x->dice($select);
-        $y = $y->dice($select);
-        $z = $z->dice($select);
+        $x      = $x->dice($select);
+        $y      = $y->dice($select);
+        $z      = $z->dice($select);
     }
 
-    # Columns for X,Y,Z coords, 
+    # Columns for X,Y,Z coords,
     my $mat;
     if ($self->homogenous) {
+
         # plus a column of 1's (for homogenous coords)
         $mat = pdl([ $x, $y, $z, ones($x->dims) ])->transpose;
-    } else {
+    }
+    else {
         $mat = pdl([ $x, $y, $z ])->transpose;
     }
 
     return $mat;
 
-} # coords
-
-
+}    # coords
 
 __PACKAGE__->meta->make_immutable;
 no Moose;

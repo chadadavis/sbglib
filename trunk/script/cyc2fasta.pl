@@ -17,7 +17,6 @@ L<Bio::DB::SGD>,
 
 =cut 
 
-
 use strict;
 use warnings;
 
@@ -32,11 +31,12 @@ use lib "$Bin/../lib/";
 
 use SBG::U::Run qw/getoptions/;
 
-# Read from STDIN or from a (single) file 
+# Read from STDIN or from a (single) file
 my $file = shift;
 open *STDIN, $file if $file;
 
 my %complexid;
+
 # Index complex names
 my $limit = 408;
 for (my $complex = 1; $complex <= $limit; $complex++) {
@@ -56,6 +56,7 @@ while (<>) {
     chomp;
     my ($orf, $gene, $complex) = split "\t";
     print "$orf $gene $complex\n";
+
     # Don't want slash in file names, rename complexes with dashes
     $complex =~ s|/|-|g;
     my $complexid = $complexid{$complex};
@@ -63,20 +64,23 @@ while (<>) {
         warn "No ID for $complex\n";
         next;
     }
+
     # Get cached output handle, keep it open since we're appending
     my $out = $fhhash{$complex};
+
     # If not yet cached, fetch it, and cache it
-    $out ||= Bio::SeqIO->new(-file=>">>${complexid}.fa");
+    $out ||= Bio::SeqIO->new(-file => ">>${complexid}.fa");
     $fhhash{$complex} ||= $out;
     my $seq = $sgd->get_Seq_by_id($orf);
+
     # Format sequence identifiers to use ORF
     $seq->display_id($orf);
-    # Make the gene name the first word of the description
-    $seq->desc($gene . ' ' . $seq->desc);    
-    $out->write_seq($seq);
-   
-}
 
+    # Make the gene name the first word of the description
+    $seq->desc($gene . ' ' . $seq->desc);
+    $out->write_seq($seq);
+
+}
 
 exit;
 

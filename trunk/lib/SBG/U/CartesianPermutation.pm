@@ -57,7 +57,6 @@ iterators as input, hence this module.
 
 =cut
 
-
 package SBG::U::CartesianPermutation;
 use Moose;
 use Moose::Autobox;
@@ -65,86 +64,80 @@ use Moose::Autobox;
 use Log::Any qw/$log/;
 use Algorithm::Combinatorics qw/variations/;
 
-
 has 'classes' => (
-    isa => 'ArrayRef',
-    is => 'rw',
+    isa      => 'ArrayRef',
+    is       => 'rw',
     required => 1,
-    );
-
+);
 
 # Number of classes
 has 'length' => (
-    isa => 'Int',
-    is => 'rw',
+    isa     => 'Int',
+    is      => 'rw',
     default => sub { shift->classes->length },
-    );
-
+);
 
 # Per-class length
 # Defaults to full size of each class
 has 'kclass' => (
-    isa => 'ArrayRef',
-    is => 'rw',
+    isa        => 'ArrayRef',
+    is         => 'rw',
     lazy_build => 1,
-    );
+);
+
 sub _build_kclass {
     my ($self) = @_;
-    return $self->classes->map(sub{$_->length})
+    return $self->classes->map(sub { $_->length });
 }
-
 
 # One iterator per class, to generate all permutions of each class
 has 'iterators' => (
-    isa => 'ArrayRef',
-    is => 'rw',
+    isa        => 'ArrayRef',
+    is         => 'rw',
     lazy_build => 1,
-    init_arg => undef,
-    );
+    init_arg   => undef,
+);
+
 sub _build_iterators {
     my ($self) = @_;
 
     my $n = $self->length - 1;
-    # One permutation iterator per class
-    my @perms = map { 
-        scalar variations($self->classes->[$_], $self->kclass->[$_]) 
-    } 0..$n ;
-    return \@perms
-}
 
+    # One permutation iterator per class
+    my @perms =
+        map { scalar variations($self->classes->[$_], $self->kclass->[$_]) }
+        0 .. $n;
+    return \@perms;
+}
 
 # The (saved) current value of the iterator for each class
 has 'current' => (
-    isa => 'ArrayRef',
-    is => 'rw',
+    isa     => 'ArrayRef',
+    is      => 'rw',
     default => sub { [] },
-    );
-
+);
 
 # Reset the permuation generator for a given class and return the iterator
 sub _reset_i {
     my ($self, $i) = @_;
     $self->current->[$i] = undef;
-    return $self->iterators->[$i] = 
+    return $self->iterators->[$i] =
         scalar variations($self->classes->[$i], $self->kclass->[$i]);
 }
-
 
 # Set the default parameter for object construction to 'classes'
 # http://search.cpan.org/~flora/Moose-1.05/lib/Moose/Manual/Construction.pod
 around 'BUILDARGS' => sub {
-    my $orig = shift;
+    my $orig  = shift;
     my $class = shift;
 
-    if ( @_ == 1) {
+    if (@_ == 1) {
         return $class->$orig('classes' => $_[0]);
     }
     else {
         return $class->$orig(@_);
     }
 };
-
-
 
 =head2 next
 
@@ -156,69 +149,71 @@ around 'BUILDARGS' => sub {
 
 
 =cut
+
 sub next {
     my ($self, $i) = @_;
+
     # Start at level 0
     $i ||= 0;
+
     # All lists have been appended already?
     return if $i >= $self->length;
 
-    my $rest = $self->next($i+1);
+    my $rest = $self->next($i + 1);
 
     # If we didn't exhaust the rest yet, don't interate
     my $next;
     if ($rest) {
         $self->current->[$i] ||= $self->iterators->[$i]->next;
         $next = $self->current->[$i];
-    } else {
+    }
+    else {
         $next = $self->current->[$i] = $self->iterators->[$i]->next;
         unless ($next) {
             $self->_reset_i($i);
             return;
         }
+
         # Re-fetch the rest, which will reinitialize them
-        $rest = $self->next($i+1);
+        $rest = $self->next($i + 1);
     }
-    return [ $next ] unless $rest;
+    return [$next] unless $rest;
     return [ $next, @$rest ];
 }
-
 
 # Product of the number of permutations of each iterator
 # I.e. the total number of results before this object returns nothing
 sub cardinality {
     my ($self) = @_;
     my $prod = 1;
-    foreach my $i (0..$self->length - 1) {
+    foreach my $i (0 .. $self->length - 1) {
+
         # How many permutations possible for this iterator
-        my $n = $self->classes->[$i]->length;
-        my $k = $self->kclass->[$i];
+        my $n   = $self->classes->[$i]->length;
+        my $k   = $self->kclass->[$i];
         my $nPk = nPk($n, $k);
         $prod *= $nPk;
     }
     return $prod;
 }
 
-
 # How many permutations are we expecting for single iterator
 # n!/(n-k)!
-sub nPk { 
+sub nPk {
     my ($n, $k) = @_;
-    return factorial($n) / factorial($n-$k);
+    return factorial($n) / factorial($n - $k);
 }
-
 
 sub factorial {
     my ($n) = @_;
-  
+
     my $f;
-    for($f = 1 ; $n > 0 ; $n--){
-        $f *= $n
+    for ($f = 1; $n > 0; $n--) {
+        $f *= $n;
     }
 
     return $f;
 }
-
 
 __PACKAGE__->meta->make_immutable;
 no Moose;

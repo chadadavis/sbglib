@@ -8,15 +8,15 @@ use namespace::autoclean;
 use Capture::Tiny 'capture_merged';
 
 has file => (
-    is  => 'ro',
-    isa => 'Str',
+    is       => 'ro',
+    isa      => 'Str',
     required => 1,
 );
 
 has chains => (
-    is         => 'ro',
-    isa        => 'ArrayRef[Str]',
-    required   => 1,
+    is       => 'ro',
+    isa      => 'ArrayRef[Str]',
+    required => 1,
 );
 
 has probe_radius => (
@@ -25,10 +25,10 @@ has probe_radius => (
     default => 1.4,
 );
 
-has _result => ( is => 'ro', lazy_build => 1 );
+has _result => (is => 'ro', lazy_build => 1);
 
 has [qw(residue_contacts atom_contacts)] => (
-    is => 'ro',
+    is         => 'ro',
     lazy_build => 1,
 );
 
@@ -41,14 +41,14 @@ sub _build_atom_contacts {
 }
 
 has verbose => (
-    is => 'rw',
-    isa => 'Bool',
+    is      => 'rw',
+    isa     => 'Bool',
     default => 0,
 );
 
 has _temp_dir => (
-    is => 'ro',
-    isa => 'File::Temp::Dir',
+    is         => 'ro',
+    isa        => 'File::Temp::Dir',
     lazy_build => 1,
 );
 
@@ -70,7 +70,7 @@ sub _build__result {
     $self->_arguments->{-prefOut} = $self->_temp_dir->dirname . '/';
 
     my $output = capture_merged {
-        system( $executable, %{ $self->_arguments } )
+        system($executable, %{ $self->_arguments });
     };
 
     warn $output if $self->verbose;
@@ -78,7 +78,10 @@ sub _build__result {
     my @contacts_by_atom    = $self->_parse_by_atom();
     my @contacts_by_residue = $self->_parse_by_residue();
 
-    return { by_atom => \@contacts_by_atom, by_residue => \@contacts_by_residue };
+    return {
+        by_atom    => \@contacts_by_atom,
+        by_residue => \@contacts_by_residue
+    };
 }
 
 has 'program_name' => (
@@ -106,12 +109,12 @@ sub _parse_by_residue {
     # Get the path to the output file.
     my $filename = $self->_arguments->{-prefOut} . '/-by-res.vor';
 
-    open( my $fh, '<', $filename );
+    open(my $fh, '<', $filename);
 
     # Parse the file line by line, each line corresponds to a
     # contact.
-    while ( my $line = <$fh> ) {
-        my @fields = split( /\s+/, $line );
+    while (my $line = <$fh>) {
+        my @fields = split(/\s+/, $line);
 
         my %contact = (
             res1 => {
@@ -141,8 +144,8 @@ sub _parse_by_atom {
     # Get the path to the output file.
     my $filename = $self->_arguments->{-prefOut} . '/-by-atom.vor';
 
+    open(my $fh, '<', $filename);
 
-    open( my $fh, '<', $filename );
     # Parse the file line by line, each line corresponds to a
     # contact.
 
@@ -164,8 +167,8 @@ sub _parse_by_atom {
         I => { 13 => 'area', 14 => 'Rno' },
     };
 
-    while ( my $line = <$fh> ) {
-        my @fields = split( ' ', $line );
+    while (my $line = <$fh>) {
+        my @fields = split(' ', $line);
         my %contact = (
             atom1 => {
                 number     => $fields[5],
@@ -184,15 +187,15 @@ sub _parse_by_atom {
         );
 
         # I can't wait for Perl 6's junctions.
-        foreach my $type ( keys %$meaning_for ) {
-            if ( $type eq $fields[1] ) {
-                foreach my $field ( keys %{ $meaning_for->{$type} } ) {
+        foreach my $type (keys %$meaning_for) {
+            if ($type eq $fields[1]) {
+                foreach my $field (keys %{ $meaning_for->{$type} }) {
 
                     # I just realized that there's parameter in the 'S' type
                     # that has a ')' sticked to it, remove it.
                     $fields[$field] =~ s/\)//g;
-                    $contact{ $meaning_for->{$type}{$field} }
-                        = $fields[$field];
+                    $contact{ $meaning_for->{$type}{$field} } =
+                        $fields[$field];
                 }
             }
         }
@@ -207,9 +210,9 @@ sub _parse_by_atom {
 sub _build__arguments {
     my $self = shift;
     return {
-        -c1 => ${ $self->chains }[0],
-        -c2 => ${ $self->chains }[1],
-        -i  => $self->file,
+        -c1    => ${ $self->chains }[0],
+        -c2    => ${ $self->chains }[1],
+        -i     => $self->file,
         -probe => $self->probe_radius,
     };
 }

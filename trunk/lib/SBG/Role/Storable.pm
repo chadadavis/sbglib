@@ -26,14 +26,12 @@ L<Moose::Role>
 
 =cut
 
-
-
 package SBG::Role::Storable;
 use Moose::Role;
 
 # Also a functional interface
 use base qw/Exporter/;
-our @EXPORT = qw/store retrieve/;
+our @EXPORT    = qw/store retrieve/;
 our @EXPORT_OK = qw/retrieve_files/;
 
 use Scalar::Util qw/blessed/;
@@ -45,8 +43,6 @@ use SBG::U::List qw/flatten/;
 
 # Any contained PDL objects need this to de-serialize
 use PDL::IO::Storable;
-
-
 
 =head2 store
 
@@ -64,12 +60,10 @@ Caveat:Any PDL objects will ignore network order and not be network-transparent.
 =cut
 
 sub store {
-   my ($self,$file,@args) = @_;
+    my ($self, $file, @args) = @_;
 
-   return Storable::nstore($self, $file);
-} # store
-
-
+    return Storable::nstore($self, $file);
+}    # store
 
 =head2 retrieve
 
@@ -85,19 +79,19 @@ unintended side effects.
 See also L<bless> , L<overload>
 
 =cut
+
 sub retrieve {
-   my ($file) = @_;
-   return unless -r $file;
-   my $obj;
-   eval { $obj = Storable::retrieve($file) };
-   return if $@;
-   # See if the module has been updated since object was stored.
-   # TODO add this back in after re-creating all objects
-#    check_version($obj);
-   return $obj;
-} # retrieve
+    my ($file) = @_;
+    return unless -r $file;
+    my $obj;
+    eval { $obj = Storable::retrieve($file) };
+    return if $@;
 
-
+    # See if the module has been updated since object was stored.
+    # TODO add this back in after re-creating all objects
+    #    check_version($obj);
+    return $obj;
+}    # retrieve
 
 =head2 retrieve_files
 
@@ -111,10 +105,8 @@ sub retrieve {
 sub retrieve_files {
     @_ = flatten @_;
     my @a = map { flatten retrieve($_) } @_;
-    return wantarray ? @a : \@a;    
+    return wantarray ? @a : \@a;
 }
-
-
 
 no Moose::Role;
 1;

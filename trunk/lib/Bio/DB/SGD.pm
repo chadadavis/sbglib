@@ -6,7 +6,6 @@
 #
 # You may distribute this module under the same terms as perl itself
 
-
 =head1 NAME
 
 Bio::DB::SGD - Database object interface to SGD yeast database
@@ -42,6 +41,7 @@ methods. Internal methods are usually preceded with a _
 
 package Bio::DB::SGD;
 use strict;
+
 # This ultimately inherits from Bio::Root::Root
 use base qw/Bio::DB::WebDBSeqI/;
 
@@ -57,7 +57,8 @@ our $DEFAULTFORMAT = 'fasta';
 sub new {
     my ($class, @args) = @_;
     my $self = $class->SUPER::new(@args);
-    $self->{_baseurl} = "http://www.uniprot.org/uniprot/?format=fasta&query=cygd%20";
+    $self->{_baseurl} =
+        "http://www.uniprot.org/uniprot/?format=fasta&query=cygd%20";
 
     return $self;
 }
@@ -76,22 +77,22 @@ sub new {
  Throws  : "id does not exist" exception
 
 =cut
+
 sub get_Seq_by_id {
     my ($self, $id) = @_;
     my $queryurl = $self->{_baseurl} . $id;
-    my $content = get $queryurl;
+    my $content  = get $queryurl;
     unless ($content) {
         $self->throw("id does not exist");
         return;
     }
-    
+
     # Get the first sequence, in case multiple
     my $string = IO::String->new($content);
-    my $seqio = Bio::SeqIO->new(-fh=>$string);
-    my $seq = $seqio->next_seq();
+    my $seqio  = Bio::SeqIO->new(-fh => $string);
+    my $seq    = $seqio->next_seq();
     return $seq;
 }
-
 
 =head2 default_format
 
@@ -106,8 +107,6 @@ sub get_Seq_by_id {
 sub default_format {
     return $DEFAULTFORMAT;
 }
-
-
 
 1;
 

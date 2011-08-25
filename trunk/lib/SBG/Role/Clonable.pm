@@ -18,14 +18,10 @@ L<Storable>
 
 =cut
 
-
-
 package SBG::Role::Clonable;
 use Moose::Role;
 
 use Storable qw/dclone/;
-
-
 
 =head2 clone
 
@@ -41,13 +37,12 @@ Calls
 which allows one to define hooks for Storable to override the default cloning.
 
 =cut
+
 sub clone {
     my ($self) = @_;
     return dclone($self);
 }
 
-
 no Moose::Role;
 1;
-
 

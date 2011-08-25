@@ -16,8 +16,6 @@ L<SBG::DomainIO::stamp> , L<SBG::Complex>
 
 =cut
 
-
-
 package SBG::ComplexIO::stamp;
 use Moose;
 
@@ -27,13 +25,11 @@ use Carp;
 
 use Moose::Autobox;
 
-
 use SBG::DomainIO::stamp;
 use SBG::Model;
 use SBG::Complex;
 use SBG::ComplexIO::report;
 use SBG::Run::cofm qw/cofm/;
-
 
 =head2 native
 
@@ -45,12 +41,12 @@ use SBG::Run::cofm qw/cofm/;
 
 
 =cut
-has 'native' => (
-    is => 'ro',
-    isa => 'Bool',
-    default => 0,
-    );
 
+has 'native' => (
+    is      => 'ro',
+    isa     => 'Bool',
+    default => 0,
+);
 
 =head2 objtype
 
@@ -58,6 +54,7 @@ The sub-objtype to use for any dynamically created objects. Should implement
 L<SBG::DomainI> role. Default "L<SBG::Domain>" .
 
 =cut
+
 # has '+objtype' => (
 #     default => 'SBG::Domain',
 #     );
@@ -66,8 +63,6 @@ sub BUILD {
     my ($self) = @_;
     $self->objtype('SBG::Domain') unless $self->objtype;
 }
-    
-
 
 =head2 write
 
@@ -78,29 +73,28 @@ sub BUILD {
 
 
 =cut
+
 sub write {
     my ($self, $complex) = @_;
     return unless defined $complex;
     my $fh = $self->fh or return;
 
     my $report;
-    my $reportio = SBG::ComplexIO::report->new(string=>\$report);
+    my $reportio = SBG::ComplexIO::report->new(string => \$report);
     $reportio->write($complex);
     $reportio->close;
-    
+
     # Prepend a comment
     $report =~ s/^/% /gm;
-    
+
     print $fh $report;
-    
+
     # Just delegate all domains in the complex to DomainIO::stamp
-    my $io = SBG::DomainIO::stamp->new(fh=>$fh);
+    my $io = SBG::DomainIO::stamp->new(fh => $fh);
     $io->write($complex->domains->flatten);
 
     return $self;
-} # write
-
-
+}    # write
 
 =head2 read
 
@@ -112,27 +106,27 @@ sub write {
  Args    : 
 
 =cut
+
 sub read {
     my ($self) = @_;
     my $fh = $self->fh or return;
 
-    my $io = SBG::DomainIO::stamp->new(fh=>$fh,objtype=>$self->objtype);
+    my $io = SBG::DomainIO::stamp->new(fh => $fh, objtype => $self->objtype);
     my $doms = $io->read_all;
-    my $spheres = $doms->map(sub{cofm($_)});
-    my $models = $spheres->map(sub{SBG::Model->new(query=>$_, subject=>$_)});
+    my $spheres = $doms->map(sub { cofm($_) });
+    my $models =
+        $spheres->map(sub { SBG::Model->new(query => $_, subject => $_) });
     my $complex = SBG::Complex->new;
-    $models->map(sub{$complex->add_model($_)});
-    
+    $models->map(sub { $complex->add_model($_) });
+
     my $contacts = $complex->contacts();
     foreach my $contact ($contacts->flatten) {
         $complex->interactions->put($contact, $contact);
-    }    
-        
+    }
+
     return $complex;
 
-} # read
-
-
+}    # read
 
 __PACKAGE__->meta->make_immutable;
 no Moose;

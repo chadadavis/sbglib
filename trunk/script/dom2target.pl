@@ -80,12 +80,10 @@ use lib "$Bin/../lib/";
 
 # Send this off to PBS first, if possible, before loading other modules
 use SBG::U::Run qw/getoptions start_lock end_lock @generic_options/;
+
 # Options must be hard-coded, unfortunately, as local variables cannot be used
-use PBS::ARGV @generic_options, 
-    ;
-my %ops = getoptions @generic_options, 
-    ;
-    
+use PBS::ARGV @generic_options,;
+my %ops = getoptions @generic_options,;
 
 use File::Basename;
 use Moose::Autobox;
@@ -95,7 +93,6 @@ use Log::Any::Adapter;
 
 use SBG::ComplexIO::stamp;
 
-
 # Separate log file for each input
 my $log_handle;
 foreach my $file (@ARGV) {
@@ -103,27 +100,30 @@ foreach my $file (@ARGV) {
     my $output = $base . '.target';
     next if -e $output . '.done';
     my $lock = start_lock($output);
-    next if ! $lock && ! $ops{debug};
+    next if !$lock && !$ops{debug};
 
     Log::Any::Adapter->remove($log_handle);
-      
+
     # A log just for this input file:
     $log_handle = Log::Any::Adapter->set(
-        '+SBG::Log',level=>'trace',file=>$output . '.log');
+        '+SBG::Log',
+        level => 'trace',
+        file  => $output . '.log'
+    );
 
     print $base, "\n" if -t STDOUT;
-    my $io = SBG::ComplexIO::stamp->new(file=>$file);
-    my $complex = $io->read;    
+    my $io = SBG::ComplexIO::stamp->new(file => $file);
+    my $complex = $io->read;
 
     $complex->store($output);
-    my $ndoms = $complex->models->values->length;
+    my $ndoms     = $complex->models->values->length;
     my $niactions = $complex->interactions->values->length;
-    my $msg = join("\t",'Domains',$ndoms,'Interactions',$niactions);
+    my $msg       = join("\t", 'Domains', $ndoms, 'Interactions', $niactions);
     $log->info($msg);
 
     # TODO close log
-    
+
     end_lock($lock, $msg);
-    
+
 }
 

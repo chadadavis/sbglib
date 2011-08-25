@@ -31,7 +31,6 @@ L<Bio::DB::SGD>,
 
 =cut 
 
-
 use strict;
 use warnings;
 
@@ -48,31 +47,31 @@ use SBG::U::Map qw/pdb_chain2uniprot_acc/;
 my $sp = Bio::DB::SwissProt->new;
 
 foreach my $file (@ARGV) {
-    my $in = Bio::SeqIO->new(-file=>$file);
+    my $in = Bio::SeqIO->new(-file => $file);
     my $outfile = basename($file, '.fa');
     $outfile .= '.fa';
-    if (-e $outfile) { 
+    if (-e $outfile) {
         warn "Skipping existing $outfile\n";
         next;
-    } 
+    }
     warn "$outfile\n";
-    my $out = Bio::SeqIO->new(-file=>">$outfile");
+    my $out = Bio::SeqIO->new(-file => ">$outfile");
     while (my $pdbseq = $in->next_seq) {
         my $pdbchainid = $pdbseq->display_id;
         $pdbseq->desc($pdbchainid . ' ' . $pdbseq->desc);
         my $uniprotacc = pdb_chain2uniprot_acc($pdbchainid);
-        my $acc = $uniprotacc || $pdbchainid;
-        my $seq = spseq($uniprotacc) || $pdbseq;
-        
+        my $acc        = $uniprotacc || $pdbchainid;
+        my $seq        = spseq($uniprotacc) || $pdbseq;
+
         $seq->display_id($pdbchainid);
         $out->write_seq($seq);
-    }    
+    }
 }
 
 sub spseq {
     my ($uniprotacc) = @_;
-    return unless $uniprotacc;   
-    our %seqcache; 
+    return unless $uniprotacc;
+    our %seqcache;
     warn "\tFetching $uniprotacc\n";
     my $spseq = $seqcache{$uniprotacc};
     unless ($spseq) {
@@ -81,8 +80,8 @@ sub spseq {
         $seqcache{$uniprotacc} = $spseq;
     }
     return $spseq;
-    
+
 }
-    
+
 exit;
 

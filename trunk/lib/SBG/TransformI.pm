@@ -31,12 +31,8 @@ L<SBG::TransformIO::stamp> , L<SBG::DomainI> , L<SBG::ComplexI>
 
 =cut
 
-
-
-
 package SBG::TransformI;
 use Moose::Role;
-
 
 with 'SBG::Role::Clonable';
 with 'SBG::Role::Dumpable';
@@ -44,21 +40,17 @@ with 'SBG::Role::Storable';
 with 'SBG::Role::Transformable';
 with 'SBG::Role::Writable';
 
-
 # NB this is not carried into implementing classes.
 # It is here as a suggestion of what you should be overloading
 # use overload (
-#     'x'  => \&mult, 
-#     '!'  => \&inverse, 
+#     'x'  => \&mult,
+#     '!'  => \&inverse,
 #     '==' => \&equals,
 #     '""' => \&stringify,
 #     fallback => 1,
 #     );
 
-
 use Module::Load;
-
-
 
 =head2 matrix
 
@@ -72,15 +64,15 @@ The 4x4 homogenous transformation matrix
 The fourth row is simply [ 0,0,0,1 ]
 
 =cut
+
 has 'matrix' => (
-    is => 'ro',
-    isa => 'PDL',
+    is         => 'ro',
+    isa        => 'PDL',
     lazy_build => 1,
+
     # Allows objects to be used as native PDL types, via the 'PDL' hash field
     trigger => sub { my ($self, $val) = @_; $self->{PDL} = $self->matrix; },
-    );
-
-
+);
 
 =head2 _build_matrix
 
@@ -93,24 +85,24 @@ This method needs to be provided by implementing classes to initialize the
 respective matrix.
 
 =cut
-requires '_build_matrix';
 
+requires '_build_matrix';
 
 =head2 rotation
 
 The rotational component of the transformation, a 3x3 matrix
 
 =cut 
-requires 'rotation';
 
+requires 'rotation';
 
 =head2 translation 
 
 The translational component of the transformation, a 3x1 column vector
 
 =cut
-requires 'translation';
 
+requires 'translation';
 
 =head2 reset
 
@@ -121,9 +113,8 @@ requires 'translation';
 
 
 =cut
+
 requires 'reset';
-
-
 
 =head2 apply
 
@@ -134,10 +125,8 @@ requires 'reset';
 
 
 =cut
+
 requires 'apply';
-
-
-
 
 =head2 mult
 
@@ -148,9 +137,8 @@ requires 'apply';
 
 
 =cut
+
 requires 'mult';
-
-
 
 =head2 inverse
 
@@ -161,9 +149,8 @@ requires 'mult';
 
 
 =cut
+
 requires 'inverse';
-
-
 
 =head2 equals
 
@@ -174,15 +161,13 @@ requires 'inverse';
 
 
 =cut
+
 requires 'equals';
 
-
-# Implicitly thread-safe: cloning (i.e. threading) is disallowed. 
+# Implicitly thread-safe: cloning (i.e. threading) is disallowed.
 # This prevents double free bugs. Spawned thread only has undef references then.
 # See man perlmod
-sub CLONE_SKIP { 1 }
-
-
+sub CLONE_SKIP {1}
 
 =head2 relativeto
 
@@ -200,16 +185,15 @@ C x A^-1 = B
 Given C (self) and A, solves for B transformation
 
 =cut
+
 sub relativeto {
-    my ($self,$other) = @_;
+    my ($self, $other) = @_;
 
     return $self x $other->inverse;
 
-} # relativeto
-
+}    # relativeto
 
 ###############################################################################
 no Moose::Role;
 1;
-
 

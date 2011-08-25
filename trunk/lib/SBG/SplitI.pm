@@ -15,13 +15,8 @@ SBG::SearchI -
 
 =cut
 
-
-
 package SBG::SplitI;
 use Moose::Role;
-
-
-
 
 =head2 search
 
@@ -32,10 +27,8 @@ use Moose::Role;
 
 
 =cut
+
 requires 'split';
-
-
-
 
 no Moose::Role;
 1;

@@ -23,18 +23,14 @@ L<Moose::Role>
 
 =cut
 
-
-
 package SBG::Role::Versionable;
 use Moose::Role;
 
 use base qw(Exporter);
 our @EXPORT_OK = qw/check_version/;
 
-# The default version for the whole sbglib package 
+# The default version for the whole sbglib package
 use SBG;
-
-
 
 =head2 version
 
@@ -47,16 +43,13 @@ Can be used to check if an object was created with an older version of a module
 
 =cut
 
-has version => ( 
-    is => 'ro',
-    default => sub { 
-        my $type = ref shift; 
+has version => (
+    is      => 'ro',
+    default => sub {
+        my $type = ref shift;
         my $version = eval("\$${type}::VERSION") || $SBG::VERSION;
     }
-    );
-
-
-
+);
 
 =head2 check_version
 
@@ -67,24 +60,25 @@ has version => (
 
 
 =cut
+
 sub check_version {
     my ($retrieved) = @_;
     my $type = blessed($retrieved) or return;
-    if ($retrieved->can('does') && $retrieved->does("SBG::Role::Versionable")) {
+    if ($retrieved->can('does') && $retrieved->does("SBG::Role::Versionable"))
+    {
+
         # The current version of the module
         my $class_ver = eval("\$${type}::VERSION") || $SBG::VERSION;
+
         # Vs. the version of the module that was saved in the stored object
         if ($class_ver ne $retrieved->version()) {
-            warn 
-                "Using $type $class_ver on object of version " . 
-                $retrieved->version(), "\n";
+            warn "Using $type $class_ver on object of version "
+                . $retrieved->version(), "\n";
             return 0;
         }
     }
     return 1;
-} # check_version
-
-
+}    # check_version
 
 no Moose::Role;
 1;

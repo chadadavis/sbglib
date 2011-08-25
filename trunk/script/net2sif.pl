@@ -4,8 +4,6 @@
 
 =cut
 
-
-
 use strict;
 use warnings;
 
@@ -24,15 +22,14 @@ use SBG::U::Log;
 
 use SBG::NetworkIO::sif;
 
-my %ops = getoptions(
-    );
+my %ops = getoptions();
 
 # STDOUT by default
 my $io = SBG::NetworkIO::sif->new();
 
 foreach my $file (@ARGV) {
 
-    my $basename = basename($file,'.network');
+    my $basename = basename($file, '.network');
 
     # Load the Network object
     my $net;
@@ -41,7 +38,7 @@ foreach my $file (@ARGV) {
         next;
     }
     $io->write($net);
-    
+
 }
 
 exit;

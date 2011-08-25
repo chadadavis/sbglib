@@ -36,7 +36,6 @@ PDB file format, Version 3.20 (Sept 15, 2008)
 
 =cut
 
-
 package SBG::DomainIO::cofm;
 
 use Moose;
@@ -71,12 +70,12 @@ Default: 1 (enabled)
 This makes http://en.wikipedia.org/wiki/Affine_transformation easier
 
 =cut
-has 'homogenous' => (
-    is => 'rw',
-    isa => 'Bool',
-    default => 1,
-    );
 
+has 'homogenous' => (
+    is      => 'rw',
+    isa     => 'Bool',
+    default => 1,
+);
 
 =head2 renumber_chains
 
@@ -86,46 +85,42 @@ Default is to to use the native chain ID of the domain written.
 If a domain spans multiple chains, then it does not have one unique chain ID.
 In that case, you should set renumber_chains.
 =cut
+
 has 'renumber_chains' => (
-    is => 'rw',
-    isa => 'Bool',
+    is      => 'rw',
+    isa     => 'Bool',
     default => 0,
 );
-
 
 =head2 verbose
 
 Write in the same format as 'cofm -v' with information on transformations, etc.
 =cut
+
 has 'verbose' => (
-    is => 'rw',
-    isa => 'Bool',
+    is      => 'rw',
+    isa     => 'Bool',
     default => 0,
 );
-
 
 # Save domains after parsing them. Returning them sequentially. Stream semantics
 has '_doms' => (
-    is => 'rw',
+    is  => 'rw',
     isa => 'Maybe[ArrayRef[SBG::Domain::Sphere]]',
 );
 
-
-# Index into which domain to be returned next. Provides stream semantics. 
+# Index into which domain to be returned next. Provides stream semantics.
 # This is not a stream parser, but it's for the sake of BioPerl consistency
 has '_index' => (
-    is => 'rw',
-    isa => 'Int',
+    is      => 'rw',
+    isa     => 'Int',
     default => 0,
 );
 
-
-    
 sub BUILD {
     my ($self) = @_;
     $self->objtype('SBG::Domain::Sphere') unless defined $self->objtype;
 }
-
 
 =head2 write
 
@@ -145,6 +140,7 @@ Since a sphere is represented as seven points, this only prints the first seven
 points of a structure, regardless of how many points it has.
 
 =cut
+
 sub write {
     my ($self, @doms) = @_;
     return unless @doms;
@@ -152,112 +148,114 @@ sub write {
     my $fh = $self->fh;
 
     $self->_verbose_header(@doms) if $self->verbose;
-        
+
     for (my $i = 0; $i < @doms; $i++) {
-        my $dom = $doms[$i];
-        my $domain = $i+1;
-            
-        printf $fh 
-            "REMARK Domain %2d Id %4s N = %5d Rg = %7.3f Rmax = %7.3f " . 
-            "Ro = %8.3f  %8.3f  %8.3f",
-            $domain, $dom->id, $dom->length, $dom->radius, 'nan', 
+        my $dom    = $doms[$i];
+        my $domain = $i + 1;
+
+        printf $fh "REMARK Domain %2d Id %4s N = %5d Rg = %7.3f Rmax = %7.3f "
+            . "Ro = %8.3f  %8.3f  %8.3f",
+            $domain, $dom->id, $dom->length, $dom->radius, 'nan',
             $dom->coords->slice('0:2,0')->list,
             ;
-          
+
         printf $fh " Assembly = %d", $dom->assembly if defined $dom->assembly;
         printf $fh " Model = %d",    $dom->model    if defined $dom->model;
-        print  $fh " Classification = ", $dom->classification if 
-            defined $dom->classification;
+        print $fh " Classification = ", $dom->classification
+            if defined $dom->classification;
         print $fh "\n";
-        
+
         # Print ATOM records (seven points of the crosshair)
-        my $chain = $self->renumber_chains ? $self->next_chain : $dom->onechain; 
+        my $chain =
+            $self->renumber_chains ? $self->next_chain : $dom->onechain;
         $chain ||= ' ';
         $self->_print_atoms($dom, $chain);
     }
-    
-    return $self;
-} # write
 
+    return $self;
+}    # write
 
 sub next_chain {
     my ($self) = @_;
     my $index = $self->_index;
+
     # This will be the index (for chain renumbering) next time we're called
     $self->_index($index + 1);
+
     # TODO index into the array ('A'..'Z','a'..'z',0..9) and mod 62
-    chr(ord('A')+($index % 26));
+    chr(ord('A') + ($index % 26));
 }
 
 # Print file names and transformations
 sub _verbose_header {
     my ($self, @doms) = @_;
     my $fh = $self->fh;
-    
+
     # STAMP does this debug out, so just copy it
-    print  $fh "Reading coordinates...\n";
-        
+    print $fh "Reading coordinates...\n";
+
     for (my $i = 0; $i < @doms; $i++) {
-        my $dom = $doms[$i];
-        my $domain = $i+1;
-        my $chain = $self->renumber_chains ? $self->next_chain : $dom->onechain; 
+        my $dom    = $doms[$i];
+        my $domain = $i + 1;
+        my $chain =
+            $self->renumber_chains ? $self->next_chain : $dom->onechain;
         $chain ||= '_';
+
         # Header
-        printf $fh "Domain %3d %s %s\n", $domain, $dom->file||'undef', $dom->id;
+        printf $fh "Domain %3d %s %s\n", $domain, $dom->file || 'undef',
+            $dom->id;
+
         # Chain counts
         my $descriptor = $dom->descriptor;
         $descriptor = "from $descriptor" if $descriptor =~ /to/; # cofm format
         printf $fh "        %s %d CAs => %4d CAs in total\n",
             $descriptor, $dom->length, $dom->length;
-        print  $fh "Applying the transformation...\n";
+        print $fh "Applying the transformation...\n";
         $self->flush;
-        my $out = SBG::TransformIO::stamp->new(fh=>$self->fh);
+        my $out = SBG::TransformIO::stamp->new(fh => $self->fh);
+
         # Verbose: force even the identity to matrix to be printed, as cofm does
-        $out->write($dom->transformation, verbose=>1);
+        $out->write($dom->transformation, verbose => 1);
         $out->flush;
-        print  $fh "     ...to these coordinates.\n";
+        print $fh "     ...to these coordinates.\n";
     }
     $self->_index($self->_index + @doms);
-    print $fh "\n\n";    
+    print $fh "\n\n";
 }
-    
 
 # Print seven ATOM records
 sub _print_atoms {
     my ($self, $dom, $chain) = @_;
     my $fh = $self->fh;
-    
+
     # This is a column-based format (defined by the PDB specification)
     my $rows = $dom->coords->dim(1);
     for (my $j = 0; $j < $rows; $j++) {
+
         # Vary the temparature, to be able to visualize relative orientation
         # But only display every second one, to be able to identify +x vs -x
         # Temperatures: 0, 4, 0, 12, 0, 20, 0
         my $temp = ($j % 2) * 4 * $j;
-            
-        printf $fh
-            '%-6s' .   # Record
-            '%5d'  .   # Atom serial num
-            ' '    .
-            '%-4s' .   # Atom name (default 'CA')
-            '%1s'  .   # Alt location
-            '%3s'  .   # Res name (default 'ALA')
-            ' '    .
-            '%1s'  .   # Chain
-            '%4d'  .   # Residue sequence number
-            '%1s'  .   # Residue insertion code
-            '   '  .
-            '%8.3f'.   # X coordinate
-            '%8.3f'.   # Y coordinate
-            '%8.3f' .  # Z coordinate
-            '%6.2f'.   # B-Occupancy
-            '%6.2f'.   # Temperature factor
-            "\n",
-            'ATOM', ceil($j/2.0), ' CA ', ' ', 'ALA', $chain, ceil($j/2.0), ' ',
-            $dom->coords->slice("0:2,$j")->list, 1.0, $temp;
-    }     
-}
 
+        printf $fh '%-6s' .      # Record
+            '%5d' .              # Atom serial num
+            ' ' . '%-4s' .       # Atom name (default 'CA')
+            '%1s' .              # Alt location
+            '%3s' .              # Res name (default 'ALA')
+            ' ' . '%1s' .        # Chain
+            '%4d' .              # Residue sequence number
+            '%1s' .              # Residue insertion code
+            '   ' . '%8.3f' .    # X coordinate
+            '%8.3f' .            # Y coordinate
+            '%8.3f' .            # Z coordinate
+            '%6.2f' .            # B-Occupancy
+            '%6.2f' .            # Temperature factor
+            "\n",
+            'ATOM', ceil($j / 2.0), ' CA ', ' ', 'ALA', $chain,
+            ceil($j / 2.0), ' ',
+            $dom->coords->slice("0:2,$j")->list, 1.0, $temp;
+    }
+}
 
 =head2 read
 
@@ -281,49 +279,53 @@ is then indexed based on the fact that each center of mass contains 7 points
 
 
 =cut
+
 sub read {
     my ($self) = @_;
-    # Make sure the input is buffered, to be able to seek() on it, 
-    # Necessary, because we have to read it twice, once for atoms, 
+
+    # Make sure the input is buffered, to be able to seek() on it,
+    # Necessary, because we have to read it twice, once for atoms,
     # once for header metadata
     $self->buffer() or return;
-    
+
     # Which dom in the 'stream' to return next
     my $index = $self->_index;
     if (defined $self->_doms) {
         return unless $index < $self->_doms->length;
-        $self->_index($index+1);
+        $self->_index($index + 1);
         return $self->_doms->[$index];
     }
-    
+
     # Verbose headers are first
     # The each domain has one REMARK line followed by ATOM lines, alternating
     my $doms = $self->_read_header();
+
     # Reset the stream, then read the ATOM lines
     $self->rewind();
-    
+
     # Read all atoms into a single structure
-    my $atoms_in = SBG::DomainIO::pdb->new(fh=>$self->fh);
+    my $atoms_in = SBG::DomainIO::pdb->new(fh => $self->fh);
     my $all_atoms = $atoms_in->read()->coords;
-    
+
     # Since this is a cofm file, each domain has exactly seven (CA) atoms
     for (my $i = 0; $i < @$doms; $i++) {
-        my $dom = $doms->[$i];
-        my $start = 7 * $i; 
+        my $dom   = $doms->[$i];
+        my $start = 7 * $i;
+
         # TODO potential optimization
         # Ignore redundant atoms if they haven't been oriented
-#        my $end = $dom->transformation->has_matrix ? $start + 6 : $start + 0;
+        #        my $end = $dom->transformation->has_matrix ? $start + 6 : $start + 0;
         my $end = $start + 6;
+
         # Column-major indexing (rows in the second dimension)
         $dom->coords($all_atoms->slice(",$start:$end"));
     }
     $self->_doms($doms);
     while (defined($self->_doms) && $index < $self->_doms->length) {
-        $self->_index($index+1);
+        $self->_index($index + 1);
         return $self->_doms->[$index];
-    }    
-}    
-
+    }
+}
 
 =head2 _read_header
 
@@ -370,6 +372,7 @@ With transformation matrix:
 
 
 =cut
+
 sub _read_header {
     my ($self) = @_;
     my $fh = $self->fh;
@@ -377,66 +380,76 @@ sub _read_header {
 
     # What type of Domain to create:
     my $objtype = $self->objtype;
-                                              
-    my $doms = [ undef ];         
+
+    my $doms = [undef];
+
     # All header lines come first, if any
     # These have to be matched to one another by the domain counter (Int, from 1)
     my $index;
     while (my $line = <$fh>) {
         if ($line =~ /^Domain\s+(\d+)\s+(\S+)\s*(\S+)?/i) {
+
             # Found a new domain, this line has the file name
-            $index = $1; # 1-based index
+            $index = $1;    # 1-based index
             my $dom = $objtype->new;
+
             # Also note the file that was read from
-            $dom->file($2) if defined $2 && -r $2;      
-            $doms->[$index - 1] = $dom;
+            $dom->file($2) if defined $2 && -r $2;
+            $doms->[ $index - 1 ] = $dom;
             $dom->label($3) if defined $3;
-        } elsif ($line =~ /\s+(.*?)=>\s+\d+\s+CAs in total$/) {      
-            # One of: 'from A 33 _ to A 566 B' or 'CHAIN X' or 'all residues'    
-            my @matches = $1 =~ 
-                /from\s+(.*?)\s+\d+ CAs|(chain .)|(all residues)\s+\d+ CAs/ig;
-            @matches = grep { defined } @matches;
+        }
+        elsif ($line =~ /\s+(.*?)=>\s+\d+\s+CAs in total$/) {
+
+            # One of: 'from A 33 _ to A 566 B' or 'CHAIN X' or 'all residues'
+            my @matches = $1
+                =~ /from\s+(.*?)\s+\d+ CAs|(chain .)|(all residues)\s+\d+ CAs/ig;
+            @matches = grep {defined} @matches;
             my $descriptor = "@matches";
             $descriptor =~ s/all residues/ALL/;
+
             # cofm uses lowercase, but STAMP uses uppercase
             $descriptor =~ s/chain/CHAIN/g;
-            my $dom = $doms->[$index - 1];
-            $dom->descriptor($descriptor);            
-        } elsif ($line =~ /^Applying the transformation/i) {
+            my $dom = $doms->[ $index - 1 ];
+            $dom->descriptor($descriptor);
+        }
+        elsif ($line =~ /^Applying the transformation/i) {
+
             # Keep track of any non-native transformation matrices
-            my $transio = SBG::TransformIO::stamp->new(fh=>$self->fh);
+            my $transio = SBG::TransformIO::stamp->new(fh => $self->fh);
             my $transformation = $transio->read;
-            $doms->[$index - 1]->transformation($transformation);
-        } elsif ($line =~ /^REMARK((\s+\S+){4})/i) {
-            # The first 2 fields (4 tokens) don't use an = 
+            $doms->[ $index - 1 ]->transformation($transformation);
+        }
+        elsif ($line =~ /^REMARK((\s+\S+){4})/i) {
+
+            # The first 2 fields (4 tokens) don't use an =
             my %fields = split ' ', $1;
             my $rest = $';
-            
+
             # The remaining fields use an = and values may contain spaces
             # Which is why this regex has to be so ugly
             # Find words after the = as long as one of those isn't followed by =
             # So, (thing=value) and (thing = one two three) both work
-            while ($rest =~ /(\S+)\s*=\s*(\S+(?:\s+\S+\b(?!\s*=))*)/g) { 
-                $fields{$1} = $2; 
+            while ($rest =~ /(\S+)\s*=\s*(\S+(?:\s+\S+\b(?!\s*=))*)/g) {
+                $fields{$1} = $2;
             }
-            
+
             $index = $fields{Domain};
-            $doms->[$index-1] = $objtype->new unless defined $doms->[$index-1];
-            my $dom = $doms->[$index-1];
+            $doms->[ $index - 1 ] = $objtype->new
+                unless defined $doms->[ $index - 1 ];
+            my $dom = $doms->[ $index - 1 ];
             $dom->length($fields{N});
             $dom->radius($fields{Rg});
             $dom->assembly($fields{Assembly}) if defined $fields{Assembly};
-            $dom->model($fields{Model}) if defined $fields{Model};
-            $dom->classification($fields{Classification}) if 
-                defined $fields{Classification};
-            
+            $dom->model($fields{Model})       if defined $fields{Model};
+            $dom->classification($fields{Classification})
+                if defined $fields{Classification};
+
             # If the Id looks like it begins with a PDB ID, parse it out
-            if ($fields{Id} =~ /^($re_pdb)/) { $dom->pdbid($1) };            
-        }          
-    } # while
+            if ($fields{Id} =~ /^($re_pdb)/) { $dom->pdbid($1) }
+        }
+    }    # while
     return $doms;
 }
- 
 
 __PACKAGE__->meta->make_immutable;
 no Moose;

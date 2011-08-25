@@ -17,8 +17,6 @@ L<SBG::U::DB>
 
 =cut
 
-
-
 package SBG::SCOP;
 use base qw/Exporter/;
 
@@ -27,8 +25,6 @@ our @EXPORT_OK = qw(pdb2scop lca equiv parse_scopid get_descriptor);
 use strict;
 use warnings;
 use List::MoreUtils qw(each_arrayref all);
-
-
 
 =head2 lca
 
@@ -43,6 +39,7 @@ qw(a.3.2.2-1 a.3.2.2-1) => a.3.2.2-1
 qw(a.3.2.2-1 a.3.2.2-2) => a.3.2.2
 
 =cut
+
 sub lca {
     my @classes = map { [ split(/[.-]/) ] } @_;
     my @lca;
@@ -52,10 +49,8 @@ sub lca {
         last unless all { $x eq $_ } @a;
         push @lca, $x;
     }
-    return join('-', join('.', @lca[0..3]), @lca[4..$#lca]);
+    return join('-', join('.', @lca[ 0 .. 3 ]), @lca[ 4 .. $#lca ]);
 }
-
-
 
 =head2 equiv
 
@@ -73,17 +68,14 @@ depth=5 => same as depth=0 ($a eq $b eq lca($a,$b))
 NB equiv("a.1.2", "a.1.2", 4) will be false. Original labels only length 3
 
 =cut
+
 sub equiv {
     my ($a, $b, $depth) = @_;
     return $a eq $b unless $depth;
-    my $lca = lca($a,$b);
+    my $lca = lca($a, $b);
     my @s = split /[.-]/, $lca;
-    return defined $s[$depth-1];
+    return defined $s[ $depth - 1 ];
 }
-
-
-
-
 
 1;
 

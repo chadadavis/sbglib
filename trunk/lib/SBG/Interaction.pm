@@ -20,15 +20,12 @@ L<Bio::Network::Interaction> , L<SBG::Node>
 
 =cut
 
-
-
 package SBG::Interaction;
 use Moose;
 
 # Explicitly extend Moose::Object when inheriting from non-Moose class
 # Order is relevant here, first class listed provides 'new()' method
 extends qw/Bio::Network::Interaction Moose::Object/;
-
 
 with 'SBG::Role::Dumpable';
 with 'SBG::Role::Scorable';
@@ -37,13 +34,11 @@ with 'SBG::Role::Writable';
 with 'SBG::Role::Clonable';
 with 'SBG::Role::Transformable';
 
-
 use overload (
-    '""' => 'stringify',
-    '==' => 'equal',
+    '""'     => 'stringify',
+    '=='     => 'equal',
     fallback => 1,
-    );
-
+);
 
 use Moose::Autobox;
 
@@ -51,8 +46,6 @@ use Moose::Autobox;
 use SBG::Seq;
 use SBG::Model;
 use SBG::U::iRMSD;
-
-
 
 =head2 _models
 
@@ -71,13 +64,13 @@ $interaction->put($node1,$model1);
 my $model1 = $interaction->at($node1);
 
 =cut
-has '_models' => (
-    isa => 'HashRef[SBG::Model]',
-    is => 'ro',
-    lazy => 1,
-    default => sub { {} },
-    );
 
+has '_models' => (
+    isa     => 'HashRef[SBG::Model]',
+    is      => 'ro',
+    lazy    => 1,
+    default => sub { {} },
+);
 
 =head2 source
 
@@ -85,22 +78,22 @@ A label representing the source database of this interaction, or interaction
 template.
 
 =cut
-has 'source' => (
-	isa => 'Str',
-	is => 'rw',
-);
 
+has 'source' => (
+    isa => 'Str',
+    is  => 'rw',
+);
 
 =head2 id
 
 Unique identifier (within 'source')
 
 =cut
+
 has 'id' => (
     isa => 'Int',
-    is => 'rw',
-    );
-
+    is  => 'rw',
+);
 
 =head2 set/get/keys
 
@@ -114,22 +107,23 @@ L<MooseX::AttributeHelpers> create attributes that are instances of their own
 class. I.e. neither 'handles' nor 'provides' are useful.
 
 =cut
+
 sub set {
     my $self = shift;
     $self->_models->put(@_);
     $self->_update_id;
     return $self->_models->at(@_);
-} # set
+}    # set
+
 sub get {
     my $self = shift;
     return $self->_models->at(@_);
 }
+
 sub keys {
     my $self = shift;
     return $self->_models->keys->sort;
 }
-
-
 
 =head2 new
 
@@ -145,9 +139,10 @@ has different semantics. Rather, create the object with an empty constructor and
 use the setter methods to set attribute values.
 
 =cut
+
 override 'new' => sub {
     my ($class, @ops) = @_;
-    
+
     # This creates a Bio::Network::Interaction
     my $obj = $class->SUPER::new(@ops);
 
@@ -164,8 +159,6 @@ override 'new' => sub {
     return $obj;
 };
 
-
-
 =head2 irmsd
 
  Function: 
@@ -175,21 +168,20 @@ override 'new' => sub {
 
 
 =cut
+
 sub irmsd {
     my ($self, $other) = @_;
 
     # Define mapping: Assume same keys to models
-    my $keys = $self->keys;
-    my $selfdoms = $keys->map(sub{$self->get($_)->subject});
-    my $otherdoms = $keys->map(sub{$other->get($_)->subject});
+    my $keys      = $self->keys;
+    my $selfdoms  = $keys->map(sub { $self->get($_)->subject });
+    my $otherdoms = $keys->map(sub { $other->get($_)->subject });
     return unless $otherdoms->length == $self->doms->length;
 
     my $res = SBG::U::iRMSD::irmsd($selfdoms, $otherdoms);
     return $res;
 
-} # irmsd
-
-
+}    # irmsd
 
 =head2 domains
 
@@ -200,13 +192,13 @@ sub irmsd {
 
 
 =cut
+
 sub domains {
-    my ($self,$keys) = @_;
+    my ($self, $keys) = @_;
     $keys ||= $self->keys;
-    return $keys->map(sub{$self->get($_)->subject});
+    return $keys->map(sub { $self->get($_)->subject });
 
-} # domains
-
+}    # domains
 
 =head2 domains
 
@@ -217,13 +209,13 @@ sub domains {
 
 
 =cut
+
 sub models {
-    my ($self,$keys) = @_;
+    my ($self, $keys) = @_;
     $keys ||= $self->keys;
-    return $keys->map(sub{$self->get($_)});
+    return $keys->map(sub { $self->get($_) });
 
-} # models
-
+}    # models
 
 =head2 pdbid
 
@@ -235,12 +227,11 @@ sub models {
 PDB structure entry code from which this interaction template is derived
 
 =cut
+
 sub pdbid {
     my ($self,) = @_;
     return $self->domains->head->pdbid;
-} # pdbid
-
-
+}    # pdbid
 
 =head2 overlap
 
@@ -256,6 +247,7 @@ If this is smaller than 0, this might not be an actual interface.
 If this is larger than ~50%, this interface might contain clashes
 
 =cut
+
 sub overlap {
     my ($self,) = @_;
 
@@ -263,10 +255,9 @@ sub overlap {
     my $overlapfrac = $dom1->overlap($dom2);
     return $overlapfrac;
 
-} # overlap
+}    # overlap
 
-
-# TODO DES belongs in DomSetI. 
+# TODO DES belongs in DomSetI.
 
 # NB A Network may contain multiple Interactions that are equal, as long as they
 # are connecting different Nodes
@@ -275,14 +266,12 @@ sub equal {
     my ($self, $other) = @_;
 
     # Domains in each Interaction
-    my $selfdoms = $self->domains->sort;
+    my $selfdoms  = $self->domains->sort;
     my $otherdoms = $other->domains->sort;
-    
+
     # Componentwise equality, only if all (two) are true
-    return all { $selfdoms->[$_] == $otherdoms->[$_] } (0..1);
+    return all { $selfdoms->[$_] == $otherdoms->[$_] } (0 .. 1);
 }
-
-
 
 =head2 avg_scores
 
@@ -299,25 +288,25 @@ Interaction->scores->at('avg_seqid') with value 50%.
 TODO replace with Scores::reduce($_, 'avg') for @keys
 
 =cut
+
 sub avg_scores {
     my ($self, @keys) = @_;
     return unless @keys;
     my ($s1, $s2) = $self->_models->values->flatten;
     foreach my $key (@keys) {
-    	next unless 
-    	   defined($s1->scores->at($key)) && defined($s2->scores->at($key));
-        my $avg = ( $s1->scores->at($key) + $s2->scores->at($key) ) / 2.0;
+        next
+            unless defined($s1->scores->at($key))
+                && defined($s2->scores->at($key));
+        my $avg = ($s1->scores->at($key) + $s2->scores->at($key)) / 2.0;
         $self->scores->put("avg_$key", $avg);
     }
 
-} # avg_scores
-
+}    # avg_scores
 
 sub stringify {
     my ($self) = @_;
     return $self->_models->values->sort->join('--');
 }
-
 
 =head2 transform
 
@@ -330,24 +319,22 @@ sub stringify {
 
 
 =cut
-sub transform {
-    my ($self,$matrix) = @_;
-    foreach my $model (@{$self->models->values}) {
-        $model->transform($matrix);
-   }
-   return $self;
-} # transform
 
+sub transform {
+    my ($self, $matrix) = @_;
+    foreach my $model (@{ $self->models->values }) {
+        $model->transform($matrix);
+    }
+    return $self;
+}    # transform
 
 sub _update_id {
     my ($self) = @_;
     $self->primary_id($self->_models->values->sort->join('--'));
 }
 
-
 ###############################################################################
-__PACKAGE__->meta->make_immutable(inline_constructor=>0);
+__PACKAGE__->meta->make_immutable(inline_constructor => 0);
 no Moose;
 1;
-
 

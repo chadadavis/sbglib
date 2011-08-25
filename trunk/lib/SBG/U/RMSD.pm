@@ -34,18 +34,18 @@ Private internal functions are generally preceded with an _
 
 =cut
 
-
-
 package SBG::U::RMSD;
 
 require Exporter;
 our @ISA = qw(Exporter);
+
 # Automatically exported symbols
-our @EXPORT    = qw//;
+our @EXPORT = qw//;
+
 # Manually exported symbols
 our @EXPORT_OK = qw/
-centroid globularity identity radius_gyr radius_max rmsd superpose superposition translation
-/;
+    centroid globularity identity radius_gyr radius_max rmsd superpose superposition translation
+    /;
 
 use Log::Any qw/$log/;
 use Carp;
@@ -54,7 +54,6 @@ use PDL::Core qw/pdl ones inplace sclr zeroes/;
 use PDL::Reduce qw/reduce/;
 use PDL::MatrixOps qw/svd det/;
 use PDL::Ufunc qw/all any sumover average max all/;
-
 
 =head2 identity
 
@@ -66,15 +65,16 @@ use PDL::Ufunc qw/all any sumover average max all/;
 
 
 =cut
+
 sub identity {
     my ($n) = @_;
-    pdl([1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1])
-    # diagonal() was broken in recent PDL
-#     $z = zeroes($n,$n);
-#     $z->diagonal(0,1) .= $z->diagonal(0,1) + 1;
-#     $z;
-} # identity
+    pdl([ 1, 0, 0, 0 ], [ 0, 1, 0, 0 ], [ 0, 0, 1, 0 ], [ 0, 0, 0, 1 ])
 
+        # diagonal() was broken in recent PDL
+        #     $z = zeroes($n,$n);
+        #     $z->diagonal(0,1) .= $z->diagonal(0,1) + 1;
+        #     $z;
+}    # identity
 
 =head2 rmsd
 
@@ -99,21 +99,24 @@ $pointsb = pdl [ [ 0,4,6,1 ], [ 2,5,6,1 ]];
 
 
 =cut
+
 sub rmsd {
     my ($pointsa, $pointsb) = @_;
+
     # Creates a new matrix copy to do the calculations
     my $diff = $pointsa->copy;
+
     # Inplace subtraction
     $diff = inplace($diff) - $pointsb if defined $pointsb;
+
     # Inplace exponentiation
     $diff = inplace($diff)**2;
+
     # Reduce each row (each point) via sumover, producing a vector of sums.
     # Then reduce the column vector via average, producing a scalar
     return sqrt(sclr(average(sumover($diff))));
 
-} # rmsd
-
-
+}    # rmsd
 
 =head2 centroid
 
@@ -133,12 +136,15 @@ coordinates everywhere or nowhere, as things remain consistent.
 See L<Bio::Tools::SeqStats> for getting amino acid weights.
 
 =cut
+
 sub centroid {
     my ($points, $weights) = @_;
+
     # Don't modify original
     my $mat = $points->copy;
 
     if (defined $weights) {
+
         # Inline multiplication of weights, if given. If not given, $mat is
         # simply a pointer to, rather than a copy of $points
         $mat = inline($mat) * $weights->transpose();
@@ -147,10 +153,8 @@ sub centroid {
     # Matrix has two dimensions (0: rows/a single point, 1: columns/X or Y or Z)
     # Reduce along the second dimension (dim 1)
     # I.e. this averages each column, producing an avg X, an avg Y, an avg Z
-    return $mat->reduce('avg',1)
+    return $mat->reduce('avg', 1);
 }
-
-
 
 =head2 radius_gyr
 
@@ -163,12 +167,11 @@ NB the radius of gyration is just the RMSD from all the coordinates to the one
 centre-of-mass coordinate;
 
 =cut 
-sub radius_gyr { 
+
+sub radius_gyr {
     my ($points, $centroid) = @_;
     return rmsd($points, $centroid);
 }
-
-
 
 =head2 radius_max
 
@@ -179,15 +182,14 @@ sub radius_gyr {
 
 
 =cut
+
 sub radius_max {
     my ($points, $centroid) = @_;
     my $diff = $points - $centroid;
     $diff = inplace($diff)**2;
     return sqrt max(sumover($diff));
 
-} # radius_max
-
-
+}    # radius_max
 
 =head2 superposition
 
@@ -210,6 +212,7 @@ Original reference:
  vectors", Acta Crystallographica 32:922. doi:10.1107/S0567739476001873
 
 =cut
+
 sub superposition {
     my ($pointsa, $pointsb) = @_;
     my $copya = $pointsa->copy;
@@ -217,11 +220,12 @@ sub superposition {
     # Identify centroid, to move points to common centre-of-mass before rotation
     my $centroida = centroid($pointsa);
     my $centroidb = centroid($pointsb);
+
     # Translate $pointsa to the origin
     $copya -= $centroida;
 
     # Covariance matrix. Does crossprod on the matrix after being placed at
-    # commone centre. The Kabsch algorithm calls this covariance, but it's 
+    # commone centre. The Kabsch algorithm calls this covariance, but it's
     # really just a matrix product.
     my $covariance = $copya->transpose x ($pointsb - $centroidb);
 
@@ -231,7 +235,6 @@ sub superposition {
 
     # Create an affine transformation matrix 4x4 from the 3x3
     my $affine = _affine($rot);
-
 
     # The following steps have to be done in this order to be compatible with
     # the order in which STAMP does it.
@@ -244,15 +247,13 @@ sub superposition {
 
     # Determine the translation required to get the rotated copya onto pointsb
     my $transl = $centroidb - centroid($copya);
-    
+
     # Make the affine matrix: combine rotation and translation
     $affine = _affine($affine, $transl);
 
     return $affine;
 
-} # superposition
-
-
+}    # superposition
 
 =head2 superpose
 
@@ -266,36 +267,41 @@ Unlike L<superposition> which just returns the transformation matrix, this also 
 The final options determines the number of iterative refinements. The default is 1, but this should be at least 10 and could be hundreds, for larger structures. 
 
 =cut
+
 sub superpose {
-    my ($pointsa,$pointsb,$iterations) = @_;
+    my ($pointsa, $pointsb, $iterations) = @_;
     $iterations = 1 unless $iterations && $iterations > 1;
+
     # Cumulative transform, initialized with an affine identity matrix (4x4)
     my $total = _affine();
     my $rmsd_prev = rmsd($pointsa, $pointsb);
+
     # Short cut for identity, no refinement
     return $total if $rmsd_prev < 1;
-    # Additional refinement interations  
+
+    # Additional refinement interations
     for (my $i = 0; $i < $iterations; $i++) {
-    	# incremental superposition
-        my $step = superposition($pointsa, $pointsb);	
-    	$pointsa .= _apply($step, $pointsa);
-    	# Right-to-left application of transformation matrices
-    	# So we multiply on the left
+
+        # incremental superposition
+        my $step = superposition($pointsa, $pointsb);
+        $pointsa .= _apply($step, $pointsa);
+
+        # Right-to-left application of transformation matrices
+        # So we multiply on the left
         $total = $step x $total;
-        my $rmsd = rmsd($pointsa,$pointsb);
+        my $rmsd = rmsd($pointsa, $pointsb);
         $log->debug("Refinement $i : $rmsd_prev to $rmsd");
         if ($rmsd_prev - $rmsd < 0.01) {
-        	$log->info("Converged after $i refinements at $rmsd");
-        	last;
-        } else {
-        	$rmsd_prev = $rmsd;
+            $log->info("Converged after $i refinements at $rmsd");
+            last;
+        }
+        else {
+            $rmsd_prev = $rmsd;
         }
     }
     return $total;
 
-} # superpose
-
-
+}    # superpose
 
 =head2 globularity
 
@@ -312,37 +318,37 @@ This provides some measure of how compact, non-linear, the components in a
 complex are arranged. E.g. high for an exosome, low for actin fibers
 
 =cut
+
 sub globularity {
     my ($pdl) = @_;
 
     my $centroid = centroid($pdl);
-    my $radgy = radius_gyr($pdl, $centroid);
-    my $radmax = radius_max($pdl, $centroid);
+    my $radgy    = radius_gyr($pdl, $centroid);
+    my $radmax   = radius_max($pdl, $centroid);
 
     # Convert PDL to scalar
     return ($radgy / $radmax);
 
-} # globularity
-
+}    # globularity
 
 sub _apply {
     my ($mat, $vect) = @_;
     return ($mat x $vect->transpose)->transpose;
 }
 
-
 sub _affine {
     my ($rot, $transl) = @_;
     my $affine = identity 4;
+
     # Rotation matrix 3x3
     $affine->slice('0:2,0:2') .= $rot->slice('0:2,0:2')
         if defined $rot;
+
     # Translation vector (between centroids)
-    $affine->slice('3,0:2') .= $transl->slice('0:2')->transpose 
+    $affine->slice('3,0:2') .= $transl->slice('0:2')->transpose
         if defined $transl;
     return $affine;
 }
-
 
 # Determine rotation matrix based on singular value decomposition
 # From: http://boscoh.com/protein/rmsd-root-mean-square-deviation
@@ -350,12 +356,13 @@ sub _rot_svd {
     my ($covariance) = @_;
 
     # Do a slice to make sure it's 3x3
-    my ($V,$S,$Wt) = svd($covariance->slice('0:2,0:2'));
+    my ($V, $S, $Wt) = svd($covariance->slice('0:2,0:2'));
+
     # $S is the diagonal components of a diagonal matrix. We need the identity
     # matrix where the last cell (-1,-1) of the matrix should be sign-inverted
     # if the determinant of the covariance matrix is negative.  This compensates
     # for chirality by using right-handed coordinates.  As a shortcut, just
-    # invert the signs in the last column, when necessary 
+    # invert the signs in the last column, when necessary
 
     # Check for bad values (probably more efficient ways to do this...)
     my $valid = ($V >= 0) | ($V < 0);
@@ -363,15 +370,14 @@ sub _rot_svd {
         carp "Cannot superpose. No singular value decomposition";
         return;
     }
-    
+
     if (det $covariance < 0) {
         $V->slice('-1,') *= -1;
     }
 
-    my $rot=$Wt x $V->transpose;
+    my $rot = $Wt x $V->transpose;
     return $rot;
 }
-
 
 =head2 translation
 
@@ -383,17 +389,18 @@ sub _rot_svd {
 Based on the centres-of-mass of the two sets of points
 
 =cut
+
 sub translation {
     my ($pointsa, $pointsb) = @_;
 
     my $centroida = centroid($pointsa);
     my $centroidb = centroid($pointsb);
-    my $diff = $centroidb - $centroida;
-    my $mat = identity 4;
+    my $diff      = $centroidb - $centroida;
+    my $mat       = identity 4;
     $mat->slice('3,0:2') .= $diff->slice('0:2')->transpose;
     return $mat;
 
-} # translation
+}    # translation
 
 ###############################################################################
 

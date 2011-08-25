@@ -16,8 +16,6 @@ L<SBG::Role::Storable> , L<SBG::Role::Dumpable>
 
 =cut
 
-
-
 package SBG::U::Object;
 
 use base qw/Exporter/;
@@ -35,8 +33,6 @@ use Class::MOP::Class;
 # Shouldn't need to explicitly load this, but overloading is not restored if not
 use SBG::Seq;
 
-
-
 =head2 module_for
 
  Function: Loads the module for an object of a given class
@@ -50,11 +46,14 @@ way.
 BUGS: Why does Perl not do this automatically when deserializing an object?
 
 =cut
+
 sub module_for {
     my ($obj) = @_;
     my $class = blessed($obj) or return;
+
     # Load the required class dynamically
     Module::Load::load($class);
+
     # Bless back into own class (restores 'overload' functionality)
     bless $obj, $class if $class;
 
@@ -65,13 +64,11 @@ sub module_for {
         }
     }
     if (UNIVERSAL::isa($obj, 'ARRAY')) {
-    	foreach my $val (@$obj) {
+        foreach my $val (@$obj) {
             module_for($val);
         }
     }
 }
-
-
 
 =head2 load_object
 
@@ -82,26 +79,28 @@ sub module_for {
 
 
 =cut
+
 sub load_object {
     my ($path) = @_;
     my $obj = retrieve($path);
     $obj = undump($path) unless defined $obj;
     if (defined $obj) {
         $log->debug("Loaded: ", $path);
-    } else {
-    	$log->error("Failed to load: ", $path);
+    }
+    else {
+        $log->error("Failed to load: ", $path);
     }
     return unless defined $obj;
+
     # Load the module definition for the type of object
     module_for($obj);
+
     # See if the module has been updated since object was stored.
-   # TODO add this back in after re-creating all objects
-#    check_version($obj);
+    # TODO add this back in after re-creating all objects
+    #    check_version($obj);
 
     return $obj;
 }
-
-
 
 =head2 methods
 
@@ -113,20 +112,19 @@ sub load_object {
 Assumes we're dealing with MOP::Class, e.g. Moose, objects here
 
 =cut
+
 sub methods {
     my ($obj) = @_;
     return unless defined($obj);
-    my $pkg = blessed $obj;
-    my @methods = $obj->meta->get_all_methods;
+    my $pkg         = blessed $obj;
+    my @methods     = $obj->meta->get_all_methods;
     my @pkg_methods = grep { $_->package_name =~ /^$pkg$/ } @methods;
-    my @public = grep { $_->name !~ /^_/ } @pkg_methods;
-    my @names = map { $_->original_fully_qualified_name } @public;
-    my @sorted = sort @names;
+    my @public      = grep { $_->name !~ /^_/ } @pkg_methods;
+    my @names       = map { $_->original_fully_qualified_name } @public;
+    my @sorted      = sort @names;
     return @sorted;
 
 }
-
-
 
 1;
 

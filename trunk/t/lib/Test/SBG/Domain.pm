@@ -7,5 +7,4 @@ sub basic : Tests {
     local $TODO = 'todo';
 }
 
-
 1;

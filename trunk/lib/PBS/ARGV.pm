@@ -107,7 +107,7 @@ use File::Temp qw(tempfile);
 use Log::Any qw/$log/;
 use Getopt::Long;
 use Tie::File;
-use IPC::Cmd; # qw/can_run/;
+use IPC::Cmd;    # qw/can_run/;
 
 =head2 qsub
 
@@ -131,15 +131,17 @@ sub qsub {
 
     my @jobids;
     my @failures;
-    # Number of command line arguments (e.g. files) to process per job, 
+
+    # Number of command line arguments (e.g. files) to process per job,
     # default: 1
     my $blocksize = $ops{blocksize} || 1;
     my $nparams_submitted = 0;
     while (my $param = _block($blocksize)) {
-    	# Wait if queue overloaded
-    	_throttle($ops{throttle});
-        my $jobid = _submit( $param, %ops );
-        if ( $jobid eq '-1' ) {
+
+        # Wait if queue overloaded
+        _throttle($ops{throttle});
+        my $jobid = _submit($param, %ops);
+        if ($jobid eq '-1') {
             push @failures, @$param;
         }
         else {
@@ -150,71 +152,69 @@ sub qsub {
 
     # Restore ARGV with the ones that didn't submit
     @::ARGV = @failures;
-    
+
     # If we're on a TTY and not already in a PBS job
-    if (-t STDOUT && ! defined $ENV{PBS_ENVIRONMENT} ) {
-    	print 
-    	   "Submitted $nparams_submitted args in ", 
-    	   scalar(@jobids), " jobs (x$blocksize)\n";
+    if (-t STDOUT && !defined $ENV{PBS_ENVIRONMENT}) {
+        print
+            "Submitted $nparams_submitted args in ",
+            scalar(@jobids), " jobs (x$blocksize)\n";
     }
-    
+
     return @jobids;
 
 }    # qsub
 
-
 sub _block {
-	my ($blocksize) = @_;
-	my @block = map { shift @::ARGV } 1..$blocksize;
-	# Workaround for unmatched shell glob
+    my ($blocksize) = @_;
+    my @block = map { shift @::ARGV } 1 .. $blocksize;
+
+    # Workaround for unmatched shell glob
     # Otherwise we might submit a job to process the file ./stuff.*.dat
-#	@block = grep { defined && -r } @block;
-#	Not testing for existance of file, as they may not always be files
-	@block = grep { defined } @block;
+    #	@block = grep { defined && -r } @block;
+    #	Not testing for existance of file, as they may not always be files
+    @block = grep {defined} @block;
     return unless @block;
     return \@block;
 }
 
-
 sub _throttle {
-	my ($throttle) = @_;
-	
-	return unless $throttle;
-	my $njobs = _njobs();
-	until ($njobs < $throttle) {
-		print "Sleeping until $njobs < $throttle\n";
-		sleep 60;
-		$njobs = _njobs();
-	}
+    my ($throttle) = @_;
+
+    return unless $throttle;
+    my $njobs = _njobs();
+    until ($njobs < $throttle) {
+        print "Sleeping until $njobs < $throttle\n";
+        sleep 60;
+        $njobs = _njobs();
+    }
 }
 
-
 sub _njobs {
-	# All job IDs contain the server name
+
+    # All job IDs contain the server name
     our $server = 'cln035';
-	my $jobs = `qstat -u \$USER`;
+    my $jobs = `qstat -u \$USER`;
     chomp $jobs;
     my @jobs = split "\n", $jobs;
-    @jobs = grep { /\.${server}/ } @jobs;
+    @jobs = grep {/\.${server}/} @jobs;
     my $njobs = @jobs;
     return $njobs;
 }
 
-
 # Ability to connect to PBS server
 sub can_connect {
-	our $qstat;
-	$qstat ||= IPC::Cmd::can_run('qstat') or return;
-	our $connected;
-	#TODO DES use IPC:Cmd::run() here to set a 5 second timeout on the check
-	$connected ||= system("$qstat >/dev/null 2>/dev/null") == 0; 
+    our $qstat;
+    $qstat ||= IPC::Cmd::can_run('qstat') or return;
+    our $connected;
+
+    #TODO DES use IPC:Cmd::run() here to set a 5 second timeout on the check
+    $connected ||= system("$qstat >/dev/null 2>/dev/null") == 0;
     return $connected;
 }
 
-
 # Write and submit one PBS job script
 sub _submit {
-    my ( $fileargs, %ops ) = @_;
+    my ($fileargs, %ops) = @_;
     our @pbs_ops;
 
     # Default: rerun same script
@@ -226,23 +226,23 @@ sub _submit {
     my @directives = $ops{directives} || ();
 
     # Check explicitly for mailing address, append it to directives
-    if ( $ops{M} ) {
+    if ($ops{M}) {
         push @directives, "-M $ops{M}";
     }
 
     # Notify on Abort, Begin, End
     #     push @directives, "-m a";
 
-
     # Command line options to pass on
     # Remove our own PBS ops, leaving just the caller's own ops
     my %cmdops = _purge_ops(%ops);
 
     # Array? if -J directive given, also append \$PBS_ARRAY_INDEX to cmdline
-    if ( $ops{J} ) {
-    	# NB if using array jobs, can only have one command line param, the file
-    	my @lines;
-    	tie @lines, 'Tie::File', $fileargs->[0];
+    if ($ops{J}) {
+
+        # NB if using array jobs, can only have one command line param, the file
+        my @lines;
+        tie @lines, 'Tie::File', $fileargs->[0];
         my $lastline = $#lines;
         push @directives, "-J 0-$lastline";
 
@@ -252,7 +252,7 @@ sub _submit {
     }
 
     # Add name, unless given
-    my ($name) = join(' ', @directives) =~ /-N (\S+)/; 
+    my ($name) = join(' ', @directives) =~ /-N (\S+)/;
     unless ($name) {
         $name = basename $fileargs->[0];
 
@@ -268,11 +268,11 @@ sub _submit {
     my @cmdops = map { '-' . $_ => $cmdops{$_} } keys %cmdops;
     $cmdline .= " @cmdops";
 
-    # Explicitly inherit TMPDIR from parent process, 
+    # Explicitly inherit TMPDIR from parent process,
     # to prevent PBS from overwriting it
     $ENV{TMPDIR} ||= File::Spec->tmpdir();
 
-    my ( $tmpfh, $jobscript ) = tempfile( "pbs_XXXXX", TMPDIR => 1 );
+    my ($tmpfh, $jobscript) = tempfile("pbs_XXXXX", TMPDIR => 1);
     print $tmpfh "#!/usr/bin/env sh\n";
     print $tmpfh "#PBS $_\n" for @directives;
     print $tmpfh "export TMPDIR=\"$ENV{TMPDIR}\"\n";
@@ -281,7 +281,8 @@ sub _submit {
     close $tmpfh;
 
     my $jobid = `qsub $jobscript`;
-#    my $jobid = 1;
+
+    #    my $jobid = 1;
     unless ($jobid) {
         my $msg = "Failed: qsub $jobscript (for $name)";
         $log->error($msg);
@@ -295,50 +296,51 @@ sub _submit {
         print "Submitted $jobid ($njobs jobs total) for: $name\n";
         $log->info("$jobid $name");
         $log->debug(join("\n", @$fileargs));
-#        print STDERR join("\n", @$fileargs), "\n";
+
+        #        print STDERR join("\n", @$fileargs), "\n";
         return $jobid;
     }
 
 }    # _submit
 
-
 # Called when the module is loaded, will exit the process if successful
 use Data::Dump qw/dump/;
+
 sub import {
     my ($self, @ops) = @_;
-    
+
     # Parse out PBS-specific submission ops too
-    our @pbs_ops = qw/cmd=s throttle=i directives=s blocksize=i J=s M=s/;    
+    our @pbs_ops = qw/cmd=s throttle=i directives=s blocksize=i J=s M=s/;
     push @ops, @pbs_ops;
-            
+
     # This makes single-char options case-sensitive
-    Getopt::Long::Configure ('no_ignore_case');
+    Getopt::Long::Configure('no_ignore_case');
     my %ops;
     my $result = GetOptions(\%ops, @ops);
-    
+
     # Don't submit PBS jobs when:
     # Already running in a PBS job (i.e. don't recurse)
     # Only options given, but no arguments
     # No permission to submit to PBS
-    if (
-        defined $ENV{PBS_ENVIRONMENT} ||
-        @ARGV == 0 || 
-        ! can_connect()
-        ) {
+    if (   defined $ENV{PBS_ENVIRONMENT}
+        || @ARGV == 0
+        || !can_connect())
+    {
+
         # Cleanup PBS-specific options
         %ops = _purge_ops(%ops);
         push @ARGV, map { '-' . $_ => $ops{$_} } keys %ops;
         return;
     }
-    
+
     my @jobids = qsub(%ops);
-    exit unless @ARGV;    
+    exit unless @ARGV;
 }
 
 sub _purge_ops {
-	my %ops = @_;
-	our @pbs_ops;
-    foreach my $key (keys %ops) { 
+    my %ops = @_;
+    our @pbs_ops;
+    foreach my $key (keys %ops) {
         foreach my $op (@pbs_ops) {
             delete $ops{$key} if $op =~ /^$key=/;
         }

@@ -33,8 +33,6 @@ L<SBG::U::DB::cofm> , L<SBG::Domain::Sphere>
 
 =cut
 
-
-
 package SBG::Run::cofm;
 use base qw/Exporter/;
 our @EXPORT_OK = qw/cofm/;
@@ -48,7 +46,7 @@ use File::Temp qw/tempfile/;
 
 use SBG::Domain::Sphere;
 use SBG::DomainIO::stamp;
-use SBG::DomainIO::cofm; 
+use SBG::DomainIO::cofm;
 use SBG::U::Cache qw/cache_get cache_set/;
 
 # TODO DES OO (base on Bio::Tools::Run::Wrapper)
@@ -56,7 +54,6 @@ use SBG::U::Cache qw/cache_get cache_set/;
 my $cofm = 'cofm';
 
 my $cachename = 'sbgcofm';
-
 
 =head2 cofm
 
@@ -77,8 +74,10 @@ TODO option to use Rg or Rmax as the resulting radius
 Uses parser from L<SBG::DomainIO::cofm>
 
 =cut
+
 sub cofm {
     my ($dom, %ops) = @_;
+
     # Caching on by default
     my $cache;
     $cache = 1 unless defined $ops{cache};
@@ -86,6 +85,7 @@ sub cofm {
     my $sphere;
     $sphere = cache_get($cachename, $key) if $cache;
     if (defined $sphere) {
+
         # [] is the marker for a negative cache entry
         return if ref($sphere) eq 'ARRAY';
         return $sphere;
@@ -94,30 +94,29 @@ sub cofm {
     # Cache miss, run external program
     $sphere = _run($dom);
     unless ($sphere) {
+
         # cofm failed, set negative cache entry
         cache_set($cachename, $key, []) if $cache;
         return;
     }
-        
+
     # Success, positive cache
     cache_set($cachename, $key, $sphere) if $cache;
 
     return $sphere;
 
-} # cofm
-
+}    # cofm
 
 # Hash a DomainI, including any transformation coords
 # Used to get a unique identifier to the cache
 sub _hash {
-    my ($dom) = @_;
+    my ($dom)  = @_;
     my $domstr = "$dom";
-    my $trans = $dom->transformation;
+    my $trans  = $dom->transformation;
     my $transstr = $trans ? md5_base64("$trans") : '';
     $domstr .= '(' . $transstr . ')' if $transstr;
     return $domstr;
 }
-
 
 =head2 _run
 
@@ -127,11 +126,12 @@ sub _hash {
  Args    : L<SBG::DomainI>
 
 =cut
+
 sub _run {
     my ($dom) = @_;
-    
+
     # Get dom into a stamp-formatted file
-    my $io = SBG::DomainIO::stamp->new(tempfile=>1);
+    my $io = SBG::DomainIO::stamp->new(tempfile => 1);
     $io->write($dom);
     my $path = $io->file;
     $io->close;
@@ -140,17 +140,17 @@ sub _run {
     # TODO consider using Capture::Tiny or IPC::Cmd
     my (undef, $tempfile) = tempfile();
     my $cmd = "$cofm -f $path -v > $tempfile";
-    unless(system($cmd)==0) { 
+    unless (system($cmd) == 0) {
         $log->error("Failed:\n\t$cmd\n\t$!");
         return;
     }
 
-    my $in = SBG::DomainIO::cofm->new(file=>$tempfile);
+    my $in = SBG::DomainIO::cofm->new(file => $tempfile);
+
     # Assumes a single domain
     my $sphere = $in->read;
     return $sphere;
-    
-} # _run
 
+}    # _run
 
 1;

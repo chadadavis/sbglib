@@ -5,8 +5,6 @@ use warnings;
 
 use Test::More;
 
-
-
 use FindBin qw/$Bin/;
 use lib "$Bin/../../../lib/";
 use Test::Approx;
@@ -23,6 +21,5 @@ is_approx($res->{pcclashes}, 0.33969166, "vmdclashes", $prec);
 my $complex = load_object("$Bin/../data/3kfi.target");
 $res = vmdclashes($complex);
 is_approx($res->{pcclashes}, 2.747, "vmdclashes", $prec);
-
 
 done_testing();

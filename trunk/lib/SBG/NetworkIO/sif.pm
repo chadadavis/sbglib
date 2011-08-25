@@ -16,21 +16,16 @@ L<SBG::Network> , L<SBG::IOI>
 
 =cut
 
-
-
 package SBG::NetworkIO::sif;
 use Moose;
 
 with qw/
-SBG::IOI
-/;
-
+    SBG::IOI
+    /;
 
 use Graph::Writer::GraphViz;
 
 use SBG::Network;
-
-
 
 =head2 read
 
@@ -41,6 +36,7 @@ use SBG::Network;
 
 NB Not implemented
 =cut
+
 sub read {
     my ($self,) = @_;
     my $fh = $self->fh;
@@ -50,13 +46,11 @@ sub read {
     while (my $line = <$fh>) {
         next if /^\s*$/ || /^\s*#/;
         my ($u, $v) = split ' ';
-        $net->add_edge($u,$v);
+        $net->add_edge($u, $v);
     }
     return $net;
 
-} # read
-
-
+}    # read
 
 =head2 write
 
@@ -68,6 +62,7 @@ sub read {
 
 
 =cut
+
 sub write {
     my ($self, $graph) = @_;
     my $fh = $self->fh or return;
@@ -75,18 +70,17 @@ sub write {
     # For each connection between two nodes, get all of the templates
     foreach my $e ($graph->edges) {
         my ($u, $v) = sort @$e;
+
         # Names of attributes for this edge
         foreach my $attr ($graph->get_edge_attribute_names($u, $v)) {
+
             # The actual interaction object for this template
-#            my $iaction = $graph->get_interaction_by_id($attr);
+            #            my $iaction = $graph->get_interaction_by_id($attr);
             print $fh "$u pp $v\n";
         }
     }
     return $self;
 }
-
-
-
 
 __PACKAGE__->meta->make_immutable;
 no Moose;

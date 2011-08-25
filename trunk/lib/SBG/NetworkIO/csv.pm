@@ -50,15 +50,12 @@ L<SBG::Interaction> , L<SBG::Network>
 
 =cut
 
-
-
 package SBG::NetworkIO::csv;
 use Moose;
 
 with qw/
-SBG::IOI
-/;
-
+    SBG::IOI
+    /;
 
 # In CSV format, a Network is just a set of Interaction
 use SBG::InteractionIO::csv;
@@ -67,8 +64,6 @@ use SBG::InteractionIO::csv;
 use SBG::Network;
 use SBG::Interaction;
 use SBG::Node;
-
-
 
 =head2 write
 
@@ -79,17 +74,17 @@ use SBG::Node;
 
 
 =cut
+
 sub write {
     my ($self, $net) = @_;
+
     # Delegate to InteractionIO
     my $iactionio = new SBG::InteractionIO::csv(%$self);
 
     $iactionio->write($_) for $net->interactions;
 
     return $self;
-} # write
-
-
+}    # write
 
 =head2 read
 
@@ -105,23 +100,23 @@ RRP41 RRP42  2br2 { CHAIN A } 2br2 { CHAIN B }
 RRP41 RRP42  2br2 { A 5 _ to A 220 _ } 2br2 { B 1 _ to B 55 _ }
 
 =cut
+
 sub read {
     my ($self) = @_;
+
     # Delegate to InteractionIO
     my $iactionio = SBG::InteractionIO::csv->new(%$self);
 
     my $net = SBG::Network->new;
     while (my ($iaction, @nodes) = $iactionio->read) {
 
-        # Now put it all into the ProteinNet. 
+        # Now put it all into the ProteinNet.
         # Now there is a formal association beteen Interaction and it's Node's
-        $net->add_interaction(-nodes => [ @nodes ], -interaction => $iaction);
+        $net->add_interaction(-nodes => [@nodes], -interaction => $iaction);
 
     }
     return $net;
-} # read
-
-
+}    # read
 
 __PACKAGE__->meta->make_immutable;
 no Moose;

@@ -18,13 +18,9 @@ Interface L<SBG::IOI>
 
 =cut
 
-
-
 package SBG::IO;
 use Moose;
 with qw/SBG::IOI/;
-
-
 
 =head2 read
 
@@ -45,6 +41,7 @@ This simple implementation reads line by line, chomp'ing them as well.
  print "Read in " . scalar(@lines) . " lines\n";
 
 =cut
+
 sub read {
     my ($self) = @_;
     my $fh = $self->fh or return;
@@ -52,9 +49,7 @@ sub read {
     return unless defined $l;
     chomp $l;
     return $l;
-} # read
-
-
+}    # read
 
 =head2 write
 
@@ -74,17 +69,16 @@ A generic implementation is provided here, prints lines, with newline
  }
 
 =cut
+
 sub write {
     my ($self, @a) = @_;
     @a or return;
     my $fh = $self->fh or return;
-    return if defined $self->file && -e $self->file && ! $self->overwrite;
+    return if defined $self->file && -e $self->file && !$self->overwrite;
     print $fh @a;
     return $self;
-} # write
+}    # write
 
-
-
-__PACKAGE__->meta->make_immutable(inline_constructor=>0);
+__PACKAGE__->meta->make_immutable(inline_constructor => 0);
 no Moose;
 1;

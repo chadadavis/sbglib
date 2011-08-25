@@ -41,21 +41,21 @@ sub pdb_chain2uniprot_acc {
     my ($id) = @_;
     my $re = '([[:digit:]][[:alnum:]]{3})[[:punct:]]?([[:alnum:]]{1,2})';
     my ($pdb, $chain) = $id =~ /$re/;
-    our $base_url = "http://www.rcsb.org/pdb/rest/das/pdb_uniprot_mapping/alignment?query=";
-    my $url = $base_url . $pdb . '.' . $chain;
+    our $base_url =
+        "http://www.rcsb.org/pdb/rest/das/pdb_uniprot_mapping/alignment?query=";
+    my $url     = $base_url . $pdb . '.' . $chain;
     my $content = get($url);
     if ($content =~ /Bad command arguments/i) {
         warn "Failed to get UniProt Acc for $id\n";
         return;
     }
-    my $io = IO::String->new($content);
-    my $xp = XML::XPath->new(ioref=>$io); 
-    my $query = '//alignObject[@dbSource="UniProt"]';    
-    my ($node) = $xp->findnodes($query);
-    my $uniprotacc = $node->getAttribute('dbAccessionId');    
+    my $io         = IO::String->new($content);
+    my $xp         = XML::XPath->new(ioref => $io);
+    my $query      = '//alignObject[@dbSource="UniProt"]';
+    my ($node)     = $xp->findnodes($query);
+    my $uniprotacc = $node->getAttribute('dbAccessionId');
     return $uniprotacc;
 }
-
 
 1;
 __END__

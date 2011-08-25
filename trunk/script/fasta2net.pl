@@ -114,7 +114,6 @@ L<SBG::Network> , L<SBG::SearchI>
 
 =cut
 
-
 use strict;
 use warnings;
 
@@ -123,34 +122,20 @@ use FindBin qw/$Bin/;
 use lib "$Bin/../lib/";
 
 # Send this off to PBS first, if possible, before loading other modules
-use SBG::U::Run 
-    qw/frac_of getoptions start_lock end_lock @generic_options/;
+use SBG::U::Run qw/frac_of getoptions start_lock end_lock @generic_options/;
 
 # Options must be hard-coded, unfortunately, as local variables cannot be used
-use PBS::ARGV @generic_options, 
+use PBS::ARGV @generic_options,
     (
-    'maxid|x=i',
-    'minid|n=i',
-    'networksize=i',
-    'top|t=i',
-    'method|m=s',
-    'overlap|v=f',
-    'searcher=s',
-    'minsize|s=s',
+    'maxid|x=i',  'minid|n=i',   'networksize=i', 'top|t=i',
+    'method|m=s', 'overlap|v=f', 'searcher=s',    'minsize|s=s',
     );
 
 my %ops = getoptions @generic_options,
     (
-    'maxid|x=i',
-    'minid|n=i',
-    'networksize=i',
-    'top|t=i',
-    'method|m=s',
-    'overlap|v=f',
-    'searcher=s',
-    'minsize|s=s',
+    'maxid|x=i',  'minid|n=i',   'networksize=i', 'top|t=i',
+    'method|m=s', 'overlap|v=f', 'searcher=s',    'minsize|s=s',
     );
-
 
 use File::Basename;
 use Moose::Autobox;
@@ -166,10 +151,10 @@ use SBG::Search::TransDB;
 use SBG::Search::PairedBlast;
 
 use acaschema;
-use SBG::U::DB; # qw/connect/;
+use SBG::U::DB;    # qw/connect/;
 
 # Searcher tries to find interaction templates (edges) to connect seq nodes
-my $blast = SBG::Run::PairedBlast->new(database=>'pdbseq');
+my $blast = SBG::Run::PairedBlast->new(database => 'pdbseq');
 $ops{method} ||= 'standaloneblast';
 $blast->method($ops{method});
 
@@ -184,24 +169,28 @@ if ($@) {
 my $buildops = {%ops}->hslice([qw/maxid minid cache top overlap/]);
 
 # Use our own library, which does connection caching, to access the schema
-my $schema = acaschema->connect(sub{SBG::U::DB::connect('aca')});
+my $schema = acaschema->connect(sub { SBG::U::DB::connect('aca') });
 
 my $dir = basename($ENV{PWD});
+
 # Strp off any preceeding date
 my (undef, $explabel) = $dir =~ /(\d{4}-\d{2}-\d{2}-)?(.*)/;
+
 # Lookup existing experiment, otherwise create a new one
 # TODO BUG needs to be done within a transaction
-my $experiment_table = $schema->resultset('Experiment');
+my $experiment_table   = $schema->resultset('Experiment');
 my $txn_find_or_create = sub {
-    my $exprec = $experiment_table->find_or_create({label=>$explabel});
+    my $exprec = $experiment_table->find_or_create({ label => $explabel });
     return $exprec;
 };
 
 my $exprec;
 try {
     $exprec = $schema->txn_do($txn_find_or_create);
-} catch {
-    $exprec = $experiment_table->find({label=>$explabel});
+}
+catch {
+    $exprec = $experiment_table->find({ label => $explabel });
+
     # TODO BUG need to check this as well
 };
 
@@ -209,29 +198,36 @@ try {
 my $log_handle;
 foreach my $file (@ARGV) {
     if (defined($ops{J})) {
+
         # The file is actually the Jth line of the list of files
         $file = PBS::ARGV::linen($file, $ops{J});
     }
     next unless $file;
+
     # Setup new log file specific to given input file
-    my $targetid = basename($file,'.fa');
-    
+    my $targetid = basename($file, '.fa');
+
     mkdir $targetid;
     my $output = catfile($targetid, 'network');
     my $lock = start_lock($output);
-    next if ! $lock && ! $ops{debug};
+    next if !$lock && !$ops{debug};
 
     Log::Any::Adapter->remove($log_handle);
+
     # A log just for this input file:
     $log_handle = Log::Any::Adapter->set(
-        '+SBG::Log',level=>'trace',file=>$output . '.log');
+        '+SBG::Log',
+        level => 'trace',
+        file  => $output . '.log'
+    );
 
     # Add each sequence as a node to new network
     my $net = SBG::Network->new();
+
     # Cannot pass parameters to constructor, since Network is an ArrayRef
     $net->targetid($targetid);
-    
-    my $seqio = Bio::SeqIO->new(-file=>$file);
+
+    my $seqio = Bio::SeqIO->new(-file => $file);
     while (my $seq = $seqio->next_seq) {
         $net->add_seq($seq);
     }
@@ -240,54 +236,54 @@ foreach my $file (@ARGV) {
     $ops{minsize} = 2 unless defined $ops{minsize};
     $ops{minsize} = ceil frac_of($ops{minsize}, $ndomains);
     next if $ndomains < $ops{minsize};
-    
-    my $targetrec = $schema->resultset('Target')->create({
-        label => $targetid,
-        experiment_id => $exprec->id,
-        ndomains => $ndomains,
-    });
+
+    my $targetrec = $schema->resultset('Target')->create(
+        {   label         => $targetid,
+            experiment_id => $exprec->id,
+            ndomains      => $ndomains,
+        }
+    );
 
     # One searcher per target complex, to keep track of templates found
-    my $searcher = $ops{searcher}->new(blast=>$blast);
+    my $searcher = $ops{searcher}->new(blast => $blast);
 
     # Create interaction templates on the edges of the network
-    $net = $net->build($searcher,%$buildops);
+    $net = $net->build($searcher, %$buildops);
 
     my @partitions = $net->partition;
 
     for (my $i = 0, my $parti = 0; $i < @partitions; $i++) {
-    	my $part = $partitions[$i];
-    	next if $part->nodes < $ops{minsize};
-        
+        my $part = $partitions[$i];
+        next if $part->nodes < $ops{minsize};
+
         my $partlabel = sprintf "%02d", $parti;
-        my $netrec = $schema->resultset('Network')->create({
-    	   partition => $partlabel,
-           nnodes => scalar($part->nodes),
-    	   nedges => scalar($part->edges), 
-    	   ninteractions => scalar($part->interactions),
-    	   target_id => $targetrec->id,
-    	});
-    	
+        my $netrec = $schema->resultset('Network')->create(
+            {   partition     => $partlabel,
+                nnodes        => scalar($part->nodes),
+                nedges        => scalar($part->edges),
+                ninteractions => scalar($part->interactions),
+                target_id     => $targetrec->id,
+            }
+        );
+
         # Pre-load the symmetry information
         $part->symmetry;
+
         # Save the primary key
         $part->id($netrec->id);
         $part->partid($partlabel);
+
         # TODO REFACTOR, shouldn't need to manually copy so much ...
         $part->targetid($net->targetid);
 
         my $dir = catdir($targetid, $partlabel);
         mkdir $dir;
-        $output = catfile($dir, $partlabel . '.network');      
+        $output = catfile($dir, $partlabel . '.network');
         $part->store($output);
-        
-        $parti++;      
+
+        $parti++;
     }
-        
-    end_lock($lock)
+
+    end_lock($lock);
 }
-
-
-
-
 

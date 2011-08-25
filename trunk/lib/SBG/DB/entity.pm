@@ -19,8 +19,6 @@
 
 =cut
 
-
-
 package SBG::DB::entity;
 use base qw/Exporter/;
 our @EXPORT_OK = qw/query id2dom/;
@@ -43,7 +41,6 @@ use SBG::Run::PairedBlast qw/gi2pdbid/;
 our $database = "trans_3_0";
 our $host;
 
-
 # Query, given a Blast Hit object
 sub query_hit {
     my ($hit, %ops) = @_;
@@ -55,29 +52,31 @@ sub query_hit {
     return unless $chainid;
     my ($pdbseq0, $pdbseqn) = $hit->range('hit');
 
-#     my $key = $hit->{refaddr};
-    my $key = refaddr $hit;
+    #     my $key = $hit->{refaddr};
+    my $key   = refaddr $hit;
     my $label = $hit->name . " ($pdbseq0-$pdbseqn)";
 
     if ($ops{cache} && exists $hit_cache{$key}) {
         my $entities = $hit_cache{$key};
-#         $log->debug($label, ': ', $entities->length, " entities (cached)");
+
+        #         $log->debug($label, ': ', $entities->length, " entities (cached)");
         $_->{hit} = $hit for @$entities;
         return @$entities;
     }
 
-    $ops{pdbseq} ||= [$pdbseq0,$pdbseqn];
+    $ops{pdbseq} ||= [ $pdbseq0, $pdbseqn ];
     my $entities = [ query($pdbid, $chainid, %ops) ];
 
-    if ($ops{cache}) { 
+    if ($ops{cache}) {
         $hit_cache{$key} = $entities;
-#         $log->debug($label, ': ', $entities->length, " entities (new)");
+
+        #         $log->debug($label, ': ', $entities->length, " entities (new)");
     }
+
     # Save ref to hit in each entity
     $_->{hit} = $hit for @$entities;
     return @$entities;
 }
-
 
 =head2 query
 
@@ -96,6 +95,7 @@ query('2ATC', 'A', resseq=>[-1,233]);
 NB not querying PQS here, just PDB
 
 =cut
+
 sub query {
     my ($pdbid, $chain, %ops) = @_;
     our $database;
@@ -113,6 +113,7 @@ sub query {
 
     $chain = chain_case($chain);
     my $dbh = SBG::U::DB::connect($database, $host);
+
     # Static handle, prepare it only once
     our $querysth;
 
@@ -134,16 +135,17 @@ AND chain = ?
         return;
     }
 
-    if (! $querysth->execute($pdbid, $chain)) {
+    if (!$querysth->execute($pdbid, $chain)) {
         $log->error($querysth->errstr);
         return;
     }
 
     # Check sequence overlap
     my @hits;
-    my ($start, $end) = @{$ops{pdbseq}} if defined $ops{pdbseq};
+    my ($start, $end) = @{ $ops{pdbseq} } if defined $ops{pdbseq};
     while (my $row = $querysth->fetchrow_hashref()) {
         $row->{entity} = $row->{id};
+
         # Save all, if no coordinates given as restraints
         unless ($ops{pdbseq}) {
             push @hits, $row;
@@ -152,11 +154,12 @@ AND chain = ?
 
         # How much of structural fragment covered by sequence
         # And how much of sequence covered by structural fragment
-        my ($covered_struct, $covered_seq) = 
-            interval_overlap($row->{start},$row->{end}, $start, $end);
+        my ($covered_struct, $covered_seq) =
+            interval_overlap($row->{start}, $row->{end}, $start, $end);
 
-        if ($covered_struct < $ops{overlap} ||
-            $covered_seq < $ops{overlap} ) { 
+        if (   $covered_struct < $ops{overlap}
+            || $covered_seq < $ops{overlap})
+        {
 
             $log->debug("covered_struct: $covered_struct");
             $log->debug("covered_seq: $covered_seq");
@@ -164,12 +167,11 @@ AND chain = ?
         }
         push @hits, $row;
     }
-#     $log->debug('rows: ', scalar(@hits));
+
+    #     $log->debug('rows: ', scalar(@hits));
     return @hits;
 
-} # query
-
-
+}    # query
 
 =head2 id2dom
 
@@ -181,11 +183,13 @@ AND chain = ?
 TODO should be done by DBIx::Class or equivalent
 
 =cut
+
 sub id2dom {
     my ($id) = @_;
     our $database;
     our $host;
     my $dbh = SBG::U::DB::connect($database, $host);
+
     # Static handle, prepare it only once
     our $id2domsth;
     $id2domsth ||= $dbh->prepare("
@@ -202,7 +206,7 @@ AND id = ?
         $log->error($dbh->errstr);
         return;
     }
-    if (! $id2domsth->execute($id)) {
+    if (!$id2domsth->execute($id)) {
         $log->error($id2domsth->errstr);
         return;
     }
@@ -217,18 +221,17 @@ AND id = ?
     my $center = pdl($row->{Cx}, $row->{Cy}, $row->{Cz}, 1);
 
     my $dom = SBG::Domain::Sphere->new(
-        pdbid=>$row->{idcode},
-        descriptor=>$row->{dom},
-        entity=>$row->{id},
-        center=>$center,
-        radius=>$row->{Rg},
-#         length=>$row->{nres}, # Not in DB
-        );
+        pdbid      => $row->{idcode},
+        descriptor => $row->{dom},
+        entity     => $row->{id},
+        center     => $center,
+        radius     => $row->{Rg},
+
+        #         length=>$row->{nres}, # Not in DB
+    );
 
     return $dom;
 
-} # id2dom
-
-
+}    # id2dom
 
 1;

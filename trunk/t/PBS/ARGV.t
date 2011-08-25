@@ -15,7 +15,6 @@ use File::Temp qw/tempdir/;
 
 use PBS::ARGV qw/qsub linen nlines/;
 
-
 # TODO TEST get tests from module docs
 
 # TODO TEST distinguish between qsub not present and qsub error
@@ -27,13 +26,12 @@ unless (PBS::ARGV::can_connect) {
     exit;
 }
 
-
-@ARGV = 1..5;
+@ARGV = 1 .. 5;
 my $base = $ENV{CACHEDIR} || $ENV{HOME};
 mkdir $base;
-my $dir = tempdir(DIR=>$base, CLEANUP=> ! debug());
-my @jobids = PBS::ARGV::qsub(directives=>["-o $dir", "-e $dir"]);
-if (! defined $ENV{PBS_ENVIRONMENT}) {
+my $dir = tempdir(DIR => $base, CLEANUP => !debug());
+my @jobids = PBS::ARGV::qsub(directives => [ "-o $dir", "-e $dir" ]);
+if (!defined $ENV{PBS_ENVIRONMENT}) {
     is(scalar(@ARGV), 0, "All arguments submitted as PBS jobs");
-} 
+}
 

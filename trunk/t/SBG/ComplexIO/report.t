@@ -14,17 +14,17 @@ use SBG::U::Object qw/load_object/;
 my $file = "$Bin/../data/10.model";
 
 my $complex = load_object($file);
-my $ndoms = 12;
+my $ndoms   = 12;
 is($complex->count, $ndoms, "Complex has $ndoms domains");
 
 my $str;
-my $out = SBG::ComplexIO::report->new(string=>\$str);
+my $out = SBG::ComplexIO::report->new(string => \$str);
 $out->write($complex);
+
 # Need to flush to re-read it
 $out->flush;
 
 my @chains = $str =~ /^CHAIN \S+/gm;
 is(scalar(@chains), $ndoms, 'report::write() to string');
-
 
 __END__

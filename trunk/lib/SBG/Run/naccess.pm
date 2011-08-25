@@ -16,7 +16,6 @@ L<SBG::DomainIO::pdb>
 
 =cut
 
-
 package SBG::Run::naccess;
 use base qw/Exporter/;
 our @EXPORT_OK = qw/sas_atoms buried/;
@@ -31,12 +30,10 @@ use Tie::File;
 use SBG::U::List qw/flatten/;
 
 use SBG::DomainIO::pdb;
+
 #use SBG::U::Cache qw/cache_get cache_set/;
 
-
 our $cachename = 'sbgnaccess';
-
-
 
 =head2 sas_atoms
 
@@ -50,17 +47,18 @@ If multiple Domains are provided, they are written to one PDB file and naccess i
 TODO caching
 
 =cut
+
 sub sas_atoms {
-	my @doms = flatten(@_);
-	$log->debug(scalar(@doms), " domains: @doms");
-    my $io = SBG::DomainIO::pdb->new(tempfile=>1, suffix=>'.pdb');
+    my @doms = flatten(@_);
+    $log->debug(scalar(@doms), " domains: @doms");
+    my $io = SBG::DomainIO::pdb->new(tempfile => 1, suffix => '.pdb');
     $io->write(@doms);
     $io->close;
     my $file = $io->file;
 
     my $pwd = getcwd();
     chdir File::Spec->tmpdir;
-    
+
     my $cmd = "naccess $file";
     $log->debug($cmd);
     my $res = system("$cmd >/dev/null");
@@ -68,8 +66,8 @@ sub sas_atoms {
     my $rsa = $file;
     $rsa =~ s/\.pdb$/.rsa/;
     unless (-r $rsa && -s $rsa) {
-    	$log->error("Cannot read RSA file: $rsa");
-    	return;
+        $log->error("Cannot read RSA file: $rsa");
+        return;
     }
     my @lines;
     tie @lines, 'Tie::File', $rsa;
@@ -81,9 +79,8 @@ sub sas_atoms {
     }
     return unless $sas;
     return $sas;
-    
-} # sas_atoms
 
+}    # sas_atoms
 
 =head2 buried
 
@@ -94,29 +91,31 @@ As a percent [0:100]
 The area calculated is the sum of the solvent-accessibel surface of the individual domains, minus the solvent-accessible surface of the complex as a whole.
 
 =cut
+
 sub buried {
     my $doms = flatten(@_);
 
     $log->debug($doms->length, " domains in complex");
+
     # Each domain individually, i.e. no contacts to partners are seen
-    # TODO BUG strangest bug I've ever seen: 
-    # without flatten_deep() sets each array element to undef, after 
+    # TODO BUG strangest bug I've ever seen:
+    # without flatten_deep() sets each array element to undef, after
     # successfully calling sas_atoms. Values are correct, inputs are erased.
     # flatten_deep works around this, presumably via an intermediate copy ...
-    my $surfaces = $doms->flatten_deep->map(sub{sas_atoms($_)});
-    
-    $surfaces = $surfaces->grep(sub{defined});
+    my $surfaces = $doms->flatten_deep->map(sub { sas_atoms($_) });
+
+    $surfaces = $surfaces->grep(sub {defined});
     $log->debug($surfaces->length, " surfaces computed");
     return unless $surfaces->length == $doms->length;
     my $sum = $surfaces->sum;
-    $log->debug("Sum $sum");    
+    $log->debug("Sum $sum");
+
     # Minus the solvent-acessible surface of the complex as a whole
     my $complex_sas = sas_atoms($doms) or return;
     $log->debug("Complexed $complex_sas");
     my $buried = $sum - $complex_sas;
     $log->debug("Buried $buried");
-    return 100.0 * $buried / $complex_sas        
+    return 100.0 * $buried / $complex_sas;
 }
-
 
 1;

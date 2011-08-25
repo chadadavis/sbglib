@@ -5,12 +5,13 @@ use Bio::SeqIO;
 # Interface templates are clustered ('c')
 # Alternatively use SBG::Search::TransDB for a redundant set
 use SBG::Search::TransDBc;
+
 # or use PairedBlast, which does not verify contacts: SBG::Search::PairedBlast
 
 use SBG::U::List qw/pairs/;
 
 my $fasta_file = shift or die "Gimme a Fasta file\n";
-my $io = Bio::SeqIO->new(-format=>'fasta',-file=>$fasta_file);
+my $io = Bio::SeqIO->new(-format => 'fasta', -file => $fasta_file);
 my @seqs;
 while (my $seq = $io->next_seq) { push @seqs, $seq }
 
@@ -31,5 +32,3 @@ foreach my $pair (@pairs) {
     say for @interface_templates;
 }
 
-    
-    

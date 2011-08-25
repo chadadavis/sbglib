@@ -28,30 +28,22 @@ L<SBG::DomainI> , L<SBG::U::RMSD> , L<SBG::Run::cofm>
 
 =cut
 
-
-
 package SBG::Domain::Sphere;
 use Moose;
 
-with (
-    'SBG::DomainI',
-    );
-
+with('SBG::DomainI',);
 
 # NB methods provided by DomainI
 use overload (
-    '""' => 'stringify',
-    '==' => 'equal',
+    '""'     => 'stringify',
+    '=='     => 'equal',
     fallback => 1,
-    );
-
+);
 
 use PDL::Core qw/pdl zeroes/;
 use Math::Trig;
-use List::Util; # qw/min/; # min() clashes with PDL::min
+use List::Util;    # qw/min/; # min() clashes with PDL::min
 use Log::Any qw/$log/;
-
-
 
 =head2 center
 
@@ -68,17 +60,16 @@ Read-only (can only be initialized from constructor)
 
 
 =cut
+
 # NB not possible to set a trigger on 'coords' because it's an attribute from a
 # Role and therefore composed, not inherited.
 has '_init_center' => (
-    is => 'rw',
-    isa => 'PDL',
-    init_arg => 'center', # friendly name for constructor
+    is       => 'rw',
+    isa      => 'PDL',
+    init_arg => 'center',                      # friendly name for constructor
     required => 1,
-    default => sub { pdl [[0,0,0,1]] },
-    );
-
-
+    default  => sub { pdl [ [ 0, 0, 0, 1 ] ] },
+);
 
 =head2 radius
 
@@ -89,13 +80,12 @@ has '_init_center' => (
 
 
 =cut
+
 has 'radius' => (
-    is => 'rw',
-    isa => 'Num',
+    is      => 'rw',
+    isa     => 'Num',
     default => 0,
-    );
-
-
+);
 
 =head2 _hair_len
 
@@ -106,41 +96,43 @@ has 'radius' => (
 
 
 =cut
-has '_hair_len' => (
-    is => 'ro',
-    isa => 'Num',
-    default => 5,
-    );
 
+has '_hair_len' => (
+    is      => 'ro',
+    isa     => 'Num',
+    default => 5,
+);
 
 sub _build_coords {
     my ($self) = @_;
 
     my $c;
     if ($self->has_coords) {
+
         # Use curent center
         $c = $self->centroid;
-    } else {
+    }
+    else {
+
         # Use center that was passed as argument
         $c = $self->_init_center->squeeze;
     }
     my $dims = $c->dim(0);
-    
+
     # If not 3 dimensions, assume 4 (homogenous coords)
     # Only necessary because PDL lvalues fail in Perl Debugger
     # Otherwise, we could just set $x=zeroes $dims; $x->slice('0') .= $r;
     my $r = $self->_hair_len;
-    my $x = $dims == 3 ? pdl($r,0,0) : pdl($r,0,0,0);
-    my $y = $dims == 3 ? pdl(0,$r,0) : pdl(0,$r,0,0);
-    my $z = $dims == 3 ? pdl(0,0,$r) : pdl(0,0,$r,0);
-    
+    my $x = $dims == 3 ? pdl($r, 0, 0) : pdl($r, 0, 0, 0);
+    my $y = $dims == 3 ? pdl(0, $r, 0) : pdl(0, $r, 0, 0);
+    my $z = $dims == 3 ? pdl(0, 0, $r) : pdl(0, 0, $r, 0);
+
     # Center, followed by X +/- offset, Y +/- offset, Z +/- offset
-    my $coords = pdl [ $c, $c+$x, $c-$x, $c+$y, $c-$y, $c+$z, $c-$z ];
+    my $coords =
+        pdl [ $c, $c + $x, $c - $x, $c + $y, $c - $y, $c + $z, $c - $z ];
 
     return $coords;
 }
-
-
 
 =head2 centroid
 
@@ -152,15 +144,15 @@ sub _build_coords {
 requied by L<DomainI>
 
 =cut
+
 sub centroid {
     my ($self,) = @_;
+
     # NB 'center' is only the starting center, not kept up to date
     # NB this is column major indexing, i.e. 0th row of coords
     return $self->coords->slice(',0')->squeeze;
 
-} # centroid
-
-
+}    # centroid
 
 =head2 overlap
 
@@ -174,11 +166,10 @@ B<'required'> by L<SBG::DomainI>
 Just aliases L<overlap_lin> for now
 
 =cut
+
 sub overlap {
     overlap_lin_frac(@_);
 }
-
-
 
 =head2 overlap_lin
 
@@ -198,23 +189,27 @@ line connecting the centres that is within both spheres.
 The maximum possible overlap is twice the radius of the smaller sphere.
 
 =cut
-sub overlap_lin { 
+
+sub overlap_lin {
     my ($self, $other) = @_;
+
     # Distance between centres
     my $dist = SBG::U::RMSD::rmsd($self->centroid, $other->centroid);
+
     # Radii of two spheres
     my $sum_radii = ($self->radius + $other->radius);
+
     # Overlaps when distance between centres < sum of two radi
     my $diff = $sum_radii - $dist;
+
     # Max possible overlap: twice the smaller radius
     my $max = 2 * List::Util::min($self->radius, $other->radius);
     $diff = $max if $diff > $max;
     $log->debug(
-        "overlap: $diff dist: $dist radii: $sum_radii on ($self) vs ($other)");
+        "overlap: $diff dist: $dist radii: $sum_radii on ($self) vs ($other)"
+    );
     return $diff;
-} # overlap_lin
-
-
+}    # overlap_lin
 
 =head2 overlap_lin_max
 
@@ -225,15 +220,15 @@ sub overlap_lin {
 
 
 =cut
+
 sub overlap_lin_max {
     my ($self, $other) = @_;
+
     # Max possible overlap: twice the smaller radius
     my $max = 2 * List::Util::min($self->radius, $other->radius);
     return $max;
 
-} # overlap_lin_max
-
-
+}    # overlap_lin_max
 
 =head2 overlap_lin_frac
 
@@ -244,18 +239,16 @@ sub overlap_lin_max {
 
 
 =cut
+
 sub overlap_lin_frac {
     my ($self, $other) = @_;
-    my $max = 2 * List::Util::min($self->radius, $other->radius);
+    my $max     = 2 * List::Util::min($self->radius, $other->radius);
     my $overlap = $self->overlap_lin($other);
-    my $frac = 1.0 * $overlap / $max;
+    my $frac    = 1.0 * $overlap / $max;
     $log->debug(sprintf "%0.3f ($self) and ($other)", $frac);
     return $frac;
 
-} # overlap_lin_frac
-
-
-
+}    # overlap_lin_frac
 
 =head2 volume
 
@@ -266,12 +259,11 @@ sub overlap_lin_frac {
 
 
 =cut
+
 sub volume {
     my ($self) = @_;
-    return (4.0/3.0) * pi * $self->radius ** 3;
+    return (4.0 / 3.0) * pi * $self->radius**3;
 }
-
-
 
 =head2 capvolume
 
@@ -292,12 +284,11 @@ http://www.russell.embl.de/wiki/index.php/Collision_Detection
 http://www.ugrad.math.ubc.ca/coursedoc/math101/notes/applications/volume.html
 
 =cut
+
 sub capvolume {
     my ($self, $depth) = @_;
     return pi * ($depth**2 * $self->radius - $depth**3 / 3.0);
 }
-
-
 
 =head2 overlap_vol
 
@@ -315,58 +306,69 @@ spheres.
 
 
 =cut
+
 sub overlap_vol {
     my ($self, $obj) = @_;
 
     # Special cases: no overlap, or completely enclosed:
     my $lin = overlap_lin($self, $obj);
-    if ($lin < 0 ) {
+    if ($lin < 0) {
+
         # If distance is negative, there is no overlapping volume
         return $lin;
-    } elsif ($lin == 2 * $self->radius) {
+    }
+    elsif ($lin == 2 * $self->radius) {
+
         # $self is completely within $obj
         return $self->volume();
-    } elsif ($lin == 2 * $obj->radius) {
+    }
+    elsif ($lin == 2 * $obj->radius) {
+
         # $obj is completely within $self
         return $obj->volume();
     }
 
     my ($a, $b) = ($self->radius, $obj->radius);
+
     # Need to find the plane (a circle) of intersection between spheres
     # Law of cosines to get one angle of triangle created by intersection
-    my $alpha = acos_real( ($b**2 + $lin**2 - $a**2) / (2 * $b * $lin) );
-    my $beta  = acos_real( ($a**2 + $lin**2 - $b**2) / (2 * $a * $lin) );
+    my $alpha = acos_real(($b**2 + $lin**2 - $a**2) / (2 * $b * $lin));
+    my $beta  = acos_real(($a**2 + $lin**2 - $b**2) / (2 * $a * $lin));
 
     # The *length* of $obj that is inside $self
     my $overb;
+
     # The *length* of $self that is inside $obj
     my $overa;
+
     # Check whether angles are acute to determine length of overlap
     if ($alpha < pi / 2) {
         $overb = $b - $b * cos($alpha);
-    } else {
+    }
+    else {
         $overb = $b + $b * cos(pi - $alpha);
     }
     if ($beta < pi / 2) {
         $overa = $a - $a * cos($beta);
-    } else {
+    }
+    else {
         $overa = $a + $a * cos(pi - $beta);
     }
 
     # These volumes only count what is beyond the intersection plane
-    # (i.e. this is *not* double counting) 
+    # (i.e. this is *not* double counting)
     # Volume of sb inside of sa:
     my $overbvol = $obj->capvolume($overb);
+
     # Volume of sa inside of sb;
     my $overavol = $self->capvolume($overa);
+
     # Total overlap volume
     my $sum = $overbvol + $overavol;
     $log->debug("$sum overlap between ($self) and ($obj)");
     return $sum;
 
-} # overlap_vol
-
-
+}    # overlap_vol
 
 __PACKAGE__->meta->make_immutable;
 no Moose;

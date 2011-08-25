@@ -16,24 +16,18 @@ L<SBG::IOI>
 
 =cut
 
-
-
 package SBG::SuperpositionIO::html;
 use Moose;
 
 with qw/
-SBG::IOI
-/;
-
-
+    SBG::IOI
+    /;
 
 use Carp;
 use CGI qw/th Tr td start_table end_table h2/;
 use SBG::U::List qw/flatten/;
 use SBG::U::HTML qw/formattd/;
 use Moose::Autobox;
-
-
 
 =head2 write
 
@@ -46,16 +40,17 @@ use Moose::Autobox;
 
 
 =cut
+
 sub write {
     my ($self, @superpositions) = @_;
     my $fh = $self->fh or return;
     @superpositions = flatten(@superpositions);
 
     print $fh h2("Superpositions"), "\n";
-    print $fh start_table({-border=>'1'});
+    print $fh start_table({ -border => '1' });
     my $heads = th([qw/from to Sc RMS nfit seq_id/]);
 
-    my $rows = [ $heads ];
+    my $rows = [$heads];
 
     foreach my $superpos (@superpositions) {
 
@@ -76,9 +71,7 @@ sub write {
     print $fh end_table();
 
     return $self;
-} # write
-
-
+}    # write
 
 =head2 read
 
@@ -89,13 +82,12 @@ sub write {
 
 
 =cut
+
 sub read {
     my ($self) = @_;
     carp "Not implemented";
     return;
 }
-
-
 
 __PACKAGE__->meta->make_immutable;
 no Moose;

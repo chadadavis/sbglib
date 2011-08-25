@@ -22,8 +22,6 @@ L<DBI>
 
 =cut
 
-
-
 package SBG::U::DB;
 use base qw/Exporter/;
 our @EXPORT_OK = qw(connect chain_case dsn);
@@ -43,7 +41,6 @@ our %connections;
 our $sleep = 10;
 
 our $default_db = 'trans_3_0';
-
 
 =head2 connect
 
@@ -65,31 +62,36 @@ which database host to connect to. Specified in ~/.my.cnf otherwise B<localhost>
 TODO this can be replaced by L<DBI::connect_cached>
 
 =cut
+
 sub connect {
     my ($dbname, $host, $timeout, $user, $usingpassword) = @_;
     our $sleep;
     our %connections;
     $dbname ||= $default_db;
-    $host ||= _default_host();
+    $host   ||= _default_host();
     my $port = _default_port();
+
     # This is also OK, if $host is not defined
     my $dbh = $connections{$host}{$dbname};
+
     # Use exists rather than defined to allow for negative caching
     return $dbh if exists $connections{$host}{$dbname};
 
     my $dsn = dsn($dbname, $host);
-    $timeout ||= defined($DB::sub) ? 100: 5;
+    $timeout ||= defined($DB::sub) ? 100 : 5;
     $user ||= '%';
     my $password = _password($dsn) if $usingpassword;
 
     my $err;
-    for (; 
+    for (
+        ;
         !defined($dbh) && (!defined($err) || $err =~ /too many connections/i);
-        sleep int(rand()*$sleep)
-        ) {
-        $dbh = eval { 
-            local $SIG{ALRM} = sub { 
-                die "DBI::connect timed out: $dsn\n"; 
+        sleep int(rand() * $sleep)
+        )
+    {
+        $dbh = eval {
+            local $SIG{ALRM} = sub {
+                die "DBI::connect timed out: $dsn\n";
             };
             alarm($timeout);
             my $dbh = DBI->connect($dsn, $user, $password);
@@ -97,9 +99,10 @@ sub connect {
             return $dbh;
         };
         $err = $DBI::errstr;
-    } 
-            
+    }
+
     unless (defined $dbh) {
+
         # Some other error
         my $err = $DBI::errstr || '<unidentified error>';
         $log->error("Could not connect to $dsn ($err)");
@@ -110,23 +113,22 @@ sub connect {
     return $dbh;
 }
 
-
 sub dsn {
-	my ($dbname, $host) = @_;
-	
+    my ($dbname, $host) = @_;
+
     $dbname ||= $default_db;
-    $host ||= _default_host();
+    $host   ||= _default_host();
     my $port = _default_port();
 
     my $dsn = "dbi:mysql:dbname=$dbname";
     $dsn .= ";host=$host" if $host;
     $dsn .= ";port=$port" if $port;
     return $dsn;
-	
+
 }
 
-
 use Term::ReadKey;
+
 sub _password {
     my ($dsn) = @_;
     my $cfg = _config();
@@ -143,18 +145,17 @@ sub _password {
     return $password;
 }
 
-
 use Config::IniFiles;
+
 sub _config {
     our $cfg;
     return $cfg if $cfg;
     my $cnf = "$ENV{HOME}/.my.cnf";
     return unless -e $cnf;
-    $cfg = Config::IniFiles->new(-file=>$cnf);
+    $cfg = Config::IniFiles->new(-file => $cnf);
     return unless $cfg;
     return $cfg;
 }
-
 
 sub _default_host {
     my $cfg = _config();
@@ -163,7 +164,6 @@ sub _default_host {
     return $host;
 }
 
-
 sub _default_port {
     my $cfg = _config();
     return unless $cfg;
@@ -171,12 +171,12 @@ sub _default_port {
     return $port;
 }
 
-
 use Socket;
+
 # http://www.macosxhints.com/dlfiles/is_tcp_port_listening_pl.txt
 sub _port_listening {
     my ($host, $port, $timeout) = @_;
-    $port ||= 3306;
+    $port    ||= 3306;
     $timeout ||= 5;
 
     my $proto = getprotobyname('tcp');
@@ -193,13 +193,10 @@ sub _port_listening {
         die "$!\n" unless $success;
     };
     close $socket;
-    
+
     return if $@;
     return 1;
 }
-
-
-
 
 =head2 chain_case
 
@@ -218,23 +215,24 @@ Else, returns the identity;
 
 TODO REFACTOR belongs in SBG::U::Map
 =cut
+
 sub chain_case {
     my ($chainid) = @_;
 
     # Convert lowercase chain id 'a' to uppercase double 'AA'
-    if (! $chainid) {
+    if (!$chainid) {
         $chainid = '';
-    } elsif ($chainid =~ /^([a-z])$/) {
+    }
+    elsif ($chainid =~ /^([a-z])$/) {
         $chainid = uc $1 . $1;
-    } elsif ($chainid =~ /^([A-Z])\1$/) {
+    }
+    elsif ($chainid =~ /^([A-Z])\1$/) {
         $chainid = lc $1;
     }
 
     return $chainid;
 
-} # chain_case
-
-
+}    # chain_case
 
 1;
 __END__

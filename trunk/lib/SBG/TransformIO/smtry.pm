@@ -16,8 +16,6 @@ L<SBG::IOI>, L<SBG::TransformI>
 
 =cut
 
-
-
 package SBG::TransformIO::smtry;
 use Moose;
 
@@ -36,18 +34,16 @@ The sub-objtype to use for any dynamically created objects. Should do
 L<SBG::TransformI>
 
 =cut
+
 # has 'objtype' => (
 #     required => 1,
 #     default => 'SBG::Transform::Affine',
 #     );
 
-
 sub BUILD {
     my ($self) = @_;
     $self->objtype('SBG::Transform::Affine') unless $self->objtype;
 }
-
-
 
 =head2 read
 
@@ -61,6 +57,7 @@ sub BUILD {
 Reads in row-major order
 
 =cut
+
 sub read {
     my ($self) = @_;
     my $fh = $self->fh() or return;
@@ -69,32 +66,32 @@ sub read {
     my @rows;
 
     while (<$fh>) {
-        next unless /^REMARK 290   SMTRY(.)  (..)(..........)(..........)(..........)(...............)/;
-        my $row_i = $1;
+        next
+            unless
+            /^REMARK 290   SMTRY(.)  (..)(..........)(..........)(..........)(...............)/;
+        my $row_i    = $1;
         my $matrix_i = $2;
-        my ($x,$y,$z,$t) = ($3, $4, $5, $6);
-        push @rows, [ $x, $y, $z, $t ];        
-           
+        my ($x, $y, $z, $t) = ($3, $4, $5, $6);
+        push @rows, [ $x, $y, $z, $t ];
+
         if (@rows == 3) {
-        	# Add a row for homogenous coords
-        	push @rows, [ 0, 0, 0, 1 ];
-        	my $mat = pdl(@rows);
-        	my $objtype = $self->objtype();     	
-        	return $objtype->new(matrix=>$mat);
-        }	
+
+            # Add a row for homogenous coords
+            push @rows, [ 0, 0, 0, 1 ];
+            my $mat     = pdl(@rows);
+            my $objtype = $self->objtype();
+            return $objtype->new(matrix => $mat);
+        }
     }
     return;
-    
-} # read
 
+}    # read
 
 sub write {
     my ($self, $trans) = @_;
     carp "Not implemented";
     return;
 }
-
-
 
 __PACKAGE__->meta->make_immutable;
 1;

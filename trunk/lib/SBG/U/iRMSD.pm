@@ -24,19 +24,18 @@ L<SBG::U::RMSD> L<SBG::Superposition::Cache> L<SBG::STAMP>
 
 =cut
 
-
-
 package SBG::U::iRMSD;
 
 require Exporter;
 our @ISA = qw(Exporter);
+
 # Automatically exported symbols
-our @EXPORT    = qw//;
+our @EXPORT = qw//;
+
 # Manually exported symbols
 our @EXPORT_OK = qw/
-irmsd
-/;
-
+    irmsd
+    /;
 
 use Moose::Autobox;
 use PDL::Lite;
@@ -45,7 +44,6 @@ use PDL::Core qw/pdl/;
 use SBG::U::RMSD qw/rmsd/;
 use SBG::Superposition::Cache qw/superposition/;
 use SBG::Run::cofm qw/cofm/;
-
 
 =head2 irmsd
 
@@ -58,6 +56,7 @@ use SBG::Run::cofm qw/cofm/;
     # And what if they're from different PDB IDs (same question)
 
 =cut
+
 sub irmsd {
     my ($doms1, $doms2) = @_;
 
@@ -71,12 +70,11 @@ sub irmsd {
     # Define crosshairs, in frame of reference of doms1 only
     my $coordsa = _irmsd_rel($doms1, $supera);
     my $coordsb = _irmsd_rel($doms1, $superb);
-    
+
     # RMSD between two sets of 14 points (two crosshairs) each
     my $irmsd = rmsd($coordsa, $coordsb);
     return $irmsd;
-} # irmsd
-
+}    # irmsd
 
 # Get coordinates of reference domains relative to given transformation
 sub _irmsd_rel {
@@ -90,19 +88,19 @@ sub _irmsd_rel {
     foreach my $d (@$origdoms) {
         $spheres->push(SBG::Run::cofm::cofm($d));
     }
-    
-    # Apply superposition to each of the domains
-    $spheres->map(sub{$superp->apply($_)});
 
-    # Coordinates of two crosshairs using transformation 
+    # Apply superposition to each of the domains
+    $spheres->map(sub { $superp->apply($_) });
+
+    # Coordinates of two crosshairs using transformation
     # TODO DES clump needs to be in a DomSetI
-    my $coords = $spheres->map(sub{$_->coords});
+    my $coords = $spheres->map(sub { $_->coords });
+
     # Convert to single matrix
-    $coords = pdl($coords)->clump(1,2);
+    $coords = pdl($coords)->clump(1, 2);
 
     return $coords;
 }
-
 
 ###############################################################################
 

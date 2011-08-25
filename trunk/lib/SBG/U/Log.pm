@@ -103,7 +103,6 @@ check C<is_debug> first, then the statement may never be executed.
 
 =cut
 
-
 package SBG::U::Log;
 use strict;
 use warnings;
@@ -112,13 +111,12 @@ use Log::Any qw/$log/;
 use Log::Any::Adapter;
 use Path::Class;
 
-
 sub new {
     my ($self, %ops) = @_;
     my ($name, $level, $file) = map { $ops{$_} } qw/name level file/;
     $name ||= '';
     $name = sprintf "%10s", $name;
-    $file ||= '-'; 
+    $file  ||= '-';
     $level ||= 'WARN';
     $level = uc $level;
 
@@ -126,28 +124,35 @@ sub new {
     chomp $h;
     $h = sprintf "%-15s", $h;
     my $pbs_jobid = sprintf "%8s", ($ENV{PBS_JOBID} || 'NotPBS');
+
     # Strip off any hostname
     $pbs_jobid =~ s/\..*$//;
-        
+
     # Initialize system logger
     my $logger = Log::Log4perl->get_logger($file);
 
-    # Default logging level 
+    # Default logging level
     $logger->level(eval '$' . $level);
-    
+
     # Log appenders (i.e. where the logs get sent)
-    my $appender = $file eq '-' 
-        ? Log::Log4perl::Appender->new(
-            'Log::Log4perl::Appender::Screen',stderr=>1) 
+    my $appender =
+        $file eq '-'
+        ? Log::Log4perl::Appender->new('Log::Log4perl::Appender::Screen',
+        stderr => 1)
         : Log::Log4perl::Appender->new(
-            'Log::Dispatch::File',filename=>$file,mode=>'append');
-        
+        'Log::Dispatch::File',
+        filename => $file,
+        mode     => 'append'
+        );
+
     # Define log format for appender
     # $h host, %d date %M method %m message %n newline
     my $layout = Log::Log4perl::Layout::PatternLayout->new(
         "$name $h $pbs_jobid %d{yyyy-MM-dd HH:mm:ss} %-50M %m%n");
+
     # Set the layout of the appender
     $appender->layout($layout);
+
     # Register the appender with the logger
     $logger->add_appender($appender);
 
@@ -156,7 +161,6 @@ sub new {
 
     return $logger;
 }
-
 
 1;
 

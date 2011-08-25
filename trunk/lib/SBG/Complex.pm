@@ -23,8 +23,6 @@ L<SBG::Traversal>
 
 =cut
 
-
-
 package SBG::Complex;
 use Moose;
 
@@ -37,9 +35,9 @@ with 'SBG::Role::Versionable';
 with 'SBG::Role::Writable';
 
 use overload (
-    '""' => 'stringify',
+    '""'     => 'stringify',
     fallback => 1,
-    );
+);
 
 use Scalar::Util qw/refaddr/;
 use Moose::Autobox;
@@ -53,20 +51,19 @@ use PDL::Core qw/pdl squeeze zeroes sclr/;
 use Statistics::Lite qw/stddev/;
 
 use Log::Any qw/$log/;
-use bignum; # qw/inf/;
+use bignum;    # qw/inf/;
 
 use Algorithm::Combinatorics qw/variations/;
 use Bio::Tools::Run::Alignment::Clustalw;
 
-
 use SBG::Types qw/$pdb41/;
-use SBG::U::List 
+use SBG::U::List
     qw/interval_overlap intersection mean min max median sum flatten swap between cartesian_product/;
 use SBG::U::RMSD;
-use SBG::U::iRMSD; # qw/irmsd/;
-use SBG::STAMP; # qw/superposition/
-use SBG::Superposition::Cache; # qw/superposition/;
-use SBG::DB::res_mapping; # qw/query aln2locations/;
+use SBG::U::iRMSD;                # qw/irmsd/;
+use SBG::STAMP;                   # qw/superposition/
+use SBG::Superposition::Cache;    # qw/superposition/;
+use SBG::DB::res_mapping;         # qw/query aln2locations/;
 use SBG::U::DB qw/chain_case/;
 use SBG::Run::PairedBlast qw/gi2pdbid/;
 use SBG::Run::pdbseq qw/pdbseq/;
@@ -83,6 +80,7 @@ use SBG::Interaction;
 use SBG::Seq;
 use SBG::Node;
 use SBG::Network;
+
 # Default domain representation
 use SBG::Domain::Sphere;
 
@@ -92,7 +90,6 @@ use SBG::Domain::Atoms;
 use SBG::U::CartesianPermutation;
 
 use SBG::Run::pdbc qw/pdbc/;
-
 
 =head2 modelid
 
@@ -104,42 +101,42 @@ use SBG::Run::pdbc qw/pdbc/;
 Convenience label
 
 =cut
-has 'modelid' => (
-    is => 'rw',
-    isa => 'Str',
-    );
 
+has 'modelid' => (
+    is  => 'rw',
+    isa => 'Str',
+);
 
 =head2 targetid
 
 The label / accession / idenftifier for the complex we are trying to build
 =cut
+
 has 'targetid' => (
-    is => 'rw',
+    is  => 'rw',
     isa => 'Str',
-    );
+);
 
 =head2 target
 
 For benchmarking the complex representing the native structure can be provided.
 =cut
+
 has 'target' => (
-    is => 'rw',
+    is  => 'rw',
     isa => 'Maybe[SBG::Complex]',
-    );
-    
+);
+
 has 'networkid' => (
-    is => 'rw',
+    is  => 'rw',
     isa => 'Int',
-    );
-        
+);
+
 # Cluster, for duplicate complexes
 has 'class' => (
-    is => 'rw',
+    is  => 'rw',
     isa => 'Str',
-    );
-
-
+);
 
 =head2 name
 
@@ -150,12 +147,11 @@ has 'class' => (
 
 
 =cut
+
 has 'name' => (
-    is => 'rw',
+    is  => 'rw',
     isa => 'Str',
-    );
-
-
+);
 
 # TODO better as a role 'Clearable', which iterates all attributes and checks 'has_clearer' and calls it.
 sub clear {
@@ -171,9 +167,8 @@ sub clear {
     $self->clear_network();
     $self->clear_globularity();
     $self->clear_buried_area();
-    
-}
 
+}
 
 =head2 description
 
@@ -184,12 +179,14 @@ sub clear {
 
 
 =cut
+
 has 'description' => (
-    is => 'rw',
-    isa => 'Maybe[Str]',
+    is         => 'rw',
+    isa        => 'Maybe[Str]',
     lazy_build => 1,
-    clearer => 'clear_description',
-    );
+    clearer    => 'clear_description',
+);
+
 sub _build_description {
     my ($self) = @_;
     my $target = $self->targetid;
@@ -198,16 +195,16 @@ sub _build_description {
     ($pdbid) = $target =~ /$pdb41/;
     my $desc;
     if ($pdbid) {
-    	# Looks like a PDB ID
-    	my $pdbc = pdbc($target);
-    	$desc = $pdbc->{header};
-    } elsif ($target =~ /^\d{3}$/) {
-    	$desc = tdracc2desc($target);
+
+        # Looks like a PDB ID
+        my $pdbc = pdbc($target);
+        $desc = $pdbc->{header};
+    }
+    elsif ($target =~ /^\d{3}$/) {
+        $desc = tdracc2desc($target);
     }
     return $desc if $desc;
 }
-
-
 
 =head2 objtype
 
@@ -218,18 +215,18 @@ sub _build_description {
  Default : 'SBG::Domain::Sphere'
 
 =cut
+
 has 'objtype' => (
-    is => 'ro',
-    isa => 'ClassName',
+    is      => 'ro',
+    isa     => 'ClassName',
     default => 'SBG::Domain::Sphere',
-    );
+);
+
 # ClassName does not validate if the class isn't already loaded. Preload it here
 before 'objtype' => sub {
     my ($self, $classname) = @_;
     Module::Load::load($classname);
 };
-
-
 
 =head2 interactions
 
@@ -237,23 +234,21 @@ L<SBG::Interaction> objects used to create this complex. Indexed by the
 B<primary_id> of the interaction.
 
 =cut
+
 has 'interactions' => (
-    isa => 'HashRef[SBG::Interaction]',
-    is => 'ro',
-    lazy => 1,
-    default => sub { { } },
-    );
-
-
+    isa     => 'HashRef[SBG::Interaction]',
+    is      => 'ro',
+    lazy    => 1,
+    default => sub { {} },
+);
 
 sub pdbids {
     my ($self) = @_;
     my $iactions = $self->interactions->values;
-    my $pdbids = $iactions->map(sub{$_->pdbid});
+    my $pdbids = $iactions->map(sub { $_->pdbid });
     my $uniq = [ uniq @$pdbids ];
     return wantarray ? @$uniq : $uniq;
 }
-
 
 =head2 superpositions
 
@@ -265,15 +260,13 @@ gets superimposed onto the existing reference domain.
 TODO DOC diagram
 
 =cut
+
 has 'superpositions' => (
-    isa => 'HashRef[SBG::Superposition]',
-    is => 'ro',
-    lazy => 1,
-    default => sub { { } },
-    );
-
-
-
+    isa     => 'HashRef[SBG::Superposition]',
+    is      => 'ro',
+    lazy    => 1,
+    default => sub { {} },
+);
 
 =head2 ncycles
 
@@ -285,11 +278,11 @@ has 'superpositions' => (
 
 
 =cut
-has 'ncycles' => (
-    is => 'rw',
-    default => sub { 0 },
-    );
 
+has 'ncycles' => (
+    is      => 'rw',
+    default => sub {0},
+);
 
 =head2 clashes
 
@@ -306,30 +299,31 @@ Indexed by the L<SBG::Node> creating the clashes when it was added.
 TOOD prefer to call this 'overlaps'
 
 =cut
+
 has 'clashes' => (
-    isa => 'HashRef[Num]',
-    is => 'ro',
-    lazy => 1,
-    default => sub { { } },
-    );
+    isa     => 'HashRef[Num]',
+    is      => 'ro',
+    lazy    => 1,
+    default => sub { {} },
+);
+
 # TODO each clash should be saved in the 'scores' hash of the Superposition
 
-
 # Clashes, as defined by VMD, all-atom, as a percent
-# Should not be much more than 1.5 
+# Should not be much more than 1.5
 has 'vmdclashes' => (
-    is => 'rw',
-    isa => 'Maybe[Num]',
+    is         => 'rw',
+    isa        => 'Maybe[Num]',
     lazy_build => 1,
-    clearer => 'clear_vmdclashes',
+    clearer    => 'clear_vmdclashes',
 );
 use SBG::Run::vmdclashes;
+
 sub _build_vmdclashes {
-    my ($self, ) = @_;
+    my ($self,) = @_;
     my $res = SBG::Run::vmdclashes::vmdclashes($self) or return;
     return $res->{pcclashes};
-} 
-
+}
 
 =head2 models
 
@@ -342,39 +336,42 @@ sub _build_vmdclashes {
 Indexed by display_id of L<SBG::Node> modelled by this L<SBG::Model>
 
 =cut
+
 has 'models' => (
-    isa => 'HashRef[SBG::Model]',
-    is => 'ro',
-    lazy => 1,
+    isa     => 'HashRef[SBG::Model]',
+    is      => 'ro',
+    lazy    => 1,
     default => sub { {} },
-    );
+);
 
 # Includes multiple representations, sorted by name/template
 # NB keys() sorts by the ACC of the components, this sorts by their gene/label
 sub all_models {
-	my ($self,) = @_;
+    my ($self,) = @_;
     my $interactions = $self->interactions->values;
-    my $models = $interactions->map(sub{$_->models->flatten});
-    $models = [ sort { 
-    	($a->input . '/' . $a->subject) cmp ($b->input . '/' . $b->subject) 
-    } @$models ];
-	return $models;
+    my $models = $interactions->map(sub { $_->models->flatten });
+    $models = [
+        sort {
+            ($a->input . '/' . $a->subject) cmp($b->input . '/' . $b->subject)
+            } @$models
+    ];
+    return $models;
 }
-
 
 # Assumes all models (i.e. multiple representatives per component)
 sub chain_of {
     my ($self, %ops) = @_;
-    our $labels = [ 'A'..'Z', 'a'..'z', 0..9 ];
+    our $labels = [ 'A' .. 'Z', 'a' .. 'z', 0 .. 9 ];
     my $index = 0;
-    my $map = {};
-    $map->{$_} = $labels->[$index++ % @$labels] for $self->all_models->flatten;
+    my $map   = {};
+    $map->{$_} = $labels->[ $index++ % @$labels ]
+        for $self->all_models->flatten;
     my $key = $ops{model};
-    # Though this could also be the 'structure/domain/subject' 
+
+    # Though this could also be the 'structure/domain/subject'
     # or the 'query/input/component'
     return $map->{$key};
 }
-
 
 =head2 symmetry
 
@@ -385,188 +382,196 @@ sub chain_of {
 
 
 =cut
-has 'symmetry' => (
-    is => 'rw',
-    );
+
+has 'symmetry' => (is => 'rw',);
 
 # TOOD DEL
 use Data::Dumper;
 
 has 'homology' => (
-    is => 'rw',
-    isa => 'ArrayRef[Int]',
+    is         => 'rw',
+    isa        => 'ArrayRef[Int]',
     lazy_build => 1,
-    clearer => 'clear_homology',
+    clearer    => 'clear_homology',
 );
+
 sub _build_homology {
-    my ($self, ) = @_;
+    my ($self,) = @_;
     my @cc = $self->symmetry->flatten;
+
     # The components actually being modelled in this complex, sorted by class,
     # since we are about to generate permutations of each class. The order of the
     # classes in @cc must be the same as the order of classes in $model I.e. if
     # class [B E] is first in @cc, then any B or E present must also be first in
     # $model
     my $keys = $self->keys;
+
     # Model components present, grouped by class
     my $model = [ map { scalar _members_by_class($_, $keys) } @cc ];
+
     # Flat list
     my @model = flatten $model;
+
     # Counts per class
-    my $kclass = $model->map(sub{$_->length});
+    my $kclass = $model->map(sub { $_->length });
+
     # Number of members in each class, e.g. [1,3,2,1]
     return $kclass;
 }
 
-
-# The order of these keys must match the weights 
+# The order of these keys must match the weights
 has '+score_keys' => (
-    default => sub { [
-    qw/pcclashes/,          # % all-atom clashes
-    qw/pcdoms/,             # % of modelled components (of target)
-    qw/mniactions/,         # # of interactions in model
-    qw/pciactions/,         # % of modelled interactions (of target)
-    qw/mseqlen/,            # Length of sequence modelled, over all proteins
-    qw/pcseqlen/,           # % of sequence length coverage
-    qw/nsources/,           # Number of PDB IDs over all templates used
-    qw/pcburied/,           # % of SAS buried in complex
-    qw/glob/,               # Globularity of complex [0:1]
-    qw/scmax/,
-    qw/scmed/,
-#    qw/scmin/,
-    qw/idmax idmed idmin/,
-    qw/ifacelenmax ifacelenmed ifacelenmin/,
-    qw/iweightmax iweightmed iweightmin/,
-    qw/seqcovermax seqcovermed seqcovermin/,
-    ] }, 
-    );
-    
+    default => sub {
+        [   qw/pcclashes/,    # % all-atom clashes
+            qw/pcdoms/,       # % of modelled components (of target)
+            qw/mniactions/,   # # of interactions in model
+            qw/pciactions/,   # % of modelled interactions (of target)
+            qw/mseqlen/,      # Length of sequence modelled, over all proteins
+            qw/pcseqlen/,     # % of sequence length coverage
+            qw/nsources/,     # Number of PDB IDs over all templates used
+            qw/pcburied/,     # % of SAS buried in complex
+            qw/glob/,         # Globularity of complex [0:1]
+            qw/scmax/,
+            qw/scmed/,
+
+            #    qw/scmin/,
+            qw/idmax idmed idmin/,
+            qw/ifacelenmax ifacelenmed ifacelenmin/,
+            qw/iweightmax iweightmed iweightmin/,
+            qw/seqcovermax seqcovermed seqcovermin/,
+        ];
+    },
+);
+
 # Final values is the constant
 has '+score_weights' => (
 
-# Weight derived from training set
-#default => sub { pdl qw/  
-#    1.0002784 -0.2046164  2.7741565 0.16234106 0.0022509768  -0.120098 -2.0390062 -0.32646872 -0.084590743  2.0155693   -2.62743 -0.055864886   0.193755 0.0080261051 0.030088151 -0.026983958 -0.032871555 0.21712407 -0.30196551 -0.24303391 0.0089509951 0.060238428 0.05075979  47.827834
-#    /},
-    
-# Weights from entire set (training + test sets)
-    default => sub { pdl qw/
-    0.18339077 -0.25231889   2.797613 0.15700415 0.0046757956 -0.10488408 -0.4795089 -0.26835171 -0.059896217  1.4270931 -2.3454635 0.0064867146 0.18846124 0.01793003 -0.015299134 0.023561227 -0.054708354 0.036664054 -0.28909752 -0.21574682 -0.021124081 0.099562617 0.0085258907  55.099234
-    /},
+    # Weight derived from training set
+    #default => sub { pdl qw/
+    #    1.0002784 -0.2046164  2.7741565 0.16234106 0.0022509768  -0.120098 -2.0390062 -0.32646872 -0.084590743  2.0155693   -2.62743 -0.055864886   0.193755 0.0080261051 0.030088151 -0.026983958 -0.032871555 0.21712407 -0.30196551 -0.24303391 0.0089509951 0.060238428 0.05075979  47.827834
+    #    /},
 
+    # Weights from entire set (training + test sets)
+    default => sub {
+        pdl qw/
+            0.18339077 -0.25231889   2.797613 0.15700415 0.0046757956 -0.10488408 -0.4795089 -0.26835171 -0.059896217  1.4270931 -2.3454635 0.0064867146 0.18846124 0.01793003 -0.015299134 0.023561227 -0.054708354 0.036664054 -0.28909752 -0.21574682 -0.021124081 0.099562617 0.0085258907  55.099234
+            /;
+    },
 
-    );
-
-
-
-    
+);
 
 # Override from Role::Scorable
 sub _build_scores {
     my ($model) = @_;
     my $stats = {};
     $log->debug($model);
-        
-    $stats->{mid} = $model->modelid();
-    $stats->{tid} = $model->targetid();
-    $stats->{tdesc} = $model->description;    
+
+    $stats->{mid}   = $model->modelid();
+    $stats->{tid}   = $model->targetid();
+    $stats->{tdesc} = $model->description;
 
     # Number of Components that we were trying to model
-    my @tdoms = flatten $model->symmetry;
+    my @tdoms  = flatten $model->symmetry;
     my $tndoms = @tdoms;
     $stats->{tndoms} = $tndoms;
-    # Number of domains modelled 
+
+    # Number of domains modelled
     my $dommodels = $model->models->values;
-    my $mndoms = $stats->{mndoms} = keys %{$model->models};
+    my $mndoms = $stats->{mndoms} = keys %{ $model->models };
+
     # Percentage of component coverage, e.g. 3/5 components => 60
     $stats->{pcdoms} = 100.0 * $mndoms / $tndoms;
 
-
     # Number of interactions modelled
-    my $mniactions = $stats->{mniactions} = keys %{$model->interactions};
-    
+    my $mniactions = $stats->{mniactions} = keys %{ $model->interactions };
+
     $log->debug("mniactions $mniactions");
-    
 
     my $target = $model->target();
+
     # Number of interactions to be modelled in target
-    my $tniactions = defined($target) ? $model->target->network->edges : 'nan';
+    my $tniactions =
+        defined($target) ? $model->target->network->edges : 'nan';
     $stats->{tniactions} = $tniactions;
-    $stats->{pciactions} = 
+    $stats->{pciactions} =
         defined($target) ? 100.0 * $mniactions / $tniactions : 'nan';
-    
+
     # TODO need to grep for defined($_) ? (also for n_res ? )
-    my $ids = $dommodels->map(sub{$_->scores->at('seqid')});
+    my $ids = $dommodels->map(sub { $_->scores->at('seqid') });
     $stats->{idmin} = min $ids;
     $stats->{idmax} = max $ids;
     $stats->{idmed} = median $ids;
-        
+
     # Model: interactions
     my $mias = $model->interactions->values;
-    
-    my $avg_seqids = $mias->map(sub{$_->scores->at('avg_seqid')});
-    
-    $stats->{n0}   = $avg_seqids->grep(sub{between($_,  0, 40)})->length;
-    $stats->{n40}  = $avg_seqids->grep(sub{between($_, 40, 60)})->length;
-    $stats->{n60}  = $avg_seqids->grep(sub{between($_, 60, 80)})->length;
-    $stats->{n80}  = $avg_seqids->grep(sub{between($_, 80,100)})->length;
-    $stats->{n100} = $avg_seqids->grep(sub{between($_,100,101)})->length;
-            
-    
+
+    my $avg_seqids = $mias->map(sub { $_->scores->at('avg_seqid') });
+
+    $stats->{n0}   = $avg_seqids->grep(sub { between($_, 0,   40) })->length;
+    $stats->{n40}  = $avg_seqids->grep(sub { between($_, 40,  60) })->length;
+    $stats->{n60}  = $avg_seqids->grep(sub { between($_, 60,  80) })->length;
+    $stats->{n80}  = $avg_seqids->grep(sub { between($_, 80,  100) })->length;
+    $stats->{n100} = $avg_seqids->grep(sub { between($_, 100, 101) })->length;
+
     # Number of residues in contact in an interaction, averaged between 2
     # interfaces.
-    my $nres = $mias->map(sub{$_->scores->at('avg_n_res')});
-    $stats->{ifacelenmin} = min $nres;    
+    my $nres = $mias->map(sub { $_->scores->at('avg_n_res') });
+    $stats->{ifacelenmin} = min $nres;
     $stats->{ifacelenmax} = max $nres;
     $stats->{ifacelenmed} = median $nres;
 
     # Docking, when used
-    my $docked = $mias->map(sub{$_->scores->at('docking')})->grep(sub{defined});
-    
-    $stats->{dockmin} = min $docked;    
+    my $docked =
+        $mias->map(sub { $_->scores->at('docking') })->grep(sub {defined});
+
+    $stats->{dockmin} = min $docked;
     $stats->{dockmax} = max $docked;
     $stats->{dockmed} = median $docked;
-    $stats->{'ndockless' } = $docked->grep(sub{$_ && $_<1386 })->length;
-    $stats->{ndockgreat} = $docked->grep(sub{$_ && $_>=1386})->length;
+    $stats->{'ndockless'} = $docked->grep(sub { $_ && $_ < 1386 })->length;
+    $stats->{ndockgreat} = $docked->grep(sub { $_ && $_ >= 1386 })->length;
+
     # For each score less than 2000, penalize by the diff/1000
     # E.g. each score of 1750 is penalized by (2000-1750)/1000 => .25
-    $stats->{dockpenalty} = $docked->map(sub{(2000-$_)/1000.0})->sum;
-    
+    $stats->{dockpenalty} = $docked->map(sub { (2000 - $_) / 1000.0 })->sum;
+
     # Interprets, when available
-    my $ipts = $mias->map(sub{$_->scores->at('interpretsz')});
-    $stats->{iptsmin} = min $ipts;    
+    my $ipts = $mias->map(sub { $_->scores->at('interpretsz') });
+    $stats->{iptsmin} = min $ipts;
     $stats->{iptsmax} = max $ipts;
     $stats->{iptsmed} = median $ipts;
 
     # Number of template PDB structures used in entire model
     # TODO belongs in SBG::Complex
-    my $idomains = $mias->map(sub{$_->domains->flatten});
-    my $ipdbs = $idomains->map(sub{$_->file});
+    my $idomains = $mias->map(sub     { $_->domains->flatten });
+    my $ipdbs    = $idomains->map(sub { $_->file });
     my $nsources = scalar List::MoreUtils::uniq $ipdbs->flatten;
     $stats->{nsources} = $nsources;
 
     # This is the sequence from the structural template used
-    my $mseqlen = $dommodels->map(sub{$_->subject->seq->length})->sum;
+    my $mseqlen = $dommodels->map(sub { $_->subject->seq->length })->sum;
     $stats->{mseqlen} = $mseqlen;
+
     # Length of the sequences that we were trying to model, original inputs
     # TODO DEL workaround for not having 'input' set for docking templates
-    my $inputs = $dommodels->map(sub{$_->input || $_->query});
-    my $tseqlen = $inputs->map(sub{$_->length})->sum;
+    my $inputs = $dommodels->map(sub { $_->input || $_->query });
+    my $tseqlen = $inputs->map(sub { $_->length })->sum;
     $stats->{tseqlen} = $tseqlen;
+
     # Percentage sequence coverage by the complex model
     my $pcseqlen = 100.0 * $mseqlen / $tseqlen;
     $stats->{pcseqlen} = $pcseqlen;
 
     # Sequence coverage per domain
-    my $pdomcovers = $dommodels->map(sub{$_->coverage()});
+    my $pdomcovers = $dommodels->map(sub { $_->coverage() });
     $stats->{seqcovermin} = min $pdomcovers;
     $stats->{seqcovermax} = max $pdomcovers;
     $stats->{seqcovermed} = median $pdomcovers;
 
-
     # Edge weight, generally the seqid
-    my $weights = $mias->map(sub{$_->weight});
+    my $weights = $mias->map(sub { $_->weight });
+
     # Average sequence identity of all the templates.
-    # NB linker domains are counted multiple times. 
+    # NB linker domains are counted multiple times.
     # Given a hub proten and three interacting spoke proteins, there are not 4
     # values for sequence identity, but rather 2*(3 interactions) => 6
     $stats->{iweightmin} = min $weights;
@@ -575,17 +580,18 @@ sub _build_scores {
 
     # Linker superpositions required to build model by overlapping dimers
     my $superpositions = $model->superpositions->values;
+
     # Sc scores of all superpositions done
-    my $scs = $superpositions->map(sub{$_->scores->at('Sc')});
+    my $scs = $superpositions->map(sub { $_->scores->at('Sc') });
     $stats->{scmin} = min $scs;
     $stats->{scmax} = max $scs;
     $stats->{scmed} = median $scs;
 
     # Globularity of entire model
     $stats->{glob} = $model->globularity();
-    
+
     $stats->{pcburied} = $model->buried_area() || 'NaN';
-    
+
     $stats->{pcclashes} = $model->vmdclashes();
 
     # Fraction overlaps between domains for each new component placed, averages
@@ -598,31 +604,31 @@ sub _build_scores {
     $stats->{ncycles} = $model->ncycles();
 
     my $homology = $model->homology;
-    my $present_homology = $homology->grep(sub{$_>0});
+    my $present_homology = $homology->grep(sub { $_ > 0 });
     $stats->{homo} = $present_homology->length == 1 ? 1 : 0;
     $stats->{homology} = $present_homology->join('-');
 
     # subjective level of difficulty
     # TODO DEL
     $stats->{difficulty} = 0;
-    
-#    print Dumper $stats;
-#    exit;
-    
+
+    #    print Dumper $stats;
+    #    exit;
+
     # Format any objects/complex numbers as simple numbers again
     foreach my $key (keys %$stats) {
-    	if (ref($stats->{$key}) =~ /^Math::Big/) {
-    		$stats->{$key} = sprintf "%g", $stats->{$key}->numify();
-    	}
+        if (ref($stats->{$key}) =~ /^Math::Big/) {
+            $stats->{$key} = sprintf "%g", $stats->{$key}->numify();
+        }
     }
-    
-    $log->debug(Dumper $stats);
-    
-    return ($stats);    
-} # _build_scores
 
+    $log->debug(Dumper $stats);
+
+    return ($stats);
+}    # _build_scores
 
 ###############################################################################
+
 =head2 domains
 
  Function: Extracts just the Domain objects from the Models in the Complex
@@ -633,6 +639,7 @@ sub _build_scores {
 Order of domains is sorted alphabetically
 
 =cut
+
 sub domains {
     my ($self, $keys, $map) = @_;
 
@@ -641,15 +648,13 @@ sub domains {
     return unless @$keys;
 
     if (defined $map) {
-        $keys = $keys->map(sub{$map->{$_} || $_});
+        $keys = $keys->map(sub { $map->{$_} || $_ });
     }
-    my $models = $keys->map(sub{ $self->get($_) });
+    my $models  = $keys->map(sub   { $self->get($_) });
     my $domains = $models->map(sub { $_->structure });
     return $domains;
 
-} # domains
-
-
+}    # domains
 
 =head2 count
 
@@ -660,13 +665,12 @@ sub domains {
 
 
 =cut
+
 sub count {
     my ($self,) = @_;
     return $self->models->keys->length;
 
-} # count
-
-
+}    # count
 
 =head2 size
 
@@ -678,25 +682,26 @@ sub count {
 Alias to L<count>
 
 =cut
+
 sub size {
     my ($self,) = @_;
     return $self->count();
 
-} # size
-
+}    # size
 
 sub seqs {
-	my ($self) = @_;
-	return $self->domains()->map(sub{$_->seq()});
+    my ($self) = @_;
+    return $self->domains()->map(sub { $_->seq() });
 }
 
 =head2 seqlen
 =cut
+
 sub seqlen {
-	my ($self) = @_;
-	my $seqs = $self->seqs();
-	return $seqs->map(sub{$_->length})->sum();
-	
+    my ($self) = @_;
+    my $seqs = $self->seqs();
+    return $seqs->map(sub { $_->length })->sum();
+
 }
 
 =head2 set/get/keys
@@ -711,15 +716,16 @@ L<MooseX::AttributeHelpers> create attributes that are instances of their own
 class. I.e. neither 'handles' nor 'provides' are useful.
 
 =cut
+
 sub set {
     my $self = shift;
     return $self->models->put(@_);
-} # set
+}    # set
+
 sub get {
     my $self = shift;
     return $self->models->at(@_);
 }
-
 
 # Order keys is sorted alphabetically (by the component ACC)
 sub keys {
@@ -727,18 +733,13 @@ sub keys {
     return $self->models->keys->sort;
 }
 
-
 # Mapping to names used to correspond to another structure
 has 'correspondance' => (
-    is => 'rw',
-    isa => 'HashRef[Str]',
+    is      => 'rw',
+    isa     => 'HashRef[Str]',
     default => sub { {} },
     clearer => 'clear_correspondance',
-    );
-
-
-
-
+);
 
 =head2 modelled_coords
 
@@ -759,36 +760,39 @@ $coords = $coords->clump(1,2) if $coords->dims == 3;
 print SBG::U::RMSD::centroid($coords);
 
 =cut
+
 has 'modelled_coords' => (
-    is => 'rw',
+    is         => 'rw',
     lazy_build => 1,
-    clearer => 'clear_modelled_coords',
-    );
+    clearer    => 'clear_modelled_coords',
+);
+
 sub _build_modelled_coords {
-    my ($self) = @_;
-    my $modelled_coords = {};    
-    my $keys = $self->keys;
+    my ($self)          = @_;
+    my $modelled_coords = {};
+    my $keys            = $self->keys;
 
     foreach my $key (@$keys) {
         my $dommodel = $self->get($key);
-        my $aln = $dommodel->aln();
+        my $aln      = $dommodel->aln();
         if ($aln) {
-            my ($modelled, $native) = 
-                $self->_coords_from_aln($aln, $key) or return;
+            my ($modelled, $native) = $self->_coords_from_aln($aln, $key)
+                or return;
             $modelled_coords->{$key} = $modelled;
-        } else {
-        	# Clone the domain using the CA representation
-        	# Transformation will be retained
-        	my $dom = $dommodel->structure;
-        	my $domatoms = SBG::Domain::Atoms->new(%$dom);
-        	$modelled_coords->{$key} = $domatoms->coords;
+        }
+        else {
+
+            # Clone the domain using the CA representation
+            # Transformation will be retained
+            my $dom      = $dommodel->structure;
+            my $domatoms = SBG::Domain::Atoms->new(%$dom);
+            $modelled_coords->{$key} = $domatoms->coords;
         }
     }
 
     return $modelled_coords;
-    
-} # _build_modelled_coords
 
+}    # _build_modelled_coords
 
 =head2 coords
 
@@ -801,25 +805,25 @@ sub _build_modelled_coords {
 TODO Belongs in DomSetI
 
 =cut
+
 sub coords {
-    my ($self,@cnames) = @_;
+    my ($self, @cnames) = @_;
+
     # Only consider common components
     @cnames = ($self->models->keys) unless @cnames;
     @cnames = flatten(@cnames);
-    
+
     my @aslist = map { $self->get($_)->structure->coords } @cnames;
     my $coords = pdl(@aslist);
-    
+
     # Clump into a 2D matrix, if there is a 3rd dimension
     # I.e. normally have an outer dimension representing individual domains.
     # Then each domain is a 2D matrix of coordinates
     # This clumps the whole set of domains into a single matrix of coords
-    $coords = $coords->clump(1,2) if $coords->dims == 3;
+    $coords = $coords->clump(1, 2) if $coords->dims == 3;
     return $coords;
-    
-} # coords
 
-
+}    # coords
 
 =head2 add_model
 
@@ -830,12 +834,11 @@ sub coords {
 
 
 =cut
+
 sub add_model {
     my ($self, @models) = @_;
     $self->models->put($_->query, $_) for @models;
-} # add_model
-
-
+}    # add_model
 
 =head2 network
 
@@ -850,40 +853,42 @@ B<subgraph> would tend to do it.  Nor is there a way to remove interactions from
 a graph, so we built it here, as needed.
 
 =cut
+
 has 'network' => (
-    is => 'rw',
-    isa => 'SBG::Network',
+    is         => 'rw',
+    isa        => 'SBG::Network',
     lazy_build => 1,
-    clearer => 'clear_network',
-    );
+    clearer    => 'clear_network',
+);
+
 sub _build_network {
     my ($self) = @_;
 
     my $net = SBG::Network->new;
 
     # Go through %{ $self->interactions }
-    foreach my $i (@{$self->interactions->values}) {
+    foreach my $i (@{ $self->interactions->values }) {
+
         # Get the Nodes defining the partners of the Interaction
         my @nodes;
-        # TODO DES Necessary hack: 
+
+        # TODO DES Necessary hack:
         # crashes when _nodes not yet defined in Bio::Network
         if (exists $i->{_nodes}) {
             @nodes = $i->nodes;
-        } else {
-            foreach my $key (@{$i->keys}) {
+        }
+        else {
+            foreach my $key (@{ $i->keys }) {
                 push(@nodes,
-                     SBG::Node->new(SBG::Seq->new(-display_id=>$key)));
+                    SBG::Node->new(SBG::Seq->new(-display_id => $key)));
             }
         }
-        
-        $net->add_interaction(
-            -nodes=>[@nodes],-interaction=>$i);
+
+        $net->add_interaction(-nodes => [@nodes], -interaction => $i);
     }
 
     return $net;
-} # network
-
-
+}    # network
 
 =head2 stringify
 
@@ -894,12 +899,11 @@ sub _build_network {
 
 
 =cut
+
 sub stringify {
     my ($self) = @_;
     $self->interactions->keys->sort->join(',');
 }
-
-
 
 =head2 transform
 
@@ -912,19 +916,18 @@ sub stringify {
 
 
 =cut
+
 sub transform {
-   my ($self,$matrix) = @_;
-   
-   # Note that interactions also contain models, but these are different copies
-   # This should be optimized so that they are not duplicated.
-   # In that case, do not transform both of these here, rather just the interaction 
-   $self->models->values->map(sub{$_->transform($matrix)});
-   $self->interactions->values->map(sub{$_->transform($matrix)});
-   
-   return $self;
-} # transform
+    my ($self, $matrix) = @_;
 
+    # Note that interactions also contain models, but these are different copies
+    # This should be optimized so that they are not duplicated.
+    # In that case, do not transform both of these here, rather just the interaction
+    $self->models->values->map(sub       { $_->transform($matrix) });
+    $self->interactions->values->map(sub { $_->transform($matrix) });
 
+    return $self;
+}    # transform
 
 =head2 coverage
 
@@ -937,14 +940,13 @@ sub transform {
 In an array context, this returns the names of the common components
 
 =cut
+
 sub coverage {
     my ($self, $other) = @_;
     return unless defined $other;
     return intersection($self->keys, $other->keys);
 
-} # coverage
-
-
+}    # coverage
 
 =head2 globularity
 
@@ -961,11 +963,12 @@ This provides some measure of how compact, non-linear, the components in a
 complex are arranged. E.g. high for an exosome, low for actin fibers
 
 =cut
+
 has 'globularity' => (
-    is => 'rw',
+    is         => 'rw',
     lazy_build => 1,
-    clearer => 'clear_globularity',
-    );
+    clearer    => 'clear_globularity',
+);
 
 sub _build_globularity {
     my ($self,) = @_;
@@ -973,12 +976,12 @@ sub _build_globularity {
     # Multidimensional piddle
     my $mcoords = $self->modelled_coords or return;
     my $coords = pdl $mcoords->values;
+
     # Flatten into 2D
-    $coords = $coords->clump(1,2) if $coords->dims == 3;
+    $coords = $coords->clump(1, 2) if $coords->dims == 3;
     return 100.0 * SBG::U::RMSD::globularity($coords);
 
-} # globularity
-
+}    # globularity
 
 =head2 buried_area
 
@@ -987,15 +990,17 @@ Surface area buried at interfaces.
 Depends on NACCESS program.
 
 =cut
+
 has 'buried_area' => (
-    is => 'rw',
-    isa => 'Maybe[Num]',
+    is         => 'rw',
+    isa        => 'Maybe[Num]',
     lazy_build => 1,
-    clearer => 'clear_buried_area',
-    );
+    clearer    => 'clear_buried_area',
+);
+
 sub _build_buried_area {
     my ($self) = @_;
-    my $sas = SBG::Run::naccess::buried($self->domains) or return; 
+    my $sas = SBG::Run::naccess::buried($self->domains) or return;
     return $sas;
 }
 
@@ -1009,26 +1014,27 @@ sub _build_buried_area {
 TODO put in a DomainSetI
 
 =cut
+
 use SBG::DomainIO::pdb;
 use Module::Load;
+
 sub combine {
-    my ($self,%ops) = @_;
+    my ($self, %ops) = @_;
     $ops{keys} ||= $self->keys;
     $log->debug($ops{keys}->join(','));
     my $doms = $self->domains($ops{keys});
     return unless $doms->length > 0;
 
-    my $io = $ops{file} ?
-        new SBG::DomainIO::pdb(file=>">$ops{file}") :
-        new SBG::DomainIO::pdb(tempfile=>1);
+    my $io =
+        $ops{file}
+        ? new SBG::DomainIO::pdb(file     => ">$ops{file}")
+        : new SBG::DomainIO::pdb(tempfile => 1);
     $io->write(@$doms);
     my $type = ref $doms->[0];
     load($type);
-    my $dom = $type->new(file=>$io->file, descriptor=>'ALL');
+    my $dom = $type->new(file => $io->file, descriptor => 'ALL');
     return $dom;
-} # combine
-
-
+}    # combine
 
 =head2 merge_domain
 
@@ -1039,9 +1045,11 @@ sub combine {
 
 
 =cut
+
 sub merge_domain {
-    my ($self,$other,$ref, $olap) = @_;
+    my ($self, $other, $ref, $olap) = @_;
     $olap ||= 0.5;
+
     # Where the last reference domain for this component was placed in space
     my $refmodel = $self->get($ref);
     my $refdom = $refmodel->subject if defined $refmodel;
@@ -1051,9 +1059,9 @@ sub merge_domain {
     my $otherdom = $othermodel->subject if defined $othermodel;
     return unless $otherdom;
 
-#     return unless _model_overlap($refmodel, $othermodel) > 0;
+    #     return unless _model_overlap($refmodel, $othermodel) > 0;
 
-    my $linker_superposition = 
+    my $linker_superposition =
         SBG::Superposition::Cache::superposition($otherdom, $refdom);
     return unless defined $linker_superposition;
 
@@ -1061,7 +1069,7 @@ sub merge_domain {
     # Product of relative with absolute transformation.
     # Order of application of transformations matters
     $log->debug("Linking:", $linker_superposition->transformation);
-    
+
     # Transform the other complex
     $linker_superposition->apply($other);
 
@@ -1072,11 +1080,12 @@ sub merge_domain {
     # Domain does not clash after being oriented, can be saved in complex now.
     # Save all meta data that went into this placement.
     # I.e. this pulls all domains from $other into $self
-    # NB this appears to replace the pivot domain (on which we merge), but 
+    # NB this appears to replace the pivot domain (on which we merge), but
     # that should not matter. All $other domains have been xformed already
     $self->set($_, $other->get($_)) for $other->keys->flatten;
+
     # Pull all interactions
-    $self->interactions->put($_, $other->interactions->at($_)) 
+    $self->interactions->put($_, $other->interactions->at($_))
         for $other->interactions->keys->flatten;
 
     # TODO save clash values (check_clashes should return ArrayRef)
@@ -1084,28 +1093,28 @@ sub merge_domain {
     # Cache superpositions by reference domain (linking domain)
     $self->superpositions->put($refdom, $linker_superposition);
 
-    # STAMP superposition score of linking superposition 
+    # STAMP superposition score of linking superposition
     return $linker_superposition->scores->at('Sc');
 
-} # merge_domain
-
+}    # merge_domain
 
 # True if the sequences being modelled by two models overlap
-# Indended to enforce that shared components are actually shared and not just 
+# Indended to enforce that shared components are actually shared and not just
 # modelling seperate domains of a single chain, for example
 sub _model_overlap {
     my ($model1, $model2) = @_;
 
     my ($query1, $query2) = map { $_->query } ($model1, $model2);
-    return unless 
-        UNIVERSAL::isa($query1, 'Bio::Search::Hit::HitI') &&
-        UNIVERSAL::isa($query2, 'Bio::Search::Hit::HitI');
+    return
+        unless UNIVERSAL::isa($query1, 'Bio::Search::Hit::HitI')
+            && UNIVERSAL::isa($query2, 'Bio::Search::Hit::HitI');
 
-    my ($start1, $end1, $start2, $end2) = 
+    my ($start1, $end1, $start2, $end2) =
         map { $_->start, $_->end } ($query1, $query2);
+
     # How much of model1's sequence is covered by model2's sequence
-    my $seqoverlap = SBG::U::List::interval_overlap(
-        $start1, $end1, $start2, $end2);
+    my $seqoverlap =
+        SBG::U::List::interval_overlap($start1, $end1, $start2, $end2);
     $log->debug("start1:$start1:end1:$end1:start2:$start2:end2:$end2");
     $log->debug("seqoverlap:$seqoverlap");
 
@@ -1114,8 +1123,6 @@ sub _model_overlap {
     }
     return $seqoverlap;
 }
-
-
 
 =head2 merge_interaction
 
@@ -1126,9 +1133,11 @@ sub _model_overlap {
 
 
 =cut
+
 sub merge_interaction {
     my ($self, $other, $iaction, $olap) = @_;
     $olap ||= 0.5;
+
     # If this interaction is just to create a cycle in this complex
     # Difference of iRMSD from 10 is cheap way to get score in [0:10], as STAMP
     return 10 - $self->cycle($iaction)
@@ -1136,6 +1145,7 @@ sub merge_interaction {
 
     # Add Interaction to self
     my ($src, $dest) = $iaction->keys->flatten;
+
     # Figure out which end of interaction can be linked to $self complex
     unless ($self->models->exists($src)) {
         swap($src, $dest);
@@ -1143,17 +1153,14 @@ sub merge_interaction {
     unless ($self->models->exists($src)) {
         $log->error("Neither $src nor $dest present in complex: $self");
         return;
-    }        
-    my $iaction_score = $self->add_interaction(
-        $iaction, $src, $dest, $olap);
+    }
+    my $iaction_score = $self->add_interaction($iaction, $src, $dest, $olap);
     return unless defined $iaction_score;
 
     # $dest node was added to $src complex, can now merge on $dest
     return $self->merge_domain($other, $dest, $olap);
 
-} # merge_interaction
-
-
+}    # merge_interaction
 
 =head2 cycle
 
@@ -1164,23 +1171,23 @@ sub merge_interaction {
 
 
 =cut
+
 sub cycle {
     my ($self, $iaction) = @_;
     $log->debug($iaction);
 
     my $keys = $iaction->keys;
+
     # Get domains from self and domains from iaction in corresponding order
-    my $irmsd = SBG::U::iRMSD::irmsd($self->domains($keys), 
-                                     $iaction->domains($keys));
+    my $irmsd =
+        SBG::U::iRMSD::irmsd($self->domains($keys), $iaction->domains($keys));
 
     # TODO this thresh is also hard-coded in CA::Assembler2
-    $self->ncycles($self->ncycles+1) if $irmsd < 15;
+    $self->ncycles($self->ncycles + 1) if $irmsd < 15;
 
     return $irmsd;
 
-} # cycle
-
-
+}    # cycle
 
 =head2 init
 
@@ -1194,18 +1201,18 @@ Initialize a complex with a single interaction, i.e. a dimeric complex
 TODO deprecate
 
 =cut
+
 sub init {
     my ($self, $iaction) = @_;
 
     my $keys = $iaction->keys;
-    my $models = $keys->map(sub{$self->_mkmodel($iaction, $_)});
+    my $models = $keys->map(sub { $self->_mkmodel($iaction, $_) });
     $self->add_model(@$models);
+
     # Save a copy
     $self->interactions->put($iaction, $iaction->clone);
 
-} # init
-
-
+}    # init
 
 =head2 add_interaction
 
@@ -1223,25 +1230,31 @@ linked to this complex via the reference domain.
 TODO initialize a complex from an interaction object.
 
 =cut
+
 sub add_interaction {
     my ($self, $iaction, $srckey, $destkey, $olap) = @_;
     $olap ||= 0.5;
+
     # Where the last reference domain for this component was placed in space
     my $refmodel = $self->get($srckey);
-    # NB here we use 'subject', not 'structure' to take advantage of 
+
+    # NB here we use 'subject', not 'structure' to take advantage of
     # interactions coming from a single source structure
     # I.e. there may be identity transformations that we want to exploit
     my $refdom = $refmodel->subject if defined $refmodel;
+
     # Initial interaction, no spacial constraints yet, always accepted
     unless (defined $refdom) {
         $self->init($iaction);
+
         # TODO Poor approach to get the maximum score
         return 10.0;
     }
 
     # Get domain models for components of interaction
     my $srcmodel = $iaction->get($srckey);
-    my $srcdom = $srcmodel->subject;
+    my $srcdom   = $srcmodel->subject;
+
     # For domain being placed, make a copy that has a concrete representation
     my $destmodel = $self->_mkmodel($iaction, $destkey);
     return unless defined $destmodel;
@@ -1249,12 +1262,12 @@ sub add_interaction {
 
     # Just verify model_overlap but don't enforce it
     _model_overlap($srcmodel, $refmodel);
-#     return unless _model_overlap($srcmodel, $refmodel) > 0;
 
-    my $linker_superposition = 
+    #     return unless _model_overlap($srcmodel, $refmodel) > 0;
+
+    my $linker_superposition =
         SBG::Superposition::Cache::superposition($srcdom, $refdom);
     return unless defined $linker_superposition;
-
 
     # Then apply that transformation to the interaction partner $destdom.
     # Product of relative with absolute transformation.
@@ -1263,65 +1276,68 @@ sub add_interaction {
     $log->debug("Linking:", $linker_superposition->transformation);
 
     # Now test steric clashes of potential domain against existing domains
-    my $clashfrac = $self->check_clashes([$destmodel->structure], undef, $olap);
+    my $clashfrac =
+        $self->check_clashes([ $destmodel->structure ], undef, $olap);
     return unless $clashfrac < 1;
 
     # Domain does not clash after being oriented, can be saved in complex now.
     # Save all meta data that went into this placement.
-    # NB Any previous $self->get($destnode) gets overwritten. 
-    # This is compatible with the backtracking of SBG::Traversal. 
+    # NB Any previous $self->get($destnode) gets overwritten.
+    # This is compatible with the backtracking of SBG::Traversal.
     $self->set($destkey, $destmodel);
-    
+
     # TODO belongs in the 'scores' of the dest model
     $self->clashes->put($destkey, $clashfrac);
+
     # Cache by destnode, as there may be many for any given refdom
     $self->superpositions->put($destkey, $linker_superposition);
+
     # Copy and transform the interaction, to save it
     my $iaction_clone = $iaction->clone;
     $linker_superposition->apply($iaction_clone);
     $self->interactions->put($iaction_clone, $iaction_clone);
     return $linker_superposition->scores->at('Sc');
 
-} # add_interaction
-
+}    # add_interaction
 
 # Create a concrete model for a given abstract model in an interaction
 # TODO belongs in SBG::Model::clone()
 use SBG::Run::cofm qw/cofm/;
+
 sub _mkmodel {
     my ($self, $iaction, $key) = @_;
     my $vmodel = $iaction->get($key);
-    my $vdom = $vmodel->subject;
+    my $vdom   = $vmodel->subject;
 
     # Clone first, to sever reference to original object
     my $clone = $vdom->clone;
+
     # Now copy construct into the desired type
-    my $type = $self->objtype;        
+    my $type = $self->objtype;
 
     # NB it is not sufficient to just do $type->new(%$clone) because cofm is
     # required to setup the radius.
-    my $cdom = 
+    my $cdom =
         blessed($clone) eq 'SBG::Domain::Sphere' ? $clone : cofm($clone);
     return unless defined $cdom;
 
     # TODO DES need to be copy constructing
     my $model = SBG::Model->new(
-        query=>$vmodel->query, 
-        subject=>$cdom,
-        scores=>$vmodel->scores,
-        input=>$vmodel->input,
-        aln=>$vmodel->aln,
-        );
+        query   => $vmodel->query,
+        subject => $cdom,
+        scores  => $vmodel->scores,
+        input   => $vmodel->input,
+        aln     => $vmodel->aln,
+    );
+
     # Needs to be cloned as well, as it will be transformed
     if (refaddr($vmodel->subject) != refaddr($vmodel->structure)) {
-    	my $struct_clone = $vmodel->structure->clone;
-    	$model->structure($struct_clone);
+        my $struct_clone = $vmodel->structure->clone;
+        $model->structure($struct_clone);
     }
 
     return $model;
-} # _mkmodel
-
-
+}    # _mkmodel
 
 =head2 check_clash
 
@@ -1336,6 +1352,7 @@ with any of the L<SBG::Domain>s in this complex.
 TODO Deprecated in favor of L<check_clashes>
 
 =cut
+
 sub check_clash {
     my ($self, $newdom, $thresh) = @_;
     $thresh ||= 0.5;
@@ -1344,24 +1361,26 @@ sub check_clash {
     my $overlaps = [];
 
     $log->debug("$newdom vs " . $self->models->values->join(','));
-    # Get all of the objects in this assembly. 
+
+    # Get all of the objects in this assembly.
     # If any of them clashes with the to-be-added objects, then disallow
-    foreach my $key (@{$self->keys}) {
+    foreach my $key (@{ $self->keys }) {
+
         # Measure the overlap between $newdom and each component
         my $existingdom = $self->get($key)->structure;
         $log->debug("$newdom vs $existingdom");
         my $overlapfrac = $newdom->overlap($existingdom);
+
         # Nonetheless, if one clashes severely, bail out
         return 1 if $overlapfrac > $thresh;
+
         # Ignore domains that aren't overlapping at all (ie < 0)
         $overlaps->push($overlapfrac) if $overlapfrac > 0;
     }
     my $mean = mean($overlaps) || 0;
     $log->debug("$newdom fits w/ mean overlap fraction: ", $mean);
     return $mean;
-} # check_clash
-
-
+}    # check_clash
 
 =head2 check_clashes
 
@@ -1377,25 +1396,29 @@ TODO there are algorithms better than O(NxM) for this
 $ignore is the pivot used to merge the complex, which doesn't need to be checked
 
 =cut
+
 sub check_clashes {
-    my ($self, $otherdoms, $ignore, $olap ) = @_;
+    my ($self, $otherdoms, $ignore, $olap) = @_;
     $olap ||= 0.5;
     $log->debug("fractional overlap thresh:$olap");
     my $overlaps = [];
 
     $log->debug($self->size, " vs ", $otherdoms->length);
 
-    # Get all of the objects in this assembly. 
+    # Get all of the objects in this assembly.
     # If any of them clashes with the to-be-added objects, then disallow
     foreach my $key ($self->keys->flatten) {
         next if $ignore && $key eq $ignore;
+
         # Measure the overlap between $thisdom and each $otherdom
         my $thisdom = $self->get($key)->structure;
         foreach my $otherdom ($otherdoms->flatten) {
             $log->debug("$thisdom vs $otherdom");
             my $overlapfrac = $thisdom->overlap($otherdom);
+
             # Nonetheless, if one clashes severely, bail out
             return 1 if $overlapfrac > $olap;
+
             # Ignore domains that aren't overlapping at all (ie < 0)
             $overlaps->push($overlapfrac) if $overlapfrac > 0;
         }
@@ -1404,9 +1427,7 @@ sub check_clashes {
     $log->debug("mean overlap fraction: ", $mean);
     return $mean;
 
-} # check_clashes
-
-
+}    # check_clashes
 
 =head2 overlap
 
@@ -1419,18 +1440,21 @@ TODO should be in a DomSetI interface
 
 
 =cut
+
 sub overlap {
     my ($self, $other) = @_;
+
     # Only consider common components
     my @cnames = $self->coverage($other);
-    
+
     my $overlaps = [];
     foreach my $key (@cnames) {
-        my $selfdom = $self->get($key)->structure;
+        my $selfdom  = $self->get($key)->structure;
         my $otherdom = $other->get($key)->structure;
-        
+
         # Returns negative distance if no overlap at all
         my $overlapfrac = $selfdom->overlap($otherdom);
+
         # Non-overlapping domains just become 0
         $overlapfrac = 0 if $overlapfrac < 0;
         $overlaps->push($overlapfrac);
@@ -1438,10 +1462,7 @@ sub overlap {
     my $mean = mean($overlaps) || 0;
     return $mean;
 
-} # overlap
-
-
-
+}    # overlap
 
 =head2 rmsd
 
@@ -1461,51 +1482,51 @@ TODO belongs in a ModelSet role
 Based on putting centres of mass in right frame of reference
 
 =cut
+
 sub rmsd {
-   my ($self,$other) = @_;
-   # Only consider common components
-   my @cnames = $self->coverage($other);
-   unless (@cnames) {
-       $log->error("No common components between complexes");
-       return;
-   }
-   $log->debug(scalar(@cnames), " common components: @cnames");
+    my ($self, $other) = @_;
 
-   my $selfcofms = [];
-   my $othercofms = [];
+    # Only consider common components
+    my @cnames = $self->coverage($other);
+    unless (@cnames) {
+        $log->error("No common components between complexes");
+        return;
+    }
+    $log->debug(scalar(@cnames), " common components: @cnames");
 
-   foreach my $key (@cnames) {
-       my $selfdom = $self->get($key)->structure;
-       my $otherdom = $other->get($key)->structure;
-       my $sup;
-       $otherdom = cofm($otherdom);
-       ($selfdom, $sup) = _setcrosshairs($selfdom, $otherdom) or next;
-       $othercofms->push($otherdom);
-       $selfcofms->push($selfdom);
-   }
+    my $selfcofms  = [];
+    my $othercofms = [];
 
-   unless ($selfcofms->length > 1) {
-       $log->warn("Too few component-wise superpositions to superpose complex");
-       return;
-   }
+    foreach my $key (@cnames) {
+        my $selfdom  = $self->get($key)->structure;
+        my $otherdom = $other->get($key)->structure;
+        my $sup;
+        $otherdom = cofm($otherdom);
+        ($selfdom, $sup) = _setcrosshairs($selfdom, $otherdom) or next;
+        $othercofms->push($otherdom);
+        $selfcofms->push($selfdom);
+    }
 
-   my $selfcoords = pdl($selfcofms->map(sub{ $_->coords }));
-   my $othercoords = pdl($othercofms->map(sub{ $_->coords }));
-   $selfcoords = $selfcoords->clump(1,2) if $selfcoords->dims == 3;
-   $othercoords = $othercoords->clump(1,2) if $othercoords->dims == 3;
+    unless ($selfcofms->length > 1) {
+        $log->warn(
+            "Too few component-wise superpositions to superpose complex");
+        return;
+    }
 
-   my $trans = SBG::U::RMSD::superpose($selfcoords, $othercoords);
-   $log->debug($trans);
-   # Now it has been transformed already. Can measure RMSD of new coords
-   my $rmsd = SBG::U::RMSD::rmsd($selfcoords, $othercoords);
-   $log->info("rmsd:", $rmsd);
-   return wantarray ? ($trans, $rmsd) : $rmsd;
+    my $selfcoords  = pdl($selfcofms->map(sub  { $_->coords }));
+    my $othercoords = pdl($othercofms->map(sub { $_->coords }));
+    $selfcoords = $selfcoords->clump(1, 2) if $selfcoords->dims == 3;
+    $othercoords = $othercoords->clump(1, 2) if $othercoords->dims == 3;
 
-} # rmsd
+    my $trans = SBG::U::RMSD::superpose($selfcoords, $othercoords);
+    $log->debug($trans);
 
+    # Now it has been transformed already. Can measure RMSD of new coords
+    my $rmsd = SBG::U::RMSD::rmsd($selfcoords, $othercoords);
+    $log->info("rmsd:", $rmsd);
+    return wantarray ? ($trans, $rmsd) : $rmsd;
 
-
-
+}    # rmsd
 
 =head2 rmsd_class
 
@@ -1519,11 +1540,12 @@ Determine bijection by testing all combinations in homologous classes
 If one complex is modelling the other, call this as $model->rmsd($benchmark)
 
 =cut
+
 sub rmsd_class {
-    my ($self,$other) = @_;
-    
+    my ($self, $other) = @_;
+
     # Upper sentinel for RMSD
-    my $maxnum = inf();
+    my $maxnum   = inf();
     my $bestrmsd = $maxnum;
     my $besttrans;
     my $bestmapping;
@@ -1532,7 +1554,7 @@ sub rmsd_class {
 
     # TODO DES all of this set intersection business needs to be factored out
     # E.g. @set_of_classes = $complex->intersect($other_complex);
-    
+
     # The complex model knows the symmetry of the components being built, even
     # the ones that were not explicitly modelled in this complex.
     # Group components into homologous classes (a component is in just one class)
@@ -1544,96 +1566,108 @@ sub rmsd_class {
     # class [B E] is first in @cc, then any B or E present must also be first in
     # $model
     my $keys = $self->keys;
+
     # Model componentspresent, grouped by class
     my $model = [ map { scalar _members_by_class($_, $keys) } @cc ];
+
     # Flat list
     my @model = flatten $model;
+
     # Counts per class
-    my $kclass = $model->map(sub{$_->length});
+    my $kclass = $model->map(sub { $_->length });
 
     # Permute all members within each class, based on members present in model
     # Cartesian product of permutations
-    my $pm = SBG::U::CartesianPermutation->new(classes=>\@cc, kclass=>$kclass);
+    my $pm =
+        SBG::U::CartesianPermutation->new(classes => \@cc, kclass => $kclass);
 
-    my $icart = 0;
+    my $icart  = 0;
     my $ncarts = $pm->cardinality;
 
     # Measure the rate of improvement of the RMSD, give up when it flattens
     my $rate_rmsd;
     my $ref_rmsd;
-    
+
     while (my $cart = $pm->next) {
         $icart++;
         my @cart = flatten $cart;
+
         # Map each component present to a possible component in the benchmark
         my %mapping = mesh(@model, @cart);
 
         # TODO verify that current connection topology is subgraph of target
-        # This is quicker than subgraph isomorphism because the classes of the 
+        # This is quicker than subgraph isomorphism because the classes of the
         # nodes are known. This is just a filter, to skip non-equiv topologies.
         # Nodes don't have to be the same node, just of the same node class
         # Shortcut: for each edge in model, is it in the target?
         # Use the current mapping. If not, can skip RMSD calculation
 
         # Test this mapping
-        my ($trans, $rmsd, $natoms) = 
-#            rmsd_mapping($self, $other, \@model, \%mapping);
+        my ($trans, $rmsd, $natoms) =
+
+            #            rmsd_mapping($self, $other, \@model, \%mapping);
             rmsd_mapping_backbone($self, $other, \@model, \%mapping);
 
-        if (! defined $rmsd) {
+        if (!defined $rmsd) {
             $log->debug("RMSD \#$icart undef");
             next;
-        } 
-        
+        }
+
         $log->debug("rmsd \#$icart / $ncarts: $rmsd");
-        $log->debug("bestrmsd \#$besti: ", $bestrmsd||'undef');
-        $log->debug("is rmsd < bestrmsd: ", 
-                    defined($rmsd) && defined($bestrmsd) && $rmsd<$bestrmsd);
+        $log->debug("bestrmsd \#$besti: ", $bestrmsd || 'undef');
+        $log->debug("is rmsd < bestrmsd: ",
+            defined($rmsd) && defined($bestrmsd) && $rmsd < $bestrmsd);
 
         # TODO could also do a weighting here:
         # (slightly worse RMSD over many more atoms could be better choice)
-        if (! defined($bestrmsd) || $rmsd < $bestrmsd) {
-            $bestrmsd = $rmsd;
-            $besttrans = $trans;
-            $bestnatoms = $natoms;
+        if (!defined($bestrmsd) || $rmsd < $bestrmsd) {
+            $bestrmsd    = $rmsd;
+            $besttrans   = $trans;
+            $bestnatoms  = $natoms;
             $bestmapping = \%mapping;
-            $besti = $icart;
-            $log->debug("better rmsd \#$icart: $rmsd ($natoms CAs) via: @cart");
+            $besti       = $icart;
+            $log->debug(
+                "better rmsd \#$icart: $rmsd ($natoms CAs) via: @cart");
         }
-        
+
         # Quit if we're not improving
         # Start with the first RMSD as a refernce
         $ref_rmsd ||= $bestrmsd;
         my $nsteps = 1000;
-        my $thresh = 0.01; # 1%
+        my $thresh = 0.01;    # 1%
         if (0 == $icart % $nsteps) {
-        	my $improved = $ref_rmsd - $bestrmsd;
-        	my $rate = $improved / $ref_rmsd;
-        	# Reset for next round
-        	$ref_rmsd = $bestrmsd;
-        	if ($rate < $thresh) {
-        		# Improved less than $thresh in $nsteps;
+            my $improved = $ref_rmsd - $bestrmsd;
+            my $rate     = $improved / $ref_rmsd;
+
+            # Reset for next round
+            $ref_rmsd = $bestrmsd;
+            if ($rate < $thresh) {
+
+                # Improved less than $thresh in $nsteps;
                 $log->info("Rate $rate ($improved in $nsteps) < $thresh");
                 last;
-        	}
+            }
         }
     }
-    $log->info("Final RMSD: $bestrmsd");    
-    return wantarray ? ($besttrans, $bestrmsd, $bestmapping, $bestnatoms) : $bestrmsd;
-    
-} # rmsd_class
+    $log->info("Final RMSD: $bestrmsd");
+    return wantarray
+        ? ($besttrans, $bestrmsd, $bestmapping, $bestnatoms)
+        : $bestrmsd;
 
+}    # rmsd_class
 
 #
 sub _members_by_class {
     my ($class, $members) = @_;
+
     # Stringify (in case of objects)
-    $class = [ map { "$_" } @$class ];
-    my @present = grep { my $c=$_; grep { $_ eq $c  } @$members } @$class;
+    $class = [ map {"$_"} @$class ];
+    my @present = grep {
+        my $c = $_;
+        grep { $_ eq $c } @$members
+    } @$class;
     return wantarray ? @present : \@present;
 }
-
-
 
 =head2 rmsd_mapping
 
@@ -1646,45 +1680,48 @@ Based on using the 7-point crosshairs, after setting correct frame of ref, which
 is done by STAMP superposition.
 
 =cut
+
 sub rmsd_mapping {
     my ($self, $other, $keys, $mapping) = @_;
-    
-    my $selfcofms = [];
+
+    my $selfcofms  = [];
     my $othercofms = [];
     foreach my $selflabel (@$keys) {
         my $selfdom = $self->get($selflabel)->structure;
-        
+
         my $otherlabel = $mapping->{$selflabel} || $selflabel;
         my $otherdom = $other->get($otherlabel)->structure;
         $otherdom = cofm($otherdom);
-        
+
         my $sup;
         ($selfdom, $sup) = _setcrosshairs($selfdom, $otherdom) or next;
-        
+
         $othercofms->push($otherdom);
         $selfcofms->push($selfdom);
     }
-    
+
     unless ($selfcofms->length > 1) {
-        $log->warn("Too few component-wise superpositions to superpose complex");
+        $log->warn(
+            "Too few component-wise superpositions to superpose complex");
         return;
     }
-    
-    my $selfcoords = pdl($selfcofms->map(sub{ $_->coords }));
-    my $othercoords = pdl($othercofms->map(sub{ $_->coords }));
-    $selfcoords = $selfcoords->clump(1,2) if $selfcoords->dims == 3;
-    $othercoords = $othercoords->clump(1,2) if $othercoords->dims == 3;
-    
+
+    my $selfcoords  = pdl($selfcofms->map(sub  { $_->coords }));
+    my $othercoords = pdl($othercofms->map(sub { $_->coords }));
+    $selfcoords = $selfcoords->clump(1, 2) if $selfcoords->dims == 3;
+    $othercoords = $othercoords->clump(1, 2) if $othercoords->dims == 3;
+
     # Least squares fit of all coords in each complex
     my $trans = SBG::U::RMSD::superpose($selfcoords, $othercoords);
+
     # Now it has been transformed already. Can measure RMSD of new coords
     my $rmsd = SBG::U::RMSD::rmsd($selfcoords, $othercoords);
+
     # The RMSD achieved if we assume this domain-domain mapping
     $log->debug("Potential rmsd:", $rmsd, " via: ", join ' ', %$mapping);
     return wantarray ? ($trans, $rmsd) : $rmsd;
-    
-} # rmsd_mapping
 
+}    # rmsd_mapping
 
 =head2 rmsd_mapping_backbone
 
@@ -1712,25 +1749,27 @@ different subset of the coordinates, depening on which modelled domain the given
 benchmark domain is being compared to.
 
 =cut
+
 sub rmsd_mapping_backbone {
     my ($self, $other, $keys, $mapping) = @_;
 
     # Cache atomic coordinates, as they will be repeated many times
     our $native_coords;
     our $modelled_coords;
-    $native_coords ||= {};
+    $native_coords   ||= {};
     $modelled_coords ||= {};
 
-    my $selfdomcoords = [];
+    my $selfdomcoords  = [];
     my $otherdomcoords = [];
+
     # unique object key
     my $refaddr = refaddr $self;
-    
+
     foreach my $selflabel (@$keys) {
         my $otherlabel = $mapping->{$selflabel} || $selflabel;
         my $cachekey = join '--', $refaddr, $selflabel, $otherlabel;
-        my $mcoords = $modelled_coords->{$cachekey};
-        my $ncoords = $native_coords->{$cachekey};
+        my $mcoords  = $modelled_coords->{$cachekey};
+        my $ncoords  = $native_coords->{$cachekey};
 
         if (defined $mcoords && defined $ncoords) {
             $selfdomcoords->push($mcoords);
@@ -1741,17 +1780,19 @@ sub rmsd_mapping_backbone {
         my $aln = $self->get($selflabel)->aln();
 
         if ($selflabel ne $otherlabel) {
+
             # Here we're trying an alternative mapping of query sequences to
             # templates, but the alternative sequence must be aligned to the
             # template used for modelling, before extracting atomic coordinates.
             $aln = _realign($aln, $selflabel, $otherlabel);
         }
 
-        ($mcoords, $ncoords) = 
-            $self->_coords_from_aln($aln, $selflabel, $mapping) or return;
+        ($mcoords, $ncoords) =
+            $self->_coords_from_aln($aln, $selflabel, $mapping)
+            or return;
 
         $modelled_coords->{$cachekey} = $mcoords;
-        $native_coords->{$cachekey} = $ncoords;
+        $native_coords->{$cachekey}   = $ncoords;
 
         $selfdomcoords->push($mcoords);
         $otherdomcoords->push($ncoords);
@@ -1759,28 +1800,26 @@ sub rmsd_mapping_backbone {
     }
 
     # Now combine them into one coordinate set for the whole complex
-    my $selfcoords = pdl($selfdomcoords);
+    my $selfcoords  = pdl($selfdomcoords);
     my $othercoords = pdl($otherdomcoords);
+
     # Make 2-dimensional, if 3-dimensional
-    $selfcoords = $selfcoords->clump(1,2) if $selfcoords->dims == 3;
-    $othercoords = $othercoords->clump(1,2) if $othercoords->dims == 3;
-        
+    $selfcoords = $selfcoords->clump(1, 2) if $selfcoords->dims == 3;
+    $othercoords = $othercoords->clump(1, 2) if $othercoords->dims == 3;
+
     my $natoms = $selfcoords->getdim(1);
     $log->debug("RMSD over $natoms C-alpha atoms");
-    
+
     # Least squares fit of all coords in each complex
     # Maximum 1000 refinement steps (unless it converges sooner)
-    my $trans = SBG::U::RMSD::superpose($selfcoords, $othercoords, 1000); 
+    my $trans = SBG::U::RMSD::superpose($selfcoords, $othercoords, 1000);
+
     # Now it has been transformed already. Can measure RMSD of new coords
     my $rmsd = SBG::U::RMSD::rmsd($selfcoords, $othercoords);
     $log->debug("Potential rmsd:", $rmsd, " via: ", join ' ', %$mapping);
     return wantarray ? ($trans, $rmsd, $natoms) : $rmsd;
-    
-} # rmsd_mapping_backbone {
 
-
-
-
+}    # rmsd_mapping_backbone {
 
 =head2 _realign
 
@@ -1797,30 +1836,32 @@ Then D is added to the alignment, re-aligned, then B is removed. And the coords 
 
 
 =cut
+
 sub _realign {
     my ($aln, $selflabel, $otherlabel) = @_;
 
     # Determine PDB ID and chain ID to add to alignment
     my ($pdbid, $chainid) = $otherlabel =~ /$pdb41/;
 
-    # Fetch the new sequence 
-    my $dom = SBG::Domain->new(pdbid=>$pdbid,descriptor=>"CHAIN $chainid");
+    # Fetch the new sequence
+    my $dom =
+        SBG::Domain->new(pdbid => $pdbid, descriptor => "CHAIN $chainid");
     my $seq = pdbseq($dom);
+
     # Reset the display ID
     $seq->display_id($pdbid . $chainid);
 
     # Add to alignment, clone it first (not done by factory already?)
-    my $clustal = Bio::Tools::Run::Alignment::Clustalw->new(quiet=>1);
+    my $clustal = Bio::Tools::Run::Alignment::Clustalw->new(quiet => 1);
     $aln = clone($aln);
-    $aln = $clustal->profile_align($aln,$seq);
+    $aln = $clustal->profile_align($aln, $seq);
 
     # Remove $selflabel from alignment
     $aln->remove_seq($aln->get_seq_by_id($selflabel));
 
     return $aln;
 
-} # _realign
-
+}    # _realign
 
 =head2 _coords_from_aln
 
@@ -1838,6 +1879,7 @@ label, e.g. 1timA.
 
 
 =cut
+
 sub _coords_from_aln {
     my ($self, $aln, $querykey, $mapping) = @_;
     $mapping ||= {};
@@ -1845,18 +1887,21 @@ sub _coords_from_aln {
     # Map pdbseq sequence coordinates to PDB residue IDs
     my $seqcoords = { SBG::DB::res_mapping::aln2locations($aln) };
     my $mappedkey = $mapping->{$querykey} || $querykey;
+
     # Get the name of the one that's not the querykey
-    my ($subjectkey) = $seqcoords->keys->grep(sub{ $_ ne $mappedkey })->flatten;
+    my ($subjectkey) =
+        $seqcoords->keys->grep(sub { $_ ne $mappedkey })->flatten;
 
     # Convert pdb|1tim|AA to '1tima', returns a [ pdb, chain ] tuple
     my ($pdb_chain) = gi2pdbid($subjectkey);
     my $subjectkeyshort = join '', @$pdb_chain;
 
-    my $labels = { 
-        $querykey => $mappedkey, 
+    my $labels = {
+        $querykey        => $mappedkey,
         $subjectkeyshort => $subjectkey,
     };
     my $coords = {};
+
     # If we fail to extract all coordinates, arbitarily chop off some
     # This is not correct, but will provide an approximation, still useful
     my $ichop;
@@ -1868,7 +1913,8 @@ sub _coords_from_aln {
         my ($pdbid, $chainid) = $key =~ /$pdb41/;
 
         my $seqcoords = $seqcoords->{$alnlabel};
-        my $resids = SBG::DB::res_mapping::query($pdbid, $chainid, $seqcoords);
+        my $resids =
+            SBG::DB::res_mapping::query($pdbid, $chainid, $seqcoords);
         $resids or return;
         my $nfound = scalar @$resids;
         $ichop ||= $nfound;
@@ -1876,7 +1922,7 @@ sub _coords_from_aln {
             $log->error(
                 "Could not extract all residue coordinates from $subjectkey");
             $ichop = min($ichop, $nfound, scalar @$seqcoords);
-            $resids = $resids->slice([0..$ichop-1]);
+            $resids = $resids->slice([ 0 .. $ichop - 1 ]);
         }
 
         # Note we start with the whole chain here but we're only extracting the
@@ -1884,9 +1930,12 @@ sub _coords_from_aln {
         # never use the Domain object itself, the fact that the descriptor
         # refers to the whole chain is not relevant.
         # TODO BUG fails when no pdbid, need to be able to bench anon structures
-        my $dom = SBG::Domain::Atoms->new(pdbid=>$pdbid,
-                                          descriptor=>"CHAIN $chainid",
-                                          residues=>$resids);
+        my $dom = SBG::Domain::Atoms->new(
+            pdbid      => $pdbid,
+            descriptor => "CHAIN $chainid",
+            residues   => $resids
+        );
+
         # If this is the modelled domain, set it's frame of reference
         if ($key eq $subjectkeyshort) {
             my $trans = $self->get($querykey)->transformation;
@@ -1898,20 +1947,20 @@ sub _coords_from_aln {
     # Force them to be the same dimensions by blatantly chopping the longer
     # This loses the 1-to-1 correspondance, but still aligns well if off by 1
 
-    my $mapped_coords = $coords->{$mappedkey};
+    my $mapped_coords  = $coords->{$mappedkey};
     my $subject_coords = $coords->{$subjectkeyshort};
+
     # Truncate both, simply from the end
     # May be off by a few residues, but better than giving up
-    my $nchop = 
+    my $nchop =
         min($ichop, $mapped_coords->dim(1), $subject_coords->dim(1)) - 1;
     $coords->{$subjectkeyshort} = $subject_coords->slice(":,0:$nchop");
-    $coords->{$mappedkey} = $mapped_coords->slice(":,0:$nchop");
+    $coords->{$mappedkey}       = $mapped_coords->slice(":,0:$nchop");
 
     # The subject is what was modelled, the query is the benchmark
     return $coords->{$subjectkeyshort}, $coords->{$mappedkey}
-    
-} # _coords_from_aln
 
+}    # _coords_from_aln
 
 # set crosshairs of one domain, based on second
 sub _setcrosshairs {
@@ -1920,34 +1969,34 @@ sub _setcrosshairs {
     # Now get the superposition from current $selfdom onto current $otherdom
     my $sup = SBG::Superposition::Cache::superposition($selfdom, $otherdom);
     return unless $sup;
-    
+
     # Set crosshairs
     $selfdom = cofm($selfdom);
+
     # Transform
     $sup->apply($selfdom);
+
     # Rebuild crosshairs over there
     $selfdom->_build_coords;
-    
+
     # Reverse transform. After this, superpositioning $selfdom onto $otherdom
     # should align crosshairs
     $sup->inverse->apply($selfdom);
-    
-    return wantarray ? ($selfdom, $sup) : $selfdom;
-} # _setcrosshairs
 
+    return wantarray ? ($selfdom, $sup) : $selfdom;
+}    # _setcrosshairs
 
 # TODO DES belongs in a Role, as there may be many approaches to finding these
 # And this one is way too slow
 sub contacts {
-    my ($self) = @_;    
+    my ($self) = @_;
     return [];
-#    my $contacts = qcons($self->domains);
-#    return $contacts;    
+
+    #    my $contacts = qcons($self->domains);
+    #    return $contacts;
 }
 
-    
 __PACKAGE__->meta->make_immutable;
 no Moose;
 1;
-
 

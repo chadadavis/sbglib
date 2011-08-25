@@ -18,8 +18,6 @@
 
 =cut
 
-
-
 package SBG::DB::contact;
 use base qw/Exporter/;
 our @EXPORT_OK = qw/query/;
@@ -29,13 +27,9 @@ use Log::Any qw/$log/;
 
 use SBG::U::DB;
 
-
-
 # TODO DES OO
 our $database = "trans_3_0";
 our $host;
-
-
 
 =head2 query
 
@@ -54,11 +48,13 @@ TODO Define cluster_sl_irmsd_5_0_or_same_chains
 This is wrong, we want to be using cluster_sl_irmsd_5_0 as the 'or_same_chains' clusters to many things together, just to reduce the number of cluster, but we'd prefer to have more alternatives here ...
 
 =cut
+
 sub query {
     my ($entity1, $entity2) = @_;
     our $database;
     our $host;
     my $dbh = SBG::U::DB::connect($database, $host);
+
     # Static handle, prepare it only once
     our $sth;
 
@@ -81,14 +77,16 @@ AND crystal=0
         return;
     }
 
-    if (! $sth->execute($entity1->{id}, $entity2->{id})) {
+    if (!$sth->execute($entity1->{id}, $entity2->{id})) {
         $log->error($sth->errstr);
         return;
     }
-#     $log->debug('select: ', $sth->rows(), ' rows');
+
+    #     $log->debug('select: ', $sth->rows(), ' rows');
 
     my @hits;
     while (my $row = $sth->fetchrow_hashref()) {
+
         # Do any necessary result filtering here
         # Link back to original entities
         $row->{entity1} = $entity1;
@@ -97,9 +95,6 @@ AND crystal=0
     }
     return @hits;
 
-} # query
-
-
-
+}    # query
 
 1;

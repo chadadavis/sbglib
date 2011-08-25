@@ -20,34 +20,31 @@ L<Bio::Seq>
 
 =cut
 
-
-
 # Need to use the package first, before adding to it
 use Bio::PrimarySeqI;
+
 # overload stringify of external package
 package Bio::PrimarySeqI;
 use overload (
-    '""' => 'stringify',
+    '""'     => 'stringify',
     fallback => 1,
-    );
+);
 
 # NB cannot use ->primary_id in operator "" because it'd be recursive
-sub stringify { my $self=shift(); $self->display_id || $self->accession_number }
-
+sub stringify {
+    my $self = shift();
+    $self->display_id || $self->accession_number;
+}
 
 package SBG::Seq;
 use Moose;
 extends qw/Bio::Seq Moose::Object/;
 
 with qw/
-SBG::Role::Storable
-/;
+    SBG::Role::Storable
+    /;
 
-use overload (
-    fallback => 1,
-    );
-
-
+use overload (fallback => 1,);
 
 =head2 new
 
@@ -58,13 +55,14 @@ use overload (
 
 
 =cut
+
 override 'new' => sub {
     my ($class, @ops) = @_;
-    
+
     my $obj = $class->SUPER::new(@ops);
 
     # This appends the object with goodies from Moose::Object
-    # __INSTANCE__ place-holder fulfilled by $obj 
+    # __INSTANCE__ place-holder fulfilled by $obj
     $obj = $class->meta->new_object(__INSTANCE__ => $obj);
 
     # bless'ing should be automatic!
@@ -72,13 +70,8 @@ override 'new' => sub {
     return $obj;
 };
 
-
-
-
-
 ###############################################################################
 __PACKAGE__->meta->make_immutable(inline_constructor => 0);
 no Moose;
 1;
-
 

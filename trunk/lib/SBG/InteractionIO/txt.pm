@@ -16,18 +16,14 @@ L<SBG::IOI>
 
 =cut
 
-
-
 package SBG::InteractionIO::txt;
 use Moose;
 
 with qw/
-SBG::IOI
-/;
+    SBG::IOI
+    /;
 
 use Moose::Autobox;
-
-
 
 =head2 write
 
@@ -40,16 +36,17 @@ RRP41 RRP42  2br2 { A 108 _ to A 148 _ } 2br2 { D 108 _ to D 148 _ }
 
 
 =cut
+
 sub write {
     my ($self, @interactions) = @_;
     my $fh = $self->fh or return;
 
     foreach my $iaction (@interactions) {
         next unless $iaction->nodes;
-        my $nodes = [ $iaction->nodes ];
+        my $nodes  = [ $iaction->nodes ];
         my $models = $nodes->map({ $iaction->get($_) });
-        my $doms = $models->map({ $_->subject });
-        my $pdbs = $doms->map({ $_->pdbid });
+        my $doms   = $models->map({ $_->subject });
+        my $pdbs   = $doms->map({ $_->pdbid });
         my $descrs = $pdbs->map({ $_->descriptor });
 
         printf $fh
@@ -58,9 +55,7 @@ sub write {
 
     }
     return $self;
-} # write
-
-
+}    # write
 
 =head2 read
 
@@ -70,15 +65,14 @@ sub write {
  Args    : 
 
 =cut
+
 sub read {
     my ($self) = @_;
-    
+
     warn "Not implemented";
     return;
 
-} # read
-
-
+}    # read
 
 __PACKAGE__->meta->make_immutable;
 no Moose;

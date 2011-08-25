@@ -16,21 +16,16 @@ L<SBG::Network> , L<SBG::IOI>
 
 =cut
 
-
-
 package SBG::NetworkIO::png;
 use Moose;
 
 with qw/
-SBG::IOI
-/;
-
+    SBG::IOI
+    /;
 
 use Graph::Writer::GraphViz;
 
 use SBG::Network;
-
-
 
 =head2 read
 
@@ -41,14 +36,13 @@ use SBG::Network;
 
 NB Not implemented
 =cut
+
 sub read {
     my ($self,) = @_;
     my $fh = $self->fh;
     warn "Not implemented";
     return $self;
-} # read
-
-
+}    # read
 
 =head2 write
 
@@ -67,6 +61,7 @@ sub read {
  );
 
 =cut
+
 sub write {
     my ($self, $graph, %ops) = @_;
     my $file = $self->file or return;
@@ -79,9 +74,7 @@ sub write {
     my $writer = Graph::Writer::GraphViz->new(%ops);
     $writer->write_graph($graph, $file);
     return $self;
-} # write
-
-
+}    # write
 
 __PACKAGE__->meta->make_immutable;
 no Moose;

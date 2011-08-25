@@ -19,8 +19,6 @@ L<SBG::Domain>
 
 =cut
 
-
-
 package SBG::DB::scop;
 
 use base qw/Exporter/;
@@ -36,8 +34,6 @@ use SBG::Domain;
 #our $scopdb = "$ENV{HOME}/work/ca/benchmark/scop_1.73.dom.gz";
 our $scopdb = dirname(__FILE__) . "/scop_1.73.dom.gz";
 
-
-
 =head2 scopdomain
 
  Function: 
@@ -52,6 +48,7 @@ NB 'file' is bogus here, will be ignored
 NB runs 'zgrep'
 
 =cut
+
 sub scopdomain {
     my ($longid) = @_;
 
@@ -59,9 +56,10 @@ sub scopdomain {
         $log->error("Couldn't parse SCOP ID: $longid");
         return;
     }
+
     # NB $chainid may be more than one character
     my ($pdbid, $chainid, $sccs) = ($1, $2, $3);
-    
+
     # Given: 2hz1A.a.1.1.1-1, this matches:
     # ("/data/pdb/2hz1.brk","2hz1A.a.1.1.1-1","A 2 _ to A 124 _")
     my $match = `zgrep $longid $scopdb`;
@@ -70,12 +68,11 @@ sub scopdomain {
         return;
     }
     my ($file, $descriptor) = ($1, $3);
+
     # NB 'file' is not verified here
-    my %fields = (pdbid=>$pdbid, descriptor=>$descriptor, sccs=>$sccs);
+    my %fields = (pdbid => $pdbid, descriptor => $descriptor, sccs => $sccs);
     return new SBG::Domain(%fields);
 
-} # scopdomain
-
-
+}    # scopdomain
 
 1;

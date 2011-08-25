@@ -20,8 +20,6 @@ L<SBG::Network> , L<Moose::Role>
 
 =cut
 
-
-
 package SBG::SearchI;
 use Moose::Role;
 use Module::Load;
@@ -33,12 +31,13 @@ The sub-objtype to use for any dynamically created objects. Should be
 L<SBG::Domain> or a sub-class of that. Default "L<SBG::Domain>" .
 
 =cut
+
 has 'objtype' => (
-    is => 'rw',
-    isa => 'ClassName',
+    is       => 'rw',
+    isa      => 'ClassName',
     required => 1,
-    default => 'SBG::Domain',
-    );
+    default  => 'SBG::Domain',
+);
 
 # ClassName does not validate if the class isn't already loaded. Preload it here.
 before 'objtype' => sub {
@@ -46,8 +45,6 @@ before 'objtype' => sub {
     return unless $classname;
     Module::Load::load($classname);
 };
-
-
 
 =head2 search
 
@@ -58,9 +55,8 @@ before 'objtype' => sub {
 
 
 =cut
+
 requires 'search';
-
-
 
 no Moose::Role;
 1;

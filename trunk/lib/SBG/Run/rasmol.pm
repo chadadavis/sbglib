@@ -16,12 +16,10 @@ SBG::Run::rasmol - Rasmol utilities
 
 =cut
 
-
-
 package SBG::Run::rasmol;
 use base qw/Exporter/;
 
-our @EXPORT = qw/rasmol/;
+our @EXPORT    = qw/rasmol/;
 our @EXPORT_OK = qw/rasmol pdb2img/;
 
 use strict;
@@ -30,12 +28,10 @@ use warnings;
 use File::Temp qw(tempfile tempdir);
 use Log::Any qw/$log/;
 
-use Bio::Root::IO; # exists_exe
+use Bio::Root::IO;    # exists_exe
 
 use SBG::DomainIO::pdb;
 use SBG::U::List qw/flatten/;
-
-
 
 =head2 rasmol
 
@@ -48,26 +44,23 @@ use SBG::U::List qw/flatten/;
 If no 'file' option is provided, a temporary file is created and returned
 
 =cut
+
 sub rasmol {
     my (@doms) = @_;
     @doms = SBG::U::List::flatten(@doms);
 
-    my $rasmol_gui = 
-        Bio::Root::IO->exists_exe('rasmol-gtk') ||
-        Bio::Root::IO->exists_exe('rasmol') or
-        return;
+    my $rasmol_gui = Bio::Root::IO->exists_exe('rasmol-gtk')
+        || Bio::Root::IO->exists_exe('rasmol')
+        or return;
 
-    my $io = new SBG::DomainIO::pdb(tempfile=>1);
+    my $io = new SBG::DomainIO::pdb(tempfile => 1);
     $io->write(@doms);
     my $cmd = "$rasmol_gui " . $io->file;
-    system("$cmd 1>/dev/null 2>/dev/null") == 0 or
-        $log->error("Failed: $cmd\n\t$!");
+    system("$cmd 1>/dev/null 2>/dev/null") == 0
+        or $log->error("Failed: $cmd\n\t$!");
 
     return $io->file;
-} # rasmol
-
-
-
+}    # rasmol
 
 =head2 pdb2img
 
@@ -89,22 +82,22 @@ Example script, highlight contacts with chain A:
 
 
 =cut
+
 sub pdb2img {
     my (%o) = @_;
     $o{pdb} or return;
     $o{img} = $o{pdb} . '.ppm' unless $o{img};
     $o{mode} ||= 'cartoon';
 
-    my $rasmol_converter = 
-        Bio::Root::IO->exists_exe('rasmol-classic') ||
-        Bio::Root::IO->exists_exe('rasmol') or
-        return;
+    my $rasmol_converter = Bio::Root::IO->exists_exe('rasmol-classic')
+        || Bio::Root::IO->exists_exe('rasmol')
+        or return;
     $log->debug("$rasmol_converter: $o{pdb} => $o{img}");
 
     my $fh;
     my $cmd = "$rasmol_converter -nodisplay >/dev/null 2>/dev/null";
     $log->debug($cmd);
-    unless(open $fh, "| $cmd") {
+    unless (open $fh, "| $cmd") {
         $log->error("Failed: $cmd\n\t$!");
         return;
     }
@@ -128,9 +121,7 @@ HERE
         return;
     }
     return $o{img};
-} # pdb2img
-    
-
+}    # pdb2img
 
 1;
 

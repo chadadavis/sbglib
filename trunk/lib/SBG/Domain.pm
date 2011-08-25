@@ -19,26 +19,22 @@ L<SBG::DomainI>
 
 =cut
 
-
-
 package SBG::Domain;
 use Moose;
 
 # Defines what must be implemented to represent a 3D structure
 with qw/
-SBG::DomainI 
-/;
+    SBG::DomainI
+    /;
 
 # Implemntations are in DomainI
 use overload (
-    '""' => 'stringify',
-    '==' => 'equal',
+    '""'     => 'stringify',
+    '=='     => 'equal',
     fallback => 1,
-    );
+);
 
 use Log::Any qw/$log/;
-
-
 
 =head2 overlap
 
@@ -49,12 +45,11 @@ use Log::Any qw/$log/;
 
 
 =cut
+
 sub overlap {
     $log->warn("overlap() not defined by " . __PACKAGE__);
     return;
 }
-
-
 
 =head2 centroid
 
@@ -64,13 +59,12 @@ sub overlap {
  Args    : 
 
 =cut
+
 sub centroid {
     my ($self,) = @_;
     warn "Not implemented";
     return;
-} # centroid
-
-
+}    # centroid
 
 __PACKAGE__->meta->make_immutable;
 no Moose;

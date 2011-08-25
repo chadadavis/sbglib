@@ -4,7 +4,6 @@ use Test::More 'no_plan';
 
 use Carp;
 
-
 use File::Temp qw/tempfile/;
 
 use FindBin qw/$Bin/;
@@ -13,7 +12,7 @@ use lib "$Bin/../../../lib/";
 use SBG::Debug;
 use SBG::U::DB;
 my $dbh = SBG::U::DB::connect();
-unless($dbh) {
+unless ($dbh) {
     ok warn "skip : no database\n";
     exit;
 }
@@ -28,26 +27,31 @@ use File::Basename;
 use FindBin qw/$Bin/;
 my $file = shift || "$Bin/../data/1g3n.fa";
 my $name = basename($file, '.fa');
-my $seqio = new Bio::SeqIO(-file=>$file);
+my $seqio = new Bio::SeqIO(-file => $file);
 my @seqs;
 while (my $seq = $seqio->next_seq) {
     push @seqs, $seq;
 }
+
 # Node objects from sequences
 my @nodes = map { new SBG::Node($_) } @seqs;
+
 # Empty network
 my $net = new SBG::Network;
+
 # Each node contains one sequence object
 $net->add_node($_) for @nodes;
+
 # Searcher tries to find interaction templates (edges) to connect nodes
-my $blast = SBG::Run::PairedBlast->new(method=>'standaloneblast');
+my $blast = SBG::Run::PairedBlast->new(method => 'standaloneblast');
+
 #my $blast = SBG::Run::PairedBlast->new(method=>'remoteblast');
-my $searcher = SBG::Search::TransDBc->new(blast=>$blast);
-$net = $net->build($searcher, cache=>0);
+my $searcher = SBG::Search::TransDBc->new(blast => $blast);
+$net = $net->build($searcher, cache => 0);
 
 # Potential interactions, between pairs of proteins
 my $edges = scalar $net->edges;
-ok($edges, "Network::edges $edges"); 
+ok($edges, "Network::edges $edges");
 
 # Potential *types* of interactions, between all interacting pairs
 # An edge may have multiple interactions

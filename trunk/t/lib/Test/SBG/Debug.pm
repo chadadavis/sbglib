@@ -3,8 +3,7 @@ package Test::SBG::Debug;
 use base qw(Test::SBG);
 use Test::SBG::Tools;
 
-
-sub default : Tests  {
+sub default : Tests {
     local $TODO = "Test enabled by default when SBGDEBUG set";
 }
 

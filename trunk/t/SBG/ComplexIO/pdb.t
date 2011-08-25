@@ -15,18 +15,16 @@ use SBG::U::Object qw/load_object/;
 my $file = "$Bin/../data/10.model";
 
 my $complex = load_object($file);
-my $mndoms = 12;
+my $mndoms  = 12;
 is($complex->count, $mndoms, "Complex loaded");
 
 # Write out
-my $out = SBG::ComplexIO::pdb->new(tempfile=>1);
+my $out = SBG::ComplexIO::pdb->new(tempfile => 1);
 $out->write($complex);
 
 # Need to flush to re-read it
 $out->flush;
 
 ok(-s $out->file, "ComplexIO::pdb::write() : " . $out->file);
-
-
 
 __END__

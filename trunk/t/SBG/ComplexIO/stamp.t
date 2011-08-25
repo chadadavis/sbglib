@@ -14,12 +14,12 @@ use SBG::Debug;
 my $file = "$Bin/../data/2nn6.dom";
 
 # Test reading all at once, array context
-my $io = SBG::ComplexIO::stamp->new(file=>$file);
+my $io = SBG::ComplexIO::stamp->new(file => $file);
 my $complex = $io->read;
 is($complex->count, 9, "Complex has 9 domains");
 
 # Write out
-my $out = SBG::ComplexIO::stamp->new(tempfile=>1);
+my $out = SBG::ComplexIO::stamp->new(tempfile => 1);
 $out->write($complex);
 
 note $out->file if SBG::Debug->debug;
@@ -28,9 +28,8 @@ note $out->file if SBG::Debug->debug;
 $out->flush;
 
 # And read back in
-my $io3 = SBG::ComplexIO::stamp->new(file=>$out->file);
+my $io3 = SBG::ComplexIO::stamp->new(file => $out->file);
 my $copy = $io3->read;
 is($copy->count, $complex->count, "Same domain count");
-
 
 __END__

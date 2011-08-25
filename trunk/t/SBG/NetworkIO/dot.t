@@ -2,7 +2,6 @@
 
 use Test::More 'no_plan';
 
-
 use FindBin qw/$Bin/;
 
 use FindBin qw/$Bin/;
@@ -13,9 +12,9 @@ use SBG::NetworkIO::csv;
 use SBG::NetworkIO::dot;
 
 my $file = shift || "$Bin/../data/ex_small.csv";
-my $in = SBG::NetworkIO::csv->new(file=>$file);
+my $in  = SBG::NetworkIO::csv->new(file => $file);
 my $net = $in->read;
-my $out = SBG::NetworkIO::dot->new(tempfile=>1);
+my $out = SBG::NetworkIO::dot->new(tempfile => 1);
 $out->write($net);
 $out->close;
 ok(-s $out->file, 'File created');
@@ -25,7 +24,8 @@ use IPC::Cmd qw/run can_run/;
 SKIP: {
     my $path = can_run('circo');
     skip 'format validation: circo (GraphViz) not installed', 1 unless $path;
-    my ($ok, undef, undef, undef, $stderr) = run(command=>[$path, $out->file]);
+    my ($ok, undef, undef, undef, $stderr) =
+        run(command => [ $path, $out->file ]);
     ok($ok, "circo accepts DOT format") or diag join "\n", @$stderr;
 
 }

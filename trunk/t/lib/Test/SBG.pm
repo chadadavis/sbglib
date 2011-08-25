@@ -41,17 +41,16 @@ use base qw/Test::Class/;
 use Test::More;
 use Path::Class;
 use Log::Any::Adapter;
-use SBG::Debug; 
+use SBG::Debug;
 
-INIT { 
+INIT {
 
-    # Enable logging to t/tests.log 
+    # Enable logging to t/tests.log
     my $logfile = file(__FILE__)->dir->parent->parent->file('tests.log');
-    Log::Any::Adapter->set('+SBG::U::Log',file=>"$logfile");
+    Log::Any::Adapter->set('+SBG::U::Log', file => "$logfile");
 
     Test::Class->runtests;
 }
-
 
 =head2 startup
 
@@ -61,8 +60,10 @@ Note, you can override this and then refer to the parent test with:
 
     $self->SUPER::startup;  
 =cut
+
 sub startup : Tests(startup=>1) {
     my $self = shift;
+
     # Each test class is prefixed with Test::
     (my $class = ref $self) =~ s/^Test:://;
     return ok 1, "$class already loaded" if $class eq __PACKAGE__;
@@ -70,7 +71,6 @@ sub startup : Tests(startup=>1) {
     $self->{class} = $class;
     return $self;
 }
-
 
 =head2 test_data
 
@@ -82,12 +82,12 @@ Common directory for test data at: t/test_data
         open my $fh, '<', file($data_dir, 'data_for_this_test.dat');
     }
 =cut
+
 sub _test_data : Tests(startup) {
-	my $self = shift;
+    my $self      = shift;
     my $test_data = file(__FILE__)->dir->parent->parent->subdir('test_data');
     $self->{test_data} = $test_data;
     return $self;
 }
 
-    
 1;

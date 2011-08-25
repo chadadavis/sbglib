@@ -24,29 +24,24 @@ Model::structure : the structural representation of the template
 
 =cut
 
-
-
-
 package SBG::Model;
 use Moose;
 
 with qw/
-SBG::Role::Storable
-SBG::Role::Scorable
-SBG::Role::Transformable
-/;
+    SBG::Role::Storable
+    SBG::Role::Scorable
+    SBG::Role::Transformable
+    /;
 
 # TODO DES needs to implement a StructureI interface, defining e.g. 'transform'
 
 use Scalar::Util qw/refaddr/;
 use Log::Any qw/$log/;
 
-
 use overload (
-    '""' => 'stringify',
+    '""'     => 'stringify',
     fallback => 1,
-    );
-
+);
 
 =head2 query
 
@@ -57,11 +52,8 @@ use overload (
 
 
 =cut
-has 'query' => (
-    is => 'rw',
-    );
 
-
+has 'query' => (is => 'rw',);
 
 =head2 subject
 
@@ -72,10 +64,8 @@ has 'query' => (
 
 
 =cut
-has 'subject' => (
-    is => 'rw',
-    );
 
+has 'subject' => (is => 'rw',);
 
 =head2 structure
 
@@ -84,19 +74,20 @@ If a component to be modelled already has a monomeric structure.
 Otherwise the template provides the structure
 
 =cut
-has 'structure' => (
-    is => 'rw',
-    does => 'SBG::DomainI',
-    handles => [ qw/coords transformation/ ],
-    lazy_build => 1,
-    );
-sub _build_structure { 
-	my ($self, ) = @_;
-	# The template is the default structure, if none given
-	return $self->subject;
-}
 
-    
+has 'structure' => (
+    is         => 'rw',
+    does       => 'SBG::DomainI',
+    handles    => [qw/coords transformation/],
+    lazy_build => 1,
+);
+
+sub _build_structure {
+    my ($self,) = @_;
+
+    # The template is the default structure, if none given
+    return $self->subject;
+}
 
 =head2 input
 
@@ -108,20 +99,16 @@ sub _build_structure {
 
 
 =cut
-has 'input' => (
-    is => 'rw',
-    );
 
+has 'input' => (is => 'rw',);
 
 =head2 aln
 
 Lazy way to keep track of the alignment between the query and the subject
 =cut
-has 'aln' => (
-    is => 'rw',
-    );
 
-    
+has 'aln' => (is => 'rw',);
+
 =head2 coverage
 
  Function: 
@@ -132,10 +119,12 @@ has 'aln' => (
 
 
 =cut
+
 has 'coverage' => (
-    is => 'rw',
+    is         => 'rw',
     lazy_build => 1,
-    );
+);
+
 sub _build_coverage {
     my ($self) = @_;
     my $model_len = $self->subject->seq->length;
@@ -143,7 +132,6 @@ sub _build_coverage {
     my $input_len = $input->length;
     return 100.0 * $model_len / $input_len;
 }
-
 
 sub stringify {
     my ($self) = @_;
@@ -153,18 +141,18 @@ sub stringify {
     return $string;
 }
 
-
 sub transform {
-	my ($self, $matrix) = @_;
-	my $subject = $self->subject;
-	$subject->transform($matrix);
-	
-	my $structure = $self->structure;
-	# If Model contains it's own strutural representation in addition to template
-	if (refaddr($structure) != refaddr($subject)) {
-		$structure->transform($matrix);
-	}
-	return $self;
+    my ($self, $matrix) = @_;
+    my $subject = $self->subject;
+    $subject->transform($matrix);
+
+    my $structure = $self->structure;
+
+    # If Model contains it's own strutural representation in addition to template
+    if (refaddr($structure) != refaddr($subject)) {
+        $structure->transform($matrix);
+    }
+    return $self;
 }
 
 =head2 gene
@@ -174,11 +162,14 @@ Hack to extract the first word of description, assumed to be the gene name
 TODO this needs to be pulled from, e.g.: http://www.uniprot.org/uniprot/Q3E7Y3.xml
 
 =cut
+
 sub gene { name(@_) }
+
 sub name {
-    my ($self) = @_;    
+    my ($self) = @_;
+
     # Alnternative when no gene name
-#    my $query = $self->query;
+    #    my $query = $self->query;
     # Use the original sequence input here, as query is the result of the Blast search
     my $query = $self->input;
     return unless defined($query);
@@ -189,15 +180,14 @@ sub name {
         ($gene) = $desc =~ /^(\S+)/;
         $log->debug($gene);
     }
+
     # Otherwise just stringify the query objecct
     return $gene || "$query";
-    	   
-}
 
+}
 
 ###############################################################################
 __PACKAGE__->meta->make_immutable;
 no Moose;
 1;
-
 

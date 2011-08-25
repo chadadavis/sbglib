@@ -23,12 +23,8 @@ L<Clone>
 
 =cut
 
-
-
 package SBG::Role::Similar;
 use Moose::Role;
-
-
 
 =head2 similar
 
@@ -39,11 +35,9 @@ use Moose::Role;
 
 
 =cut
+
 requires 'similar';
-
-
 
 no Moose::Role;
 1;
-
 

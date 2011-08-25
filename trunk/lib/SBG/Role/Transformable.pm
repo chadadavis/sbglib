@@ -32,12 +32,8 @@ L<Clone>
 
 =cut
 
-
-
 package SBG::Role::Transformable;
 use Moose::Role;
-
-
 
 =head2 transform
 
@@ -65,11 +61,9 @@ Or as a Perl array with:
  my $transl = $mat->slice('3,0:2')->list;
 
 =cut
+
 requires 'transform';
-
-
 
 no Moose::Role;
 1;
-
 

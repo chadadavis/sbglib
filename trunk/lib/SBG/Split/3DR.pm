@@ -20,8 +20,6 @@ Annotate L<Bio::Seq> with L<Bio::SeqFeature::Generic> first, then collapse it do
 
 =cut
 
-
-
 package SBG::Split::3DR;
 use Moose;
 with 'SBG::SplitI';
@@ -35,24 +33,15 @@ use DBI;
 
 use SBG::U::DB;
 
-
 has 'mingap' => (
-    is => 'rw',
-    isa => 'Int',
+    is      => 'rw',
+    isa     => 'Int',
     default => 30,
-    );
+);
 
+has '_dbh' => (is => 'rw',);
 
-has '_dbh' => (
-    is => 'rw',
-    );
-
-
-has '_sth' => (
-    is => 'rw',
-    );
-
-
+has '_sth' => (is => 'rw',);
 
 =head2 BUILD
 
@@ -63,27 +52,22 @@ has '_sth' => (
 
 
 =cut
+
 sub BUILD {
     my ($self) = @_;
-    my $dbh=SBG::U::DB::connect('3dr_complexes');
+    my $dbh = SBG::U::DB::connect('3dr_complexes');
     return unless $dbh;
 
     my $sth = $dbh->prepare(
-        join ' ',
-        'SELECT',
-        join(',', qw/uniprot pfam i start end evalue/),
-        'FROM',
-        'domain_instances',
-        'where uniprot=?',
-	);
+        join ' ', 'SELECT', join(',', qw/uniprot pfam i start end evalue/),
+        'FROM', 'domain_instances', 'where uniprot=?',
+    );
 
     $self->_dbh($dbh);
     $self->_sth($sth);
     return $self;
 
-} # BUILD
-
-
+}    # BUILD
 
 =head2 split
 
@@ -97,22 +81,26 @@ domains are labeled as dummy domains. The returned sequences cover the entire
 length of the original sequence.
 
 =cut
+
 sub split {
     my ($self, $seq) = @_;
+
     # Look for domain hits for this sequence ID
     my $feats = $self->query($seq);
+
     # Merge domain boundaries that are close togther
     $feats = $self->_smooth_feats($seq, $feats);
+
     # Add dummy features for the gap regions between annotated domains
     $feats = $self->_fill_feats($seq, $feats);
+
     # Associate each feature with the one sequence
-    $feats->map(sub{$_->attach_seq($seq)});
+    $feats->map(sub { $_->attach_seq($seq) });
+
     # Subsequence for reach feature
-    my $subseqs = $feats->map(sub{_subseq_feat($seq, $_)});
+    my $subseqs = $feats->map(sub { _subseq_feat($seq, $_) });
     return $subseqs;
 }
-
-
 
 =head2 query
 
@@ -128,77 +116,78 @@ These are not yet attached to the sequence. Do that with
 The display_name of each feature contains the domain name
 
 =cut
+
 sub query {
     my ($self, $seq) = @_;
 
     my $dbhits = $self->_hits($seq);
+
     # Convert DB hash to Bio::SeqFeature::Generic
-    my $feats = $dbhits->map(sub{_hit2feat($_)});
+    my $feats = $dbhits->map(sub { _hit2feat($_) });
     return $feats;
 }
-
 
 sub _hits {
     my ($self, $seq) = @_;
 
-    my $sth = $self->_sth;
-    my $res = $sth->execute($seq->display_id);
+    my $sth  = $self->_sth;
+    my $res  = $sth->execute($seq->display_id);
     my $hits = [];
     while (my $h = $sth->fetchrow_hashref) {
         $hits->push($h);
     }
+
     # Put domains in the order that they occur in on sequence
-    $hits = [sort {$a->{start} <=> $b->{start} } @$hits];
+    $hits = [ sort { $a->{start} <=> $b->{start} } @$hits ];
     return $hits;
 }
-
 
 sub _hit2feat {
     my ($hit) = @_;
     my $feat = Bio::SeqFeature::Generic->new(
-        -start => $hit->{start},
-        -end => $hit->{end},
+        -start        => $hit->{start},
+        -end          => $hit->{end},
         -display_name => join('.', $hit->{pfam}, $hit->{i}),
-        -score => $hit->{evalue},
-        -source_tag => 'pfam_domains',
-        );
+        -score        => $hit->{evalue},
+        -source_tag   => 'pfam_domains',
+    );
     return $feat;
 }
 
-
-# Smooth/expand the boundaries. 
+# Smooth/expand the boundaries.
 # No short fragments between domains, nor at begin/end of sequence
 sub _smooth_feats {
     my ($self, $seq, $feats) = @_;
 
-    
     for (my $i = 0; $i < $feats->length - 1; $i++) {
         my $this = $feats->[$i];
-        my $next = $feats->[$i+1];
+        my $next = $feats->[ $i + 1 ];
+
         # Find the midpoint between domains
         my $gap = $next->start - $this->end;
-        my $mid = int (($next->start + $this->end) / 2);
-        
+        my $mid = int(($next->start + $this->end) / 2);
+
         # If next domain is completely contained in this domain, delete it
         while ($gap < 0 && $next->end < $this->end) {
-            delete $feats->[$i+1];
+            delete $feats->[ $i + 1 ];
             $i++;
             last unless $i < $feats->length;
-            $next = $feats->[$i+1];
-            $gap = $next->start - $this->end;
-            $mid = int (($next->start + $this->end) / 2);
+            $next = $feats->[ $i + 1 ];
+            $gap  = $next->start - $this->end;
+            $mid  = int(($next->start + $this->end) / 2);
         }
         last unless $next;
 
-        if ($gap < 0 || ($gap > 0 && $gap < $self->mingap)) { 
+        if ($gap < 0 || ($gap > 0 && $gap < $self->mingap)) {
+
             # If any two boundaries are two close together, collapses them
             # Or, if they overlap, split them at the middle of the overlap
             $this->end($mid);
-            $next->start($mid+1);
+            $next->start($mid + 1);
         }
     }
-    $feats = $feats->grep(sub{defined});
-    
+    $feats = $feats->grep(sub {defined});
+
     # Stretch ends, if close enough
     if ($feats->[0] && $feats->[0]->start < $self->mingap) {
         $feats->[0]->start(1);
@@ -211,57 +200,55 @@ sub _smooth_feats {
 
 }
 
-
 sub _fill_feats {
-    my ($self, $seq, $feats) = @_ ;
+    my ($self, $seq, $feats) = @_;
 
     my $full = [];
+
     # Insert one dummy domain before each domain when there's a gap
     my $prev = 0;
     for (my $i = 0; $i < $feats->length; $i++) {
         my $this = $feats->[$i];
         if ($this->start - $prev > 1) {
-            $full->push(_dummy($prev+1, $this->start-1));
+            $full->push(_dummy($prev + 1, $this->start - 1));
         }
         $full->push($this);
-        $prev = $this->end
+        $prev = $this->end;
     }
 
     # And append a dummy domain at the end, if necessary
     if ($seq->length - $prev > 1) {
-        $full->push(_dummy($prev+1, $seq->length));
+        $full->push(_dummy($prev + 1, $seq->length));
     }
 
     return $full;
 
-} # _fill_feats
-
+}    # _fill_feats
 
 sub _dummy {
     my ($start, $end) = @_;
     return Bio::SeqFeature::Generic->new(
-        -start => $start,
-        -end => $end,
+        -start        => $start,
+        -end          => $end,
         -display_name => 'NODOMAIN',
-        -source_tag => 'pfam_domains',
-        );
+        -source_tag   => 'pfam_domains',
+    );
 }
-
 
 sub _subseq_feat {
     my ($seq, $feat) = @_;
     my $subseq = $feat->seq;
+
     # Make display_id of sequence contain coords of feature
-    $subseq->display_id(join('-',$subseq->display_id,$feat->start,$feat->end));
+    $subseq->display_id(
+        join('-', $subseq->display_id, $feat->start, $feat->end));
+
     # Put domain label into sequence description
     $subseq->desc($feat->display_name . ' ' . $seq->desc);
     return $subseq;
 }
 
-
-
 __PACKAGE__->meta->make_immutable;
 no Moose;
 1;
-
 

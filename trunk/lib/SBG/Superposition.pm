@@ -26,11 +26,8 @@ L<SBG::TransformI> , L<SBG::DomainI>
 
 =cut
 
-
-
 package SBG::Superposition;
 use Moose;
-
 
 with 'SBG::Role::Dumpable';
 with 'SBG::Role::Scorable';
@@ -39,35 +36,34 @@ with 'SBG::Role::Transformable';
 with 'SBG::Role::Writable';
 
 use overload (
-    '""' => 'stringify',
+    '""'     => 'stringify',
     fallback => 1,
-    );
+);
 
 use Scalar::Util qw/blessed refaddr/;
 use Moose::Autobox;
-
 
 =head2 isid
 
 If this is the identity superposition of a domain onto itself
 
 =cut
-has 'isid' => (
-    is => 'rw',
-    isa => 'Bool',
-    );
 
+has 'isid' => (
+    is  => 'rw',
+    isa => 'Bool',
+);
 
 =head2 to
 
 The domain defining the frame of reference
 
 =cut
-has 'to' => (
-    is => 'rw',
-    does => 'SBG::DomainI',
-    );
 
+has 'to' => (
+    is   => 'rw',
+    does => 'SBG::DomainI',
+);
 
 =head2 from
 
@@ -75,21 +71,19 @@ The domain superpositioned onto the reference domain, containing a
 transformation.
 
 =cut
-has 'from' => (
-    is => 'rw',
-    does => 'SBG::DomainI',
-    );
 
+has 'from' => (
+    is   => 'rw',
+    does => 'SBG::DomainI',
+);
 
 has 'transformation' => (
-    is => 'rw',
-    does => 'SBG::TransformI',
-    handles => [ qw/matrix/ ],   
+    is       => 'rw',
+    does     => 'SBG::TransformI',
+    handles  => [qw/matrix/],
     required => 1,
-    default => sub { new SBG::Transform::Affine },
-    );
-
-
+    default  => sub { new SBG::Transform::Affine },
+);
 
 =head2 identity
 
@@ -106,23 +100,22 @@ high-scoring. The C<new()> just uses the identity transform as a convenient
 default and sets no scores on the transform.
 
 =cut
+
 sub identity {
     my ($pkg, $dom) = @_;
     my $self = $pkg->new(
-        to => $dom,
-        from => $dom,
+        to     => $dom,
+        from   => $dom,
         scores => {
-        isid=> 1,
-        Sc  => 10,
-        RMS => 0,
-        seq_id => 100,
-        sec_id => 100,
+            isid   => 1,
+            Sc     => 10,
+            RMS    => 0,
+            seq_id => 100,
+            sec_id => 100,
         },
-        );
+    );
     return $self;
-};
-
-
+}
 
 =head2 transform
 
@@ -136,19 +129,19 @@ Required by L<SBG::Role::Transformable>
 See also: L<SBG::DomainI>
 
 =cut
+
 sub transform {
-    my ($self,$matrix) = @_;
+    my ($self, $matrix) = @_;
 
     # Transform the underlying transformation.
     $self->transformation()->transform($matrix);
+
     # And the domains
     $self->from()->transform($matrix);
     $self->to()->transform($matrix);
 
     return $self;
-} # transform
-
-
+}    # transform
 
 =head2 apply
 
@@ -159,14 +152,12 @@ sub transform {
 
 
 =cut
+
 sub apply {
-    my ($self,@objs) = @_;
+    my ($self, @objs) = @_;
     $self->transformation->apply(@objs)
 
-} # apply
-
-
-
+}    # apply
 
 =head2 inverse
 
@@ -177,21 +168,28 @@ sub apply {
 
 
 =cut
+
 sub inverse {
     my ($self,) = @_;
     my $class = blessed $self;
     my $copy;
     if ($self->isid) {
+
         # Use clone to keep separate copies of domain objects
         $copy = $class->identity($self->dom->clone);
-    } else {
+    }
+    else {
+
         # Swap the from domain with the to domain, as we're reversing
-        $copy = $class->new(from=>$self->to->clone,
-                            to=>$self->from->clone,
-                            transformation=>$self->transformation->inverse,
-                            # Make a copy of the ref
-                            scores=>{ %{$self->scores} }
-            );
+        $copy = $class->new(
+            from           => $self->to->clone,
+            to             => $self->from->clone,
+            transformation => $self->transformation->inverse,
+
+            # Make a copy of the ref
+            scores => { %{ $self->scores } }
+        );
+
         # And update alignment lengths
         $copy->scores->put('q_len', $self->scores->at('d_len'));
         $copy->scores->put('d_len', $self->scores->at('q_len'));
@@ -199,8 +197,7 @@ sub inverse {
 
     return $copy;
 
-} # inverse
-
+}    # inverse
 
 =head2 coverage
 
@@ -209,9 +206,11 @@ Eg. if the query is 50 residues and the hit is 30 residues, then coverage is 60
 Eg. if the query is 30 residues and the hit is 50 residues, then coverage is 100
 
 =cut
+
 sub coverage {
     my ($self,) = @_;
-    my $ratio = 100.0 * $self->scores->at('q_len') / $self->scores->at('d_len');
+    my $ratio =
+        100.0 * $self->scores->at('q_len') / $self->scores->at('d_len');
     return $ratio > 100.0 ? 100.0 : $ratio;
 }
 
@@ -224,16 +223,15 @@ sub coverage {
 
 
 =cut
+
 sub stringify {
     my ($self,) = @_;
     return '' . $self->transformation;
 
-} # stringify
-
+}    # stringify
 
 ###############################################################################
 __PACKAGE__->meta->make_immutable;
 no Moose;
 1;
-
 

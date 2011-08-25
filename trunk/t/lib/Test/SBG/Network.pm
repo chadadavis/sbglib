@@ -4,7 +4,7 @@ use base 'Test::SBG';
 use Test::SBG::Tools;
 
 sub test_it : Tests {
-	local $TODO = "Not yet tested";
-} 
+    local $TODO = "Not yet tested";
+}
 
 1;

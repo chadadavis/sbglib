@@ -16,8 +16,6 @@ L<SBG::Network>
 
 =cut
 
-
-
 package SBG::NetworkIO::3DR;
 use Moose;
 
@@ -31,8 +29,6 @@ use IO::String;
 use SBG::Network;
 use SBG::Node;
 
-
-
 =head2 write
 
  Function: 
@@ -42,6 +38,7 @@ use SBG::Node;
 
 
 =cut
+
 sub write {
     my ($self, $net) = @_;
     return unless defined $net;
@@ -49,13 +46,11 @@ sub write {
 
     print $fh '#=ID ?', "\n";
     foreach my $node ($net->nodes) { print $fh '#=CP ', $node, "\n"; }
-    print $fh '#=NA ?', "\n";
+    print $fh '#=NA ?',  "\n";
     print $fh '#=DE ? ', "\n";
 
     return $self;
-} # write
-
-
+}    # write
 
 =head2 read
 
@@ -67,11 +62,13 @@ sub write {
  Args    : 
 
 =cut
+
 sub read {
     my ($self) = @_;
     my $fh = $self->fh or return;
 
     while (my $line = <$fh>) {
+
         # Skip to first record, beginning with ID line
         next unless $line =~ m|^#=ID (\S+)$|;
         my $net = $self->_sequences($1);
@@ -80,9 +77,7 @@ sub read {
     $self->rewind;
     return;
 
-} # read
-
-
+}    # read
 
 =head2 _sequences
 
@@ -93,16 +88,19 @@ sub read {
 
 
 =cut
+
 sub _sequences {
     my ($self, $id) = @_;
 
-    my $url = 'http://www.3drepertoire.org/Seqs?db=3DR&type_acc=Complex&source_acc=3DR&acc=';
+    my $url =
+        'http://www.3drepertoire.org/Seqs?db=3DR&type_acc=Complex&source_acc=3DR&acc=';
     my $fasta_data = get($url . $id);
     return unless $fasta_data;
 
-    my $io = Bio::SeqIO->new(-fh=>IO::String->new($fasta_data),
-                             -format=>'Fasta',
-        );
+    my $io = Bio::SeqIO->new(
+        -fh     => IO::String->new($fasta_data),
+        -format => 'Fasta',
+    );
     my $net = SBG::Network->new;
     while (my $seq = $io->next_seq) {
         my $node = SBG::Node->new($seq);
@@ -111,10 +109,7 @@ sub _sequences {
 
     return $net;
 
-} # _sequences
-
-
-
+}    # _sequences
 
 __PACKAGE__->meta->make_immutable;
 no Moose;

@@ -26,7 +26,7 @@ L<Algorithm::Numerical::Sample>
 use strict;
 use warnings;
 
-use Algorithm::Numerical::Sample  qw /sample/;
+use Algorithm::Numerical::Sample qw /sample/;
 use Data::Dump qw/dump/;
 use POSIX qw/ceil/;
 
@@ -41,15 +41,15 @@ print "@$sample\n";
 exit;
 
 sub sample_it {
-	my ($size, @args) = @_;
+    my ($size, @args) = @_;
 
     $size = @args if $size > @args;
+
     # $size can be a fraction of @args as well
     $size = ceil frac_of($size, scalar(@args));
-        
-    my @sample = sample(-set => \@args,-sample_size => $size);
+
+    my @sample = sample(-set => \@args, -sample_size => $size);
     return \@sample;
 
 }
 
-                                   

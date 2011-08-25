@@ -34,8 +34,6 @@ Put the BLOCK in quotes to prevent your shell from interpreting it.
 
 =cut
 
-
-
 # CPAN
 use Getopt::Long;
 use Pod::Usage;
@@ -48,16 +46,12 @@ use lib "$Bin/../lib/";
 use SBG::Role::Storable qw(retrieve_files);
 
 my %ops;
-my $result = GetOptions(\%ops, 
-                        'h|help',
-    );
-if ($ops{h}) { pod2usage(-exitval=>1, -verbose=>2); }
+my $result = GetOptions(\%ops, 'h|help',);
+if ($ops{h}) { pod2usage(-exitval => 1, -verbose => 2); }
 
 my $block = shift @ARGV;
-@ARGV or pod2usage(-exitval=>2);
+@ARGV or pod2usage(-exitval => 2);
 my @objs = retrieve_files(@ARGV);
 my $res = reduce { eval $block } @objs;
 print $res, "\n";
-
-
 
