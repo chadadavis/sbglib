@@ -25,8 +25,6 @@ L<SBG::DomainI>
 
 =cut
 
-
-
 package SBG::Run::pdbc;
 use base qw/Exporter/;
 our @EXPORT_OK = qw/pdbc/;
@@ -35,7 +33,6 @@ use Moose::Autobox;
 use Log::Any qw/$log/;
 
 use SBG::Types qw/$pdb41/;
-
 
 =head2 pdbc
 
@@ -48,55 +45,62 @@ use SBG::Types qw/$pdb41/;
 B<pdbc> must be in your PATH
 
 =cut
+
 sub pdbc {
     my ($str) = @_;
     $log->debug($str);
     our %cache;
 
     my ($pdb, $chains) = $str =~ /^(\d\w{3})(.*)?/;
+
     # Get struture for entire PDB entry, if not already fetched
     $cache{$pdb} ||= _run($pdb);
     my $cached = $cache{$pdb};
     return $cached unless $chains;
+
     # But only provide chain information for given chains
     my @chains = split '', $chains;
+
     # Copy
-    my $subcomplex = { %$cached };
+    my $subcomplex = {%$cached};
+
     # Remove an copied chains
     $subcomplex->{chain} = {};
+
     # Add only requested chains
     $subcomplex->{chain}{$_} = $cached->{chain}{$_} for @chains;
     return $subcomplex;
 
-} # pdbc
-
-
-
-
+}    # pdbc
 
 sub _run {
-    my ($pdb, ) = @_;
+    my ($pdb,) = @_;
     open my $pdbcfh, "pdbc -d ${pdb}|";
+
     # Process header first
     my $header = _header($pdbcfh, $pdb);
+
     # Suck up other chains
     my %fields = _chains($pdbcfh);
+
     # Add the header in
-    my $h = { pdbid=>$pdb, header=>$header, chain=>{%fields} };
+    my $h = { pdbid => $pdb, header => $header, chain => {%fields} };
     return $h;
 }
 
-
 sub _header {
     my ($pdbcfh, $pdb) = @_;
-    
+
     my $first = <$pdbcfh>;
-    my@fields = split ' ', $first;
+    my @fields = split ' ', $first;
+
     # Remove leading comment
     shift @fields if $fields[0] eq '%';
+
     # Remove date and entry 24-OCT-00   1G3N
     pop @fields if $fields[-1] eq uc($pdb);
     pop @fields if $fields[-1] =~ /\d{2}-[A-Z]{3}-\d{2}/;
+
     # Concate the rest back together
     my $desc = join(' ', @fields);
     return $desc;
@@ -109,7 +113,7 @@ sub _chains {
         my ($mol) = $line =~ /MOLECULE:\s*(.*)/;
         next unless $mol;
         $mol =~ s/;? +$//g;
-        $line = <$pdbcfh>;        
+        $line = <$pdbcfh>;
         my ($chains) = $line =~ /CHAIN:\s*(.*)/;
         $chains =~ s/[^A-Z0-9a-z]//g;
         my @chains = split '', $chains;
