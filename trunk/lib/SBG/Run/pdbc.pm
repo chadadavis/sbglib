@@ -4,7 +4,6 @@
 
 SBG::Run::pdbc - Wrapper for running B<pdbc> (to get entry/chain descriptions
 
-
 =head1 SYNOPSIS
 
  use SBG::Run::pdbc qw/pdbc/;
@@ -16,6 +15,9 @@ SBG::Run::pdbc - Wrapper for running B<pdbc> (to get entry/chain descriptions
  
 =head1 DESCRIPTION
 
+Wrapper for 'pdbc' from the STAMP suite.
+
+ http://code.google.com/p/bio-stamp/
 
 =head1 SEE ALSO
 
@@ -33,7 +35,6 @@ use Moose::Autobox;
 use Log::Any qw/$log/;
 
 use SBG::Types qw/$pdb41/;
-
 
 
 =head2 pdbc
