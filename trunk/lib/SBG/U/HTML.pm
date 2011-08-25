@@ -47,7 +47,7 @@ sub formattd {
 
 sub rcsb {
     my ($str) = @_;
-    my ($pdb, $chain) = $str =~ /(\d\w{3})(\w?)/;
+    my ($pre, $pdb, $chain, $post) = $str =~ /^(.*?)(\d\w{3})(\w?)(.*?)$/;
     # If there is a chain, get its chain description, otherwise entry header
     my $pdbc = pdbc($pdb);
     my $title;
@@ -58,7 +58,7 @@ sub rcsb {
     my $url = $base . $pdb;
     my $a = a({-title=>$title,-target=>'_blank',-href=>$url}, $pdb.$chain);
     # Return the prematch, if any, the new link, and the postmatch
-    return $` . $a . $'; # emacs parser wants an extra '
+    return $pre . $a . $post; 
 
 }
 
