@@ -28,7 +28,7 @@ use SBG::U::Object qw/load_object/;
 use SBG::U::Run qw/frac_of getoptions start_lock end_lock/;
 use SBG::U::Log;
 
-use SBG::U::HTML qw/rcsb/;
+use SBG::U::HTML;
 
 use SBG::NetworkIO::dot;
 
