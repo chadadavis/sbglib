@@ -20,9 +20,10 @@ my $iop = new Bio::SeqIO(-file=>"$Bin/../data/P25359.fa");
 my $seqp = $iop->next_seq;
 #$blast = SBG::Run::PairedBlast->new(method=>'remoteblast',e=>0.01,database=>'pdbaa');
 $blast = SBG::Run::PairedBlast->new(method=>'standaloneblast',e=>0.01,database=>'pdbaa');
-my $hits = $blast->_blast1($seqp)->{'2NN6'};
+my $test_id = '2NN6';
+my $hits = $blast->_blast1($seqp)->{$test_id};
 my $nhits = @$hits;
-ok($nhits > 0, "Blast -e bug workaround: RRP43 hits on 2NN6: $nhits");
+ok($nhits > 0, "Blast -e bug workaround: RRP43 hits on $test_id: $nhits");
 
 
 # Convert upper to lower case chain names:

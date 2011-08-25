@@ -200,7 +200,7 @@ sub _build_description {
     if ($pdbid) {
     	# Looks like a PDB ID
     	my $pdbc = pdbc($target);
-    	$desc = $pdbc->{'header'};
+    	$desc = $pdbc->{header};
     } elsif ($target =~ /^\d{3}$/) {
     	$desc = tdracc2desc($target);
     }
@@ -327,7 +327,7 @@ use SBG::Run::vmdclashes;
 sub _build_vmdclashes {
     my ($self, ) = @_;
     my $res = SBG::Run::vmdclashes::vmdclashes($self) or return;
-    return $res->{'pcclashes'};
+    return $res->{pcclashes};
 } 
 
 
@@ -369,7 +369,7 @@ sub chain_of {
     my $index = 0;
     my $map = {};
     $map->{$_} = $labels->[$index++ % @$labels] for $self->all_models->flatten;
-    my $key = $ops{'model'};
+    my $key = $ops{model};
     # Though this could also be the 'structure/domain/subject' 
     # or the 'query/input/component'
     return $map->{$key};
@@ -466,23 +466,23 @@ sub _build_scores {
     my $stats = {};
     $log->debug($model);
         
-    $stats->{'mid'} = $model->modelid();
-    $stats->{'tid'} = $model->targetid();
-    $stats->{'tdesc'} = $model->description;    
+    $stats->{mid} = $model->modelid();
+    $stats->{tid} = $model->targetid();
+    $stats->{tdesc} = $model->description;    
 
     # Number of Components that we were trying to model
     my @tdoms = flatten $model->symmetry;
     my $tndoms = @tdoms;
-    $stats->{'tndoms'} = $tndoms;
+    $stats->{tndoms} = $tndoms;
     # Number of domains modelled 
     my $dommodels = $model->models->values;
-    my $mndoms = $stats->{'mndoms'} = keys %{$model->models};
+    my $mndoms = $stats->{mndoms} = keys %{$model->models};
     # Percentage of component coverage, e.g. 3/5 components => 60
-    $stats->{'pcdoms'} = 100.0 * $mndoms / $tndoms;
+    $stats->{pcdoms} = 100.0 * $mndoms / $tndoms;
 
 
     # Number of interactions modelled
-    my $mniactions = $stats->{'mniactions'} = keys %{$model->interactions};
+    my $mniactions = $stats->{mniactions} = keys %{$model->interactions};
     
     $log->debug("mniactions $mniactions");
     
@@ -490,77 +490,77 @@ sub _build_scores {
     my $target = $model->target();
     # Number of interactions to be modelled in target
     my $tniactions = defined($target) ? $model->target->network->edges : 'nan';
-    $stats->{'tniactions'} = $tniactions;
-    $stats->{'pciactions'} = 
+    $stats->{tniactions} = $tniactions;
+    $stats->{pciactions} = 
         defined($target) ? 100.0 * $mniactions / $tniactions : 'nan';
     
     # TODO need to grep for defined($_) ? (also for n_res ? )
     my $ids = $dommodels->map(sub{$_->scores->at('seqid')});
-    $stats->{'idmin'} = min $ids;
-    $stats->{'idmax'} = max $ids;
-    $stats->{'idmed'} = median $ids;
+    $stats->{idmin} = min $ids;
+    $stats->{idmax} = max $ids;
+    $stats->{idmed} = median $ids;
         
     # Model: interactions
     my $mias = $model->interactions->values;
     
     my $avg_seqids = $mias->map(sub{$_->scores->at('avg_seqid')});
     
-    $stats->{'n0'}   = $avg_seqids->grep(sub{between($_,  0, 40)})->length;
-    $stats->{'n40'}  = $avg_seqids->grep(sub{between($_, 40, 60)})->length;
-    $stats->{'n60'}  = $avg_seqids->grep(sub{between($_, 60, 80)})->length;
-    $stats->{'n80'}  = $avg_seqids->grep(sub{between($_, 80,100)})->length;
-    $stats->{'n100'} = $avg_seqids->grep(sub{between($_,100,101)})->length;
+    $stats->{n0}   = $avg_seqids->grep(sub{between($_,  0, 40)})->length;
+    $stats->{n40}  = $avg_seqids->grep(sub{between($_, 40, 60)})->length;
+    $stats->{n60}  = $avg_seqids->grep(sub{between($_, 60, 80)})->length;
+    $stats->{n80}  = $avg_seqids->grep(sub{between($_, 80,100)})->length;
+    $stats->{n100} = $avg_seqids->grep(sub{between($_,100,101)})->length;
             
     
     # Number of residues in contact in an interaction, averaged between 2
     # interfaces.
     my $nres = $mias->map(sub{$_->scores->at('avg_n_res')});
-    $stats->{'ifacelenmin'} = min $nres;    
-    $stats->{'ifacelenmax'} = max $nres;
-    $stats->{'ifacelenmed'} = median $nres;
+    $stats->{ifacelenmin} = min $nres;    
+    $stats->{ifacelenmax} = max $nres;
+    $stats->{ifacelenmed} = median $nres;
 
     # Docking, when used
     my $docked = $mias->map(sub{$_->scores->at('docking')})->grep(sub{defined});
     
-    $stats->{'dockmin'} = min $docked;    
-    $stats->{'dockmax'} = max $docked;
-    $stats->{'dockmed'} = median $docked;
+    $stats->{dockmin} = min $docked;    
+    $stats->{dockmax} = max $docked;
+    $stats->{dockmed} = median $docked;
     $stats->{'ndockless' } = $docked->grep(sub{$_ && $_<1386 })->length;
-    $stats->{'ndockgreat'} = $docked->grep(sub{$_ && $_>=1386})->length;
+    $stats->{ndockgreat} = $docked->grep(sub{$_ && $_>=1386})->length;
     # For each score less than 2000, penalize by the diff/1000
     # E.g. each score of 1750 is penalized by (2000-1750)/1000 => .25
-    $stats->{'dockpenalty'} = $docked->map(sub{(2000-$_)/1000.0})->sum;
+    $stats->{dockpenalty} = $docked->map(sub{(2000-$_)/1000.0})->sum;
     
     # Interprets, when available
     my $ipts = $mias->map(sub{$_->scores->at('interpretsz')});
-    $stats->{'iptsmin'} = min $ipts;    
-    $stats->{'iptsmax'} = max $ipts;
-    $stats->{'iptsmed'} = median $ipts;
+    $stats->{iptsmin} = min $ipts;    
+    $stats->{iptsmax} = max $ipts;
+    $stats->{iptsmed} = median $ipts;
 
     # Number of template PDB structures used in entire model
     # TODO belongs in SBG::Complex
     my $idomains = $mias->map(sub{$_->domains->flatten});
     my $ipdbs = $idomains->map(sub{$_->file});
     my $nsources = scalar List::MoreUtils::uniq $ipdbs->flatten;
-    $stats->{'nsources'} = $nsources;
+    $stats->{nsources} = $nsources;
 
     # This is the sequence from the structural template used
     my $mseqlen = $dommodels->map(sub{$_->subject->seq->length})->sum;
-    $stats->{'mseqlen'} = $mseqlen;
+    $stats->{mseqlen} = $mseqlen;
     # Length of the sequences that we were trying to model, original inputs
     # TODO DEL workaround for not having 'input' set for docking templates
     my $inputs = $dommodels->map(sub{$_->input || $_->query});
     my $tseqlen = $inputs->map(sub{$_->length})->sum;
-    $stats->{'tseqlen'} = $tseqlen;
+    $stats->{tseqlen} = $tseqlen;
     # Percentage sequence coverage by the complex model
     my $pcseqlen = 100.0 * $mseqlen / $tseqlen;
-    $stats->{'pcseqlen'} = $pcseqlen;
+    $stats->{pcseqlen} = $pcseqlen;
 
     # Sequence coverage per domain
     my $pdomcovers = $dommodels->map(sub{$_->coverage()});
-    $stats->{'seqcovermin'} = min $pdomcovers;
-    $stats->{'seqcovermax'} = max $pdomcovers;
-    $stats->{'seqcovermed'} = median $pdomcovers;
+    $stats->{seqcovermin} = min $pdomcovers;
+    $stats->{seqcovermax} = max $pdomcovers;
+    $stats->{seqcovermed} = median $pdomcovers;
 
 
     # Edge weight, generally the seqid
@@ -569,42 +569,42 @@ sub _build_scores {
     # NB linker domains are counted multiple times. 
     # Given a hub proten and three interacting spoke proteins, there are not 4
     # values for sequence identity, but rather 2*(3 interactions) => 6
-    $stats->{'iweightmin'} = min $weights;
-    $stats->{'iweightmax'} = max $weights;
-    $stats->{'iweightmed'} = median $weights;
+    $stats->{iweightmin} = min $weights;
+    $stats->{iweightmax} = max $weights;
+    $stats->{iweightmed} = median $weights;
 
     # Linker superpositions required to build model by overlapping dimers
     my $superpositions = $model->superpositions->values;
     # Sc scores of all superpositions done
     my $scs = $superpositions->map(sub{$_->scores->at('Sc')});
-    $stats->{'scmin'} = min $scs;
-    $stats->{'scmax'} = max $scs;
-    $stats->{'scmed'} = median $scs;
+    $stats->{scmin} = min $scs;
+    $stats->{scmax} = max $scs;
+    $stats->{scmed} = median $scs;
 
     # Globularity of entire model
-    $stats->{'glob'} = $model->globularity();
+    $stats->{glob} = $model->globularity();
     
-    $stats->{'pcburied'} = $model->buried_area() || 'NaN';
+    $stats->{pcburied} = $model->buried_area() || 'NaN';
     
-    $stats->{'pcclashes'} = $model->vmdclashes();
+    $stats->{pcclashes} = $model->vmdclashes();
 
     # Fraction overlaps between domains for each new component placed, averages
     my $overlaps = $model->clashes->values;
-    $stats->{'olmin'} = min $overlaps;
-    $stats->{'olmax'} = max $overlaps;
-    $stats->{'olmed'} = median $overlaps;
+    $stats->{olmin} = min $overlaps;
+    $stats->{olmax} = max $overlaps;
+    $stats->{olmed} = median $overlaps;
 
     # Number of closed rings in modelled structure, using known interfaces
-    $stats->{'ncycles'} = $model->ncycles();
+    $stats->{ncycles} = $model->ncycles();
 
     my $homology = $model->homology;
     my $present_homology = $homology->grep(sub{$_>0});
-    $stats->{'homo'} = $present_homology->length == 1 ? 1 : 0;
-    $stats->{'homology'} = $present_homology->join('-');
+    $stats->{homo} = $present_homology->length == 1 ? 1 : 0;
+    $stats->{homology} = $present_homology->join('-');
 
     # subjective level of difficulty
     # TODO DEL
-    $stats->{'difficulty'} = 0;
+    $stats->{difficulty} = 0;
     
 #    print Dumper $stats;
 #    exit;
@@ -1014,7 +1014,7 @@ use Module::Load;
 sub combine {
     my ($self,%ops) = @_;
     $ops{keys} ||= $self->keys;
-    $log->debug($ops{'keys'}->join(','));
+    $log->debug($ops{keys}->join(','));
     my $doms = $self->domains($ops{keys});
     return unless $doms->length > 0;
 

@@ -185,9 +185,9 @@ my $schema = acaschema->connect(sub{SBG::U::DB::connect('aca')});
 # Separate log file for each input
 my $log_handle;
 foreach my $file (@ARGV) {
-    if (defined($ops{'J'})) {
+    if (defined($ops{J})) {
         # The file is actually the Jth line of the list of files
-        $file = PBS::ARGV::linen($file, $ops{'J'});
+        $file = PBS::ARGV::linen($file, $ops{J});
     }
 
     # Load the Network object
@@ -203,7 +203,7 @@ foreach my $file (@ARGV) {
     mkdir $destdir;
     my $output = catfile($targetid, $partid, 'model');
     my $lock = start_lock($output);
-    next if ! $lock && ! $ops{'debug'};
+    next if ! $lock && ! $ops{debug};
 
     Log::Any::Adapter->remove($log_handle);
     # A log just for this input file:
@@ -260,11 +260,11 @@ sub _one_net {
     my $assembler = SBG::CA::Assembler2->new(
         net=>$net,callback=>\&_write_solution, %aops
         );
-    if ($ops{'seed'} && -r $ops{'seed'}) {
-    	$assembler->seed(load_object $ops{'seed'});
+    if ($ops{seed} && -r $ops{seed}) {
+    	$assembler->seed(load_object $ops{seed});
     }
-    if ($ops{'target'} && -r $ops{'target'}) {
-        $assembler->target(load_object $ops{'target'});
+    if ($ops{target} && -r $ops{target}) {
+        $assembler->target(load_object $ops{target});
     }
     my $t = Graph::Traversal::GreedyEdges->new(
         assembler=>$assembler,

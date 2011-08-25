@@ -48,33 +48,33 @@ our $host;
 sub query_hit {
     my ($hit, %ops) = @_;
     our %hit_cache;
-    $ops{'cache'} = 1 unless defined $ops{'cache'};
+    $ops{cache} = 1 unless defined $ops{cache};
 
     my ($pdbid_chainid) = gi2pdbid($hit->name);
     my ($pdbid, $chainid) = @$pdbid_chainid;
     return unless $chainid;
     my ($pdbseq0, $pdbseqn) = $hit->range('hit');
 
-#     my $key = $hit->{'refaddr'};
+#     my $key = $hit->{refaddr};
     my $key = refaddr $hit;
     my $label = $hit->name . " ($pdbseq0-$pdbseqn)";
 
-    if ($ops{'cache'} && exists $hit_cache{$key}) {
+    if ($ops{cache} && exists $hit_cache{$key}) {
         my $entities = $hit_cache{$key};
 #         $log->debug($label, ': ', $entities->length, " entities (cached)");
-        $_->{'hit'} = $hit for @$entities;
+        $_->{hit} = $hit for @$entities;
         return @$entities;
     }
 
-    $ops{'pdbseq'} ||= [$pdbseq0,$pdbseqn];
+    $ops{pdbseq} ||= [$pdbseq0,$pdbseqn];
     my $entities = [ query($pdbid, $chainid, %ops) ];
 
-    if ($ops{'cache'}) { 
+    if ($ops{cache}) { 
         $hit_cache{$key} = $entities;
 #         $log->debug($label, ': ', $entities->length, " entities (new)");
     }
     # Save ref to hit in each entity
-    $_->{'hit'} = $hit for @$entities;
+    $_->{hit} = $hit for @$entities;
     return @$entities;
 }
 
@@ -105,11 +105,11 @@ sub query {
         $chain = uc $1 . $1;
     }
 
-    if (defined $ops{'resseq'}) {
+    if (defined $ops{resseq}) {
         carp "Converting coordinates not implemented";
         return;
     }
-    $ops{'overlap'} = 0.50 unless defined $ops{'overlap'};
+    $ops{overlap} = 0.50 unless defined $ops{overlap};
 
     $chain = chain_case($chain);
     my $dbh = SBG::U::DB::connect($database, $host);
@@ -141,11 +141,11 @@ AND chain = ?
 
     # Check sequence overlap
     my @hits;
-    my ($start, $end) = @{$ops{'pdbseq'}} if defined $ops{'pdbseq'};
+    my ($start, $end) = @{$ops{pdbseq}} if defined $ops{pdbseq};
     while (my $row = $querysth->fetchrow_hashref()) {
-        $row->{'entity'} = $row->{'id'};
+        $row->{entity} = $row->{id};
         # Save all, if no coordinates given as restraints
-        unless ($ops{'pdbseq'}) {
+        unless ($ops{pdbseq}) {
             push @hits, $row;
             next;
         }
@@ -153,10 +153,10 @@ AND chain = ?
         # How much of structural fragment covered by sequence
         # And how much of sequence covered by structural fragment
         my ($covered_struct, $covered_seq) = 
-            interval_overlap($row->{'start'},$row->{'end'}, $start, $end);
+            interval_overlap($row->{start},$row->{end}, $start, $end);
 
-        if ($covered_struct < $ops{'overlap'} ||
-            $covered_seq < $ops{'overlap'} ) { 
+        if ($covered_struct < $ops{overlap} ||
+            $covered_seq < $ops{overlap} ) { 
 
             $log->debug("covered_struct: $covered_struct");
             $log->debug("covered_seq: $covered_seq");
@@ -217,12 +217,12 @@ AND id = ?
     my $center = pdl($row->{Cx}, $row->{Cy}, $row->{Cz}, 1);
 
     my $dom = SBG::Domain::Sphere->new(
-        pdbid=>$row->{'idcode'},
-        descriptor=>$row->{'dom'},
-        entity=>$row->{'id'},
+        pdbid=>$row->{idcode},
+        descriptor=>$row->{dom},
+        entity=>$row->{id},
         center=>$center,
-        radius=>$row->{'Rg'},
-#         length=>$row->{'nres'}, # Not in DB
+        radius=>$row->{Rg},
+#         length=>$row->{nres}, # Not in DB
         );
 
     return $dom;

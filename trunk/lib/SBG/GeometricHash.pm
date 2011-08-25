@@ -239,7 +239,7 @@ sub _uniq {
 # For each point in the query model, add up the votes for all the hashed models
 sub _votes {
     my ($self, $model, $labels) = @_;
-    my $gh = $self->{'_gh'};
+    my $gh = $self->{_gh};
     my %votes;
     # For each 3D point, hash it 
     for (my $i = 0; $i < $model->dim(1); $i++) {
@@ -267,8 +267,8 @@ If no model name is provided, generic class ID numbers will be created.
 sub put { 
     my ($self, $modelid, $points, $labels) = @_;
     unless (defined $modelid) {
-        $self->{'classid'}++;
-        $modelid = $self->{'classid'};
+        $self->{classid}++;
+        $modelid = $self->{classid};
     }
 
     # If each (labelled) object contains multiple points, extract points.  Also
@@ -348,7 +348,7 @@ sub _append {
     my ($self, $point, $label, $modelid, $size, $i, $j, $k) = @_;
     $label ||= 'undef';
     # For each 3D point, hash it and append the model name to that point's list
-    my $gh = $self->{'_gh'};
+    my $gh = $self->{_gh};
     $gh->{$point} ||= {};
     $gh->{$point}{$label} ||= [];
     push @{ $gh->{$point}{$label} }, join(' ', $modelid, $size, $i, $j, $k);

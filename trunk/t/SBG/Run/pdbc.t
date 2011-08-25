@@ -11,7 +11,7 @@ use Moose::Autobox;
 my $pdbid = '2nn6';
 my $fields = pdbc($pdbid);
 
-is($fields->{'header'}, 'HYDROLASE/TRANSFERASE', "pdbc 'header' field");
+is($fields->{header}, 'HYDROLASE/TRANSFERASE', "pdbc 'header' field");
 is($fields->{chain}->keys->length, 9, "pdbc 9 chains in $pdbid");
 
 my $chains = 'GH';

@@ -121,10 +121,10 @@ sub solution {
     my ($self, $state, $partition) = @_;
 
 
-    my $net = $state->{'net'};
+    my $net = $state->{net};
     my $ccid = $net->connected_component_by_vertex($partition);
     my @nodecover = sort $net->connected_component_by_index($ccid);
-    my $templates = $state->{'models'}->{$partition};
+    my $templates = $state->{models}->{$partition};
     my @ids = sort map {ex_id($_)} @$templates;
 
     # Append this solution to total answers
@@ -149,7 +149,7 @@ sub ex_id {
 
 sub test {
     my ($self, $state, $iaction) = @_;
-    if ($state->{'net'}->has_edge($iaction->nodes)) {
+    if ($state->{net}->has_edge($iaction->nodes)) {
         return;
     }
     # Our test index of this template
@@ -159,10 +159,10 @@ sub test {
     # Also that src and dest are compat with one another
 
     my ($src, $dest) = $iaction->nodes;
-    my $src_part = $state->{'uf'}->find($src);
-    my $dest_part = $state->{'uf'}->find($dest);
-    my $src_comp = $src_part ? $state->{'models'}->{$src_part} : [];
-    my $dest_comp = $dest_part ? $state->{'models'}->{$dest_part} : [];
+    my $src_part = $state->{uf}->find($src);
+    my $dest_part = $state->{uf}->find($dest);
+    my $src_comp = $src_part ? $state->{models}->{$src_part} : [];
+    my $dest_comp = $dest_part ? $state->{models}->{$dest_part} : [];
 
 
     # What other templates already being used, and are they compat

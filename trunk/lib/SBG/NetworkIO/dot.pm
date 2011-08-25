@@ -146,8 +146,8 @@ sub write_end {
 #    my $up = uniprot2gene($u);
 #    if ($up) {
 #        ($acc, $id, $gene, $desc) = 
-#            ($up->{'uniprot_acc'}, $up->{'uniprot_id'}, 
-#            $up->{'gene_name'}, $up->{'description'});
+#            ($up->{uniprot_acc}, $up->{uniprot_id}, 
+#            $up->{gene_name}, $up->{description});
 #    }           
 #    my $ulabel = $gene || $u;  
 #    my $str .= 
@@ -215,11 +215,11 @@ sub write_body {
             if ($source eq 'docking') {
                 # Gradient from black to middle grey
                 $color = mapcolors(
-                    $scores->{'docking'}, 570, 4076, '#000000', '#cccccc');
+                    $scores->{docking}, 570, 4076, '#000000', '#cccccc');
             } else {
                 # Gradient from red to green
                 $color = mapcolors(
-                    $scores->{'avg_seqid'}, 0, 100, '#ff0000', '#00ff00');
+                    $scores->{avg_seqid}, 0, 100, '#ff0000', '#00ff00');
             }
                             
             my $scorelabel;
@@ -231,8 +231,8 @@ sub write_body {
             my ($ulabel, $vlabel) = ('') x 2;
             my $up_u = ''; #uniprot2gene($u);
             my $up_v = ''; #uniprot2gene($v);
-            $ulabel = $up_u->{'gene_name'} if $up_u;
-            $vlabel = $up_v->{'gene_name'} if $up_v;
+            $ulabel = $up_u->{gene_name} if $up_u;
+            $vlabel = $up_v->{gene_name} if $up_v;
             my $usubject = $iaction->get($u)->subject;
             my $vsubject = $iaction->get($v)->subject;
             

@@ -65,7 +65,7 @@ has 'pdbids' => (
 # seqid: sequence identity between query and template (average of two partners)
 our ($wtnres, $wtpdbcount, $wtseqid) = (.1, .2, .7);
 
-our $datadir = $ENV{'AG'} . '/3DR/data';
+our $datadir = $ENV{AG} . '/3DR/data';
         
 has 'model_sources' => (
     is => 'rw',
@@ -165,7 +165,7 @@ sub search {
     my @interactions;
     push @interactions, $self->_interactions( $seq1, $seq2, %ops );
 
-    my $topn = $ops{'top'};
+    my $topn = $ops{top};
 
     # Only use docking-based templates where there weren't enough chain-based
     unless ( $topn && scalar(@interactions) >= $topn ) {
@@ -223,7 +223,7 @@ sub _interactions {
             scores  => { seqid => $h->{pcid2}, n_res => $h->{n_res2} },
         );
 
-        my $iaction = SBG::Interaction->new(source=>$h->{source},id=>$h->{'id'});
+        my $iaction = SBG::Interaction->new(source=>$h->{source},id=>$h->{id});
         $iaction->set( $seq1, $mod1 );
         $iaction->set( $seq2, $mod2 );
         $iaction->avg_scores(qw/seqid n_res/);
@@ -235,7 +235,7 @@ sub _interactions {
         $iaction->scores->put('interpretsz', $h->{z});
       
         # Increment count of (unique) interactions used from this PDB
-        my $pdbid = $h->{'pdbid'};
+        my $pdbid = $h->{pdbid};
         # Each hit is only from a single chain, 
         # just look at chain--chain uniqueness of interactions within a PDB ID
         my @chains = sort($dom1->onechain, $dom2->onechain);
@@ -269,15 +269,15 @@ sub _covers {
 	my $end1 = $seq->length;
 	
 	# minumum sequence coverage required
-    $ops{'overlap'} = 0.50 unless defined $ops{'overlap'};
+    $ops{overlap} = 0.50 unless defined $ops{overlap};
 	
     # How much of structural fragment covered by sequence
     # And how much of sequence covered by structural fragment
     my ($covered_struct, $covered_seq) = 
         interval_overlap($start1, $end1, $start2, $end2);
             
-    if ($covered_struct < $ops{'overlap'} ||
-        $covered_seq < $ops{'overlap'} ) { 
+    if ($covered_struct < $ops{overlap} ||
+        $covered_seq < $ops{overlap} ) { 
         $log->debug("covered_struct: $covered_struct");
         $log->debug("covered_seq: $covered_seq");
         return 0;
@@ -321,7 +321,7 @@ sub _docking {
                 scores  => { type => $h->{type2} },
             );
 
-            my $iaction = SBG::Interaction->new(source=>'',id=>$h->{'id'});
+            my $iaction = SBG::Interaction->new(source=>'',id=>$h->{id});
             $iaction->set( $seq1, $mod1 );
             $iaction->set( $seq2, $mod2 );
         

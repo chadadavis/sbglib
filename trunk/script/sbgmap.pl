@@ -45,7 +45,7 @@ my %ops;
 my $result = GetOptions(\%ops, 
                         'h|help',
     );
-if ($ops{'h'}) { pod2usage(-exitval=>1, -verbose=>2); }
+if ($ops{h}) { pod2usage(-exitval=>1, -verbose=>2); }
 
 my $function = eval shift;
 my @files = @ARGV;

@@ -113,7 +113,7 @@ Writes in row-major order
 sub write {
     my ($self, $trans, %ops) = @_;
     my $fh = $self->fh or return;
-    return "" if ! $trans->has_matrix && ! defined $ops{'verbose'};
+    return "" if ! $trans->has_matrix && ! defined $ops{verbose};
     my $mat = $trans->matrix;
 
     my $line_format = '%10.5f ' x 4;

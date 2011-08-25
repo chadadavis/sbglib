@@ -166,7 +166,7 @@ sub getoptions {
     Getopt::Long::Configure ('no_ignore_case');
     my $result = GetOptions(\%ops, @ops);
             
-    if (! $result || $ops{'help'}) {        
+    if (! $result || $ops{help}) {        
         pod2usage(-exitval=>1, -verbose=>2, -noperldoc=>1); 
     }
 

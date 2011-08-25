@@ -208,9 +208,9 @@ try {
 # Separate log file for each input
 my $log_handle;
 foreach my $file (@ARGV) {
-    if (defined($ops{'J'})) {
+    if (defined($ops{J})) {
         # The file is actually the Jth line of the list of files
-        $file = PBS::ARGV::linen($file, $ops{'J'});
+        $file = PBS::ARGV::linen($file, $ops{J});
     }
     next unless $file;
     # Setup new log file specific to given input file
@@ -219,7 +219,7 @@ foreach my $file (@ARGV) {
     mkdir $targetid;
     my $output = catfile($targetid, 'network');
     my $lock = start_lock($output);
-    next if ! $lock && ! $ops{'debug'};
+    next if ! $lock && ! $ops{debug};
 
     Log::Any::Adapter->remove($log_handle);
     # A log just for this input file:
@@ -239,7 +239,7 @@ foreach my $file (@ARGV) {
     my $ndomains = $net->nodes;
     $ops{minsize} = 2 unless defined $ops{minsize};
     $ops{minsize} = ceil frac_of($ops{minsize}, $ndomains);
-    next if $ndomains < $ops{'minsize'};
+    next if $ndomains < $ops{minsize};
     
     my $targetrec = $schema->resultset('Target')->create({
         label => $targetid,
@@ -257,7 +257,7 @@ foreach my $file (@ARGV) {
 
     for (my $i = 0, my $parti = 0; $i < @partitions; $i++) {
     	my $part = $partitions[$i];
-    	next if $part->nodes < $ops{'minsize'};
+    	next if $part->nodes < $ops{minsize};
         
         my $partlabel = sprintf "%02d", $parti;
         my $netrec = $schema->resultset('Network')->create({

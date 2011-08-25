@@ -75,8 +75,8 @@ sub qcons {
         my %contacts1;
         my %contacts2;
         foreach my $contact ($res_contacts->flatten) {
-            $contacts1{$contact->{'res1'}{'number'}}++;
-            $contacts2{$contact->{'res2'}{'number'}}++;
+            $contacts1{$contact->{res1}{number}}++;
+            $contacts2{$contact->{res2}{number}}++;
         }
         my $n_res1 = keys %contacts1;
         my $n_res2 = keys %contacts2;

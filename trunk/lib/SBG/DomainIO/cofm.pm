@@ -420,18 +420,18 @@ sub _read_header {
                 $fields{$1} = $2; 
             }
             
-            $index = $fields{'Domain'};
+            $index = $fields{Domain};
             $doms->[$index-1] = $objtype->new unless defined $doms->[$index-1];
             my $dom = $doms->[$index-1];
-            $dom->length($fields{'N'});
-            $dom->radius($fields{'Rg'});
-            $dom->assembly($fields{'Assembly'}) if defined $fields{'Assembly'};
-            $dom->model($fields{'Model'}) if defined $fields{'Model'};
-            $dom->classification($fields{'Classification'}) if 
-                defined $fields{'Classification'};
+            $dom->length($fields{N});
+            $dom->radius($fields{Rg});
+            $dom->assembly($fields{Assembly}) if defined $fields{Assembly};
+            $dom->model($fields{Model}) if defined $fields{Model};
+            $dom->classification($fields{Classification}) if 
+                defined $fields{Classification};
             
             # If the Id looks like it begins with a PDB ID, parse it out
-            if ($fields{'Id'} =~ /^($re_pdb)/) { $dom->pdbid($1) };            
+            if ($fields{Id} =~ /^($re_pdb)/) { $dom->pdbid($1) };            
         }          
     } # while
     return $doms;

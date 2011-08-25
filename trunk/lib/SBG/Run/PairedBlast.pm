@@ -413,9 +413,9 @@ sub _expand_aliases {
             my $clone = clone($hit);
             $clone->accession($pdb);
             $clone->name($name);
-            $clone->hsp->{'HIT_NAME'} = $name;
+            $clone->hsp->{HIT_NAME} = $name;
             # Trace history
-            $clone->{'refaddr'} = refaddr $hit;
+            $clone->{refaddr} = refaddr $hit;
             push @$exphits, $clone;
 
         }

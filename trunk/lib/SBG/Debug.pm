@@ -55,7 +55,7 @@ _set() if _check();
 # Automatically enabled when run under debugger 
 # or when SBGDEBUG defined in environment
 sub _check {
-    return ($ENV{'SBGDEBUG'} || defined $DB::sub) ? 1 : 0;  
+    return ($ENV{SBGDEBUG} || defined $DB::sub) ? 1 : 0;  
 }
 
 

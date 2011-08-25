@@ -103,7 +103,7 @@ foreach my $file (@ARGV) {
     my $output = $base . '.target';
     next if -e $output . '.done';
     my $lock = start_lock($output);
-    next if ! $lock && ! $ops{'debug'};
+    next if ! $lock && ! $ops{debug};
 
     Log::Any::Adapter->remove($log_handle);
       

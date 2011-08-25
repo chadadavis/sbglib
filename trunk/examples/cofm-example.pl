@@ -11,7 +11,7 @@ my $pdbid = '1e7p';
 my $assembly = '2';
 my $model = '1';
 my $label = "$pdbid-$assembly";
-my $file = "$ENV{'DS'}/cofm-classes/$label.cofm";
+my $file = "$ENV{DS}/cofm-classes/$label.cofm";
 my $output = SBG::DomainIO::cofm->new(
     file=>">$file", renumber_chains=>1, verbose=>1);
 

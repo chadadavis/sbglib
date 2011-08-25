@@ -172,7 +172,7 @@ sub existing_contacts {
     $dbh ||= connect($dbname, undef, undef, $ENV{USER}, 1);
     our $sth;
 
-    if ($sth && $sth->{'Active'}) {
+    if ($sth && $sth->{Active}) {
         return $sth->fetchrow_hashref;
     }
 

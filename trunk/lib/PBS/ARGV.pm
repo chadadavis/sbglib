@@ -133,11 +133,11 @@ sub qsub {
     my @failures;
     # Number of command line arguments (e.g. files) to process per job, 
     # default: 1
-    my $blocksize = $ops{'blocksize'} || 1;
+    my $blocksize = $ops{blocksize} || 1;
     my $nparams_submitted = 0;
     while (my $param = _block($blocksize)) {
     	# Wait if queue overloaded
-    	_throttle($ops{'throttle'});
+    	_throttle($ops{throttle});
         my $jobid = _submit( $param, %ops );
         if ( $jobid eq '-1' ) {
             push @failures, @$param;
@@ -152,7 +152,7 @@ sub qsub {
     @::ARGV = @failures;
     
     # If we're on a TTY and not already in a PBS job
-    if (-t STDOUT && ! defined $ENV{'PBS_ENVIRONMENT'} ) {
+    if (-t STDOUT && ! defined $ENV{PBS_ENVIRONMENT} ) {
     	print 
     	   "Submitted $nparams_submitted args in ", 
     	   scalar(@jobids), " jobs (x$blocksize)\n";
@@ -219,15 +219,15 @@ sub _submit {
 
     # Default: rerun same script
     # NB: this can be a relative path, because we 'cd' to $ENV{PWD} in the job
-    my $cmdline = $ops{'cmd'} || $0;
+    my $cmdline = $ops{cmd} || $0;
     $cmdline .= " @$fileargs";
 
     # PBS directives
-    my @directives = $ops{'directives'} || ();
+    my @directives = $ops{directives} || ();
 
     # Check explicitly for mailing address, append it to directives
-    if ( $ops{'M'} ) {
-        push @directives, "-M $ops{'M'}";
+    if ( $ops{M} ) {
+        push @directives, "-M $ops{M}";
     }
 
     # Notify on Abort, Begin, End
@@ -239,7 +239,7 @@ sub _submit {
     my %cmdops = _purge_ops(%ops);
 
     # Array? if -J directive given, also append \$PBS_ARRAY_INDEX to cmdline
-    if ( $ops{'J'} ) {
+    if ( $ops{J} ) {
     	# NB if using array jobs, can only have one command line param, the file
     	my @lines;
     	tie @lines, 'Tie::File', $fileargs->[0];
@@ -248,7 +248,7 @@ sub _submit {
 
         # NB this variable will be defined by the PBS environment when started
         # Each job will get a -J 5 where 5 varies from 0 to the lastline of file
-        $cmdops{'J'} = '$PBS_ARRAY_INDEX';
+        $cmdops{J} = '$PBS_ARRAY_INDEX';
     }
 
     # Add name, unless given
@@ -270,12 +270,12 @@ sub _submit {
 
     # Explicitly inherit TMPDIR from parent process, 
     # to prevent PBS from overwriting it
-    $ENV{'TMPDIR'} ||= File::Spec->tmpdir();
+    $ENV{TMPDIR} ||= File::Spec->tmpdir();
 
     my ( $tmpfh, $jobscript ) = tempfile( "pbs_XXXXX", TMPDIR => 1 );
     print $tmpfh "#!/usr/bin/env sh\n";
     print $tmpfh "#PBS $_\n" for @directives;
-    print $tmpfh "export TMPDIR=\"$ENV{'TMPDIR'}\"\n";
+    print $tmpfh "export TMPDIR=\"$ENV{TMPDIR}\"\n";
     print $tmpfh "cd $ENV{PWD}\n";
     print $tmpfh "$cmdline\n";
     close $tmpfh;
@@ -321,7 +321,7 @@ sub import {
     # Only options given, but no arguments
     # No permission to submit to PBS
     if (
-        defined $ENV{'PBS_ENVIRONMENT'} ||
+        defined $ENV{PBS_ENVIRONMENT} ||
         @ARGV == 0 || 
         ! can_connect()
         ) {

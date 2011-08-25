@@ -91,8 +91,8 @@ AND crystal=0
     while (my $row = $sth->fetchrow_hashref()) {
         # Do any necessary result filtering here
         # Link back to original entities
-        $row->{'entity1'} = $entity1;
-        $row->{'entity2'} = $entity2;
+        $row->{entity1} = $entity1;
+        $row->{entity2} = $entity2;
         push @hits, $row;
     }
     return @hits;

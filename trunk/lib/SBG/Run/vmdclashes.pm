@@ -11,8 +11,8 @@ SBG::Run::pdbc - Wrapper for running B<pdbc> (to get entry/chain descriptions
 
  my $dom = new SBG::DomainI(pdbid=>'2nn6', descriptor=>'A 13 _ to A 331 _');
  my %fields = pdbc($dom);
- print "Entry description:", $fields{'header'};
- print "Chain A description:", $fields{'A'};
+ print "Entry description:", $fields{header};
+ print "Chain A description:", $fields{A};
 
 =head1 DESCRIPTION
 

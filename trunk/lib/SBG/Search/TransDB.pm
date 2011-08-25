@@ -84,7 +84,7 @@ sub search {
         # Maintain a reverse map, entitypair back to hitpair
         foreach my $epair (@entitypairs) {
             my ($e1, $e2) = @$epair;
-            my $epairid = $e1->{'id'} . '--' . $e2->{'id'};
+            my $epairid = $e1->{id} . '--' . $e2->{id};
             $entity2hit{$epairid} ||= $hitpair;
             # There will be duplicates, hash them to get unique keys
             $allentitypairs{$epairid} ||= $epair;
@@ -114,7 +114,7 @@ sub search {
     # Convert contact to SBG::Interaction, including original Blast hits
     my @interactions = map {_contact2interaction($_,\%entity2hit)} @repcontacts;
 
-    if (my $topn = $ops{'top'}) {
+    if (my $topn = $ops{top}) {
         # Take top N interactions
         # This is the reverse numerical sort on the weight field
         @interactions = rnkeytop { $_->weight } $topn => @interactions;

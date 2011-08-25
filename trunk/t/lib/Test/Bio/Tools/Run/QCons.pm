@@ -14,7 +14,7 @@ sub setup: Test(setup) {
     my ($self) = @_;
     # Setup the wrapper
     my $qcons = Bio::Tools::Run::QCons->new(
-        file => $self->{'test_data'} . "/docking1.pdb",
+        file => $self->{test_data} . "/docking1.pdb",
         chains => ['A', 'B'],
     );
     $self->{qcons} = $qcons;

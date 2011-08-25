@@ -163,13 +163,13 @@ my %m  = $y->ols( $iv );
 
 
 # Don't need this any longer
-# delete $m{'y_pred'};
+# delete $m{y_pred};
 
 # Show linear model params
 print "$_\t$m{$_}\n" for (sort keys %m);
 print "\n";
 
-my $betas = $m{'b'};
+my $betas = $m{b};
 
 # Because betas contains a constant, add a column of ones to each observation
 my $ones = ones($nmodels);
@@ -196,7 +196,7 @@ my $obs = $modelvars->slice("$obsi,")->transpose;
 
 # Show the raw data
 my $actuals = $y;
-my $preds = $m{'y_pred'};
+my $preds = $m{y_pred};
 
 # print "actuals:$actuals\n";
 my $preds_actuals = cat($preds, $actuals)->transpose;
@@ -212,7 +212,7 @@ print "mean error: ", sum($diffs)/($ntestend-1), "\n";
 print "\n";
 
 # Now correlate $m->{y_pred} and $y
-my $corr = $y->corr($m{'y_pred'});
+my $corr = $y->corr($m{y_pred});
 print "corr on subset test: $corr\n";
 
 $corr = $rmsd->corr($score);

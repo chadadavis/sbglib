@@ -52,7 +52,7 @@ sub rcsb {
     my $pdbc = pdbc($pdb);
     my $title;
     $title = $pdbc->{chain}{$chain} if $chain;
-    $title ||= $pdbc->{'header'};
+    $title ||= $pdbc->{header};
 
     my $base = 'http://www.rcsb.org/pdb/explore.do?structureId=';
     my $url = $base . $pdb;

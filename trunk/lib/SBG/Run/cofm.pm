@@ -81,7 +81,7 @@ sub cofm {
     my ($dom, %ops) = @_;
     # Caching on by default
     my $cache;
-    $cache = 1 unless defined $ops{'cache'};
+    $cache = 1 unless defined $ops{cache};
     my $key = _hash($dom);
     my $sphere;
     $sphere = cache_get($cachename, $key) if $cache;

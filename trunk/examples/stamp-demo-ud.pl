@@ -53,7 +53,7 @@ for (my $i = $starti; my $domi = $input->read; $i++) {
             
             # See SBG::Superposition for details of the score names
             # E.g. 'RMS', 'Sc', ...
-            print $super->scores->{'RMS'}, ' ', $super->scores->{'Sc'};
+            print $super->scores->{RMS}, ' ', $super->scores->{Sc};
             # Or do your own thing
             my %scores = %{$super->scores};
             

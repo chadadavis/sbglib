@@ -151,8 +151,8 @@ a primary_id.
 =cut
 override 'add_interaction' => sub {
     my ($self, %ops) = @_;
-    my $iaction = $ops{'-interaction'};
-    my $nodes = $ops{'-nodes'};
+    my $iaction = $ops{-interaction};
+    my $nodes = $ops{-nodes};
     unless ($iaction->primary_id) {
         $iaction->primary_id(join('--', @$nodes));
     }

@@ -126,7 +126,7 @@ use SBG::U::Map qw/uniprot2gene/;
 
 
 # Backwards compat.
-$ops{'redo'} = 1 if defined($ops{'cache'}) && $ops{'cache'} == 0;
+$ops{redo} = 1 if defined($ops{cache}) && $ops{cache} == 0;
 
 
 # Column header labels
@@ -185,9 +185,9 @@ unless (-s $headerpath) {
 
 my $log_handle;
 foreach my $file (@ARGV) {
-    if (defined($ops{'J'})) {
+    if (defined($ops{J})) {
         # The file is actually the Jth line of the list of files
-        $file = PBS::ARGV::linen($file, $ops{'J'});
+        $file = PBS::ARGV::linen($file, $ops{J});
     }
 
     next unless -r $file;
@@ -199,11 +199,11 @@ foreach my $file (@ARGV) {
     my $basepath = catfile($dirname, $basename);
     my $output = $basepath . '.csv';
     # Skip if already finished
-    next if !$ops{'redo'} && -e $basepath . '.done';
+    next if !$ops{redo} && -e $basepath . '.done';
 
     # Lock this model from other processes/jobs
     my $lock = start_lock($output);
-    next if ! $lock && ! $ops{'redo'};
+    next if ! $lock && ! $ops{redo};
 
     Log::Any::Adapter->remove($log_handle);
     # A log just for this input file:
@@ -231,11 +231,11 @@ sub do_model {
     
     $log->info("modelfile: $modelfile");
     my $model = load_object($modelfile);
-    $model->{'modelfile'} = $modelfile;
+    $model->{modelfile} = $modelfile;
 
     $stats = $model->scores;
     
-    if ($ops{'redo'}) {
+    if ($ops{redo}) {
         $log->info("redo");
 
         # Clear everything, including the superposition
@@ -256,23 +256,23 @@ sub do_model {
         $model->clear_scores;
         # Calling scores() here rebuilds it
         $model->scores->put('rmsd', $rmsd);
-        $stats->{'rmsd'} = $rmsd;
+        $stats->{rmsd} = $rmsd;
         
         $model->store($modelfile);
         $log->info("model stats and RMSD wiped an re-saved");
     }
         
         
-    $stats->{'score'} = $model->score();
+    $stats->{score} = $model->score();
        
     # Get Genenames (TODO DES need to be a separate annotation module)
     my $dommodels = $model->models->values;
     my $inputs = $dommodels->map(sub{$_->input || $_->query});
     my $genes = $inputs->map(sub{uniprot2gene($_->display_id)});
-    $stats->{'genes'} = $genes->join(',');
+    $stats->{genes} = $genes->join(',');
    
     # TODO DEL why is this missing?
-    $stats->{'mid'} ||= $model->modelid; 
+    $stats->{mid} ||= $model->modelid; 
 
     # TODO DES to become ComplexIO::csv
     # Format floating point values, just use 'sprintf %g'
@@ -312,11 +312,11 @@ sub _basepath {
 sub _difficulty {
 	my ($stats) = @_;
 	my @values;
-	push @values, 100.0 - ($stats->{'idmax'} || 0);
-	push @values, $stats->{'mndoms'};
-	push @values, $stats->{'pseqlen'};
-	push @values, 100.0 * $stats->{'nsources'} / ($stats->{'tndoms'} - 1);
-	push @values, 100.0 * $stats->{'ncycles'} / $stats->{'mndoms'};
+	push @values, 100.0 - ($stats->{idmax} || 0);
+	push @values, $stats->{mndoms};
+	push @values, $stats->{pseqlen};
+	push @values, 100.0 * $stats->{nsources} / ($stats->{tndoms} - 1);
+	push @values, 100.0 * $stats->{ncycles} / $stats->{mndoms};
 	
 	my $classes = [ qw/n0 n40 n60 n80 n100 ndockless ndockgreat/ ];
 	my $class_present = $classes->map(sub{$stats->{$_} > 0});

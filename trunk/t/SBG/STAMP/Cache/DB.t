@@ -39,8 +39,8 @@ my $domd = SBG::Domain->new(pdbid=>'2br2', descriptor=>'CHAIN D');
 sub _query {
     my ($pdbid, $chain) = @_;
     my @hits = SBG::DB::entity::query($pdbid, $chain);
-    my ($firsthit) = grep { $_->{'dom'} =~ /^CHAIN/  } @hits;
-    my $dom = SBG::DB::entity::id2dom($firsthit->{'entity'});
+    my ($firsthit) = grep { $_->{dom} =~ /^CHAIN/  } @hits;
+    my $dom = SBG::DB::entity::id2dom($firsthit->{entity});
     return $dom;
 }
 

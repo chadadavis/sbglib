@@ -75,7 +75,7 @@ for (my $i = 0; $i < @$index; $i++) {
             
             # See SBG::Superposition for details of the score names
             # E.g. 'RMS', 'Sc', ...
-            print "RMS: ", $super->scores->{'RMS'}, ' Sc: ', $super->scores->{'Sc'}, "\n";
+            print "RMS: ", $super->scores->{RMS}, ' Sc: ', $super->scores->{Sc}, "\n";
             # Or do your own thing
             my %scores = %{$super->scores};
             print join ' ', %scores, "\n";

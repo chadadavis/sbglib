@@ -52,7 +52,7 @@ sub cache {
     our $arch;
     unless (defined $arch) { $arch = `uname -m`; chomp $arch; }
 
-    my $base = $ENV{'CACHEDIR'};
+    my $base = $ENV{CACHEDIR};
     mkdir $base if $base;
     $base = File::Spec->tmpdir unless defined($base) && -d $base && -w $base;
     my $cachedir = "${base}/${name}_${arch}";

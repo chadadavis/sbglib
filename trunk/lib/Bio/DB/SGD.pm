@@ -57,7 +57,7 @@ our $DEFAULTFORMAT = 'fasta';
 sub new {
     my ($class, @args) = @_;
     my $self = $class->SUPER::new(@args);
-    $self->{'_baseurl'} = "http://www.uniprot.org/uniprot/?format=fasta&query=cygd%20";
+    $self->{_baseurl} = "http://www.uniprot.org/uniprot/?format=fasta&query=cygd%20";
 
     return $self;
 }
@@ -78,7 +78,7 @@ sub new {
 =cut
 sub get_Seq_by_id {
     my ($self, $id) = @_;
-    my $queryurl = $self->{'_baseurl'} . $id;
+    my $queryurl = $self->{_baseurl} . $id;
     my $content = get $queryurl;
     unless ($content) {
         $self->throw("id does not exist");

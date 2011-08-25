@@ -69,7 +69,7 @@ sub _cache {
 
     our %cache;
     # Caching on by default
-#     my $cache = 1 unless defined $ops{'cache'};
+#     my $cache = 1 unless defined $ops{cache};
     my $cache = 1;
     my $key = $dom->id();
     my $seq = cache_get($cachename, $key) if $cache;

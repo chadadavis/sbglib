@@ -231,14 +231,14 @@ Returns true/false == success/failure to use/add interaction template
 sub test {
     my ($self, $state, $iaction) = @_;
     # Skip if already covered
-    if ($state->{'net'}->has_edge($iaction->nodes)) {
+    if ($state->{net}->has_edge($iaction->nodes)) {
         $log->debug("Edge already covered: $iaction");
         return;
     }
 
     # Doesn't matter which we consider to be the source/dest node
     my ($src,$dest) = $iaction->nodes;
-    my $uf = $state->{'uf'};
+    my $uf = $state->{uf};
 
     # Resulting complex, after (possibly) merging two disconnected complexes
     my $merged_complex;
@@ -302,8 +302,8 @@ sub _cycle {
     my ($self, $state, $iaction) = @_;
     # Take either end of the interaction, since they belong to same complex
     my ($src, $dest) = $iaction->nodes;
-    my $partition = $state->{'uf'}->find($src);
-    my $complex = $state->{'models'}->{$partition};
+    my $partition = $state->{uf}->find($src);
+    my $complex = $state->{models}->{$partition};
 
     # Modify a copy
     # TODO store these thresholds (configurably) elsewhere
@@ -338,10 +338,10 @@ sub _merge {
     # Order irrelevant, as merging is symmetric
     my ($src, $dest) = $iaction->nodes;
 
-    my $src_part = $state->{'uf'}->find($src);
-    my $src_complex = $state->{'models'}->{$src_part};
-    my $dest_part = $state->{'uf'}->find($dest);
-    my $dest_complex = $state->{'models'}->{$dest_part};
+    my $src_part = $state->{uf}->find($src);
+    my $src_complex = $state->{models}->{$src_part};
+    my $dest_part = $state->{uf}->find($dest);
+    my $dest_complex = $state->{models}->{$dest_part};
 
     my $merged_complex = $src_complex->clone;
     my $merged_score = $merged_complex->merge_interaction(
@@ -386,8 +386,8 @@ sub _add_monomer {
         $iaction, $iaction->keys, $self->overlap_thresh);
 
     # Lookup complex to which we want to add the interaction
-    my $ref_partition = $state->{'uf'}->find($ref);
-    my $ref_complex = $state->{'models'}->{$ref_partition};
+    my $ref_partition = $state->{uf}->find($ref);
+    my $ref_complex = $state->{models}->{$ref_partition};
     my $merged_complex = $ref_complex->clone;
     my $merged_score = $merged_complex->merge_domain(
         $add_complex, $ref, $self->overlap_thresh);
@@ -424,7 +424,7 @@ Note that component labels are not used by default here, because the components 
 =cut
 sub solution {
     my ($self, $state, $partition,) = @_;
-    my $complex = $state->{'models'}->{$partition};
+    my $complex = $state->{models}->{$partition};
 
     if ($self->maxsolutions && $self->classes >= $self->maxsolutions) {
     	$log->info("Max solutions reached: ", $self->maxsolutions);

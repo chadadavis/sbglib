@@ -142,7 +142,7 @@ sub _state0 {
     	# Should generally have already been computed
     	if (1) {
     	my $GRAPH_ARRAY_INDEX = 5;
-    	my $interx_map = $wholenet->[$GRAPH_ARRAY_INDEX]->{'_interx_id_map'};
+    	my $interx_map = $wholenet->[$GRAPH_ARRAY_INDEX]->{_interx_id_map};
     	my @edges = $seednet->edges();
     	foreach my $edge (@edges) {
     		# TODO DEBUG this breaks on some networks
@@ -197,15 +197,15 @@ sub _recurse {
 
         # Note that these nodes are now connected
         my ($src, $dest) = $iaction->nodes;
-        $state_clone->{'uf'}->union($src,$dest);
+        $state_clone->{uf}->union($src,$dest);
 
         # Update reference complex of each node: $src and $dest
         # After the union, $src and $dest are found in the same partition
-        my $partition = $state_clone->{'uf'}->find($src);
-        $state_clone->{'models'}->{$partition} = $merged_complex;
+        my $partition = $state_clone->{uf}->find($src);
+        $state_clone->{models}->{$partition} = $merged_complex;
 
         # Copy interaction to solution network
-        $state_clone->{'net'}->add_interaction(-nodes=>[$iaction->nodes],
+        $state_clone->{net}->add_interaction(-nodes=>[$iaction->nodes],
                                                -interaction=>$iaction);
         
         # Every successfully modelled interaction creates a new solution model
