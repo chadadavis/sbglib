@@ -20,6 +20,8 @@
 =cut
 
 package SBG::DB::entity;
+use strict;
+use warnings;
 use base qw/Exporter/;
 our @EXPORT_OK = qw/query id2dom/;
 

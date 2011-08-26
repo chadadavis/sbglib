@@ -307,7 +307,7 @@ sub _docking {
         my $dir = join '/', $self->docking_dir, $h->{directory};
 
         # This also finds gzipped files
-        foreach my $file (<$dir/*>) {
+        foreach my $file (glob "$dir/*") {
 
             my $dom1 =
                 SBG::Domain->new(file => $file, descriptor => 'CHAIN A');
@@ -375,7 +375,7 @@ sub _structures {
 
         # Find each instance of a homology model for the given protein
         # This will find the files whether gzipped or not
-        push(@struct_files, <${_}/${key}*.pdb*>) for @sources;
+        push(@struct_files, glob "${_}/${key}*.pdb*") for @sources;
         $log->debug(scalar(@struct_files),
             " structures for $key : @struct_files");
         foreach my $struct (@struct_files) {

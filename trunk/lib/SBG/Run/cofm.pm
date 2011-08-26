@@ -34,6 +34,8 @@ L<SBG::U::DB::cofm> , L<SBG::Domain::Sphere>
 =cut
 
 package SBG::Run::cofm;
+use strict;
+use warnings;
 use base qw/Exporter/;
 our @EXPORT_OK = qw/cofm/;
 

@@ -1,5 +1,7 @@
 #!/usr/bin/env perl
 
+use strict;
+use warnings;
 use Test::More 'no_plan';
 
 use Graph::UnionFind;

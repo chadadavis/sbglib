@@ -3,11 +3,7 @@
 =head1 NAME
 
 
-
-
 =head1 SYNOPSIS
-
-
 
 
 =head1 DESCRIPTION
@@ -19,6 +15,8 @@
 =cut
 
 package SBG::DB::irmsd;
+use strict;
+use warnings;
 use base qw/Exporter/;
 our @EXPORT_OK = qw/query/;
 

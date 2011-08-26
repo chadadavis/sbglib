@@ -39,7 +39,7 @@ use SBG::Split::3DR;
 
 # Read from STDIN or from a (single) file
 my $file = shift;
-open *STDIN, $file if $file;
+open *STDIN, '<', $file if $file;
 
 my %ops = getoptions qw/mingap|g=i/;
 $ops{mingap} = 30 unless defined $ops{mingap};

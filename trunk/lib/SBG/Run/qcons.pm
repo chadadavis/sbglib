@@ -17,6 +17,8 @@ L<SBG::DomainIO::pdb>
 =cut
 
 package SBG::Run::qcons;
+use strict;
+use warnings;
 use base qw/Exporter/;
 our @EXPORT_OK = qw/qcons/;
 
@@ -54,7 +56,7 @@ sub qcons {
 
     # Map domain names to the chain that they have been written to
     my %domainmap;
-    for (my $i = 0, $chain = 'A'; $i < @doms; $i++, $chain++) {
+    for (my ($i, $chain) = (0, 'A'); $i < @doms; $i++, $chain++) {
         $domainmap{ $doms[$i] } = $chain;
     }
     my $ndoms = @doms;

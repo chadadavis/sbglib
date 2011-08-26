@@ -35,17 +35,19 @@ Private internal functions are generally preceded with an _
 =cut
 
 package SBG::U::RMSD;
-
+use strict;
+use warnings;
 require Exporter;
 our @ISA = qw(Exporter);
 
-# Automatically exported symbols
-our @EXPORT = qw//;
-
 # Manually exported symbols
-our @EXPORT_OK = qw/
-    centroid globularity identity radius_gyr radius_max rmsd superpose superposition translation
-    /;
+our @EXPORT_OK = qw(
+    centroid    globularity
+    radius_gyr  radius_max 
+    superpose   superposition 
+    translation identity
+    rmsd
+);
 
 use Log::Any qw/$log/;
 use Carp;

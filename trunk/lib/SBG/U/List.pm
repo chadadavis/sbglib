@@ -34,6 +34,8 @@ L<List::Utils> , L<List::MoreUtils>
 =cut
 
 package SBG::U::List;
+use strict;
+use warnings;
 use Carp;
 
 use Moose::Autobox;

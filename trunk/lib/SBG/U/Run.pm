@@ -24,11 +24,12 @@ See also L<MooseX::Runnable>
 =cut
 
 package SBG::U::Run;
-use base qw/Exporter/;
-our @EXPORT_OK = qw/start_lock end_lock frac_of getoptions @generic_options/;
-
 use strict;
 use warnings;
+
+use base qw/Exporter/;
+our @EXPORT_OK = 
+    qw/start_lock end_lock frac_of getoptions @generic_options/;
 
 use Pod::Usage;
 use Getopt::Long;
@@ -104,7 +105,7 @@ sub end_lock {
 
     # TODO DES API break
     my $file = $lock->{file};
-    open my $fh, ">$file";
+    open my $fh, '>', $file;
     print $fh $result, "\n" if defined $result;
     close $fh;
     $lock->unlock;

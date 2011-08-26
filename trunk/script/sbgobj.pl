@@ -42,6 +42,8 @@ L<SBG::Role::Storable>
 
 # CPAN
 
+use strict;
+use warnings;
 use Pod::Usage;
 use File::Temp;
 use Scalar::Util qw/blessed/;

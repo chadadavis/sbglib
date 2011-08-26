@@ -33,7 +33,7 @@ use SBG::U::Run qw/getoptions/;
 
 # Read from STDIN or from a (single) file
 my $file = shift;
-open *STDIN, $file if $file;
+open *STDIN, '<', $file if $file;
 
 my %complexid;
 

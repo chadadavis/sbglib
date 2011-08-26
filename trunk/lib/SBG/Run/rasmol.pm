@@ -17,13 +17,11 @@ SBG::Run::rasmol - Rasmol utilities
 =cut
 
 package SBG::Run::rasmol;
-use base qw/Exporter/;
-
-our @EXPORT    = qw/rasmol/;
-our @EXPORT_OK = qw/rasmol pdb2img/;
-
 use strict;
 use warnings;
+use base qw/Exporter/;
+our @EXPORT    = qw/rasmol/;
+our @EXPORT_OK = qw/rasmol pdb2img/;
 
 use File::Temp qw(tempfile tempdir);
 use Log::Any qw/$log/;
@@ -97,7 +95,7 @@ sub pdb2img {
     my $fh;
     my $cmd = "$rasmol_converter -nodisplay >/dev/null 2>/dev/null";
     $log->debug($cmd);
-    unless (open $fh, "| $cmd") {
+    unless (open $fh, '|-', $cmd) {
         $log->error("Failed: $cmd\n\t$!");
         return;
     }

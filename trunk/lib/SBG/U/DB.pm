@@ -23,11 +23,11 @@ L<DBI>
 =cut
 
 package SBG::U::DB;
+use strict;
+use warnings;
 use base qw/Exporter/;
 our @EXPORT_OK = qw(connect chain_case dsn);
 
-use strict;
-use warnings;
 use DBI;
 use Carp;
 use Log::Any qw/$log/;

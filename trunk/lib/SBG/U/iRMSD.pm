@@ -25,17 +25,13 @@ L<SBG::U::RMSD> L<SBG::Superposition::Cache> L<SBG::STAMP>
 =cut
 
 package SBG::U::iRMSD;
-
+use strict;
+use warnings;
 require Exporter;
 our @ISA = qw(Exporter);
 
-# Automatically exported symbols
-our @EXPORT = qw//;
-
 # Manually exported symbols
-our @EXPORT_OK = qw/
-    irmsd
-    /;
+our @EXPORT_OK = qw(irmsd);
 
 use Moose::Autobox;
 use PDL::Lite;

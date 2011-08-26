@@ -21,6 +21,7 @@ L<Bio::Seq>
 =cut
 
 # Need to use the package first, before adding to it
+use strict;
 use Bio::PrimarySeqI;
 
 # overload stringify of external package

@@ -19,6 +19,8 @@
 =cut
 
 package SBG::DB::contact;
+use strict;
+use warnings;
 use base qw/Exporter/;
 our @EXPORT_OK = qw/query/;
 

@@ -215,7 +215,7 @@ foreach my $file (@ARGV) {
     # Mark jobs that are tried, but not done, this file deleted when finished
     # A cheap way to track what crashes before finishing
     my $tryingfile = $output . '.trying';
-    open my $tryingfh, ">$tryingfile";
+    open my $tryingfh, '>', $tryingfile;
     close $tryingfh;
 
     my $stats = {};
@@ -285,7 +285,7 @@ sub do_model {
     }
 
     my $basepath = _basepath($model);
-    open my $fh, ">${basepath}.csv" or die;
+    open my $fh, '>', "${basepath}.csv" or die;
 
     # Print the CSV line, using predefined key ordering
     my $fields = $stats->slice($allkeys)->map(sub { defined $_ ? $_ : '' });

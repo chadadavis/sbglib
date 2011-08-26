@@ -17,7 +17,8 @@ SBG::U::HTML - Utilities
 =cut
 
 package SBG::U::HTML;
-
+use strict;
+use warnings;
 use CGI qw/:standard *table/;
 
 use SBG::U::List qw/maprange/;

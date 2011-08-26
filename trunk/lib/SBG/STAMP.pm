@@ -124,7 +124,7 @@ sub superposition_native {
     $log->debug("\n$fullcmd");
     system("$fullcmd > /dev/null 2>/dev/null");
     my $fh;
-    unless (-s $scanfile && open($fh, $scanfile)) {
+    unless (-s $scanfile && open($fh, '<', $scanfile)) {
         $log->error(
             "$fromdom => $ontodom : Can't read: $scanfile:\n$fullcmd");
         return;

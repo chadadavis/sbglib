@@ -1,8 +1,10 @@
 #!/usr/bin/env perl
 
+use strict;
+use warnings;
 use Test::More 'no_plan';
-use Moose::Autobox;
 
+use Moose::Autobox;
 use FindBin qw/$Bin/;
 use lib "$Bin/../../lib/";
 use SBG::Model;

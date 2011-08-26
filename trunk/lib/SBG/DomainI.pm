@@ -318,7 +318,7 @@ sub _build__path_specs {
     return unless $ENV{STAMPDIR};
     my $pdb_directories = $ENV{STAMPDIR} . '/pdb.directories';
     my $fh;
-    open $fh, $pdb_directories;
+    open $fh, '<', $pdb_directories;
     while (<$fh>) {
         my @values = split ' ';
         push @paths, [@values];

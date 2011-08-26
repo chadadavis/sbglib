@@ -25,11 +25,12 @@ L<Bio::DB::BioFetch>
 =cut
 
 package SBG::U::Map;
+use strict;
+use warnings;
+
 use base qw/Exporter/;
 our @EXPORT_OK = qw/pdb_chain2uniprot_acc/;
 
-use strict;
-use warnings;
 use Carp;
 use Log::Any qw/$log/;
 

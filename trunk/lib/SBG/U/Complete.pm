@@ -40,7 +40,8 @@ L<Getopt:Complete>
 =cut
 
 package SBG::U::Complete;
-
+use strict;
+use warnings;
 use base qw/Exporter/;
 our @EXPORT_OK = qw/complete_methods/;
 

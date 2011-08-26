@@ -25,6 +25,8 @@ L<SBG::DomainI>
 =cut
 
 package SBG::Run::vmdclashes;
+use strict;
+use warnings;
 use base qw/Exporter/;
 our @EXPORT_OK = qw/vmdclashes/;
 
@@ -69,7 +71,7 @@ sub vmdclashes {
     my $cmd    = "vmd -dispdev none -e \"$script\" -args \"$file\"";
     $log->debug($cmd);
     my $res = {};
-    open my $vmdfh, "$cmd |";
+    open my $vmdfh,'-|', $cmd;
     while (<$vmdfh>) {
         next unless /=/;
         chomp;

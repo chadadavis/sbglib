@@ -20,7 +20,8 @@ L<SBG::Domain>
 =cut
 
 package SBG::DB::scop;
-
+use strict;
+use warnings;
 use base qw/Exporter/;
 our @EXPORT_OK = qw/scopdomain/;
 

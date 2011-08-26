@@ -17,6 +17,8 @@ L<SBG::DomainIO::pdb>
 =cut
 
 package SBG::Run::naccess;
+use strict;
+use warnings;
 use base qw/Exporter/;
 our @EXPORT_OK = qw/sas_atoms buried/;
 

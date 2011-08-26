@@ -17,7 +17,8 @@ L<SBG::Role::Storable> , L<SBG::Role::Dumpable>
 =cut
 
 package SBG::U::Object;
-
+use strict;
+use warnings;
 use base qw/Exporter/;
 our @EXPORT_OK = qw/module_for methods load_object/;
 

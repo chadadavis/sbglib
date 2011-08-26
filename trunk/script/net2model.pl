@@ -206,7 +206,7 @@ foreach my $file (@ARGV) {
 
     # A cheap way to track what crashes before finishing
     my $tryingfile = $output . '.trying';
-    open my $tryingfh, ">$tryingfile";
+    open my $tryingfh, '>', $tryingfile;
     close $tryingfh;
 
     _print_net($net);

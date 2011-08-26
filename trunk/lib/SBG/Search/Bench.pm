@@ -55,7 +55,7 @@ sub components {
     # Grep the lines from database
     my $cmd =
         "zcat $templatedb | egrep \'^ -- Can model $pdbid (([^[:space:]]+)) (([^[:space:]]+))\'";
-    open my $fh, "$cmd|";
+    open my $fh, '-|', $cmd;
     my @components;
     while (my $line = <$fh>) {
         my @fields = split ' ', $line;
@@ -79,7 +79,7 @@ sub pdbids {
     # Grep the lines from database
     my $cmd =
         "zcat $templatedb | egrep -o \'^ -- Can model (....)\' | sort | uniq";
-    open my $fh, "$cmd|";
+    open my $fh, '-|', $cmd;
     my @ids;
     while (my $line = <$fh>) {
         my @fields = split ' ', $line;
@@ -128,7 +128,7 @@ sub search {
     # Expliciting grepping the $pdb should make this a little faster
     my ($pdb) = $accno1 =~ /^($re_pdb)/;
     my @interactions;
-    open my $fh, "zcat $templatedb|";
+    open my $fh, '-|', "zcat $templatedb";
     while (my $line = <$fh>) {
 
         next

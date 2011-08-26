@@ -20,6 +20,8 @@ L<SBG::Domain::Sphere> , L<SBG::Run::cofm>
 =cut
 
 package SBG::DB::cofm;
+use strict;
+use warnings;
 use base qw/Exporter/;
 our @EXPORT_OK = qw/query/;
 

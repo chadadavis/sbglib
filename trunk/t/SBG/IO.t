@@ -1,5 +1,7 @@
 #!/usr/bin/env perl
 
+use strict;
+use warnings;
 use Test::More 'no_plan';
 use File::Temp qw(tempfile);
 
@@ -53,7 +55,7 @@ is($str, 'foo', 'SBG::IO->new(string=>$str)');
 
 # Test buffering a pipe
 my $cmd = 'echo hello world';
-open my $cmdfh, "$cmd |";
+open my $cmdfh, '-|', $cmd;
 my $cmdio = SBG::IO->new(fh => $cmdfh);
 ok(!$cmdio->reset, "pipe is not seek'able");
 

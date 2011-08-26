@@ -28,11 +28,10 @@ Put the BLOCK in quotes to prevent your shell from interpreting it.
 
 =head2 -h Print this help page
 
-=head1 SEE ALSO
-
-
-
 =cut
+
+use strict;
+use warnings;
 
 # CPAN
 use Getopt::Long;

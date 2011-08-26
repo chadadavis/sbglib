@@ -18,12 +18,11 @@ L<SBG::U::DB>
 =cut
 
 package SBG::SCOP;
-use base qw/Exporter/;
-
-our @EXPORT_OK = qw(pdb2scop lca equiv parse_scopid get_descriptor);
-
 use strict;
 use warnings;
+use base qw/Exporter/;
+our @EXPORT_OK = qw(pdb2scop lca equiv parse_scopid get_descriptor);
+
 use List::MoreUtils qw(each_arrayref all);
 
 =head2 lca
