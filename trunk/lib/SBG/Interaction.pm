@@ -27,12 +27,14 @@ use Moose;
 # Order is relevant here, first class listed provides 'new()' method
 extends qw/Bio::Network::Interaction Moose::Object/;
 
-with 'SBG::Role::Dumpable';
-with 'SBG::Role::Scorable';
-with 'SBG::Role::Storable';
-with 'SBG::Role::Writable';
-with 'SBG::Role::Clonable';
-with 'SBG::Role::Transformable';
+with qw(
+    SBG::Role::Dumpable
+    SBG::Role::Scorable
+    SBG::Role::Storable
+    SBG::Role::Writable
+    SBG::Role::Clonable
+    SBG::Role::Transformable
+);
 
 use overload (
     '""'     => 'stringify',

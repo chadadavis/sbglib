@@ -35,12 +35,15 @@ http://www.compbio.dundee.ac.uk/manuals/stamp.4.2/node29.html
 package SBG::DomainI;
 use Moose::Role;
 
-with 'SBG::Role::Clonable';
-with 'SBG::Role::Dumpable';
-with 'SBG::Role::Scorable';
-with 'SBG::Role::Storable';
-with 'SBG::Role::Transformable';
-with 'SBG::Role::Writable';
+with qw(
+    SBG::Role::Clonable
+    SBG::Role::Dumpable
+    SBG::Role::Scorable
+    SBG::Role::Storable
+    SBG::Role::Transformable
+    SBG::Role::Writable
+);
+
 
 # You will need to redefine this (i.e. copy) it to implementing classes
 # The methods themselves will be consumed via this role, however.
@@ -113,6 +116,7 @@ CHAIN A B 12 _ to B 211 _
 B 33 _ to B 99 _ CHAIN A
 
 See L<SBG::Types>
+
 =cut
 
 has 'descriptor' => (
@@ -363,6 +367,7 @@ This attribute is imported automatically in consuming classes. But you may
 override it.
 
 This defines where the domain is in space at any point in time.
+
 =cut
 
 has 'transformation' => (
@@ -388,6 +393,7 @@ Set of homogenous 4D coordinates. The 4th dimension of each point must be 1.
 TODO: considering coercing coordinates from 3D to 4D here, for convenience
 
 TODO This implementation should not be in the interface
+
 =cut
 
 has 'coords' => (
@@ -509,6 +515,7 @@ sub transform {
 True when this domain consists of only one chain, and that entire chain
 
 See als L<onechain>
+
 =cut
 
 sub wholechain {
@@ -527,6 +534,7 @@ sub wholechain {
 True when this domain consists of only one chain, but maybe not the whole chain
 
 See als L<wholechain>
+
 =cut
 
 sub onechain {
@@ -607,6 +615,7 @@ sub uniqueid {
 =head2 label
 
 A user-defined label, which might not be defined, and might not be unique
+
 =cut
 
 has 'label' => (
@@ -696,10 +705,6 @@ sub _descriptor_short {
 
 =head2 seq
 
- Function: 
- Example : 
- Returns : 
- Args    : 
 
 
 =cut

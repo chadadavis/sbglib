@@ -30,10 +30,12 @@ use Moose;
 # NB Order of inheritance matters here
 extends qw/Bio::Network::ProteinNet Moose::Object/;
 
-with 'SBG::Role::Storable';
-with 'SBG::Role::Dumpable';
-with 'SBG::Role::Writable';
-with 'SBG::Role::Versionable';
+with qw(
+    SBG::Role::Storable
+    SBG::Role::Dumpable
+    SBG::Role::Writable
+    SBG::Role::Versionable
+);
 
 use overload (
     '""'     => 'stringify',

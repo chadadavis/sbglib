@@ -29,11 +29,13 @@ L<SBG::TransformI> , L<SBG::DomainI>
 package SBG::Superposition;
 use Moose;
 
-with 'SBG::Role::Dumpable';
-with 'SBG::Role::Scorable';
-with 'SBG::Role::Storable';
-with 'SBG::Role::Transformable';
-with 'SBG::Role::Writable';
+with qw(
+    SBG::Role::Dumpable
+    SBG::Role::Scorable
+    SBG::Role::Storable
+    SBG::Role::Transformable
+    SBG::Role::Writable
+);
 
 use overload (
     '""'     => 'stringify',

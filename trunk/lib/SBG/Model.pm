@@ -159,18 +159,29 @@ sub transform {
 
 Hack to extract the first word of description, assumed to be the gene name
 
-TODO this needs to be pulled from, e.g.: http://www.uniprot.org/uniprot/Q3E7Y3.xml
+TODO this needs to be pulled from, e.g.: 
+
+ http://www.uniprot.org/uniprot/Q3E7Y3.xml
 
 =cut
 
 sub gene { name(@_) }
+
+=head2 name
+
+
+
+=cut
 
 sub name {
     my ($self) = @_;
 
     # Alnternative when no gene name
     #    my $query = $self->query;
-    # Use the original sequence input here, as query is the result of the Blast search
+
+    # Use the original sequence input here, as query is the result of the
+    # Blast search
+
     my $query = $self->input;
     return unless defined($query);
     my $gene;
@@ -186,7 +197,6 @@ sub name {
 
 }
 
-###############################################################################
 __PACKAGE__->meta->make_immutable;
 no Moose;
 1;

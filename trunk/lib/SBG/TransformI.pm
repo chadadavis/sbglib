@@ -34,11 +34,13 @@ L<SBG::TransformIO::stamp> , L<SBG::DomainI> , L<SBG::ComplexI>
 package SBG::TransformI;
 use Moose::Role;
 
-with 'SBG::Role::Clonable';
-with 'SBG::Role::Dumpable';
-with 'SBG::Role::Storable';
-with 'SBG::Role::Transformable';
-with 'SBG::Role::Writable';
+with qw(
+    SBG::Role::Clonable
+    SBG::Role::Dumpable
+    SBG::Role::Storable
+    SBG::Role::Transformable
+    SBG::Role::Writable
+);
 
 # NB this is not carried into implementing classes.
 # It is here as a suggestion of what you should be overloading

@@ -26,13 +26,14 @@ L<SBG::Traversal>
 package SBG::Complex;
 use Moose;
 
-with 'SBG::DomainSetI';
-with 'SBG::Role::Clonable';
-with 'SBG::Role::Scorable';
-with 'SBG::Role::Storable';
-with 'SBG::Role::Transformable';
-with 'SBG::Role::Versionable';
-with 'SBG::Role::Writable';
+with qw(
+    SBG::Role::Clonable
+    SBG::Role::Scorable
+    SBG::Role::Storable
+    SBG::Role::Transformable
+    SBG::Role::Versionable
+    SBG::Role::Writable
+);
 
 use overload (
     '""'     => 'stringify',
@@ -110,6 +111,7 @@ has 'modelid' => (
 =head2 targetid
 
 The label / accession / idenftifier for the complex we are trying to build
+
 =cut
 
 has 'targetid' => (
@@ -120,6 +122,7 @@ has 'targetid' => (
 =head2 target
 
 For benchmarking the complex representing the native structure can be provided.
+
 =cut
 
 has 'target' => (
@@ -172,11 +175,9 @@ sub clear {
 
 =head2 description
 
- Function: 
- Example : 
- Returns : 
- Args    : 
+Text description of the molecule. Extracted from the PDB entry using C<pdb> from L<SBG::STAMP>.
 
+Note, this is not the 'descriptor' (that's in L<SBG::DomainI> )
 
 =cut
 
