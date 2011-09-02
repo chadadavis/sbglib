@@ -20,3 +20,4 @@ $cache->set('thekey2', $dom1);
 my $dom2 = $cache->get('thekey2');
 is($dom2, $dom1, "cache get()");
 
+done_testing;

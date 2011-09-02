@@ -23,8 +23,6 @@ with qw/
     SBG::IOI
     /;
 
-use Graph::Writer::GraphViz;
-
 use SBG::Complex;
 use SBG::Network;
 

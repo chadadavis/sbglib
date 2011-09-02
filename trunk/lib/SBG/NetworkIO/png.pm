@@ -2,7 +2,7 @@
 
 =head1 NAME
 
-SBG::NetworkIO::graphviz - 
+SBG::NetworkIO::png - 
 
 =head1 SYNOPSIS
 

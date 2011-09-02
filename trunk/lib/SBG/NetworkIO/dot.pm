@@ -2,7 +2,7 @@
 
 =head1 NAME
 
-SBG::NetworkIO::graphviz - 
+SBG::NetworkIO::dot - 
 
 =head1 SYNOPSIS
 
@@ -23,7 +23,6 @@ with qw/
     SBG::IOI
     /;
 
-use Graph::Writer::GraphViz;
 use File::Basename;
 
 use SBG::Network;
