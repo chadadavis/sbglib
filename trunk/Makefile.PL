@@ -1,14 +1,19 @@
 #!/usr/bin/env perl
 
-# Update this list with something like:
-# grep  '^use ' --exclude='*.svn*' -r . |cut -f 2 -d ' '|cut -f 1 -d ';'|grep -v '^SBG'|sort|uniq
-# Better: 
-# perl -MDevel::Modlist=stop,nocore,cpan,zerodefault `find . -name '*.pl' -o -name '*.t' -o -name '*.pm' | xargs`
+=head2 UPDATE
+
+Update this list with
+
+  files=`find . -name '*.pl' -o -name '*.t' -o -name '*.pm' | xargs`
+  perl -d:Modlist=stop,nocore,cpan,zerodefault $files
+
+=cut 
 
 use inc::Module::Install;
 use Module::AutoInstall;
 
 name 'SBG';
+# Collect metadata from the following module
 all_from 'lib/SBG.pm';
 
 
@@ -69,11 +74,12 @@ requires 'Statistics::Lite' => '0';
 requires 'Term::ReadKey' => '0';
 #requires 'XML::XPath' => '0';
 
-# TODO Only required for testing
-requires 'Test::Approx' => '0';
-requires 'Test::Class' => '0';
-requires 'Test::More' => '0';
-requires 'Test::Most' => '0';
+
+# Only required for testing
+test_requires 'Test::Approx' => '0';
+test_requires 'Test::Class' => '0';
+test_requires 'Test::More' => '0';
+test_requires 'Test::Most' => '0';
 
 
 # These STAMP binaries need to be found in the PATH
@@ -87,26 +93,36 @@ requires_external_bin 'rasmol'; # by SBG::Run::rasmol
 requires_external_bin 'blastpgp';
 requires_external_bin 'clustalw';
 requires_external_bin 'dot'; # graphviz
-#requires_external_bin 'vmd'; # SBG::Run::vmdclashes
 requires_external_bin 'naccess';
 requires_external_bin 'Qcontacts';
 
+
 # Not available on CentOS
 #requires_external_bin 'rlwrap'; # SBG::Run::vmdclashes (from vmd) 
+#requires_external_bin 'vmd'; # SBG::Run::vmdclashes
 
 
-# Automagically install above deps from CPAN
-#auto_install(force=>1); # Not compat with CPANPLUS
-auto_install();
-
+# install_script glob('script/*.pl');
 install_script 'script/fasta2net.pl';
 install_script 'script/net2model.pl';
 install_script 'script/sbgobj.pl';
 install_script 'sbglib.sh';
 
-# Test all *.t files, 
-# Is there no 'recursive' option here?
-WriteMakefile(
-    test => {TESTS => 't/*.t t/*/*.t t/*/*/*.t t/*/*/*/*.t t/*/*/*/*/*.t'}
-    );
+# Automagically install above deps from CPAN
+auto_install();
+
+
+# If we used Test::Class everywhere, this would be sufficient
+# WriteAll;
+
+# And if you don't need a "Pure Perl" solution, this is sufficient:
+# WriteMakefile(test => {TESTS => `find t -name '*.t' | xargs` });
+
+# But instead do recursive search for ./t/*.t files
+use File::Find;
+my @tests;
+find(sub { push @tests, $File::Find::name if /\.t$/ }, 't');
+
+WriteMakefile(test => { TESTS => "@tests" });
+
 
