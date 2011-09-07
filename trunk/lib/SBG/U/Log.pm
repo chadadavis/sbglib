@@ -137,12 +137,15 @@ sub new {
     # Log appenders (i.e. where the logs get sent)
     my $appender =
         $file eq '-'
-        ? Log::Log4perl::Appender->new('Log::Log4perl::Appender::Screen',
-        stderr => 1)
+        ? Log::Log4perl::Appender->new(
+            'Log::Log4perl::Appender::Screen', 
+            stderr => 1,
+        )
         : Log::Log4perl::Appender->new(
-        'Log::Dispatch::File',
-        filename => $file,
-        mode     => 'append'
+            'Log::Dispatch::File',
+            filename => $file,
+            mode     => '>>',
+            binmode  => ':encoding(UTF-8)',
         );
 
     # Define log format for appender
