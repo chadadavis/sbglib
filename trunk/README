@@ -1,13 +1,6 @@
-sbg
 
 This repository houses code common to Bioinformatics-related developement in the
-SBG (Structural Bioinformatics Group) at EMBL.
-
-
-DEPENDENCIES
-
-http://www.russell.embl.de/private/wiki/index.php/Sbglib#Installation
-
+SBG (Structural Bioinformatics Group) of Prof. Russell
 
 INSTALLATION
 
@@ -19,32 +12,14 @@ To install this module, run the following commands:
 	./Build install
 
 
-ENVIRONMENT
+EVERYTHINIG ELSE
 
-Set what shell you are running with:
-
- echo $SHELL
-
-bash: You simply need to source env.bash (from your ~/.bashrc)
-
-tcsh: Add to your ~/.cshrc :
-
- setenv DIR=<the directory where this readme is located>
- setenv PERL5LIB $PERL5LIB:$DIR
- setenv PATH $PATH:$DIR/bin
-
-
-SUPPORT AND DOCUMENTATION
-
-After installing, you can find documentation for this module with the
-perldoc command.
-
-    perldoc SBG
+    http://code.google.com/p/sbglib/
 
 
 COPYRIGHT AND LICENCE
 
-Copyright (C) 2009 Chad A Davis
+Copyright (C) 2008-2011 Chad A Davis
 
 This program is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.
