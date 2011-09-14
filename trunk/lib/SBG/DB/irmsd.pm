@@ -44,7 +44,8 @@ sub query {
     my ($contact1, $contact2) = @_;
     our $database;
     our $host;
-    my $dbh = SBG::U::DB::connect($database, $host);
+    my $dsn = SBG::U::DB::dsn(database=>$database, host=>$host);
+    my $dbh = SBG::U::DB::connect($dsn);
 
     # Static handle, prepare it only once
     our $sth;

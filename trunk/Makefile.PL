@@ -47,6 +47,7 @@ requires 'Graph::UnionFind' => '0';
 requires 'Graph::Writer::GraphViz' => '0';
 requires 'Hash::MoreUtils' => '0';
 requires 'IO::Compress::Gzip' => '0';
+requires 'IO::Prompt' => '0';
 requires 'IO::Uncompress::Gunzip' => '0';
 requires 'IPC::Cmd' => '0';
 requires 'List::MoreUtils' => '0';

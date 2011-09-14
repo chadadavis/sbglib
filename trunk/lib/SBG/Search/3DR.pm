@@ -99,7 +99,8 @@ has 'dbname' => (
 sub BUILD {
     my ($self) = @_;
 
-    my $dbh = SBG::U::DB::connect($self->dbname);
+    my $dsn = SBG::U::DB::dsn(database=>$self->dbname);
+    my $dbh = SBG::U::DB::connect($dsn);
 
     # TODO invalid state if connection fails (too late, has to be in BUILDARGS)
     return unless defined $dbh;

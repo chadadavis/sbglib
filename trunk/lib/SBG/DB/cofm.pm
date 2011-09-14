@@ -28,11 +28,11 @@ our @EXPORT_OK = qw/query/;
 use DBI;
 use Log::Any qw/$log/;
 
-use SBG::U::DB qw/chain_case/;
+use SBG::U::Map qw/chain_case/;
 
 # TODO DES OO
-our $database = "trans_3_0";
-our $host;
+my $DATABASE = "trans_3_0";
+
 
 =head2 query
 
@@ -58,11 +58,10 @@ check PQS as the chain ID might differ from the PDB.
 
 sub query {
     my ($pdbid, $chainid) = @_;
-    our $database;
-    our $host;
 
     $chainid = chain_case($chainid);
-    my $dbh = SBG::U::DB::connect($database, $host);
+    my $dsn = SBG::U::DB::dsn(database=>$DATABASE);
+    my $dbh = SBG::U::DB::connect($dsn);
 
     # Static handle, prepare it only once
     our $cofm_sth;

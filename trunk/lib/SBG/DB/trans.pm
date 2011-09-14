@@ -35,8 +35,7 @@ use SBG::Superposition;
 use SBG::Transform::Affine;
 
 # TODO DES OO
-our $database = "trans_3_0";
-our $host;
+my $DATABASE = "trans_3_0";
 
 =head2 query
 
@@ -85,9 +84,9 @@ have come from the entity database in the first place.
 sub superposition_native {
     my ($dom1, $dom2) = @_;
     return unless $dom1->entity && $dom2->entity;
-    our $database;
-    our $host;
-    my $dbh = SBG::U::DB::connect($database, $host);
+
+    my $dsn = SBG::U::DB::dsn(database=>$DATABASE);
+    my $dbh = SBG::U::DB::connect($dsn);
 
     # Static handle, prepare it only once
     our $sth;

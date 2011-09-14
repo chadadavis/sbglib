@@ -33,15 +33,15 @@ use Log::Any qw/$log/;
 use Carp;
 use Scalar::Util qw/refaddr/;
 
-use SBG::U::DB qw/chain_case/;
+use SBG::U::Map qw/chain_case/;
 use SBG::U::List qw/interval_overlap/;
 use SBG::Domain;
 use SBG::Domain::Sphere;
 use SBG::Run::PairedBlast qw/gi2pdbid/;
 
 # TODO DES OO
-our $database = "trans_3_0";
-our $host;
+my $DATABASE = "trans_3_0";
+
 
 # Query, given a Blast Hit object
 sub query_hit {
@@ -100,8 +100,6 @@ NB not querying PQS here, just PDB
 
 sub query {
     my ($pdbid, $chain, %ops) = @_;
-    our $database;
-    our $host;
 
     if ($chain =~ /^([a-z])$/) {
         $chain = uc $1 . $1;
@@ -114,7 +112,8 @@ sub query {
     $ops{overlap} = 0.50 unless defined $ops{overlap};
 
     $chain = chain_case($chain);
-    my $dbh = SBG::U::DB::connect($database, $host);
+    my $dsn = SBG::U::DB::dsn(database=>$DATABASE);
+    my $dbh = SBG::U::DB::connect($dsn);
 
     # Static handle, prepare it only once
     our $querysth;
@@ -188,9 +187,9 @@ TODO should be done by DBIx::Class or equivalent
 
 sub id2dom {
     my ($id) = @_;
-    our $database;
-    our $host;
-    my $dbh = SBG::U::DB::connect($database, $host);
+
+    my $dsn = SBG::U::DB::dsn(database=>$DATABASE);
+    my $dbh = SBG::U::DB::connect($dsn);
 
     # Static handle, prepare it only once
     our $id2domsth;

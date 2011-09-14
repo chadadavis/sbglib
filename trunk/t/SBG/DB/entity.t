@@ -12,8 +12,8 @@ use lib "$Bin/../../../lib/";
 use SBG::Debug;
 
 use SBG::U::DB;
-my $dbh = SBG::U::DB::connect();
-unless ($dbh) {
+
+unless (SBG::U::DB::ping) {
     ok warn "skip : no database\n";
     exit;
 }

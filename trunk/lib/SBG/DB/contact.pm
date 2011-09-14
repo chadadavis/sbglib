@@ -30,8 +30,8 @@ use Log::Any qw/$log/;
 use SBG::U::DB;
 
 # TODO DES OO
-our $database = "trans_3_0";
-our $host;
+my $DATABASE = "trans_3_0";
+
 
 =head2 query
 
@@ -53,9 +53,9 @@ This is wrong, we want to be using cluster_sl_irmsd_5_0 as the 'or_same_chains' 
 
 sub query {
     my ($entity1, $entity2) = @_;
-    our $database;
-    our $host;
-    my $dbh = SBG::U::DB::connect($database, $host);
+
+    my $dsn = SBG::U::DB::dsn(database=>$DATABASE);
+    my $dbh = SBG::U::DB::connect($dsn);
 
     # Static handle, prepare it only once
     our $sth;

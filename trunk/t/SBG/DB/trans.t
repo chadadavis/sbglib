@@ -28,8 +28,8 @@ use SBG::Run::rasmol;
 use SBG::Debug qw(debug);
 
 use SBG::U::DB;
-my $dbh = SBG::U::DB::connect();
-unless ($dbh) {
+
+unless (SBG::U::DB::ping) {
     ok warn "skip : no database\n";
     exit;
 }

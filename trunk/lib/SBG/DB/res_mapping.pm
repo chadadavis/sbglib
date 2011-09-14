@@ -28,19 +28,12 @@ use DBI;
 use Log::Any qw/$log/;
 use List::Util qw/min/;
 
-use SBG::U::DB qw/chain_case/;
+use SBG::U::Map qw/chain_case/;
 
 # TODO DES OO
-our $database = "trans_3_0";
-our $host;
+my $DATABASE = "trans_3_0";
 
 =head2 query
-
- Function: 
- Example : 
- Returns : L<SBG::DomainI>
- Args    : 
-    
 
 Takes an ArrayRef rather than $start, $end now. This should contain all the
 positions in between that also need to be fetched.  Rows are returned according
@@ -48,15 +41,13 @@ to the order in sequence, not in the structure, i.e. the residue IDs returned
 are not necessarily in order, but they do correspond to the order of the
 sequence given, as long as the sequence is ordered.
 
-       
 =cut
 
 sub query {
     my ($pdbid, $chainid, $pdbseq) = @_;
-    our $database;
-    our $host;
 
-    my $dbh = SBG::U::DB::connect($database, $host);
+    my $dsn = SBG::U::DB::dsn(database=>$DATABASE);
+    my $dbh = SBG::U::DB::connect($dsn);
 
     my $pdbseqstr = join(',', @$pdbseq);
 
@@ -98,7 +89,6 @@ END
 Removes any gapped columns (columns with any gaps at all), and truncates the longer sequence in the alignment. I.e. the ArraysRefs are both of equal length (i.e. only for alignments of exactly two sequences).
 
 Each ArrayRef can be fed to L<query> to lookup corresponding PDB residue IDs.
-
 
 =cut
 
@@ -145,5 +135,6 @@ sub flush_seqs {
     $seq2 = substr($seq2, 0, $minlen);
     return ($seq1, $seq2);
 }
+
 
 1;

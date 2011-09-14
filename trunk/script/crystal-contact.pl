@@ -57,7 +57,7 @@ use FindBin qw/$Bin/;
 use lib "$Bin/../lib/";
 
 use SBG::U::Run qw/getoptions/;
-use SBG::U::DB qw/connect/;
+use SBG::U::DB qw/connect dsn/;
 use SBG::U::List qw/pairs2/;
 
 our $dbname = 'trans_3_0';
@@ -118,7 +118,7 @@ sub set_crystal_do {
     my ($pdbid, $chain1, $chain2) = @_;
 
     our $dbh;
-    $dbh ||= connect($dbname, undef, undef, $ENV{USER}, 1);
+    $dbh ||= connect(dsn(database=>$dbname));
 
     my $sql = "
 update entity e1, contact c, entity e2 
@@ -138,7 +138,7 @@ sub set_crystal {
     my ($pdbid, $chain1, $chain2) = @_;
 
     our $dbh;
-    $dbh ||= connect($dbname, undef, undef, $ENV{USER}, 1);
+    $dbh ||= connect(dsn(database=>$dbname));
     our $sth;
     $sth ||= $dbh->prepare("
 UPDATE
@@ -165,7 +165,7 @@ sub existing_contacts {
     my ($pdbid, $chain1, $chain2) = @_;
 
     our $dbh;
-    $dbh ||= connect($dbname, undef, undef, $ENV{USER}, 1);
+    $dbh ||= connect(dsn(database=>$dbname));
     our $sth;
 
     if ($sth && $sth->{Active}) {

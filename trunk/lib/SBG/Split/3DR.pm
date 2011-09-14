@@ -55,7 +55,8 @@ has '_sth' => (is => 'rw',);
 
 sub BUILD {
     my ($self) = @_;
-    my $dbh = SBG::U::DB::connect('3dr_complexes');
+    my $dsn = SBG::U::DB::dsn(database=>'3dr_complexes');
+    my $dbh = SBG::U::DB::connect($dsn);
     return unless $dbh;
 
     my $sth = $dbh->prepare(

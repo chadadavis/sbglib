@@ -28,7 +28,7 @@ package SBG::U::Map;
 use strict;
 use warnings;
 use base qw/Exporter/;
-our @EXPORT_OK = qw/pdb_chain2uniprot_acc uniprot2gene tdracc2desc/;
+our @EXPORT_OK = qw/pdb_chain2uniprot_acc uniprot2gene tdracc2desc chain_case/;
 
 use Carp;
 use Log::Any qw/$log/;
@@ -82,8 +82,8 @@ sub _xml_regex {
 # Only for S. cerevisiae sequences
 sub uniprot2gene {
     my ($uniprot) = @_;
-
-    my $dbh = SBG::U::DB::connect('3dr_complexes');
+    my $dsn = SBG::U::DB::dsn(database=>'3dr_complexes');
+    my $dbh = SBG::U::DB::connect($dsn);
     our $sth_gene;
     $sth_gene ||= $dbh->prepare(join ' ', 'SELECT', 'gene_name', 'FROM',
         'yeast_proteins', 'where', 'uniprot_acc=?',);
@@ -97,7 +97,8 @@ sub tdracc2desc {
     my ($target) = @_;
 
     # TODO REFACTOR into an external 3DR module
-    my $dbh = SBG::U::DB::connect('3DR');
+    my $dsn = SBG::U::DB::dsn(database=>'3DR');
+    my $dbh = SBG::U::DB::connect($dsn);
     my $arr = $dbh->selectall_arrayref(
         join ' ',
         "SELECT description FROM thing",
@@ -106,6 +107,42 @@ sub tdracc2desc {
     my ($desc) = flatten $arr;
     return $desc;
 }
+
+=head2 chain_case
+
+ Function: Converts between e.g. 'a' and 'AA'
+ Example : $chain = chain_case('a'); $chain = chain_case('AA');
+ Returns : lowercase converted to double uppercase, or vice versa
+ Args    : 
+
+The NCBI Blast standard uses a double uppercase to represent a lower case chain identifier from the PDB. I.e. when a structure has more than 36 chains, the first 26 are named [A-Z] the next 10 are named [0-9], and the next next 26 are named [a-z]. The NCBI Blast is not case-sensitive, so it converts the latter to double uppercase, i.e. 'a' becomes 'AA'.
+
+Given 'a', returns 'AA';
+
+Given 'AA', returns 'a';
+
+Else, returns the identity;
+
+TODO REFACTOR belongs in SBG::U::Map
+=cut
+
+sub chain_case {
+    my ($chainid) = @_;
+
+    # Convert lowercase chain id 'a' to uppercase double 'AA'
+    if (!$chainid) {
+        $chainid = '';
+    }
+    elsif ($chainid =~ /^([a-z])$/) {
+        $chainid = uc $1 . $1;
+    }
+    elsif ($chainid =~ /^([A-Z])\1$/) {
+        $chainid = lc $1;
+    }
+
+    return $chainid;
+
+}    # chain_case
 
 1;
 __END__

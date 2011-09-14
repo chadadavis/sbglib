@@ -65,7 +65,6 @@ use SBG::U::iRMSD;                # qw/irmsd/;
 use SBG::STAMP;                   # qw/superposition/
 use SBG::Superposition::Cache;    # qw/superposition/;
 use SBG::DB::res_mapping;         # qw/query aln2locations/;
-use SBG::U::DB qw/chain_case/;
 use SBG::Run::PairedBlast qw/gi2pdbid/;
 use SBG::Run::pdbseq qw/pdbseq/;
 use SBG::Run::naccess qw/buried/;

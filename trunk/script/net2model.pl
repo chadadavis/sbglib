@@ -166,10 +166,11 @@ use SBG::CA::Assembler2;
 use Graph::Traversal::GreedyEdges;
 
 use acaschema;
-use SBG::U::DB;    # qw/connect/;
+use SBG::U::DB;    # qw/connect dsn/;
 
 # Use our own library, which does connection caching, to access the schema
-my $schema = acaschema->connect(sub { SBG::U::DB::connect('aca') });
+my $dsn = SBG::U::DB::dsn(database => 'aca');
+my $schema = acaschema->connect(sub { SBG::U::DB::connect($dsn) });
 
 # Separate log file for each input
 my $log_handle;

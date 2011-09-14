@@ -8,8 +8,8 @@ use FindBin qw/$Bin/;
 use lib "$Bin/../../../lib/";
 
 use SBG::U::DB;
-my $dbh = SBG::U::DB::connect();
-unless ($dbh) {
+
+unless (SBG::U::DB::ping) {
     ok warn "skip : no database\n";
     exit;
 }
@@ -18,7 +18,6 @@ use Moose::Autobox;
 use List::Util qw/min/;
 
 use SBG::DB::res_mapping qw/query aln2locations/;
-use SBG::U::DB qw/chain_case/;
 
 use Bio::AlignIO;
 use SBG::Domain::Atoms;

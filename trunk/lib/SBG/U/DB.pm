@@ -6,19 +6,43 @@ SBG::U::DB - DB tools
 
 =head1 SYNOPSIS
 
- use SBG::U::DB;
- my $db_handle = SBG::U::DB::connect("mydb");
- my $db_handle = SBG::U::DB::connect("mydb", "myhost");
+ use SBG::U::DB qw(connect dsn)
+ my $db_handle = connect(dsn(database=>"mydb"));
+ my $db_handle = connect(dsn(database=>"mydb", host=>"myhost"));
 
 
 =head1 DESCRIPTION
 
-Not thread-safe
+Convenience wrapper for MySQL for people in the SBG group
 
+Does connection caching. Note, this is probably not thread-safe or
+fork-safe. For that, you might want to look at L<DBIx::Connector>
+
+To simplify frequent connections, create a C<~/.my.cnf> file with your default
+dtabase host. E.g.
+
+ [client]
+ host=server.company.com
+ user=jake
+ database=sales_reports
+ password=ilikecake
+
+For documentation, see
+
+ http://dev.mysql.com/doc/refman/5.1/en/option-files.html
+
+Caching is disabled with SBGDEBUG is defined in the environment. See
+L<SBG::Debug> .
 
 =head1 SEE ALSO
 
-L<DBI>
+=over
+
+=item * L<DBI>
+
+=item * L<DBD::mysql>
+
+=back
 
 =cut
 
@@ -26,213 +50,141 @@ package SBG::U::DB;
 use strict;
 use warnings;
 use base qw/Exporter/;
-our @EXPORT_OK = qw(connect chain_case dsn);
+our @EXPORT_OK = qw(connect dsn ping);
 
-use DBI;
-use Carp;
+use English qw(-no_match_vars);
 use Log::Any qw/$log/;
-
+use DBI;
 # Simply for documenting the dependency
-#use DBD::mysql;
+use DBD::mysql;
+# For testing the port before connecting;
+use Net::Ping;
+# For reading passwords
+use IO::Prompt;
 
-# Connection cache (by hostname/dbname)
-our %connections;
+use SBG::Debug qw(debug);
 
-our $sleep = 10;
+our $DEFAULT_SERVER = 'russelllab.org';
+# Upon max_connections, idle time doubles each try, this is the max
+# The sum up to this point amounts to about 4.5 hours, before an exception
+my  $MAX_WAIT       = 2**16;
 
-our $default_db = 'trans_3_0';
 
 =head2 connect
 
- Function: Returns DB handle, using connection caching, sleeps if overloaded
- Example : my $db_handle = SBG::U::DB::connect("my_db_name", "my_host_name");
- Returns : Database handle (L<DBI::db>) or undef 
- Args    : Str database name
-           Str host name (default "localhost")
+Returns DB handle, using connection caching, sleeps if overloaded
 
-Connections are cached. I.e. feel free to call this as often as you like, it
-will return the previous connection if you ask for the same database name,
-without incurring any overhead.
+ # Use defaults from my ~/.my.cnf
+ my $db_handle = connect();
+
+ my $db_handle = SBG::U::DB::connect(
+     dsn(database=>"my_db_name", host=>"my_host_name")
+     $my_user_name, #
+ );
 
 If the return value is not defined, check L<DBI>C<errstr()>
 
-Host name is optional. If not given, uses the same rules as mysql to determine
-which database host to connect to. Specified in ~/.my.cnf otherwise B<localhost>
+Enables C<RaiseError> (see L<DBD::mysql> ) unless you explicitly disable it:
 
-TODO this can be replaced by L<DBI::connect_cached>
+ my $dbh = connect(
+     dsn(database => 'my_db'),
+     $my_user, $my_pass, { RaiseError => 0, },
+ );
 
 =cut
 
 sub connect {
-    my ($dbname, $host, $timeout, $user, $usingpassword) = @_;
-    our $sleep;
-    our %connections;
-    $dbname ||= $default_db;
-    $host   ||= _default_host();
-    my $port = _default_port();
+    my ($dsn, $user, $password, $dbi_ops) = @_;
+    $dsn ||= dsn();
+    $dbi_ops ||= {};
+    $dbi_ops->{RaiseError} = 1 unless defined $dbi_ops->{RaiseError};
 
-    # This is also OK, if $host is not defined
-    my $dbh = $connections{$host}{$dbname};
-
-    # Use exists rather than defined to allow for negative caching
-    return $dbh if exists $connections{$host}{$dbname};
-
-    my $dsn = dsn($dbname, $host);
-    $timeout ||= defined($DB::sub) ? 100 : 5;
-    $user ||= '%';
-    my $password = _password($dsn) if $usingpassword;
-
-    my $err;
-    for (
-        ;
-        !defined($dbh) && (!defined($err) || $err =~ /too many connections/i);
-        sleep int(rand() * $sleep)
-        )
-    {
+    my $dbh;
+    # Seconds to wait when max_connections has been reached, doubled each time
+    my $wait = 1;
+    do {
         $dbh = eval {
-            local $SIG{ALRM} = sub {
-                die "DBI::connect timed out: $dsn\n";
-            };
-            alarm($timeout);
-            my $dbh = DBI->connect($dsn, $user, $password);
-            alarm(0);
-            return $dbh;
+            debug() ? DBI->connect(       $dsn, $user, $password, $dbi_ops) :
+                      DBI->connect_cached($dsn, $user, $password, $dbi_ops) ;
         };
-        $err = $DBI::errstr;
-    }
+        if ($EVAL_ERROR) {
+            $log->error(join ':', $DBI::err, $DBI::errstr) if $DBI::err;
+            # 1040: max_connections, 1203: max_user_connections
+            # http://dev.mysql.com/doc/refman/5.1/en/too-many-connections.ht
+            if ($DBI::err == 1203 || $DBI::err == 1040) {
+                # Give up, and rethrow the exception
+                die $EVAL_ERROR if $wait > $MAX_WAIT;
+                $log->warn("max_connections. Sleeping $wait seconds ...");
+                sleep $wait;
+                $wait *= 2;
+            } else {
+                # Some other connection failure, not handled here
+                die $EVAL_ERROR;
+            }
+        }
+    } while (! $dbh);
 
-    unless (defined $dbh) {
-
-        # Some other error
-        my $err = $DBI::errstr || '<unidentified error>';
-        $log->error("Could not connect to $dsn ($err)");
-    }
-
-    # Update cache (negative cache of failed connections)
-    $connections{$host}{$dbname} = $dbh;
     return $dbh;
 }
 
-sub dsn {
-    my ($dbname, $host) = @_;
 
-    $dbname ||= $default_db;
-    $host   ||= _default_host();
-    my $port = _default_port();
+=head2
 
-    my $dsn = "dbi:mysql:dbname=$dbname";
-    $dsn .= ";host=$host" if $host;
-    $dsn .= ";port=$port" if $port;
-    return $dsn;
+Check if a MySQL server is listing at the given host
 
-}
+ unless (SBG::U::DB::ping('server.com')) { 
+     die "server.com is down";
+ }
 
-use Term::ReadKey;
-
-sub _password {
-    my ($dsn) = @_;
-    my $cfg = _config();
-    my $password = $ENV{DBI_PASS} || $cfg->val('client', 'password') || '';
-    return $password if $password;
-
-    $dsn ||= '<unknown>';
-    print "\nEnter password for: $dsn : ";
-    ReadMode 'noecho';
-    $password = ReadLine 0;
-    chomp $password;
-    ReadMode 'normal';
-    print "\n";
-    return $password;
-}
-
-use Config::IniFiles;
-
-sub _config {
-    our $cfg;
-    return $cfg if $cfg;
-    my $cnf = "$ENV{HOME}/.my.cnf";
-    return unless -e $cnf;
-    $cfg = Config::IniFiles->new(-file => $cnf);
-    return unless $cfg;
-    return $cfg;
-}
-
-sub _default_host {
-    my $cfg = _config();
-    return unless $cfg;
-    my $host = $cfg->val('client', 'host');
-    return $host;
-}
-
-sub _default_port {
-    my $cfg = _config();
-    return unless $cfg;
-    my $port = $cfg->val('client', 'port');
-    return $port;
-}
-
-use Socket;
-
-# http://www.macosxhints.com/dlfiles/is_tcp_port_listening_pl.txt
-sub _port_listening {
-    my ($host, $port, $timeout) = @_;
-    $port    ||= 3306;
-    $timeout ||= 5;
-
-    my $proto = getprotobyname('tcp');
-    my $iaddr = inet_aton($host);
-    my $paddr = sockaddr_in($port, $iaddr);
-    my $socket;
-    socket($socket, PF_INET, SOCK_STREAM, $proto) or return;
-
-    eval {
-        local $SIG{ALRM} = sub { die "SIGALRM\n"; };
-        alarm($timeout);
-        my $success = CORE::connect($socket, $paddr);
-        alarm(0);
-        die "$!\n" unless $success;
-    };
-    close $socket;
-
-    return if $@;
-    return 1;
-}
-
-=head2 chain_case
-
- Function: Converts between e.g. 'a' and 'AA'
- Example : $chain = chain_case('a'); $chain = chain_case('AA');
- Returns : lowercase converted to double uppercase, or vice versa
- Args    : 
-
-The NCBI Blast standard uses a double uppercase to represent a lower case chain identifier from the PDB. I.e. when a structure has more than 36 chains, the first 26 are named [A-Z] the next 10 are named [0-9], and the next next 26 are named [a-z]. The NCBI Blast is not case-sensitive, so it converts the latter to double uppercase, i.e. 'a' becomes 'AA'.
-
-Given 'a', returns 'AA';
-
-Given 'AA', returns 'a';
-
-Else, returns the identity;
-
-TODO REFACTOR belongs in SBG::U::Map
 =cut
 
-sub chain_case {
-    my ($chainid) = @_;
+sub ping {
+    my ($host) = @_;
+    my $ping = Net::Ping->new;
+    $ping->{port_num} = 3306;
+    $host ||= $DEFAULT_SERVER;
+    return $ping->ping($host);
+}
 
-    # Convert lowercase chain id 'a' to uppercase double 'AA'
-    if (!$chainid) {
-        $chainid = '';
-    }
-    elsif ($chainid =~ /^([a-z])$/) {
-        $chainid = uc $1 . $1;
-    }
-    elsif ($chainid =~ /^([A-Z])\1$/) {
-        $chainid = lc $1;
-    }
 
-    return $chainid;
+=head2 
 
-}    # chain_case
+Returns the MySQL connection string with useful default options
+
+ my $dsn = dsn(database=>'mydb', host=>'ourserver.com');
+
+Note, 'database' and 'dbname' are equivalent. 
+
+Other options:
+
+ mysql_connect_timeout
+
+Timeout in seconds for creating the connection (default 10)
+
+ mysql_read_default_file
+
+Config file to use, default C<~/.my.cnf>
+
+ mysql_read_default_group
+
+Group in the INI file to read, no default
+
+See L<DBD::mysql> for more options
+
+=cut
+
+sub dsn {
+    my %ops = @_;
+
+    $ops{mysql_connect_timeout} ||= 10;
+#     $ops{mysql_read_default_group} ||= 'backup'; # Set before default_file
+    $ops{mysql_read_default_file} = '~/.my.cnf';
+
+    my $dsn = 'dbi:mysql:' . join ';', map { "$_=$ops{$_}" } keys %ops;
+    $log->debug('DSN ' . $dsn);
+    return $dsn;
+}
+
 
 1;
 __END__

@@ -151,7 +151,7 @@ use SBG::Search::TransDB;
 use SBG::Search::PairedBlast;
 
 use acaschema;
-use SBG::U::DB;    # qw/connect/;
+use SBG::U::DB; # qw(connect dsn);
 
 # Searcher tries to find interaction templates (edges) to connect seq nodes
 my $blast = SBG::Run::PairedBlast->new(database => 'pdbseq');
@@ -169,7 +169,8 @@ if ($@) {
 my $buildops = {%ops}->hslice([qw/maxid minid cache top overlap/]);
 
 # Use our own library, which does connection caching, to access the schema
-my $schema = acaschema->connect(sub { SBG::U::DB::connect('aca') });
+my $dsn = SBG::U::DB::dsn(database => 'aca');
+my $schema = acaschema->connect(sub { SBG::U::DB::connect($dsn) });
 
 my $dir = basename($ENV{PWD});
 

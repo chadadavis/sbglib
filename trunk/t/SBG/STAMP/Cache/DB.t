@@ -13,8 +13,8 @@ use SBG::U::Test qw/pdl_approx/;
 # $File::Temp::KEEP_ALL = 1;
 
 use SBG::U::DB;
-my $dbh = SBG::U::DB::connect();
-unless ($dbh) {
+
+unless (SBG::U::DB::ping) {
     ok warn "skip : no database\n";
     exit;
 }
