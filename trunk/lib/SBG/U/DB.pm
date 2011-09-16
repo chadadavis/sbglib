@@ -59,8 +59,6 @@ use DBI;
 use DBD::mysql;
 # For testing the port before connecting;
 use Net::Ping;
-# For reading passwords
-use IO::Prompt;
 
 use SBG::Debug qw(debug);
 
@@ -77,7 +75,7 @@ Returns DB handle, using connection caching, sleeps if overloaded
  # Use defaults from my ~/.my.cnf
  my $db_handle = connect();
 
- my $db_handle = SBG::U::DB::connect(
+ my $db_handle = connect(
      dsn(database=>"my_db_name", host=>"my_host_name")
      $my_user_name, #
  );
