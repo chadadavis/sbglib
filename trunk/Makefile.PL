@@ -4,8 +4,17 @@
 
 Update this list with
 
-  files=`find . -name '*.pl' -o -name '*.t' -o -name '*.pm' | xargs`
-  perl -d:Modlist=stop,nocore,cpan,zerodefault $files
+ make distclean
+ files=`find . -name '*.pl' -o -name '*.t' -o -name '*.pm' | xargs`
+ perl -d:Modlist=stop,nocore,cpan,zerodefault,stdout $files | \
+     perl -lane 'next if /^SBG/;print "requires \"$F[0]\" => \"$F[1]\";"' >| \
+     requires.txt
+
+And then replace the 'requires' lines below with that 'requires.txt'
+
+Note that certain modules like Bio::Network::Interaction and
+Bio::Network::ProteinNet have an invalid version and have to be customized
+manually.
 
 =cut 
 
@@ -16,64 +25,77 @@ name 'SBG';
 # Collect metadata from the following module
 all_from 'lib/SBG.pm';
 
-
-requires 'autodie' => '0'; # Qcons
-requires 'Algorithm::Cluster' => '0';
-requires 'Algorithm::Combinatorics' => '0';
-requires 'Algorithm::Numerical::Sample' => '0';
-requires 'autobox::List::Util' => '0';
-requires 'Bio::DB::SwissProt' => '0';
-requires 'Bio::Network::ProteinNet' => '0';
-requires 'Bio::Seq' => '0';
-requires 'Bio::Tools::Run::Alignment::Clustalw' => '0';
-requires 'Bio::Tools::Run::RemoteBlast' => '0';
-requires 'Bio::Tools::Run::StandAloneBlast' => '0';
-requires 'Capture::Tiny' => '0';
-requires 'CHI' => '0';
-requires 'Class::MOP' => '0';
-requires 'Clone' => '0';
-requires 'Config::IniFiles' => '0';
-requires 'Cwd' => '0';
-requires 'Data::Dump' => '0';
-requires 'Data::Dumper' => '0';
-requires 'DBI' => '0';
-requires 'File::NFSLock' => '0';
-requires 'File::Slurp' => '0';
-requires 'File::Spec' => '0';
-requires 'File::Spec::Functions' => '0';
-requires 'File::Temp' => '0';
-requires 'Graph' => '0';
-requires 'Graph::UnionFind' => '0';
-requires 'Graph::Writer::GraphViz' => '0';
-requires 'Hash::MoreUtils' => '0';
-requires 'IO::Compress::Gzip' => '0';
-requires 'IO::Prompt' => '0';
-requires 'IO::Uncompress::Gunzip' => '0';
-requires 'IPC::Cmd' => '0';
-requires 'List::MoreUtils' => '0';
-requires 'List::Util' => '0';
-requires 'Log::Any' => '0';
-requires 'Log::Any::Adapter' => '0';
-requires 'Log::Log4perl' => '0';
-requires 'LWP::Simple' => '0';
-requires 'Math::Round' => '0';
-requires 'Math::Trig' => '1.10';
-requires 'Module::AutoInstall' => '0';
-requires 'Module::Load' => '0';
-requires 'Moose' => '0';
-requires 'Moose::Autobox' => '0';
-requires 'Moose::Role' => '0';
-requires 'Moose::Util::TypeConstraints' => '0';
-requires 'Mouse' => '0';
-requires 'namespace::autoclean' => 0; # Only for Qcons (TODO refactor)
-requires 'PDL' => '0';
-requires 'Scalar::Util' => '0';
-requires 'Sort::Key' => '0';
-requires 'Sort::Key::Top' => '0';
-requires 'Statistics::Contingency' => '0';
-requires 'Statistics::Lite' => '0';
-requires 'Term::ReadKey' => '0';
-#requires 'XML::XPath' => '0';
+requires "Bio::Align::AlignI" => "0";
+#requires "Bio::DB::RCSB" => "0"; # part of this distro
+requires "Bio::LocatableSeq" => "0";
+requires "Bio::Network::Interaction" => "0"; # set version to 0
+requires "Bio::Network::Node" => "0";
+requires "Bio::Network::ProteinNet" => "0";  # set version to 0
+requires "Bio::Tools::Run::Alignment::Clustalw" => "0";
+requires "CHI" => "0.47";
+requires "Class::MOP" => "2.0202";
+requires "Class::MOP::Class::Immutable::Trait" => "2.0202";
+requires "Clone" => "0.31";
+requires "Compress::Raw::Zlib" => "2.033";
+requires "Cwd" => "3.33";
+requires "DBD::mysql" => "4.019";
+requires "DBI" => "1.616";
+requires "Data::Dump" => "1.19";
+requires "Data::Dumper" => "2.128";
+requires "Data::OptList" => "0.107";
+requires "Devel::GlobalDestruction" => "0.03";
+requires "Digest::MD5" => "2.51";
+requires "Error" => "0.17016";
+requires "Eval::Closure" => "0.06";
+requires "File::GlobMapper" => "1.000";
+requires "File::Slurp" => "9999.13";
+requires "Graph" => "0.94";
+#requires "Graph::Traversal::GreedyEdges" => "0"; # part of this distro
+requires "HTTP::Date" => "6.00";
+requires "HTTP::Headers" => "6.00";
+requires "IO::String" => "1.08";
+requires "LWP" => "6.02";
+requires "List::MoreUtils" => "0.30";
+requires "List::Util" => "1.23";
+requires "Log::Any" => "0.12";
+requires "MRO::Compat" => "0.11";
+requires "Module::Load" => "0.18";
+requires "Moose::Autobox" => "0.11";
+requires "Moose::Error::Util" => "0";
+requires "Moose::Util::TypeConstraints::Builtins" => "2.0202";
+requires "PDL" => "2.4.9_002";
+requires "PDL::Bad" => "0";
+requires "PDL::Config" => "0";
+requires "PDL::IO::Misc" => "0";
+requires "PDL::IO::Pnm" => "0";
+requires "PDL::IO::Storable" => "0";
+requires "PDL::ImageRGB" => "0";
+requires "PDL::Lite" => "2.4.9_002";
+requires "PDL::Math" => "0";
+requires "PDL::MatrixOps" => "0";
+requires "PDL::Ops" => "0";
+requires "PDL::Primitive" => "0";
+requires "PDL::Slices" => "0";
+requires "PDL::Ufunc" => "0";
+requires "PDL::Version" => "2.4.9_002";
+requires "Package::DeprecationManager" => "0.11";
+requires "Package::Stash" => "0.25";
+requires "Package::Stash::XS" => "0.21";
+requires "Params::Util" => "1.03";
+requires "Perl6::Junction" => "1.40000";
+requires "Scope::Guard" => "0.20";
+requires "Statistics::Lite" => "3.2";
+requires "Storable" => "2.25";
+requires "Sub::Exporter" => "0.982";
+requires "Sub::Install" => "0.925";
+requires "Sub::Name" => "0.05";
+requires "Term::ReadKey" => "2.30";
+requires "Test::Builder" => "0.98";
+requires "Try::Tiny" => "0.09";
+requires "URI" => "1.58";
+requires "Want" => "0.18";
+requires "autobox" => "2.72";
+requires "autobox::universal" => "0";
 
 
 # Only required for testing
