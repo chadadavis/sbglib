@@ -13,15 +13,15 @@ INSTALLATION
 
 To install this module, run the following commands:
 
-	perl Makefile.PL
-	./Build
-	./Build test
-	./Build install
+ perl Makefile.PL
+ ./Build
+ ./Build test
+ ./Build install
 
 
 EVERYTHINIG ELSE
 
-    http://code.google.com/p/sbglib/
+ http://code.google.com/p/sbglib/
 
 
 COPYRIGHT AND LICENCE
