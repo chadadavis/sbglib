@@ -15,11 +15,11 @@ SBG::U::Log - Simple logging setup for Russell group
  # In your scripts, define where the messages go
  # By default error and warn messages go to stderr. Other messages ignored
  use Log::Any::Adapter; 
- Log::Any::Adapter->set('+SBG::U::Log')
+ Log::Any::Adapter->set('+SBG::U::Log');
  
  # Or log to a file (in the current directory), and set the level to debug
  # This captures debug, info, warn, error and fatal messages. trace is ignored
- Log::Any::Adapter->set('+SBG::U::Log',level=>'debug',file=>'myapp.log') 
+ Log::Any::Adapter->set('+SBG::U::Log',level=>'debug',file=>'myapp.log');
   
 =head1 DESCRIPTION
 
