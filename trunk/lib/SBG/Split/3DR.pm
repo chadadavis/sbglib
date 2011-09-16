@@ -59,7 +59,7 @@ sub BUILD {
     my $dbh = SBG::U::DB::connect($dsn);
     return unless $dbh;
 
-    my $sth = $dbh->prepare(
+    my $sth = $dbh->prepare_cached(
         join ' ', 'SELECT', join(',', qw/uniprot pfam i start end evalue/),
         'FROM', 'domain_instances', 'where uniprot=?',
     );

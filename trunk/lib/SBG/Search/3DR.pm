@@ -107,7 +107,7 @@ sub BUILD {
     $self->_dbh($dbh);
 
     # Stored unidirectionally (uniprot1 < uniprot2)
-    my $sth_interaction = $dbh->prepare(
+    my $sth_interaction = $dbh->prepare_cached(
         join ' ',
         'SELECT',
         '*',
@@ -124,7 +124,7 @@ sub BUILD {
     );
     $self->_sth->put('interaction_templates', $sth_interaction);
 
-    my $sth_docking = $dbh->prepare(
+    my $sth_docking = $dbh->prepare_cached(
         join ' ',
         'SELECT',
         '*',

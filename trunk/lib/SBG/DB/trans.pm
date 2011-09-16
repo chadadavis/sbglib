@@ -88,12 +88,10 @@ sub superposition_native {
     my $dsn = SBG::U::DB::dsn(database=>$DATABASE);
     my $dbh = SBG::U::DB::connect($dsn);
 
-    # Static handle, prepare it only once
-    our $sth;
-
     $log->debug("$dom1(", $dom1->entity, ")=>$dom2(", $dom2->entity, ")");
 
-    $sth ||= $dbh->prepare("
+    # Static handle, prepare it only once
+    my $sth = $dbh->prepare_cached("
 SELECT
 sc,rmsd,seqid,secid,
 r11,r12,r13,v1,
@@ -112,6 +110,7 @@ WHERE (id_entity1=? AND id_entity2=?)
         return;
     }
     my $row = $sth->fetchrow_hashref();
+    $sth->finish;
     if (defined $row) {
         $log->debug("DB hit (positive) $dom1=>$dom2");
     }

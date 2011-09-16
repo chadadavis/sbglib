@@ -64,9 +64,7 @@ sub query {
     my $dbh = SBG::U::DB::connect($dsn);
 
     # Static handle, prepare it only once
-    our $cofm_sth;
-
-    $cofm_sth ||= $dbh->prepare("
+    my $cofm_sth = $dbh->prepare_cached("
 select
 Cx, Cy, Cz, Rg, Rmax
 from 
@@ -89,7 +87,9 @@ chain=?
     }
 
     # (Cx, Cy, Cz, Rg, Rmax);
-    return $cofm_sth->fetchrow_hashref();
+    my $res = $cofm_sth->fetchrow_hashref();
+    $cofm_sth->finish;
+    return $res;
 }    # query
 
 1;

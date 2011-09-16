@@ -24,6 +24,8 @@ $, = ' ';
 
 # query()
 my $res = SBG::DB::cofm::query('2nn6', 'A');
+# Run it twice to test database statement handle caching
+$res = SBG::DB::cofm::query('2nn6', 'A');
 
 ok($res, "query('2nn6', 'A')");
 my ($tx, $ty, $tz, $trg, $trmax) = (80.860, 12.450, 122.080, 26.738, 63.826);

@@ -47,12 +47,10 @@ sub query {
     my $dsn = SBG::U::DB::dsn(database=>$database, host=>$host);
     my $dbh = SBG::U::DB::connect($dsn);
 
-    # Static handle, prepare it only once
-    our $sth;
-
     my ($a1, $b1, $a2, $b2) = _order($contact1, $contact2);
 
-    $sth ||= $dbh->prepare("
+    # Static handle, prepare it only once
+    my $sth = $dbh->prepare_cached("
 SELECT
 *
 FROM 
@@ -69,7 +67,9 @@ WHERE (a1=? AND b1=? AND a2=? AND b2=?)
         return;
     }
 
-    my $row = $sth->fetchrow_hashref() or return;
+    my $row = $sth->fetchrow_hashref();
+    $sth->finish;
+    return unless $row;
     return $row->{irmsd};
 
 }    # query

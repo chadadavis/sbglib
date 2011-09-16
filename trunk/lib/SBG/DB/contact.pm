@@ -58,9 +58,7 @@ sub query {
     my $dbh = SBG::U::DB::connect($dsn);
 
     # Static handle, prepare it only once
-    our $sth;
-
-    $sth ||= $dbh->prepare("
+    my $sth = $dbh->prepare_cached("
 SELECT
 id_entity1,id_entity2,n_res1,n_res2,
   cluster_sl_irmsd_5_0 as cluster
@@ -95,6 +93,7 @@ AND crystal=0
         $row->{entity2} = $entity2;
         push @hits, $row;
     }
+    $sth->finish;
     return @hits;
 
 }    # query

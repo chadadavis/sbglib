@@ -84,9 +84,12 @@ sub uniprot2gene {
     my ($uniprot) = @_;
     my $dsn = SBG::U::DB::dsn(database=>'3dr_complexes');
     my $dbh = SBG::U::DB::connect($dsn);
-    our $sth_gene;
-    $sth_gene ||= $dbh->prepare(join ' ', 'SELECT', 'gene_name', 'FROM',
-        'yeast_proteins', 'where', 'uniprot_acc=?',);
+    my $sth_gene = $dbh->prepare_cached(
+        join ' ', 
+        'SELECT', 'gene_name', 
+        'FROM', 'yeast_proteins', 
+        'where', 'uniprot_acc=?',
+    );
     my $res = $sth_gene->execute($uniprot);
     my $a   = $sth_gene->fetchrow_arrayref;
     return unless $a && @$a;

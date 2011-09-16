@@ -116,19 +116,17 @@ sub query {
     my $dbh = SBG::U::DB::connect($dsn);
 
     # Static handle, prepare it only once
-    our $querysth;
-
-    $querysth ||= $dbh->prepare("
+    my $querysth = $dbh->prepare_cached("
 SELECT
 id, idcode, chain, dom, start, end, len
 FROM entity
 WHERE 
     bad != 1 
-AND Rg != 0
-AND (type = 'chain' OR type = 'fragment')
+AND Rg  != 0
+AND (type  = 'chain' OR type = 'fragment')
 AND source = 'pdb'
 AND idcode = ?
-AND chain = ?
+AND chain  = ?
 ");
 
     unless ($querysth) {
@@ -168,7 +166,7 @@ AND chain = ?
         }
         push @hits, $row;
     }
-
+    $querysth->finish;
     #     $log->debug('rows: ', scalar(@hits));
     return @hits;
 
@@ -192,15 +190,14 @@ sub id2dom {
     my $dbh = SBG::U::DB::connect($dsn);
 
     # Static handle, prepare it only once
-    our $id2domsth;
-    $id2domsth ||= $dbh->prepare("
+    my $id2domsth = $dbh->prepare_cached("
 SELECT 
 idcode,dom,id,Cx,Cy,Cz,Rg,Rmax
 FROM entity
 WHERE 
     bad != 1
-AND Rg != 0
-AND id = ?
+AND Rg  != 0
+AND id   = ?
 ");
 
     unless ($id2domsth) {
@@ -213,6 +210,7 @@ AND id = ?
     }
 
     my $row = $id2domsth->fetchrow_hashref;
+    $id2domsth->finish;
     unless (defined $row) {
         $log->warn("No entity $id found");
         return;
