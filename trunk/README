@@ -8,15 +8,16 @@ Run:
 
  perldoc lib/SBG.pm
 
+ perldoc lib/SBG/Tutorial.pm
+
 
 INSTALLATION
 
 To install this module, run the following commands:
 
  perl Makefile.PL
- ./Build
- ./Build test
- ./Build install
+ make test
+ make install
 
 
 EVERYTHINIG ELSE

@@ -10,6 +10,8 @@ SBG - Structural Bioinformatics Group
 
 =head1 SYNOPSIS
 
+See L<SBG::Tutorial>
+
 
 =head1 AUTHOR
 
