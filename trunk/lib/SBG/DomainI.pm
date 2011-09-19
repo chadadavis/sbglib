@@ -569,6 +569,9 @@ NB if no PDB ID is present, the filename should be unique.
 
 See also L<uniqueid>
 
+TODO make this a 'ro' attribute
+# (requires making pdbid, descriptor, assembly, model, file also 'ro' )
+
 =cut
 
 sub id {
@@ -582,8 +585,9 @@ sub id {
     elsif ($self->file) {
 
         # Or use the filename, if this is not a PDB entry
-        $str = basename($self->file, qw/.gz .Z .zip/);
-        $str = basename($str,        qw/.pdb .ent .mmol .brk .cofm/);
+        $str = $self->file;
+        $str =~ s/$_$//i for qw(.gz .Z .zip);
+        $str =~ s/$_$//i for qw(.pdb .ent .mmol .brk .cofm);
     }
     $str .= $self->_descriptor_short if $self->_descriptor_short;
     return $str;
