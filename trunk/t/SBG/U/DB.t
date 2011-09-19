@@ -26,8 +26,9 @@ unless (ping()) {
 }
 
 {
-    my $dbh = connect();
-    ok defined $dbh, 'connect() with defaults from ~/.my.cnf'
+    my $dbh = connect(undef, 'anonymous');
+    ok defined $dbh, 'connect() (w/ defaults: /etc/my.cnf || .~/.my.cnf)';
+    ### dbh: tied %$dbh
 }
 
 

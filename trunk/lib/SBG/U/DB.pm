@@ -161,24 +161,29 @@ Timeout in seconds for creating the connection (default 10)
 
  mysql_read_default_file
 
-Config file to use, default C<~/.my.cnf>
+Config file to use, first C<~/.my.cnf> else C</etc/my.cnf>
 
  mysql_read_default_group
 
-Group in the INI file to read, no default
+Group in the INI file to read, default C<client>
 
 See L<DBD::mysql> for more options
 
 =cut
 
+my $etc_my_cnf  = '/etc/my.cnf'        if -r '/etc/my.cnf';
+my $home_my_cnf = "$ENV{HOME}/.my.cnf" if -r "$ENV{HOME}/.my.cnf";
+
 sub dsn {
     my %ops = @_;
 
     $ops{mysql_connect_timeout} ||= 10;
-#     $ops{mysql_read_default_group} ||= 'backup'; # Set before default_file
-    $ops{mysql_read_default_file} = '~/.my.cnf';
+    $ops{mysql_read_default_group} ||= 'client';
+    my $my_cnf = $home_my_cnf || $etc_my_cnf;
+    $ops{mysql_read_default_file} = $my_cnf if $my_cnf;
 
     my $dsn = 'dbi:mysql:' . join ';', map { "$_=$ops{$_}" } keys %ops;
+
     $log->debug('DSN ' . $dsn);
     return $dsn;
 }
