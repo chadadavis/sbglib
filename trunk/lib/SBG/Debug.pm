@@ -42,7 +42,10 @@ use strict;
 use warnings;
 
 use Carp qw/carp confess/;
+# Will enable keeping of created temp file
 use File::Temp;
+# Will enable profiling of DBI statements
+use DBI;
 
 use base qw(Exporter);
 our @EXPORT_OK = qw(debug);
@@ -92,11 +95,15 @@ sub _set {
     # Keep temp files
     $File::Temp::KEEP_ALL = 1;
     $File::Temp::DEBUG    = 1;
+
+    $ENV{DBI_PROFILE} = 2;
 }
 
+# Note, this doesn't restore any previous state, it just turns everything off
 sub _unset {
     $_DEBUG = 0;
     delete $ENV{SBGDEBUG};
+    delete $ENV{DBI_PROFILE};
 
     # Make carp behave like cluck, and croak like confess
     $Carp::Verbose = 0;
