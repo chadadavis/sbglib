@@ -12,10 +12,14 @@ SBG::IOI - Generic I/O (input/output) interface, inspired by L<Bio::Root::IO>
 
 =head1 DESCRIPTION
 
+Note, that much of this is already provided by L<IO::All>
 
 =head1 SEE ALSO
 
 L<SBG::IO> generic implementation
+
+=head1 TODO
+
 
 =cut
 

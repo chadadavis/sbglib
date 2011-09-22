@@ -289,12 +289,15 @@ Interaction->scores->at('avg_seqid') with value 50%.
 
 TODO replace with Scores::reduce($_, 'avg') for @keys
 
+TODO belongs in Role::Scorable
+
 =cut
 
 sub avg_scores {
     my ($self, @keys) = @_;
     return unless @keys;
     my ($s1, $s2) = $self->_models->values->flatten;
+    return unless defined $s1 && defined $s2;
     foreach my $key (@keys) {
         next
             unless defined($s1->scores->at($key))

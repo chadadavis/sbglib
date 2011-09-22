@@ -49,7 +49,7 @@ has 'scores' => (
     isa        => 'HashRef',
     lazy_build => 1,           # Re-built (to the default) after a clear
 
-    #    default => sub { {} }, # Left undefed after a clear
+    #    default => sub { {} }, # Left undefined after a clear
     clearer => 'clear_scores',
 );
 
