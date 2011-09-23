@@ -24,6 +24,7 @@ L<SBG::Traversal>
 =cut
 
 package SBG::Complex;
+
 use Moose;
 
 with qw(
@@ -41,6 +42,7 @@ use overload (
 );
 
 use Scalar::Util qw/refaddr/;
+
 use Moose::Autobox;
 use autobox::List::Util;
 use List::MoreUtils qw/mesh uniq/;
@@ -52,7 +54,6 @@ use PDL::Core qw/pdl squeeze zeroes sclr/;
 use Statistics::Lite qw/stddev/;
 
 use Log::Any qw/$log/;
-use bignum;    # qw/inf/;
 
 use Algorithm::Combinatorics qw/variations/;
 use Bio::Tools::Run::Alignment::Clustalw;
@@ -68,7 +69,6 @@ use SBG::DB::res_mapping;         # qw/query aln2locations/;
 use SBG::Run::PairedBlast qw/gi2pdbid/;
 use SBG::Run::pdbseq qw/pdbseq/;
 use SBG::Run::naccess qw/buried/;
-use SBG::Run::qcons qw/qcons/;
 use SBG::U::Map qw/tdracc2desc/;
 
 # Complex stores these data structures
@@ -90,6 +90,7 @@ use SBG::Domain::Atoms;
 use SBG::U::CartesianPermutation;
 
 use SBG::Run::pdbc qw/pdbc/;
+
 
 =head2 modelid
 
@@ -154,6 +155,7 @@ has 'name' => (
     is  => 'rw',
     isa => 'Str',
 );
+
 
 # TODO better as a role 'Clearable', which iterates all attributes and checks 'has_clearer' and calls it.
 sub clear {
@@ -1545,7 +1547,7 @@ sub rmsd_class {
     my ($self, $other) = @_;
 
     # Upper sentinel for RMSD
-    my $maxnum   = inf();
+    my $maxnum   = 'Inf';
     my $bestrmsd = $maxnum;
     my $besttrans;
     my $bestmapping;
@@ -1988,6 +1990,7 @@ sub _setcrosshairs {
 
 # TODO DES belongs in a Role, as there may be many approaches to finding these
 # And this one is way too slow
+#use SBG::Run::qcons qw/qcons/;
 sub contacts {
     my ($self) = @_;
     return [];
