@@ -1,13 +1,14 @@
 #!/usr/bin/env perl
 
 use strict;
-use Test::More 'no_plan';
+use Test::More;
+use FindBin qw/$Bin/;
+use lib "$Bin/../../../lib/";
+use SBG::Debug;
 
 use Carp;
 use FindBin qw/$Bin/;
 
-use FindBin qw/$Bin/;
-use lib "$Bin/../../../lib/";
 use SBG::ComplexIO::report;
 use SBG::U::Object qw/load_object/;
 
@@ -27,4 +28,4 @@ $out->flush;
 my @chains = $str =~ /^CHAIN \S+/gm;
 is(scalar(@chains), $ndoms, 'report::write() to string');
 
-__END__
+done_testing;

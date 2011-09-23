@@ -1,15 +1,15 @@
 #!/usr/bin/env perl
 
 use strict;
-use Test::More 'no_plan';
-
-use Carp;
-
-use File::Temp qw/tempfile/;
-
+use warnings;
 use FindBin qw/$Bin/;
 use lib "$Bin/../../../lib/";
 use SBG::Debug qw(debug);
+
+use Test::More;
+use Carp;
+use File::Temp qw/tempfile/;
+
 use SBG::Run::PairedBlast qw/gi2pdbid/;
 use Bio::SeqIO;
 
@@ -83,3 +83,4 @@ ok(scalar(@hitpairs), 'with limit=10 monomeric hits on each side');
 
 # gi2pdbid
 
+done_testing;

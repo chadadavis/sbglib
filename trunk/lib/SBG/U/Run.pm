@@ -31,6 +31,8 @@ use base qw/Exporter/;
 our @EXPORT_OK = 
     qw/start_lock end_lock frac_of getoptions @generic_options/;
 
+use SBG::Debug;
+
 use Pod::Usage;
 use Getopt::Long;
 use Carp;
@@ -38,13 +40,11 @@ use Carp;
 use File::NFSLock;
 use Fcntl qw/LOCK_EX LOCK_NB/;
 use File::Slurp qw/slurp/;
-use File::Temp;
 
 use SBG::U::Log;
 use Log::Any qw/$log/;
 use Log::Any::Adapter;
 
-use SBG::Debug;
 
 =head2 start_lock
 

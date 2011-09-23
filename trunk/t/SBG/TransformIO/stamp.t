@@ -2,14 +2,12 @@
 
 use strict;
 use warnings;
-use Test::More 'no_plan';
-use Carp;
-
-use FindBin;
-use File::Temp qw/tempfile/;
-
 use FindBin qw/$Bin/;
 use lib "$Bin/../../../lib/";
+use SBG::Debug;
+
+use Test::More;
+use File::Temp qw/tempfile/;
 
 use SBG::U::Test qw/pdl_approx/;
 use SBG::U::Log;
@@ -38,3 +36,4 @@ my $t2 = $in->read;
 
 pdl_approx($t2->matrix, $t->matrix);
 
+done_testing;

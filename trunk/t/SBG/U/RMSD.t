@@ -2,19 +2,17 @@
 
 use strict;
 use warnings;
-use Test::More;
-use Carp;
-
-use File::Temp qw/tempfile/;
-$File::Temp::KEEP_ALL = 1;
-
 use FindBin qw/$Bin/;
 use lib "$Bin/../../../lib/";
-use Test::Approx;
-use SBG::U::Test qw/pdl_approx/;
+use SBG::Debug;
 
+use Test::More;
+use Carp;
+use File::Temp qw/tempfile/;
+use Test::Approx;
 use PDL::Lite;
 
+use SBG::U::Test qw/pdl_approx/;
 use SBG::U::RMSD qw/
     centroid radius_gyr radius_max superposition rmsd translation identity
     /;

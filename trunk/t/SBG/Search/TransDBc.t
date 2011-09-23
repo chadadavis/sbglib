@@ -2,16 +2,13 @@
 
 use strict;
 use warnings;
-use Test::More 'no_plan';
-
-use Carp;
-
-use File::Temp qw/tempfile/;
-
 use FindBin qw/$Bin/;
 use lib "$Bin/../../../lib/";
-
 use SBG::Debug;
+
+use Test::More;
+use File::Temp qw/tempfile/;
+
 use SBG::U::DB;
 
 unless (SBG::U::DB::ping) {
@@ -65,3 +62,4 @@ my @subnets = $net->partition;
 my $subnets = scalar @subnets;
 is($subnets, 1, "Network::partition: $subnets");
 
+done_testing;

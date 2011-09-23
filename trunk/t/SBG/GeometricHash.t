@@ -2,16 +2,15 @@
 
 use strict;
 use warnings;
-use Test::More 'no_plan';
+use FindBin qw/$Bin/;
+use lib "$Bin/../../lib/";
+use SBG::Debug;
+
+use Test::More;
 
 use File::Temp qw/tempfile/;
 use Carp;
 $SIG{__DIE__} = \&confess;
-
-use FindBin qw/$Bin/;
-use lib "$Bin/../../lib/";
-
-use SBG::Debug;
 
 use PDL::Lite;
 use PDL::Core;
@@ -186,3 +185,4 @@ sub _perm {
     return $points;
 }
 
+done_testing;

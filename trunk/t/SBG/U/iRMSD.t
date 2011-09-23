@@ -2,14 +2,13 @@
 
 use strict;
 use warnings;
-use Test::More 'no_plan';
-use Carp;
-
-use File::Temp qw/tempfile/;
-$File::Temp::KEEP_ALL = 1;
-
 use FindBin qw/$Bin/;
 use lib "$Bin/../../../lib/";
+use SBG::Debug;
+
+use Test::More;
+use File::Temp qw/tempfile/;
+
 use Test::Approx;
 use SBG::U::iRMSD qw/irmsd/;
 use SBG::Domain;
@@ -33,3 +32,4 @@ is_approx($irmsd, 5.11, "iRMSD reverse", $toler);
 $TODO = "Test STAMP::irmsd for domains with an existing transformation";
 ok 0;
 
+done_testing;

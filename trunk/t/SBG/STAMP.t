@@ -2,18 +2,16 @@
 
 use strict;
 use warnings;
-use Test::More 'no_plan';
+use FindBin qw/$Bin/;
+use lib "$Bin/../../lib/";
+use SBG::Debug qw(debug);
+
+use Test::More;
 use SBG::U::Test qw/pdl_approx/;
 
 use File::Temp;
-use Carp;
-$SIG{__DIE__} = \&confess;
-
 use Moose::Autobox;
 use PDL;
-
-use FindBin qw/$Bin/;
-use lib "$Bin/../../lib/";
 
 use Test::Approx;
 use SBG::STAMP qw/superposition/;
@@ -23,7 +21,7 @@ use SBG::DomainIO::stamp;
 
 use SBG::Run::cofm qw/cofm/;
 use SBG::Run::rasmol;
-use SBG::Debug qw(debug);
+
 
 # Tolerate rounding differences between stamp (using clib) and PDL
 my $toler = 0.5;
@@ -221,3 +219,4 @@ my $ass_expect = pdl
 pdl_approx($ass_sup->matrix, $ass_expect,
     "assembly superposition($ass2_1_a, $ass2_2_a)", $toler);
 
+done_testing;

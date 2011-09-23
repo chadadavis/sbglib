@@ -25,9 +25,11 @@ our @EXPORT_OK = qw/qcons/;
 use Cwd;
 use File::Basename;
 use Log::Any qw/$log/;
-use Moose::Autobox;
 
 use Bio::Tools::Run::QCons;
+# Autobox Has to be loaded after Mouse (used by Qcons)
+use Moose::Autobox;
+
 use SBG::DomainIO::pdb;
 use SBG::Interaction;
 use SBG::Model;
@@ -80,6 +82,7 @@ sub qcons {
             $contacts1{ $contact->{res1}{number} }++;
             $contacts2{ $contact->{res2}{number} }++;
         }
+
         my $n_res1 = keys %contacts1;
         my $n_res2 = keys %contacts2;
 
@@ -93,6 +96,7 @@ sub qcons {
                 scores  => { 'n_res' => $n_res1 }
             )
         );
+
         $interaction->set(
             $pair->[1],
             SBG::Model->new(
@@ -100,9 +104,12 @@ sub qcons {
                 scores  => { 'n_res' => $n_res2 }
             )
         );
+
         $contacts->push($interaction);
     }
+
     return $contacts;
+
 }    # qcons
 
 1;

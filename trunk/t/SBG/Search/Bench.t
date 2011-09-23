@@ -2,16 +2,13 @@
 
 use strict;
 use warnings;
-use Test::More 'no_plan';
-use Carp;
-$SIG{__DIE__} = \&confess;
-
-use File::Temp qw/tempfile/;
-
-use Moose::Autobox;
-
 use FindBin qw/$Bin/;
 use lib "$Bin/../../../lib/";
+use SBG::Debug;
+
+use Test::More;
+use File::Temp qw/tempfile/;
+use Moose::Autobox;
 
 use SBG::Seq;
 use SBG::Node;
@@ -68,3 +65,4 @@ is(scalar(@subnets), 4, 'Network::partition');
 @subnets = $net->partition(minsize => 3);
 is(scalar(@subnets), 2, 'Network::partition minsize=>3');
 
+done_testing;

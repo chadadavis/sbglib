@@ -2,7 +2,11 @@
 
 use strict;
 use warnings;
-use Test::More 'no_plan';
+use FindBin qw/$Bin/;
+use lib "$Bin/../../../lib/";
+use SBG::Debug;
+
+use Test::More;
 use Carp;
 use FindBin;
 use File::Temp qw/tempfile/;
@@ -10,8 +14,6 @@ my $dir = $FindBin::RealBin;
 
 use PDL::Lite;
 
-use FindBin qw/$Bin/;
-use lib "$Bin/../../../lib/";
 use Test::Approx;
 
 use SBG::Domain::Sphere;
@@ -84,3 +86,4 @@ $expectoverlap = $s1->radius + $s2->radius - $expectdist;
 # is_approx($s1->overlap_vol($s2), $expectoverlap, 'overlap_vol()', $tolerance);
 ok 0;
 
+done_testing;

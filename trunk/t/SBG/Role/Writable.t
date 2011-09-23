@@ -2,13 +2,14 @@
 
 use strict;
 use warnings;
-use Test::More 'no_plan';
-use Carp;
-
-use File::Temp qw/tempfile/;
-
 use FindBin qw/$Bin/;
 use lib "$Bin/../../../lib/";
+use SBG::Debug;
+
+use Test::More;
+use Carp;
+use File::Temp qw/tempfile/;
+
 use SBG::Domain;
 use SBG::Role::Writable;
 use SBG::DomainIO::stamp;
@@ -21,3 +22,4 @@ my $file = $dom->write('stamp', tempfile => 1);
 my $copy = SBG::DomainIO::stamp->new(file => $file)->read;
 is($copy, $dom, "Re-read Writable domain");
 
+done_testing;

@@ -31,6 +31,6 @@ it under the same terms as Perl itself.
 
 use v5.8;
 
-our $VERSION = 20110922;
+our $VERSION = 20110923;
 
 1;

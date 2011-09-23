@@ -2,17 +2,17 @@
 
 use strict;
 use warnings;
-use Test::More 'no_plan';
 
 use FindBin qw/$Bin/;
 use lib "$Bin/../../../lib/";
-use Test::Approx;
-use SBG::U::Log qw/log/;
-
 use SBG::Debug;
 
+use Test::More 'no_plan';
+use Test::Approx;
+
+use SBG::U::Log qw/log/;
 use SBG::U::Run qw/start_lock end_lock frac_of getoptions/;
-use File::Slurp qw/slurp/;
+
 
 my $lock = start_lock('lockname');
 ok($lock, "Job locking");

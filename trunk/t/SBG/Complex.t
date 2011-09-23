@@ -2,14 +2,16 @@
 
 use strict;
 use warnings;
+use FindBin qw/$Bin/;
+use lib "$Bin/../../lib/";
+use SBG::Debug;
+
 use Test::More 'no_plan';
 use Moose::Autobox;
 
 use Carp;
 $SIG{__DIE__} = \&confess;
 
-use FindBin qw/$Bin/;
-use lib "$Bin/../../lib/";
 use Test::Approx;
 
 use SBG::Complex;
@@ -21,7 +23,7 @@ use SBG::DomainIO::stamp;
 use SBG::DomainIO::pdb;
 use SBG::U::List qw/flatten/;
 use SBG::Run::rasmol;
-use SBG::Debug;
+
 
 # Create Domains to use as templates
 # One hexameric ring of 2br2: CHAINS ADCFEB

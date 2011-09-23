@@ -2,17 +2,16 @@
 
 use strict;
 use warnings;
-use Test::More 'no_plan';
-
-use Graph::UnionFind;
-
-# Local libraries
 use FindBin qw/$Bin/;
 use lib "$Bin/../../../lib/";
-use Graph::Traversal::GreedyEdges;
-use SBG::NetworkIO::csv;
-
 use SBG::Debug;
+
+use Test::More;
+use Graph::UnionFind;
+
+use SBG::NetworkIO::csv;
+use Graph::Traversal::GreedyEdges;
+
 
 # Load up a network
 my $file = "$Bin/data/simple_network.csv";
@@ -111,7 +110,10 @@ foreach (sort keys %answers) {
 is(scalar(keys %expected),
     0, "Missing solutions? " . join(',', keys %expected));
 
+
+done_testing;
 exit;
+
 
 package TestAssembler;
 use Moose;

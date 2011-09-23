@@ -2,13 +2,14 @@
 
 use strict;
 use warnings;
-use Test::More 'no_plan';
-use Carp;
-use File::Temp qw/tempfile/;
-
 use FindBin qw/$Bin/;
 use lib "$Bin/../../../lib/";
 use SBG::Debug;
+
+use Test::More;
+use Carp;
+use File::Temp qw/tempfile/;
+
 
 use SBG::U::DB;
 
@@ -35,3 +36,4 @@ my ($hit2) = @hits;
 
 is($hit1->{n_res1}, $hit2->{n_res2}, "bidirectional query");
 
+done_testing;

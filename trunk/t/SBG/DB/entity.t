@@ -2,14 +2,15 @@
 
 use strict;
 use warnings;
-use Test::More 'no_plan';
+use FindBin qw/$Bin/;
+use lib "$Bin/../../../lib/";
+use SBG::Debug;
+
+use Test::More;
 
 use Carp;
 use File::Temp qw/tempfile/;
 
-use FindBin qw/$Bin/;
-use lib "$Bin/../../../lib/";
-use SBG::Debug;
 
 use SBG::U::DB;
 
@@ -46,3 +47,5 @@ is($dom->descriptor, "A 7 _ to A 130 _", 'id2dom()');
 
 $TODO = 'Test query_hit()';
 ok 0;
+
+done_testing;

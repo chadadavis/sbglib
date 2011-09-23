@@ -41,6 +41,9 @@ package SBG::Debug;
 use strict;
 use warnings;
 
+# File::Slurp bug: load before File::Temp to avoid 'redefined' error
+use File::Slurp;
+
 use Carp qw/carp confess/;
 # Will enable keeping of created temp file
 use File::Temp;

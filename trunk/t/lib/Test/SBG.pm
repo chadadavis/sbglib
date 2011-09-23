@@ -38,6 +38,10 @@ package Test::SBG;
 use strict;
 use warnings;
 use base qw/Test::Class/;
+
+# File::Slurp bug: load before File::Temp to avoid 'redefined' error
+use File::Slurp;
+
 use Test::More;
 use Path::Class;
 use Log::Any::Adapter;

@@ -2,16 +2,13 @@
 
 use strict;
 use warnings;
-use Test::More;
-
-use File::Temp;
-
 use FindBin qw/$Bin/;
 use lib "$Bin/../../../../lib/";
+use SBG::Debug;
+
+use Test::More;
+use File::Temp;
 use SBG::U::Test qw/pdl_approx/;
-
-# $File::Temp::KEEP_ALL = 1;
-
 use SBG::U::DB;
 
 unless (SBG::U::DB::ping) {

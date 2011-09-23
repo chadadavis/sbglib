@@ -41,6 +41,12 @@ L<Test::Class> , L<Test::Class::Load>
 
 =cut
 
+use strict;
+use warnings;
+
+# File::Slurp bug: load before File::Temp to avoid 'redefined' error
+use File::Slurp;
+
 # Where is this file: ../t
 use FindBin qw/$Bin/;
 use Path::Class;

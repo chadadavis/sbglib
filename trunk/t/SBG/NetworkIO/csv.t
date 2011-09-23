@@ -2,12 +2,11 @@
 
 use strict;
 use warnings;
-use Test::More 'no_plan';
-
-use FindBin qw/$Bin/;
-
 use FindBin qw/$Bin/;
 use lib "$Bin/../../../lib/";
+use SBG::Debug;
+
+use Test::More;
 
 use SBG::Network;
 use SBG::NetworkIO::csv;
@@ -35,3 +34,4 @@ ok 0;
 # $io = new SBG::NetworkIO::csv;
 # $io->write($net);
 
+done_testing;

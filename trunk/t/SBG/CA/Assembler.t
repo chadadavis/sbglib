@@ -2,22 +2,28 @@
 
 use strict;
 use warnings;
+use FindBin qw/$Bin/;
+use lib "$Bin/../../../lib/";
+use SBG::Debug;
+
 use Test::More 'no_plan';
 use Carp;
 
+
+
 use Moose::Autobox;
 use List::MoreUtils qw/mesh/;
-
-use FindBin qw/$Bin/;
-use lib "$Bin/../../../lib/";
 
 use SBG::Seq;
 use SBG::Node;
 use SBG::Domain;
 use SBG::Interaction;
+
 use SBG::Network;
 use SBG::Complex;
+
 use SBG::CA::Assembler2;    # qw(linker);
+
 use SBG::Run::cofm qw/cofm/;
 use SBG::Run::rasmol;
 
@@ -25,7 +31,7 @@ $TODO = 'update to Assembler2';
 ok(0);
 exit;
 
-use SBG::Debug;
+
 
 # Similar to example in STAMP.t but use at least two chained superpositions
 # Do not simply multiply transform twice, rather: chain them

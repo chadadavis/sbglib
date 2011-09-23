@@ -2,21 +2,19 @@
 
 use strict;
 use warnings;
-use Test::More;
-
-use Carp;
-
-use Moose::Autobox;
-
 use FindBin qw/$Bin/;
 use lib "$Bin/../../lib/";
+use SBG::Debug;
+
+use Test::More;
+use Carp;
+use Moose::Autobox;
+
 use SBG::Network;
 use SBG::Node;
 use SBG::Seq;
 use SBG::Interaction;
 use SBG::U::Object qw/load_object/;
-
-use SBG::Debug;
 
 my $target    = load_object("$Bin/data/3bvi.target");
 my $targetnet = $target->network;
@@ -109,3 +107,4 @@ my $str1 = _nested2str(@$cc1);
 note "str1 ", $str1;
 
 
+done_testing;

@@ -2,12 +2,12 @@
 
 use strict;
 use warnings;
-use Test::More 'no_plan';
-
-use Moose::Autobox;
-
 use FindBin qw/$Bin/;
 use lib "$Bin/../../../lib/";
+use SBG::Debug;
+use Test::More;
+
+use Moose::Autobox;
 
 use SBG::Seq;    # for stringify
 use SBG::Run::pdbseq qw/pdbseq/;
@@ -30,3 +30,4 @@ my $dom1rv8B =
 $seq = pdbseq($dom1rv8B);
 is($seq->length, 253, 'pdbseq gets last residue');
 
+done_testing;

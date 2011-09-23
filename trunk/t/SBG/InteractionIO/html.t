@@ -2,11 +2,11 @@
 
 use strict;
 use warnings;
-use Test::More 'no_plan';
-use FindBin qw/$Bin/;
-
 use FindBin qw/$Bin/;
 use lib "$Bin/../../../lib/";
+use SBG::Debug;
+
+use Test::More;
 
 use SBG::InteractionIO::csv;
 use SBG::InteractionIO::html;
@@ -31,3 +31,4 @@ my $out = new SBG::InteractionIO::html(tempfile => 1);
 $out->write(@iactions);
 ok(0);
 
+done_testing;

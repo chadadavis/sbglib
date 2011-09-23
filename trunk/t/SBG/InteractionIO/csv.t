@@ -2,11 +2,12 @@
 
 use strict;
 use warnings;
-use Test::More 'no_plan';
-use FindBin qw/$Bin/;
-
 use FindBin qw/$Bin/;
 use lib "$Bin/../../../lib/";
+use SBG::Debug;
+
+use Test::More;
+use FindBin qw/$Bin/;
 
 use SBG::InteractionIO::csv;
 
@@ -25,3 +26,4 @@ is(scalar(@iactions), 17, "read()");
 # Verify that no duplicate nodes created
 is($io->count, 6, "Unique node cache");
 
+done_testing;

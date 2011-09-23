@@ -2,15 +2,14 @@
 
 use strict;
 use warnings;
-use Test::More 'no_plan';
-
-use Carp;
-
-use File::Temp qw/tempfile/;
-
 use FindBin qw/$Bin/;
 use lib "$Bin/../../../lib/";
 use SBG::Debug;
+
+use Test::More;
+use Carp;
+use File::Temp qw/tempfile/;
+
 use SBG::Seq;
 use SBG::Role::Storable;
 
@@ -25,3 +24,4 @@ my $seq2 = retrieve $file;
 
 is($seq1, $seq2, "store / retrieve");
 
+done_testing;

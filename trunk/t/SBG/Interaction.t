@@ -2,12 +2,13 @@
 
 use strict;
 use warnings;
-use Test::More 'no_plan';
-
-use Moose::Autobox;
-
 use FindBin qw/$Bin/;
 use lib "$Bin/../../lib/";
+use SBG::Debug;
+
+use Test::More;
+
+use Moose::Autobox;
 
 use SBG::Interaction;
 use SBG::Model;
@@ -54,3 +55,5 @@ is($gotmodels[$_], $models[$_], "Storing models in Interaction by Node")
 
 $TODO = "Test equality, should be independent of Node endpoints";
 ok 0;
+
+done_testing;

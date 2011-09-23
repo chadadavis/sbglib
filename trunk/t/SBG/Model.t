@@ -2,11 +2,13 @@
 
 use strict;
 use warnings;
-use Test::More 'no_plan';
-
-use Moose::Autobox;
 use FindBin qw/$Bin/;
 use lib "$Bin/../../lib/";
+use SBG::Debug;
+
+use Test::More;
+
+use Moose::Autobox;
 use SBG::Model;
 use SBG::Node;
 use SBG::Seq;
@@ -39,3 +41,4 @@ is("$models[1]", "Q9NPD3(2nn6B)", 'stringify');
 $TODO = 'Distinguish "subject" from "structure"';
 ok(0);
 
+done_testing;
