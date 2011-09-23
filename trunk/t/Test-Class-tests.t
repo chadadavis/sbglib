@@ -46,6 +46,8 @@ use warnings;
 
 # File::Slurp bug: load before File::Temp to avoid 'redefined' error
 use File::Slurp;
+# Mouse bug: load before MooseX::Autobox to avoid prototype mismatch error
+use Mouse;
 
 # Where is this file: ../t
 use FindBin qw/$Bin/;
