@@ -29,6 +29,8 @@ use File::Spec;
 use Log::Any qw/$log/;
 use CHI;
 
+use SBG::Debug;
+
 # Cache cache  ;-)
 our %cache_hash;
 
@@ -85,7 +87,9 @@ Cache claims to even work between concurrent processes!
 
 sub cache_get {
     my ($cachename, $key)  = @_;
-    my ($cache,     $lock) = cache($cachename);
+    if (SBG::Debug::debug) { return; }
+
+    my ($cache, $lock) = cache($cachename);
 
     if (my $data = $cache->get($key)) {
 
@@ -119,6 +123,9 @@ Cache claims to even work between concurrent processes!
 
 sub cache_set {
     my ($cachename, $key, $data) = @_;
+
+    if (SBG::Debug::debug) { return; }
+
     my ($cache, $lock) = cache($cachename);
 
     my $status;
