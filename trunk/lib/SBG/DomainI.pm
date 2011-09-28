@@ -60,6 +60,7 @@ use Moose::Autobox;
 use Scalar::Util qw(refaddr);
 use Module::Load;
 use File::Basename qw/basename/;
+#use Devel::Comments;
 
 use PDL::Lite;
 use PDL::Core qw/pdl/;
@@ -281,10 +282,16 @@ sub _build_file {
     my $str   = $pdbid;
 
     # Append e.g. '-2' for 2nd assembly
-    $str .= '-' . $self->assembly if $self->assembly;
-
-    # Append model number in the biounit assembly
-    $str .= '-' . $self->model if $self->model;
+    if ($self->assembly) {
+        if ($self->model) {
+            # Custom format for SBG group based on splitting files for STAMP
+            $str .= '-' . $self->assembly . '-' . $self->model;
+        }
+        else {
+            # Standard file name as delivered by RCSB
+            $str .= '.pdb' . $self->assembly
+        }
+    }
 
     # If PDB files are stored hierarchically e.g. pdb/xy/1xyz.pdb
     my $subdir = substr($pdbid, 1, 2);
@@ -411,6 +418,8 @@ sub _build_coords {
 =head2 symmops
 
 Symmetry operator matrices, defined in PDB file
+
+cf. http://www.pymolwiki.org/index.php/BiologicalUnit
 
 =cut
 
