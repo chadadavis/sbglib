@@ -1,0 +1,34 @@
+
+This repository houses code common to Bioinformatics-related developement in the
+SBG (Structural Bioinformatics Group) of Prof. Russell
+
+DOCUMENTATION
+
+Run:
+
+ perldoc lib/SBG.pm
+
+ perldoc lib/SBG/Tutorial.pm
+
+
+INSTALLATION
+
+To install this module, run the following commands:
+
+ perl Makefile.PL
+ make test
+ make install
+
+
+EVERYTHINIG ELSE
+
+ http://code.google.com/p/sbglib/
+
+
+COPYRIGHT AND LICENCE
+
+Copyright (C) 2008-2011 Chad A Davis
+
+This program is free software; you can redistribute it and/or modify it
+under the same terms as Perl itself.
+
