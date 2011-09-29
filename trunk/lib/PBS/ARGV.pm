@@ -164,6 +164,49 @@ sub qsub {
 
 }    # qsub
 
+# Called when the module is loaded, will exit the process if successful
+sub import {
+    my ($self, @ops) = @_;
+
+    # Parse out PBS-specific submission ops too
+    our @pbs_ops = qw/cmd=s throttle=i directives=s blocksize=i J=s M=s/;
+    push @ops, @pbs_ops;
+
+    # This makes single-char options case-sensitive
+    Getopt::Long::Configure('no_ignore_case');
+    my %ops;
+    my $result = GetOptions(\%ops, @ops);
+
+    # Don't submit PBS jobs when:
+    # Already running in a PBS job (i.e. don't recurse)
+    # Only options given, but no arguments
+    # No permission to submit to PBS
+    if (   defined $ENV{PBS_ENVIRONMENT}
+        || @ARGV == 0
+        || !can_connect())
+    {
+
+        # Cleanup PBS-specific options
+        %ops = _purge_ops(%ops);
+        push @ARGV, map { '-' . $_ => $ops{$_} } keys %ops;
+        return;
+    }
+
+    my @jobids = qsub(%ops);
+    exit unless @ARGV;
+}
+
+# Ability to connect to PBS server
+sub can_connect {
+    our $qstat;
+    $qstat ||= IPC::Cmd::can_run('qstat') or return;
+    our $connected;
+
+    #TODO DES use IPC:Cmd::run() here to set a 5 second timeout on the check
+    $connected ||= system("$qstat >/dev/null 2>/dev/null") == 0;
+    return $connected;
+}
+
 sub _block {
     my ($blocksize) = @_;
     my @block = map { shift @::ARGV } 1 .. $blocksize;
@@ -199,17 +242,6 @@ sub _njobs {
     @jobs = grep {/\.${server}/} @jobs;
     my $njobs = @jobs;
     return $njobs;
-}
-
-# Ability to connect to PBS server
-sub can_connect {
-    our $qstat;
-    $qstat ||= IPC::Cmd::can_run('qstat') or return;
-    our $connected;
-
-    #TODO DES use IPC:Cmd::run() here to set a 5 second timeout on the check
-    $connected ||= system("$qstat >/dev/null 2>/dev/null") == 0;
-    return $connected;
 }
 
 # Write and submit one PBS job script
@@ -302,40 +334,6 @@ sub _submit {
     }
 
 }    # _submit
-
-# Called when the module is loaded, will exit the process if successful
-use Data::Dump qw/dump/;
-
-sub import {
-    my ($self, @ops) = @_;
-
-    # Parse out PBS-specific submission ops too
-    our @pbs_ops = qw/cmd=s throttle=i directives=s blocksize=i J=s M=s/;
-    push @ops, @pbs_ops;
-
-    # This makes single-char options case-sensitive
-    Getopt::Long::Configure('no_ignore_case');
-    my %ops;
-    my $result = GetOptions(\%ops, @ops);
-
-    # Don't submit PBS jobs when:
-    # Already running in a PBS job (i.e. don't recurse)
-    # Only options given, but no arguments
-    # No permission to submit to PBS
-    if (   defined $ENV{PBS_ENVIRONMENT}
-        || @ARGV == 0
-        || !can_connect())
-    {
-
-        # Cleanup PBS-specific options
-        %ops = _purge_ops(%ops);
-        push @ARGV, map { '-' . $_ => $ops{$_} } keys %ops;
-        return;
-    }
-
-    my @jobids = qsub(%ops);
-    exit unless @ARGV;
-}
 
 sub _purge_ops {
     my %ops = @_;
