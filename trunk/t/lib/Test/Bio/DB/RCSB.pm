@@ -5,11 +5,17 @@ use Test::SBG::Tools;
 
 use LWP::UserAgent;
 
+# Any 'setup' is run once before every other test.
+# You can put any code in here.
+# I'm using it to create a fresh object each time
+# I save that object, over-writing any previous object
 sub setup : Test(setup) {
     my ($self) = @_;
     my $rcsb = Bio::DB::RCSB->new;
     $self->{rcsb} = $rcsb;
 }
+
+# Now each of the following tests are completely independent. 
 
 sub _rcsb : Test {
     my ($self) = @_;
