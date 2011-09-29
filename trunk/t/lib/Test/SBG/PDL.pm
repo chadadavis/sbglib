@@ -43,8 +43,8 @@ use warnings;
 
 use base qw(Exporter);
 use Test::More;
-use PDL::Core qw/approx/;
-use PDL::Ufunc qw/all any/;
+use PDL::Core;
+use PDL::Ufunc qw/any/;
 
 our @EXPORT_OK = qw(pdl_approx pdl_equiv);
 
