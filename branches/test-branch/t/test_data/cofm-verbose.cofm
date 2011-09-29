@@ -1,0 +1,33 @@
+Reading coordinates...
+Domain   1 /net/netfile1/ds-russell/pdb/e7/pdb1e79.ent.gz 1e79A
+        chain A 492 CAs =>  492 CAs in total
+Applying the transformation... 
+   1.00000    0.00000    0.00000             0.00000 
+   0.00000    1.00000    0.00000             0.00000 
+   0.00000    0.00000    1.00000             0.00000 
+      ...to these coordinates.
+Domain   2 /net/netfile1/ds-russell/pdb/g3/pdb1g3n.ent.gz 1g3nA
+        chain A 293 CAs =>  293 CAs in total
+Applying the transformation... 
+   1.00000    0.00000    0.00000             0.00000 
+   0.00000    1.00000    0.00000             0.00000 
+   0.00000    0.00000    1.00000             0.00000 
+      ...to these coordinates.
+
+
+REMARK Domain   1 Id      1e79A N = 492 Rg =  25.897 Rmax =     nan Ro   =  103.654   76.436   36.951
+ATOM      0  CA  ALA A   0     103.654  76.436  36.951  1.00  0.00
+ATOM      1  CA  ALA A   1     108.654  76.436  36.951  1.00  4.00
+ATOM      1  CA  ALA A   1      98.654  76.436  36.951  1.00  0.00
+ATOM      2  CA  ALA A   2     103.654  81.436  36.951  1.00 12.00
+ATOM      2  CA  ALA A   2     103.654  71.436  36.951  1.00  0.00
+ATOM      3  CA  ALA A   3     103.654  76.436  41.951  1.00 20.00
+ATOM      3  CA  ALA A   3     103.654  76.436  31.951  1.00  0.00
+REMARK Domain   2 Id      1g3nA N = 293 Rg =  20.352 Rmax =     nan Ro   =   34.809   60.229   46.352
+ATOM      0  CA  ALA A   0      34.809  60.229  46.352  1.00  0.00
+ATOM      1  CA  ALA A   1      39.809  60.229  46.352  1.00  4.00
+ATOM      1  CA  ALA A   1      29.809  60.229  46.352  1.00  0.00
+ATOM      2  CA  ALA A   2      34.809  65.229  46.352  1.00 12.00
+ATOM      2  CA  ALA A   2      34.809  55.229  46.352  1.00  0.00
+ATOM      3  CA  ALA A   3      34.809  60.229  51.352  1.00 20.00
+ATOM      3  CA  ALA A   3      34.809  60.229  41.352  1.00  0.00
