@@ -96,9 +96,8 @@ L<PBS::Status>.
 package PBS::ARGV;
 use strict;
 use warnings;
-
-use vars qw($VERSION);
-$VERSION = 0.01;
+our $VERSION = 20110929;
+use 5.008;
 
 use Carp;
 use File::Spec;

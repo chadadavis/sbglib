@@ -29,7 +29,7 @@ it under the same terms as Perl itself.
 
 =cut
 
-use v5.8;
+use 5.008;
 
 our $VERSION = 20110928;
 

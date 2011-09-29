@@ -20,6 +20,10 @@ L<Graph::Traversal>
 =cut
 
 package Graph::Traversal::GreedyEdges;
+use strict;
+use warnings;
+use 5.008;
+
 use Moose;
 use Moose::Autobox;
 
