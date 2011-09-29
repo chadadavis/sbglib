@@ -1,25 +1,38 @@
 #!/usr/bin/env perl
 
-=head1 NAME
-
-SBG::U::Run
-
 =head1 SYNOPSIS
 
+ use SBG::U::Run qw/getoptions/;
+
+ my %ops = getoptions();
+ 
+ # Everything else is left in @ARGV
+ for my $file (@ARGV) { 
+     my $result = $ops{debug} ? method_with_debuggin() : default_method();
+ }
 
 
 =head1 DESCRIPTION
 
-Utilities for executables, including file locking, logging, option processing
+Utilities for executables, including file locking, logging, option processing.
+
+Default options that are parsed: (using L<Getopt::Long> syntax)
+
+ help|h debug|d=i cache|c=i loglevel|l=s logfile|f=s logdir=s
 
 =head1 SEE ALSO
 
+=over 4
+
+=item * L<Getopt::Long>
+
+=item * L<MooseX::Runnable>
+
+=back
+
 =head1 TODO
 
-Should be a Role
-
-See also L<MooseX::Runnable>
-
+Should be a Role, e.g. L<MooseX::Runnable>
 
 =cut
 
@@ -44,17 +57,6 @@ use File::Slurp qw/slurp/;
 use SBG::U::Log;
 use Log::Any qw/$log/;
 use Log::Any::Adapter;
-
-
-=head2 start_lock
-
- Function: 
- Example : 
- Returns : 
- Args    : 
-
-
-=cut
 
 sub start_lock {
     my ($basepath) = @_;
@@ -89,16 +91,6 @@ sub start_lock {
     return $lock;
 }
 
-=head2 end_lock
-
- Function: 
- Example : 
- Returns : 
- Args    : 
-
-
-=cut
-
 sub end_lock {
     my ($lock, $result) = @_;
     return unless $lock && $lock->{file};
@@ -113,11 +105,6 @@ sub end_lock {
 }
 
 =head2 frac_of
-
- Function: 
- Example : 
- Returns : 
- Args    : 
 
 Convert percentage to literal amount.
 
@@ -138,18 +125,17 @@ sub frac_of {
     return $abs;
 }
 
-=head2 getoptions
-
- Function: 
- Example : 
- Returns : 
- Args    : 
-
-
-=cut
 
 our @generic_options =
     qw/help|h debug|d=i cache|c=i loglevel|l=s logfile|f=s logdir=s/;
+
+=head2 getoptions
+
+Gets default options out of C<@ARGV> 
+
+Note, this will modify your C<@ARGV>
+
+=cut
 
 sub getoptions {
     my (@ops) = @_;
