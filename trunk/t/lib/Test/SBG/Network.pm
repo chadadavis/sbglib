@@ -5,6 +5,7 @@ use Test::SBG::Tools;
 
 sub test_it : Tests {
     local $TODO = "Not yet tested";
+    ok 0;
 }
 
 1;
