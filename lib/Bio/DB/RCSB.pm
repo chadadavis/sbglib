@@ -39,12 +39,16 @@ methods. Internal methods are usually preceded with a _
 # Let the code begin...
 
 package Bio::DB::RCSB;
+use strict;
+use warnings;
+our $VERSION = 20110929;
+use 5.008;
+
 use Moose;
 
 # NB necessary to have Moose::Object first here, before other parents
 extends qw/Moose::Object Bio::Root::Root/;
 
-our $MODVERSION = '0.0.1';
 
 use LWP::UserAgent;
 

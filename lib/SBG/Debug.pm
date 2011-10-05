@@ -11,7 +11,7 @@ SBG::Debug - Enable debugging for common modules
  SBG::Debug->debug(1); # now it's on
  SBG::Debug->debug(0); # now it's off
 
-A simple interface to set/unset common debugging options:
+A simple interface to set/unset common debugging options. It sets these:
 
  $ENV{SBGDEBUG} = 1;          # Env. var. for SBG applications
  $Carp::Verbose = 1;          # Print stack trace on carp or cluck
@@ -26,14 +26,7 @@ Since this manipulates global variables from many packages, it's not
 thread-safe. It enables these debugging options for every module in your
 program.
 
-=head1 TODO
-
-Check Getopt for --debug
- 
-Set log level for L<SBG::Log>
-    (TODO BUG but that might create a new log). 
-
-Disable caching for L<SBG::Cache>
+=back
 
 =cut
 
@@ -66,7 +59,12 @@ sub _check {
 
 =head2 debug 
 
-Get or set C<debug()> mode
+Get or set C<debug()> mode. If the argument is undefined, debug mode will not be disabled. This is convenient when you want to do:
+
+ SBG::Debug->debug($ops{debug}); 
+
+You don't have to worry about turning it off accidentally if it was already
+disabled excplicitly previously.
 
 =cut
 

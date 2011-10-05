@@ -69,6 +69,7 @@ our @EXPORT_OK = qw(
     lcp
     intersection
     union
+    difference
     pairs
     pairs2
     reorder
@@ -79,7 +80,6 @@ our @EXPORT_OK = qw(
     mapcolor
     mapcolors
     interval_overlap
-    cartesian_product
     between
 );
 
@@ -230,6 +230,7 @@ sub sequence {
     return wantarray ? @a : \@a;
 }
 
+# TODO prefer Set::Scalar
 # Input an array of arrays, i.e. intersection([1..5],[3..7],...)
 # Works with any numbers of arrays
 # Objects are compared with string equality,
@@ -266,11 +267,25 @@ sub intersection {
 
 }    # intersection
 
+# TODO prefer Set::Scalar
 # Each element in the list(s) will be represented just once, unsorted
 sub union {
     my @a = uniq(flatten(@_));
     return wantarray ? @a : \@a;
 }
+
+
+# TODO prefer Set::Scalar
+# Set difference: returns the elemens of @$a that aren't in @$b
+sub difference {
+    my ($a, $b) = @_;
+    grep { 
+        my $a_ = $_;
+        # True when this $a elem equals none of the $b elems in $b
+        @$b == grep { $a_ ne $_ } @$b 
+    } @$a;
+}
+
 
 # All one-directional paired combinations of a list:
 # pairs(a,b,c) => ([a,b],[a,c],[b,c])

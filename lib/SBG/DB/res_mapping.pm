@@ -14,6 +14,8 @@
 
 =head1 SEE ALSO
 
+SIFTS : 
+ http://www.russelllab.org/privatewiki/index.php/Precomputed_PDB_Data#SIFTS
 
 
 =cut

@@ -27,12 +27,11 @@ dtabase host. E.g.
  database=sales_reports
  password=ilikecake
 
-For documentation, see
+For documentation of the configuration file, see
 
  http://dev.mysql.com/doc/refman/5.1/en/option-files.html
 
-Caching is disabled with SBGDEBUG is defined in the environment. See
-L<SBG::Debug> .
+Connection caching is disabled when in debug mode. See L<SBG::Debug> .
 
 =head1 SEE ALSO
 
@@ -41,6 +40,10 @@ L<SBG::Debug> .
 =item * L<DBI>
 
 =item * L<DBD::mysql>
+
+=item * http://dev.mysql.com/doc/refman/5.1/en/option-files.html
+
+=item * L<SBG::Debug>
 
 =back
 
@@ -59,10 +62,10 @@ use DBI;
 use DBD::mysql;
 # For testing the port before connecting;
 use Net::Ping;
-
+# To check for debug() mode (to disable connection caching)
 use SBG::Debug qw(debug);
 
-our $DEFAULT_SERVER = 'russelllab.org';
+
 # Upon max_connections, idle time doubles each try, this is the max
 # The sum up to this point amounts to about 4.5 hours, before an exception
 my  $MAX_WAIT       = 2**16;
@@ -126,7 +129,7 @@ sub connect {
 }
 
 
-=head2
+=head2 ping
 
 Check if a MySQL server is listing at the given host
 
@@ -135,6 +138,9 @@ Check if a MySQL server is listing at the given host
  }
 
 =cut
+
+# Only used by ping()
+my $DEFAULT_SERVER = 'russelllab.org';
 
 sub ping {
     my ($host) = @_;
@@ -145,7 +151,7 @@ sub ping {
 }
 
 
-=head2 
+=head2 dsn 
 
 Returns the MySQL connection string with useful default options
 
