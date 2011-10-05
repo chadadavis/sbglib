@@ -60,7 +60,7 @@ use Bio::Tools::Run::Alignment::Clustalw;
 
 use SBG::Types qw/$pdb41/;
 use SBG::U::List
-    qw/interval_overlap intersection mean min max median sum flatten swap between cartesian_product/;
+    qw/interval_overlap intersection mean min max median sum flatten swap between /;
 use SBG::U::RMSD;
 use SBG::U::iRMSD;                # qw/irmsd/;
 use SBG::STAMP;                   # qw/superposition/
