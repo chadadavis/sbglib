@@ -18,6 +18,14 @@ Note, that much of this is already provided by L<IO::All>
 
 L<SBG::IO> generic implementation
 
+=head1 BUGS
+
+To have a file created (for writing), you need to provide the mode with the
+file:
+
+ my $io = SBG::DomainIO::pdb(file => '>some/file.pdb');
+
+
 =head1 TODO
 
 
