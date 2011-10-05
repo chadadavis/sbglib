@@ -63,6 +63,12 @@ is_deeply(\@un, [ 1 .. 15 ], "union()");
 my @in = nsort intersection(\@a, \@b, \@c);
 is_deeply(\@in, [ 7 .. 10 ], "intersection()");
 
+{
+    # TODO test with common elements and without, prefer to use Set::Scalar
+    local $TODO = "Test difference()";
+    ok 0;
+}
+
 # my @strings = qw(a.2.4.1-2 a.234 a.2.4.3-1 a.2.1.5-2 a.2.1);
 my @strings = qw(a.2.4.1-2 a.234.5.6.8);
 
