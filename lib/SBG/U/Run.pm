@@ -8,9 +8,13 @@
  
  # Everything else is left in @ARGV
  for my $file (@ARGV) { 
-     my $result = $ops{debug} ? method_with_debuggin() : default_method();
+     my $result = $ops{debug} ? method_with_debugging() : default_method();
  }
 
+ # Of course in this case, C<--debug> also turns on L<SBG::Debug> 
+ # So, you could just check:
+ use SBG::Debug qw(debug)
+ my $result = debug() ? method_with_debugging() : default_method();
 
 =head1 DESCRIPTION
 
