@@ -50,7 +50,17 @@ The generator objects provided must implement the method B<next()>
 
 =head1 SEE ALSO
 
-L<Set::CrossProduct> , L<Algorithm::Combinatorics>
+=over 4
+
+=item * L<Set::CrossProduct>
+
+=item * L<Algorithm::Combinatorics>
+
+=item * L<Set::Scalar>::C<cartesian_product_iterator>
+
+=back
+
+
 
 Both of these can return an iterator, but L<Set::CrossProduct> does not accept
 iterators as input, hence this module.

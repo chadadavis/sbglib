@@ -139,6 +139,8 @@ Apply this transform to some point, or even a matrix (affine multiplication)
 NB You do not need to transpose() row vectors. This method does that already,
 and transposes them back to row vectors before returning them.
 
+TODO take a list of objects to transform
+
 =cut
 
 sub apply {
