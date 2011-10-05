@@ -10,6 +10,9 @@ SBG::Run::qcons - Wrapper for running B<Qcontacts> (residue contacts)
 
 =head1 DESCRIPTION
 
+Because we use STAMP to write the domains, they will produce gunzipped files.
+Also, any transformations will be respected.
+
 =head1 SEE ALSO
 
 L<SBG::DomainIO::pdb>

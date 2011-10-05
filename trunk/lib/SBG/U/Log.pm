@@ -111,6 +111,8 @@ use Log::Any qw/$log/;
 use Log::Any::Adapter;
 use Path::Class;
 
+use SBG::Debug; 
+
 sub new {
     my ($self, %ops) = @_;
     my ($name, $level, $file) = map { $ops{$_} } qw/name level file/;
@@ -118,6 +120,7 @@ sub new {
     $name = sprintf "%10s", $name;
     $file  ||= '-';
     $level ||= 'WARN';
+    if (SBG::Debug::debug) { $level = 'DEBUG'; }
     $level = uc $level;
 
     my $h = `hostname --short`;

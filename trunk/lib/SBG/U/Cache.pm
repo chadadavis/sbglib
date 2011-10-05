@@ -2,17 +2,26 @@
 
 =head1 NAME
 
-SBG::U::Cache -
+SBG::U::Cache - Simple wrapper for L<CHI> caching framework
 
 =head1 SYNOPSIS
 
 
 =head1 DESCRIPTION
 
+Caching will be disabled when in debug mode. See L<SBG::Debug> .
+
+Assumes that an empty ArrayRef (C<[]>) implies a negative cache hit.
+
+Cache claims to even work between concurrent processes!
 
 =head1 SEE ALSO
 
-L<CHI>
+=over 4
+
+=item * L<CHI>
+
+=back
 
 =cut
 
@@ -23,31 +32,31 @@ use warnings;
 use base qw/Exporter/;
 our @EXPORT_OK = qw/cache cache_get cache_set/;
 
-use strict;
-use warnings;
 use File::Spec;
 use Log::Any qw/$log/;
 use CHI;
 
 use SBG::Debug;
 
-# Cache cache  ;-)
-our %cache_hash;
 
 =head2 cache
 
- Function: 
- Example : 
- Returns : 
- Args    : 
+Get a handle to cache, by name:
 
+ my $cache = cache('myapplication');
+
+You generally don't need to use this directly. Just pass the name to
+C<cache_get> and C<cache_set> .
 
 =cut
 
+# Cache cache  ;-)
+my %cache_hash;
+my $arch;
+
 sub cache {
     my ($name) = @_;
-    our %cache_hash;
-    our $arch;
+
     unless (defined $arch) { $arch = `uname -m`; chomp $arch; }
 
     my $base = $ENV{CACHEDIR};
@@ -76,12 +85,9 @@ sub cache {
 
 =head2 cache_get
 
- Function: 
- Example : 
- Returns : Re-retrieved object from cache
- Args    : [] implies negative caching
+Fetch item from cache:
 
-Cache claims to even work between concurrent processes!
+ my $obj = cache_get('myapplication', 'some_lookup_key');
 
 =cut
 
@@ -112,12 +118,10 @@ sub cache_get {
 
 =head2 cache_set
 
- Function: 
- Example : 
- Returns : Re-retrieved object from cache
- Args    : [] implies negative caching
-
-Cache claims to even work between concurrent processes!
+Set a cache key:
+ 
+ cache_set('myapplication', 'some_key_id', $the_thing);
+ # $the_thing will be serialized
 
 =cut
 

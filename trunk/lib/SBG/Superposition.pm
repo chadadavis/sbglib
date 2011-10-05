@@ -147,17 +147,13 @@ sub transform {
 
 =head2 apply
 
- Function: 
- Example : 
- Returns : 
- Args    : 
-
+TODO take a list of objects to transform
 
 =cut
 
 sub apply {
-    my ($self, @objs) = @_;
-    $self->transformation->apply(@objs)
+    my ($self, $obj) = @_;
+    $self->transformation->apply($obj)
 
 }    # apply
 

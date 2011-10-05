@@ -41,11 +41,12 @@ methods. Internal methods are usually preceded with a _
 
 package Bio::DB::SGD;
 use strict;
+use warnings;
+our $VERSION = 20110929;
+use 5.008;
 
 # This ultimately inherits from Bio::Root::Root
 use base qw/Bio::DB::WebDBSeqI/;
-
-our $MODVERSION = '0.0.1';
 
 use LWP::Simple;
 use IO::String;
