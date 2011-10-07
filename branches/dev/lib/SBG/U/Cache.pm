@@ -38,6 +38,9 @@ use CHI;
 
 use SBG::Debug;
 
+BEGIN {
+    warn __PACKAGE__ , ' is deprecated in favor of SBG::Cache';
+}
 
 =head2 cache
 
