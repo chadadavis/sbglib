@@ -46,6 +46,10 @@ Note, due to a bug in Blast's processing of the -e (e-value) parameter for certa
 
 L<SBG::SearchI>
 
+=head1 TODO
+
+Call L<SBG::Run::Blast> 
+
 =cut
 
 use Bio::Search::Hit::BlastHit;
@@ -62,7 +66,7 @@ package SBG::Run::PairedBlast;
 use Moose;
 use Moose::Autobox;
 
-# Also a functional interface
+# Also a functional interface (TODO belongs in SBG::U::Map)
 use base qw/Exporter/;
 our @EXPORT    = qw//;
 our @EXPORT_OK = qw/gi2pdbid/;
