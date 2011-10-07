@@ -4,10 +4,9 @@
 
 SBG::U::Cache - Simple wrapper for L<CHI> caching framework
 
-=head1 SYNOPSIS
-
-
 =head1 DESCRIPTION
+
+This module is now deprecated in favor of L<SBG::Cache>
 
 Caching will be disabled when in debug mode. See L<SBG::Debug> .
 
