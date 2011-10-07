@@ -88,7 +88,7 @@ use CHI;
 use Config;
 
 use SBG::Debug;
-use Devel::Comments;
+#use Devel::Comments;
 
 my $arch = $Config{myarchname};
 

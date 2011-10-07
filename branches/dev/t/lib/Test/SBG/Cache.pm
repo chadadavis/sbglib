@@ -79,3 +79,5 @@ sub arch_specific : Tests {
     $cache2->set('key', 'value');
     isnt $cache1->get('key'), $cache2->get('key');
 }
+
+1;

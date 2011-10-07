@@ -50,7 +50,6 @@ use Bio::Tools::Run::Alignment::Clustalw;
 
 use SBG::Node;
 use SBG::U::List qw/pairs/;
-use SBG::U::Cache qw/cache/;
 
 =head2 new
 
