@@ -35,6 +35,7 @@ use Moose::Autobox;
 use Log::Any qw/$log/;
 
 use SBG::Types qw/$pdb41/;
+use SBG::Cache qw/cache/;
 
 =head2 pdbc
 
@@ -51,13 +52,16 @@ B<pdbc> must be in your PATH
 sub pdbc {
     my ($str) = @_;
     $log->debug($str);
-    our %cache;
+    my $cache = cache();
 
     my ($pdb, $chains) = $str =~ /^(\d\w{3})(.*)?/;
 
     # Get struture for entire PDB entry, if not already fetched
-    $cache{$pdb} ||= _run($pdb);
-    my $cached = $cache{$pdb};
+    my $cached = $cache->get($pdb);
+    if (! defined $cached) {
+        $cached = _run($pdb);
+        $cache->set($pdb, $cached);
+    }
     return $cached unless $chains;
 
     # But only provide chain information for given chains

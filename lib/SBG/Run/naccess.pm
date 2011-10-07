@@ -33,9 +33,6 @@ use SBG::U::List qw/flatten/;
 
 use SBG::DomainIO::pdb;
 
-#use SBG::U::Cache qw/cache_get cache_set/;
-
-our $cachename = 'sbgnaccess';
 
 =head2 sas_atoms
 

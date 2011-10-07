@@ -28,8 +28,7 @@ use Bio::SeqIO;
 use SBG::DomainIO::stamp;
 use IO::String;
 
-use SBG::U::Cache qw/cache_get cache_set/;
-our $cachename = 'sbgpdbseq';
+use SBG::Cache qw/cache/;
 
 =head2 pdbseq
 
@@ -45,67 +44,23 @@ B<pdbseq> must be in your PATH
 
 sub pdbseq {
     my (@doms) = @_;
-
-    my @seqs = map { _cache($_) } @doms;
-
-    return unless @seqs;
+    my @seqs;
+    my $cache = cache();
+    for my $dom (@doms) {
+        my $key   = $dom->id();
+        my $seq   = $cache->get($key);
+        if (! defined $seq) {
+            # Cache miss, run external program
+            $seq = _run($dom);
+            $seq ||= [];
+            $cache->set($key, $seq);
+        }
+        if (ref($seq) ne 'ARRAY') { push @seqs, $seq; }
+    }
+    # Assum we won't be called in scalar context with multiple inputs
     return wantarray ? @seqs : $seqs[0];
 
 }    # pdbseq
-
-=head2 _cache
-
- Function: 
- Example : 
- Returns : 
- Args    : 
-
-# TODO needs to be refactored into SBG::U::Cache since every module does this
-
-=cut
-
-sub _cache {
-    my ($dom) = @_;
-
-    our %cache;
-
-    # Caching on by default
-    #     my $cache = 1 unless defined $ops{cache};
-    my $cache = 1;
-    my $key   = $dom->id();
-    my $seq   = cache_get($cachename, $key) if $cache;
-    if (defined $seq) {
-
-        # [] is the marker for a negative cache entry
-        return if ref($seq) eq 'ARRAY';
-        return $seq;
-    }
-
-    # Cache miss, run external program
-    $seq = _run($dom);
-
-    unless ($seq) {
-
-        # failed, set negative cache entry
-        cache_set($cachename, $key, []) if $cache;
-        return;
-    }
-
-    cache_set($cachename, $key, $seq) if $cache;
-    return $seq;
-
-}    # _cache
-
-=head2 _run
-
- Function: 
- Example : 
- Returns : 
- Args    : 
-
-
-
-=cut
 
 sub _run {
     my (@doms) = @_;
@@ -126,6 +81,6 @@ sub _run {
     return unless @seqs;
     return wantarray ? @seqs : $seqs[0];
 
-}    # pdbseq
+}
 
 1;
