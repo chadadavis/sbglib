@@ -25,15 +25,13 @@ our @EXPORT_OK = qw/superposition/;
 
 use Log::Any qw/$log/;
 
-use SBG::U::Cache qw/cache_get cache_set/;
+use SBG::Cache qw/cache/;
 use SBG::STAMP;
 use SBG::DB::trans;
 
-our $cachename = 'sbgsuperposition';
 
 sub superposition_native {
     my ($fromdom, $ontodom, $ops) = @_;
-    my $cachekey = "${fromdom}=>${ontodom}";
 
     my $fromfile = $fromdom->file;
     my $ontofile = $ontodom->file;
@@ -47,8 +45,10 @@ sub superposition_native {
     my $superpos;
 
     # Try cache
+    my $cachekey = "${fromdom}=>${ontodom}";
+    my $cache = cache();
     unless (defined $superpos) {
-        $superpos = cache_get($cachename, $cachekey);
+        $superpos = $cache->get($cachekey);
 
         # Negative cache? (i.e. superpostion previously found to be impossible)
         return if ref($superpos) eq 'ARRAY';
@@ -71,17 +71,17 @@ sub superposition_native {
 
     my $invkey = "${ontodom}=>${fromdom}";
     if (defined $superpos) {
-        cache_set($cachename, $cachekey, $superpos);
+        $cache->set($cachekey, $superpos);
 
         # Also save the inverse, since we already know it implicitly
-        cache_set($cachename, $invkey, $superpos->inverse);
+        $cache->set($invkey, $superpos->inverse);
         return $superpos;
     }
     else {
 
         # Negative caching
-        cache_set($cachename, $cachekey, []);
-        cache_set($cachename, $invkey,   []);
+        $cache->set($cachekey, []);
+        $cache->set($invkey,   []);
         return;
     }
 
