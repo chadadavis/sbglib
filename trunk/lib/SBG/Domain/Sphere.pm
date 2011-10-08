@@ -87,6 +87,9 @@ has 'radius' => (
     default => 0,
 );
 
+has 'radius_max' => (is => 'rw', isa => 'Num');
+
+
 =head2 _hair_len
 
  Function: 

@@ -49,13 +49,12 @@ use File::Temp qw/tempfile/;
 use SBG::Domain::Sphere;
 use SBG::DomainIO::stamp;
 use SBG::DomainIO::cofm;
-use SBG::U::Cache qw/cache_get cache_set/;
+use SBG::Cache qw/cache/;
 
 # TODO DES OO (base on Bio::Tools::Run::Wrapper)
 # cofm binary (should be in PATH)
 my $cofm = 'cofm';
 
-my $cachename = 'sbgcofm';
 
 =head2 cofm
 
@@ -80,12 +79,10 @@ Uses parser from L<SBG::DomainIO::cofm>
 sub cofm {
     my ($dom, %ops) = @_;
 
-    # Caching on by default
-    my $cache;
-    $cache = 1 unless defined $ops{cache};
+    my $cache = cache();
     my $key = _hash($dom);
     my $sphere;
-    $sphere = cache_get($cachename, $key) if $cache;
+    $sphere = $cache->get($key);
     if (defined $sphere) {
 
         # [] is the marker for a negative cache entry
@@ -98,12 +95,12 @@ sub cofm {
     unless ($sphere) {
 
         # cofm failed, set negative cache entry
-        cache_set($cachename, $key, []) if $cache;
+        $cache->set($key, []);
         return;
     }
 
     # Success, positive cache
-    cache_set($cachename, $key, $sphere) if $cache;
+    $cache->set($key, $sphere);
 
     return $sphere;
 
