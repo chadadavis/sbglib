@@ -37,6 +37,9 @@ use SBG::DomainIO::pdb;
 use SBG::Interaction;
 use SBG::Model;
 use SBG::U::List qw/pairs flatten/;
+use SBG::Cache qw(cache);
+
+#use Devel::Comments;
 
 =head2 qcons
 
@@ -66,16 +69,25 @@ sub qcons {
     }
     my $ndoms = @doms;
 
+    my $cache = cache();
     my $contacts = [];
     foreach my $pair (pairs(@doms)) {
-        my $chains = $pair->map(sub { $domainmap{$_} });
-        $log->debug("Running QCons on pair @$pair");
+        my $key = join '--', map { $_->hash } @$pair;
+        ### $key
+        my $res_contacts = $cache->get($key);
+        ### cached : $res_contacts
 
-        my $qcons =
-            Bio::Tools::Run::QCons->new(file => $file, chains => $chains);
+        if (! defined $res_contacts) {
+            $log->debug("Running QCons on pair @$pair");
+            my $chains = $pair->map(sub { $domainmap{$_} });
+            my $qcons =
+                Bio::Tools::Run::QCons->new(file => $file, chains => $chains);
+            # Summarize by residue (rather than by atom)
+            $res_contacts = $qcons->residue_contacts;
+            $cache->set($key, $res_contacts);
+            ### caching : $res_contacts
+        }
 
-        # Summarize by residue (rather than by atom)
-        my $res_contacts = $qcons->residue_contacts;
         next unless ($res_contacts->length);
 
         # Count residues in contact, by chain

@@ -625,6 +625,22 @@ sub uniqueid {
     return $str;
 }
 
+=head2 hash
+
+Unlike C<uniquid> this should be more persistent, allowing comparison of
+Domains even after they've been serialized.
+
+=cut
+
+sub hash {
+    my ($dom)  = @_;
+    my $domstr = "$dom";
+    my $trans  = $dom->transformation;
+    my $transstr = $trans ? md5_base64("$trans") : '';
+    $domstr .= '(' . $transstr . ')' if $transstr;
+    return $domstr;
+}
+
 =head2 label
 
 A user-defined label, which might not be defined, and might not be unique
