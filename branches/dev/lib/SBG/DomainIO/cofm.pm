@@ -439,6 +439,7 @@ sub _read_header {
             my $dom = $doms->[ $index - 1 ];
             $dom->length($fields{N});
             $dom->radius($fields{Rg});
+            $dom->radius_max($fields{Rmax});
             $dom->assembly($fields{Assembly}) if defined $fields{Assembly};
             $dom->model($fields{Model})       if defined $fields{Model};
             $dom->classification($fields{Classification})
