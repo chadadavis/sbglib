@@ -201,7 +201,7 @@ sub write_body {
             next if $interactions->{$iactionkey};
 
             my $source = $iaction->source || '';
-            my $penwidth = maprange($iaction->weight, 1, 1000, 1, 50);
+            my $penwidth = maprange($iaction->weight, 1, 1_000, 1, 50);
             my $url = "${tdrurl}?id1=${u}&id2=${v}";
 
             my $scores = $iaction->scores;
@@ -210,7 +210,7 @@ sub write_body {
 
                 # Gradient from black to middle grey
                 $color =
-                    mapcolors($scores->{docking}, 570, 4076, '#000000',
+                    mapcolors($scores->{docking}, 570, 4_076, '#000000',
                     '#cccccc');
             }
             else {
