@@ -534,7 +534,7 @@ sub _build_scores {
 
     # For each score less than 2000, penalize by the diff/1000
     # E.g. each score of 1750 is penalized by (2000-1750)/1000 => .25
-    $stats->{dockpenalty} = $docked->map(sub { (2000 - $_) / 1000.0 })->sum;
+    $stats->{dockpenalty} = $docked->map(sub { (2_000 - $_) / 1000.0 })->sum;
 
     # Interprets, when available
     my $ipts = $mias->map(sub { $_->scores->at('interpretsz') });
@@ -1635,7 +1635,7 @@ sub rmsd_class {
         # Quit if we're not improving
         # Start with the first RMSD as a refernce
         $ref_rmsd ||= $bestrmsd;
-        my $nsteps = 1000;
+        my $nsteps = 1_000;
         my $thresh = 0.01;    # 1%
         if (0 == $icart % $nsteps) {
             my $improved = $ref_rmsd - $bestrmsd;
@@ -1814,7 +1814,7 @@ sub rmsd_mapping_backbone {
 
     # Least squares fit of all coords in each complex
     # Maximum 1000 refinement steps (unless it converges sooner)
-    my $trans = SBG::U::RMSD::superpose($selfcoords, $othercoords, 1000);
+    my $trans = SBG::U::RMSD::superpose($selfcoords, $othercoords, 1_000);
 
     # Now it has been transformed already. Can measure RMSD of new coords
     my $rmsd = SBG::U::RMSD::rmsd($selfcoords, $othercoords);
