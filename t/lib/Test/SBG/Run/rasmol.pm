@@ -26,4 +26,4 @@ sub pdb2img : Test {
 
 }
 
-1;
+
