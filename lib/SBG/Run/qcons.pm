@@ -24,6 +24,9 @@ created. Finally, Qcons does not process gzipped files. So, even if a
 structure hasn't been transformed or truncated, it at least needs to be
 unzipped.
 
+Because we use STAMP to write the domains, they will produce gunzipped files.
+Also, any transformations will be respected.
+
 =head1 SEE ALSO
 
 =over 4

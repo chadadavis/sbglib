@@ -1,6 +1,6 @@
 
-This repository houses code common to Bioinformatics-related developement in the
-SBG (Structural Bioinformatics Group) of Prof. Russell
+This distribution contains code common to Bioinformatics-related developement
+in the SBG (Structural Bioinformatics Group) of Prof. Rob Russell
 
 DOCUMENTATION
 
@@ -10,7 +10,6 @@ Run:
 
  perldoc lib/SBG/Tutorial.pm
 
-
 INSTALLATION
 
 To install this module, run the following commands:
@@ -19,15 +18,17 @@ To install this module, run the following commands:
  make test
  make install
 
+HOME PAGE
+
+ https://sbglib.googlecode.com
 
 EVERYTHINIG ELSE
 
  http://code.google.com/p/sbglib/
 
-
 COPYRIGHT AND LICENCE
 
-Copyright (C) 2008-2011 Chad A Davis
+Copyright (C) 2007-2011 Chad A Davis <chad.a.davis@gmail.com>
 
 This program is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.

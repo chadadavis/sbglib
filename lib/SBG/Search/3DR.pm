@@ -336,7 +336,7 @@ sub _docking {
             $iaction->scores->put('docking', $score);
 
             # Arbitary weight, to be less than the structure-based templates
-            $iaction->weight($score / 1000);
+            $iaction->weight($score / 1_000);
 
             push @interactions, $iaction;
         }
