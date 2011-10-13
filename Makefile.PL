@@ -35,21 +35,19 @@ all_from 'lib/SBG.pm';
 
 requires "Algorithm::Cluster" => "0";
 requires "Algorithm::Combinatorics" => "0";
-#requires "Bio::DB::RCSB" => "0";
+# In this distro
+#requires "Bio::DB::RCSB" => "0";  
+# Not indexed by CPAN, use the distro file path to install in cpan
 requires "Bio::Network::ProteinNet" => "0";
-requires "Bio::PrimarySeqI" => "0";
-requires "Bio::Root::IO" => "0";
+#requires "CJFIELDS/BioPerl-Network-1.006900.tar.gz" => undef;
 requires "Bio::Search::Hit::BlastHit" => "0";
 requires "Bio::Seq" => "0";
-requires "Bio::SeqFeature::Generic" => "0";
-requires "Bio::SeqIO" => "0";
 requires "Bio::Tools::Run::Alignment::Clustalw" => "0";
-requires "Bio::Tools::Run::QCons" => "0";
-requires "Bio::Tools::Run::RemoteBlast" => "0";
+# Optional
+#requires "Bio::Tools::Run::QCons" => "0"; 
 requires "Bio::Tools::Run::StandAloneBlast" => "0";
 requires "CGI" => "0";
 requires "CHI" => "0";
-requires "Capture::Tiny" => "0";
 requires "Carp" => "0";
 requires "Class::MOP::Class" => "0";
 requires "Clone" => "0";
@@ -59,7 +57,6 @@ requires "DBI" => "0";
 requires "Data::Dump" => "0";
 requires "Data::Dumper" => "0";
 requires "Digest::MD5" => "0";
-requires "English" => "0";
 requires "Fcntl" => "0";
 requires "File::Basename" => "0";
 requires "File::NFSLock" => "0";
@@ -90,9 +87,10 @@ requires "Moose" => "0";
 requires "Moose::Autobox" => "0";
 requires "Moose::Role" => "0";
 requires "Moose::Util::TypeConstraints" => "0";
-requires "Mouse" => "0";
+requires "Mouse" => "0"; # SBG::Run::qcons
 requires "Net::Ping" => "0";
-requires "PBS::ARGV" => "0";
+# In this distro
+#requires "PBS::ARGV" => "0";  
 requires "PDL" => "0";
 requires "PDL::Basic" => "0";
 requires "PDL::Core" => "0";
@@ -116,10 +114,9 @@ requires "Statistics::Lite" => "0";
 requires "Storable" => "0";
 requires "Text::ParseWords" => "0";
 requires "Tie::File" => "0";
-requires "XML::XPath" => "0";
 requires "autobox::List::Util" => "0";
 
-# Only required for testing
+# Required for testing
 test_requires 'Test::Approx' => '0';
 test_requires 'Test::Class' => '0';
 test_requires 'Test::More' => '0';
@@ -128,23 +125,26 @@ test_requires 'Data::Dumper' => '0';
 test_requires 'Data::Dump' => '0';
 
 # These STAMP binaries need to be found in the PATH
-# STAMP also requires STAMPDIR to be set to the location of pdb.directories
-requires_external_bin 'pdbc';
-requires_external_bin 'pdbseq';
-requires_external_bin 'stamp';
-requires_external_bin 'transform';
-requires_external_bin 'cofm';
-requires_external_bin 'rasmol'; # by SBG::Run::rasmol
-requires_external_bin 'blastpgp';
-requires_external_bin 'clustalw';
-requires_external_bin 'dot'; # graphviz
-requires_external_bin 'naccess';
-requires_external_bin 'Qcontacts';
+# http://code.google.com/p/bio-stamp/
+requires_external_bin 'pdbc';       # SBG::Run::pdbc
+requires_external_bin 'pdbseq';     # SBG::Run::pdbseq
+requires_external_bin 'stamp';      # SBG::STAMP
+requires_external_bin 'transform';  # SBG::DomainIO::stamp
+requires_external_bin 'cofm';       # SBG::Run::cofm
 
+# Rasmol required by SBG::Run::rasmol (only used by tests)
+#requires_external_bin 'rasmol';    # SBG::Run::rasmol
+requires_external_bin 'blastpgp';   # SBG::Run::Blast 
+requires_external_bin 'clustalw';   # SBG::Complex SBG::Network
+# dot and circo are part of GraphViz
+#requires_external_bin 'dot';       # SBG::NetworkIO::dot
+#requires_external_bin 'circo';     # SBG::NetworkIO::dot
+#requires_external_bin 'Qcontacts'; # SBG::Run::qcons
+#requires_external_bin 'naccess';   # SBG::Run::naccess
 
 # Not available on CentOS
-#requires_external_bin 'rlwrap'; # SBG::Run::vmdclashes (from vmd) 
-#requires_external_bin 'vmd'; # SBG::Run::vmdclashes
+#requires_external_bin 'rlwrap';    # SBG::Run::vmdclashes
+#requires_external_bin 'vmd';       # SBG::Run::vmdclashes
 
 
 # install_script glob('script/*.pl');
