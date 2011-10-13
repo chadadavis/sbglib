@@ -6,15 +6,45 @@ DOCUMENTATION
 
 Run:
 
- perldoc lib/SBG.pm
+ perldoc ./lib/SBG.pm
+ perldoc ./lib/SBG/Tutorial.pm
 
- perldoc lib/SBG/Tutorial.pm
+Also see the examples in ./examples/ and the tests in ./t/
+
+DEPENDENCIES
+
+STAMP (stamp, pdbc, pdbseq, transform, cofm)
+* http://code.google.com/p/bio-stamp/
+
+CPAN modules that require manual installation. Run:
+
+ cpan CJFIELDS/BioPerl-Network-1.006900.tar.gz
+
+
+Others requirements can be installed via APT (on Debian/Ubuntu)
+* blastpgp
+** sudo apt-get install blast2
+* clustalw
+** sudo apt-get install clustalw
+
+Optional: 
+* rasmol, for visualization / testing
+** sudo apt-get install rasmol
+* graphviz (circo, dot), for SBG::NetworkIO::dot 
+** sudo apt-get install graphviz
+* Qcontacts, for residue contacts
+** http://dl.dropbox.com/u/6526608/Qcontacts.tar.gz
+* QCons Perl module for Qcontacts
+** https://github.com/chadadavis/qcons/downloads
+* NACCESS, for SBG::Run::naccess
+** http://www.bioinf.manchester.ac.uk/naccess/
 
 INSTALLATION
 
 To install this module, run the following commands:
 
  perl Makefile.PL
+ make # Will install any other module dependencies
  make test
  make install
 
@@ -22,9 +52,10 @@ HOME PAGE
 
  https://sbglib.googlecode.com
 
-EVERYTHINIG ELSE
+BUGS
 
- http://code.google.com/p/sbglib/
+ http://code.google.com/p/sbglib/issues/list
+
 
 COPYRIGHT AND LICENCE
 

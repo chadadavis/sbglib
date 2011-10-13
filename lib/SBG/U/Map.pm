@@ -28,7 +28,7 @@ package SBG::U::Map;
 use strict;
 use warnings;
 use base qw/Exporter/;
-our @EXPORT_OK = qw/pdb_chain2uniprot_acc uniprot2gene tdracc2desc chain_case/;
+our @EXPORT_OK = qw/pdb_chain2uniprot_acc uniprot2gene tdracc2desc chain_case gi2pdbid/;
 
 use Carp;
 use Log::Any qw/$log/;
@@ -146,6 +146,49 @@ sub chain_case {
     return $chainid;
 
 }    # chain_case
+
+=head2 gi2pdbid
+
+Given a string like: 
+
+ pdb|13gn|A pdb|1g3n|BB
+
+returns an Array of tuples like
+
+(
+  [ '1g3n', 'A', ],
+  [ '1g3n', 'b', ],
+)
+
+Blast uses double uppercase when the PDB chain ID is lower case. Such uppercase
+double are returned as a lower-case chain ID, e.g. 'BB' => 'b'
+
+=cut
+
+my $pdbre = 'pdb\|(\d[a-zA-Z0-9]{3})\|([a-zA-Z0-9]{0,2})';
+
+sub gi2pdbid {
+    my ($gistr) = @_;
+    my @res;
+    while ($gistr =~ /$pdbre/g) {
+        my $pdb = $1;
+
+        # NB '0'is a valid chain name, but not 'true' according to Perl
+        my $chain = defined($2) ? $2 : '';
+        if (length($chain) == 2
+            && substr($chain, 0, 1) eq substr($chain, 1, 1))
+        {
+            $chain = lc substr($chain, 0, 1);
+        }
+        push @res, [ $pdb, $chain ];
+    }
+    return unless @res;
+
+    unless (wantarray) {
+        return $res[0]->[0];
+    }
+    return @res;
+}
 
 1;
 __END__

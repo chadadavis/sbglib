@@ -26,7 +26,13 @@ Since this manipulates global variables from many packages, it's not
 thread-safe. It enables these debugging options for every module in your
 program.
 
-=back
+=head2 TODO
+
+Consider disabling MySQL query cache: 
+
+ SET local query_cache_type = ON
+
+But might need to be done per database handle ...
 
 =cut
 
