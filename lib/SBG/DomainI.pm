@@ -323,11 +323,11 @@ has '_path_specs' => (
     lazy_build => 1,
 );
 
+# TODO BUG need to ask stamp where it's config is (should be printed)
 sub _build__path_specs {
     our @paths;
     return \@paths if @paths;
-    return unless $ENV{STAMPDIR};
-    my $pdb_directories = $ENV{STAMPDIR} . '/pdb.directories';
+    my $pdb_directories = _pdb_directories() or return;
     my $fh;
     open $fh, '<', $pdb_directories;
     while (<$fh>) {
@@ -336,6 +336,18 @@ sub _build__path_specs {
     }
     close $fh;
     return \@paths;
+}
+
+sub _pdb_directories {
+    # First directory that exists:
+    my ($stampdir) = grep { -d ($_ || '') } 
+        ($ENV{STAMPDIR}, $ENV{HOME} . '/.stamp', '/usr/local/share/stamp');
+    my $pdb_directories = $stampdir . '/pdb.directories';
+    if (! -r $pdb_directories) {
+        warn 'Cannot read STAMP config: ', $pdb_directories;
+        return;
+    }
+    return $pdb_directories;
 }
 
 =head2 length
