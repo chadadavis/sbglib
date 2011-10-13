@@ -21,22 +21,23 @@ CPAN modules that require manual installation. Run:
  cpan CJFIELDS/BioPerl-Network-1.006900.tar.gz
 
 
-Others: 
+Others requirements can be installed via APT (on Debian/Ubuntu)
 * blastpgp
+** sudo apt-get install blast2
 * clustalw
-On Ubuntu/Debian, run:
-
- sudo apt-get install blast2 clustalw
-
+** sudo apt-get install clustalw
 
 Optional: 
 * rasmol, for visualization / testing
+** sudo apt-get install rasmol
 * graphviz (circo, dot), for SBG::NetworkIO::dot 
+** sudo apt-get install graphviz
 * Qcontacts, for residue contacts
 ** http://dl.dropbox.com/u/6526608/Qcontacts.tar.gz
 * QCons Perl module for Qcontacts
 ** https://github.com/chadadavis/qcons/downloads
 * NACCESS, for SBG::Run::naccess
+** http://www.bioinf.manchester.ac.uk/naccess/
 
 INSTALLATION
 
@@ -55,9 +56,6 @@ BUGS
 
  http://code.google.com/p/sbglib/issues/list
 
-EVERYTHINIG ELSE
-
- http://code.google.com/p/sbglib/
 
 COPYRIGHT AND LICENCE
 
