@@ -592,7 +592,8 @@ sub _build_scores {
     # Globularity of entire model
     $stats->{glob} = $model->globularity();
 
-    $stats->{pcburied} = $model->buried_area() || 'NaN';
+    # Depends on naccess binary
+#    $stats->{pcburied} = $model->buried_area() || 'NaN';
 
     $stats->{pcclashes} = $model->vmdclashes();
 
