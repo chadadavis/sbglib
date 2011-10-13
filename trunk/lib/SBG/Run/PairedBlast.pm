@@ -48,28 +48,15 @@ L<SBG::SearchI>
 
 =head1 TODO
 
-Call L<SBG::Run::Blast> 
+Factor out C<_blast1()> into L<SBG::Run::Blast> 
 
 =cut
 
-use Bio::Search::Hit::BlastHit;
-
-# Overload stringification of external package
-package Bio::Search::Hit::BlastHit;
-use overload (
-    '""'     => 'stringify',
-    fallback => 1,
-);
-sub stringify { (shift)->name }
-
 package SBG::Run::PairedBlast;
+use strict;
+use warnings;
 use Moose;
 use Moose::Autobox;
-
-# Also a functional interface (TODO belongs in SBG::U::Map)
-use base qw/Exporter/;
-our @EXPORT    = qw//;
-our @EXPORT_OK = qw/gi2pdbid/;
 
 use Bio::Tools::Run::StandAloneBlast;
 use Bio::Tools::Run::RemoteBlast;
@@ -81,6 +68,7 @@ use Scalar::Util qw/refaddr/;
 use Clone qw/clone/;
 
 use SBG::U::List qw/intersection pairs2 interval_overlap/;
+use SBG::Run::Blast qw(expand_aliases hits_by_pdbid);
 
 has 'cache' => (
     isa     => 'HashRef',
@@ -349,7 +337,7 @@ sub _blast1 {
         $log->debug($seq->primary_id, ': ', $hits->length, " Hits (raw)");
 
         # Expand alias sequences
-        $hits = _expand_aliases($hits);
+        $hits = expand_aliases($hits);
         $log->debug($seq->primary_id, ': ', $hits->length,
             " Hits (expanded)");
 
@@ -377,114 +365,10 @@ sub _blast1 {
     }
 
     # Index by pdbid
-    my $hitsbyid = _hitsbyid($hits);
+    my $hitsbyid = hits_by_pdbid($hits);
     return $hitsbyid;
 }    # _blast1
 
-=head2 _expand_aliases
-
- Function: 
- Example : 
- Returns : 
- Args    : 
-
-Clone each hit that has multiple names, so that we can index everything by one
-name.
-
-NB this depends on the blast database being formatted to include the
-aliases. This is not the case for the pre-formatted databases downloaded from
-the NCBI. Rather, download the fasta file and create the database with formatdb
-or makeblastdb
-
-=cut
-
-sub _expand_aliases {
-    my ($hits) = @_;
-    my $exphits = [];
-    foreach my $hit (@$hits) {
-
-        # $hit->name contains the name of the actual hit, get its ID too
-        my $longdesc = $hit->name . ' ' . $hit->description;
-        my @hitnames = gi2pdbid($longdesc);
-        foreach my $hitname (@hitnames) {
-            my ($pdb, $chain) = @$hitname;
-
-            # Reformat it, respecting any lowercase chain names now
-            my $name  = "pdb|$pdb|$chain";
-            my $clone = clone($hit);
-            $clone->accession($pdb);
-            $clone->name($name);
-            $clone->hsp->{HIT_NAME} = $name;
-
-            # Trace history
-            $clone->{refaddr} = refaddr $hit;
-            push @$exphits, $clone;
-
-        }
-    }
-    return $exphits;
-}
-
-sub _hitsbyid {
-    my ($hits) = @_;
-
-    # Index by pdbid
-    my $hitsbyid = {};
-    foreach my $h (@$hits) {
-        my $pdbid = gi2pdbid($h->name);
-        $hitsbyid->{$pdbid} ||= [];
-        $hitsbyid->at($pdbid)->push($h);
-    }
-    return $hitsbyid;
-}
-
-=head2 gi2pdbid
-
- Function: 
- Example : 
- Returns : nothing when no matches, other array of tuples
- Args    : 
-
-Given a string like: 
-
- pdb|13gn|A pdb|1g3n|BB
-
-returns an Array of tuples like
-
-(
-  [ '1g3n', 'A', ],
-  [ '1g3n', 'b', ],
-)
-
-Blast uses double uppercase when the PDB chain ID is lower case. Such uppercase
-double are returned as a lower-case chain ID, e.g. 'BB' => 'b'
-
-=cut
-
-our $pdbre = 'pdb\|(\d[a-zA-Z0-9]{3})\|([a-zA-Z0-9]{0,2})';
-
-sub gi2pdbid {
-    my ($gistr) = @_;
-    my @res;
-    while ($gistr =~ /$pdbre/g) {
-        my $pdb = $1;
-
-        # NB '0'is a valid chain name, but not 'true' according to Perl
-        my $chain = defined($2) ? $2 : '';
-        if (length($chain) == 2
-            && substr($chain, 0, 1) eq substr($chain, 1, 1))
-        {
-            $chain = lc substr($chain, 0, 1);
-        }
-        push @res, [ $pdb, $chain ];
-    }
-    return unless @res;
-
-    unless (wantarray) {
-        return $res[0]->[0];
-    }
-    return @res;
-}
 
 __PACKAGE__->meta->make_immutable(inline_constructor => 0);
 no Moose;

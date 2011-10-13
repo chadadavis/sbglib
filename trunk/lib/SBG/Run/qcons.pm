@@ -10,12 +10,32 @@ SBG::Run::qcons - Wrapper for running B<Qcontacts> (residue contacts)
 
 =head1 DESCRIPTION
 
+This is a small wrapper for running Qcontacts:
+
+ http://tsailab.tamu.edu/QCons/
+
+It makes use of another wrapper: L<Bio::Tools::Run::Qcons> which is available on Github at:
+
+ https://github.com/brunoV/qcons
+
+An additional wrapper is necessary, because Qcons only processes entire
+chains. Furthermore, if a structure has been transformed, a new PDB file must
+created. Finally, Qcons does not process gzipped files. So, even if a
+structure hasn't been transformed or truncated, it at least needs to be
+unzipped.
+
 Because we use STAMP to write the domains, they will produce gunzipped files.
 Also, any transformations will be respected.
 
 =head1 SEE ALSO
 
-L<SBG::DomainIO::pdb>
+=over 4
+
+=item L<Bio::Tools::Run::Qcons>
+
+=item L<SBG::DomainIO::pdb>
+
+=back
 
 =cut
 

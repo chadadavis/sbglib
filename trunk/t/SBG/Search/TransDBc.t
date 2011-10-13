@@ -10,6 +10,7 @@ use Test::More;
 use File::Temp qw/tempfile/;
 
 use SBG::U::DB;
+use SBG::Debug qw(debug);
 
 unless (SBG::U::DB::ping) {
     ok warn "skip : no database\n";
@@ -46,7 +47,7 @@ my $blast = SBG::Run::PairedBlast->new(method => 'standaloneblast');
 
 #my $blast = SBG::Run::PairedBlast->new(method=>'remoteblast');
 my $searcher = SBG::Search::TransDBc->new(blast => $blast);
-$net = $net->build($searcher, cache => 0);
+$net = $net->build($searcher, cache => ! debug());
 
 # Potential interactions, between pairs of proteins
 my $edges = scalar $net->edges;
