@@ -19,7 +19,7 @@ STAMP (stamp, pdbc, pdbseq, transform, cofm)
 CPAN modules that require manual installation. Run:
 
  cpan CJFIELDS/BioPerl-Network-1.006900.tar.gz
-
+ cpan C/CJ/CJFIELDS/BioPerl-Run-1.006900.tar.gz
 
 Others requirements can be installed via APT (on Debian/Ubuntu)
 * blastpgp
@@ -28,6 +28,8 @@ Others requirements can be installed via APT (on Debian/Ubuntu)
 ** sudo apt-get install clustalw
 
 Optional: 
+* Graph::Writer::GraphViz, for saving network as PNG
+** cpan Graph::Writer::GraphViz
 * rasmol, for visualization / testing
 ** sudo apt-get install rasmol
 * graphviz (circo, dot), for SBG::NetworkIO::dot 
