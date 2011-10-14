@@ -38,10 +38,12 @@ requires "Algorithm::Combinatorics" => "0";
 # In this distro
 #requires "Bio::DB::RCSB" => "0";  
 # Not indexed by CPAN, use the distro file path to install in cpan
-requires "Bio::Network::ProteinNet" => "0";
 #requires "CJFIELDS/BioPerl-Network-1.006900.tar.gz" => undef;
+requires "Bio::Network::ProteinNet" => "0";
 requires "Bio::Search::Hit::BlastHit" => "0";
 requires "Bio::Seq" => "0";
+# Not indexed by CPAN, use the distro file path to install in cpan
+#requires "CJFIELDS/BioPerl-Run-1.006900.tar.gz" => undef;
 requires "Bio::Tools::Run::Alignment::Clustalw" => "0";
 # Optional
 #requires "Bio::Tools::Run::QCons" => "0"; 
@@ -67,7 +69,8 @@ requires "Getopt::Complete" => "0";
 requires "Getopt::Long" => "0";
 requires "Graph" => "0";
 requires "Graph::UnionFind" => "0";
-requires "Graph::Writer::GraphViz" => "0";
+# Optional, for writing network in PNG
+#requires "Graph::Writer::GraphViz" => "0";
 requires "IO::Compress::Gzip" => "0";
 requires "IO::File" => "0";
 requires "IO::String" => "0";
