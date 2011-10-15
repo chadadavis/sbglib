@@ -5,7 +5,8 @@ use Test::SBG::Tools;
 
 use Moose::Autobox;
 use autobox::List::Util;
-use File::Which;
+use IPC::Cmd qw(can_run);
+
 
 # startup failing will skip other tests
 # Supposed to be true for 'setup' as well, but doesn't seem so
@@ -22,7 +23,7 @@ sub setup : Test(setup) {
 
     # But don't run, if it will fail, see if it's installed first
     my $binary = $qcons->program_name();
-    my $path   = which($binary);
+    my $path   = can_run($binary);
     $self->{path} = $path;
 }
 
