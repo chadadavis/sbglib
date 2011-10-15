@@ -4,7 +4,7 @@ use base qw(Test::SBG);
 use Test::SBG::Tools;
 
 use Bio::SeqIO;
-use Devel::Comments;
+#use Devel::Comments;
 
 sub setup : Tests(setup) {
     my ($self) = @_;
@@ -31,4 +31,4 @@ sub basic : Tests {
 
 }
 
-
+1;
