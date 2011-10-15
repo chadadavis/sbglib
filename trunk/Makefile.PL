@@ -126,6 +126,7 @@ test_requires 'Test::More' => '0';
 test_requires 'Test::Most' => '0';
 test_requires 'Data::Dumper' => '0';
 test_requires 'Data::Dump' => '0';
+test_requires 'File::Which' => '0';
 
 # These STAMP binaries need to be found in the PATH
 # http://code.google.com/p/bio-stamp/
