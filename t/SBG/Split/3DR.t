@@ -13,11 +13,12 @@ use Moose::Autobox;
 use SBG::Split::3DR;
 use Bio::SeqIO;
 
-my $splitter = SBG::Split::3DR->new(mingap => 30);
-unless ($splitter->_dbh) {
-    ok warn "skip : no database\n";
-    exit;
+unless (SBG::U::DB::ping) {
+    plan skip_all => "No database";
 }
+
+my $splitter = SBG::Split::3DR->new(mingap => 30);
+
 
 # A fasta file of two sequences, with various domains
 my $file = "$Bin/data/85.fa";

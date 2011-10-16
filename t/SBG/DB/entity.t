@@ -15,8 +15,7 @@ use File::Temp qw/tempfile/;
 use SBG::U::DB;
 
 unless (SBG::U::DB::ping) {
-    ok warn "skip : no database\n";
-    exit;
+    plan skip_all => "No database";
 }
 
 use SBG::DB::entity;

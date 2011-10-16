@@ -39,7 +39,7 @@ use SBG::Debug;
 
 BEGIN {
     # Provide a backtrace because the caller is more than 1 level away
-    cluck __PACKAGE__ , ' is deprecated in favor of SBG::Cache';
+    cluck "\n", __PACKAGE__ , ' is deprecated in favor of SBG::Cache';
 }
 
 =head2 cache

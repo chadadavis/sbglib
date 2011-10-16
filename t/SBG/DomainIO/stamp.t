@@ -2,7 +2,7 @@
 
 use strict;
 use warnings;
-use Test::More 'no_plan';
+use Test::More;
 use Carp;
 use FindBin qw/$Bin/;
 
@@ -42,4 +42,4 @@ my @doms4   = $io4->read;
 my $transes = grep { $_->transformation->has_matrix } @doms4;
 is($transes, 4, "Parsing domains with explicit transformations");
 
-__END__
+done_testing;

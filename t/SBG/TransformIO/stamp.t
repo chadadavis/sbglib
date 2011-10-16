@@ -9,7 +9,7 @@ use SBG::Debug;
 use Test::More;
 use File::Temp qw/tempfile/;
 
-use SBG::U::Test qw/pdl_approx/;
+use Test::SBG::PDL qw/pdl_approx/;
 use SBG::U::Log;
 
 use PDL;

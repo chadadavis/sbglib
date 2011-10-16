@@ -2,7 +2,7 @@
 
 use strict;
 use warnings;
-use Test::More 'no_plan';
+use Test::More;
 
 use Carp;
 use FindBin qw/$Bin/;
@@ -34,4 +34,4 @@ my $io3 = SBG::ComplexIO::stamp->new(file => $out->file);
 my $copy = $io3->read;
 is($copy->count, $complex->count, "Same domain count");
 
-__END__
+done_testing;
