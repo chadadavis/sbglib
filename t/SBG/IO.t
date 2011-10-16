@@ -2,7 +2,7 @@
 
 use strict;
 use warnings;
-use Test::More 'no_plan';
+use Test::More;
 use File::Temp qw(tempfile);
 
 use FindBin qw/$Bin/;
@@ -72,4 +72,4 @@ $ioindexed->seek($index3);
 my $thing = $ioindexed->read;
 is($thing, '678', 'IOI::index');
 
-__END__
+done_testing;

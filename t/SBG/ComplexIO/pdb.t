@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More 'no_plan';
+use Test::More;
 
 use Carp;
 use FindBin qw/$Bin/;
@@ -27,4 +27,4 @@ $out->flush;
 
 ok(-s $out->file, "ComplexIO::pdb::write() : " . $out->file);
 
-__END__
+done_testing;

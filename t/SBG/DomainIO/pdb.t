@@ -2,13 +2,13 @@
 
 use strict;
 use warnings;
-use Test::More 'no_plan';
+use Test::More;
 use Carp;
 use FindBin qw/$Bin/;
 
 use FindBin qw/$Bin/;
 use lib "$Bin/../../../lib/";
-use SBG::U::Test qw/pdl_approx/;
+use Test::SBG::PDL qw/pdl_approx/;
 
 use SBG::DomainIO::pdb;
 my $file = "$Bin/../data/1timA.pdb";
@@ -63,3 +63,4 @@ ok($x->nelem() > 0, 'Column-based parsing of PDB');
 is($resids->slice('0'), 2002, 'Column-based parsing of PDB');
 pdl_approx($x->slice('0'), 34.945, 'Column-based parsing of PDB', $toler);
 
+done_testing;

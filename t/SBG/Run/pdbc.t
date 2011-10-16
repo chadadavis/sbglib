@@ -2,7 +2,7 @@
 
 use strict;
 use warnings;
-use Test::More 'no_plan';
+use Test::More;
 
 use SBG::Run::pdbc qw/pdbc/;
 use SBG::Domain;
@@ -28,3 +28,4 @@ $fields = pdbc($pdbid);
 $TODO   = "Fix processing of structures with > 62 chains";
 is($fields->{chain}->keys->length, 83, "pdbc 83 chains (> 62) in $pdbid");
 
+done_testing;

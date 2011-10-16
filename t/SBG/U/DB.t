@@ -16,8 +16,7 @@ use English qw(-no_match_vars);
 use DBI;
 
 unless (ping()) {
-    ok warn "skip : no database\n";
-    exit;
+    plan skip_all => "No database";
 }
 
 {

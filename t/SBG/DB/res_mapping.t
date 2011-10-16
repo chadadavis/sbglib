@@ -2,7 +2,7 @@
 
 use strict;
 use warnings;
-use Test::More 'no_plan';
+use Test::More;
 
 use FindBin qw/$Bin/;
 use lib "$Bin/../../../lib/";
@@ -10,8 +10,7 @@ use lib "$Bin/../../../lib/";
 use SBG::U::DB;
 
 unless (SBG::U::DB::ping) {
-    ok warn "skip : no database\n";
-    exit;
+    plan skip_all => "No database";
 }
 
 use Moose::Autobox;
@@ -67,6 +66,5 @@ ok(0);
 $TODO = 'Test ranges, verify ordering';
 ok(0);
 
-__END__
-
+done_testing;
 

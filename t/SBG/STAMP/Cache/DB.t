@@ -8,12 +8,11 @@ use SBG::Debug;
 
 use Test::More;
 use File::Temp;
-use SBG::U::Test qw/pdl_approx/;
+use Test::SBG::PDL qw/pdl_approx/;
 use SBG::U::DB;
 
 unless (SBG::U::DB::ping) {
-    ok warn "skip : no database\n";
-    exit;
+    plan skip_all => 'No database';
 }
 
 use SBG::STAMP;

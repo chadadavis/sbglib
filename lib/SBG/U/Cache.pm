@@ -34,11 +34,12 @@ our @EXPORT_OK = qw/cache cache_get cache_set/;
 use File::Spec;
 use Log::Any qw/$log/;
 use CHI;
-
+use Carp qw(cluck);
 use SBG::Debug;
 
 BEGIN {
-    warn __PACKAGE__ , ' is deprecated in favor of SBG::Cache';
+    # Provide a backtrace because the caller is more than 1 level away
+    cluck "\n", __PACKAGE__ , ' is deprecated in favor of SBG::Cache';
 }
 
 =head2 cache

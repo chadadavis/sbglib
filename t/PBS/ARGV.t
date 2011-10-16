@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More 'no_plan';
+use Test::More;
 
 # Local libraries
 use FindBin qw/$Bin/;
@@ -22,7 +22,7 @@ use PBS::ARGV qw/qsub linen nlines/;
 # TODO TEST job array -J option
 
 unless (PBS::ARGV::can_connect) {
-    ok warn "skip : No permissions to PBS\n";
+    plan skip_all => 'No permissions to PBS';
     exit;
 }
 
@@ -35,3 +35,4 @@ if (!defined $ENV{PBS_ENVIRONMENT}) {
     is(scalar(@ARGV), 0, "All arguments submitted as PBS jobs");
 }
 
+done_testing;

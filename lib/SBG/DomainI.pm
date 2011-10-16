@@ -331,6 +331,7 @@ sub _build__path_specs {
     my $fh;
     open $fh, '<', $pdb_directories;
     while (<$fh>) {
+        next if /^\s*#/;
         my @values = split ' ';
         push @paths, [@values];
     }

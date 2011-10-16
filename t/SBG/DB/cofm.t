@@ -2,7 +2,7 @@
 
 use strict;
 use warnings;
-use Test::More 'no_plan';
+use Test::More;
 
 use PDL;
 use PDL::Matrix;
@@ -14,8 +14,7 @@ use Test::Approx;
 use SBG::U::DB;
 
 unless (SBG::U::DB::ping) {
-    ok warn "skip : no database\n";
-    exit;
+    plan skip_all => "No database";
 }
 
 use SBG::DB::cofm;
@@ -37,6 +36,6 @@ is_approx($res->{Cz},   $tz,    'Cz',   $prec);
 is_approx($res->{Rg},   $trg,   'Rg',   $prec);
 is_approx($res->{Rmax}, $trmax, 'Rmax', $prec);
 
-__END__
+done_testing;
 
 
