@@ -31,7 +31,7 @@ certain sequence, this module does not use that feature, but post-filters the
 hits which do not meet the threshold. This results in the same semantics, with
 a small performance penalty.
 
-Remember to set the following variables:
+Remember to set the following variables (at least C<BLASTDB> )
 
 =over 4
 
@@ -60,6 +60,10 @@ to the directory containing the BLOSUM/ PAM substitution matrices
 =item * L<Bio::Search::Hit::HitI>
 
 =back
+
+=head1 TODO
+
+warn if database is not an absolute path and C<BLASTDB> isn't set.
 
 =cut
 
@@ -167,7 +171,9 @@ has 'standalonefactory' => (
 sub _build_standalonefactory {
     my ($self) = @_;
     # Don't use the 'e' option here
-    my $ops = $self->Moose::Autobox::Hash::hslice([qw(b j database)]);
+    # Bioperl option format: preceeded by dash:
+    my $ops = { map { '-' . $_ => $self->{$_} } qw(b j database) };
+
     my $factory = Bio::Tools::Run::StandAloneBlast->new(%$ops);
     $factory->save_tempfiles(debug());
     return $factory;
