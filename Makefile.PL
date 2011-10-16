@@ -46,7 +46,7 @@ requires "Bio::Seq" => "0";
 #requires "CJFIELDS/BioPerl-Run-1.006900.tar.gz" => undef;
 requires "Bio::Tools::Run::Alignment::Clustalw" => "0";
 # Optional
-#requires "Bio::Tools::Run::QCons" => "0"; 
+requires "Bio::Tools::Run::QCons" => "0"; 
 requires "Bio::Tools::Run::StandAloneBlast" => "0";
 requires "CGI" => "0";
 requires "CHI" => "0";
@@ -90,7 +90,6 @@ requires "Moose" => "0";
 requires "Moose::Autobox" => "0";
 requires "Moose::Role" => "0";
 requires "Moose::Util::TypeConstraints" => "0";
-requires "Mouse" => "0"; # SBG::Run::qcons
 requires "Net::Ping" => "0";
 # In this distro
 #requires "PBS::ARGV" => "0";  
@@ -143,7 +142,6 @@ requires_external_bin 'clustalw';   # SBG::Complex SBG::Network
 # dot and circo are part of GraphViz
 #requires_external_bin 'dot';       # SBG::NetworkIO::dot
 #requires_external_bin 'circo';     # SBG::NetworkIO::dot
-#requires_external_bin 'Qcontacts'; # SBG::Run::qcons
 #requires_external_bin 'naccess';   # SBG::Run::naccess
 
 # Not available on CentOS
