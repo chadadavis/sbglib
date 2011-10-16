@@ -2,7 +2,7 @@
 
 use strict;
 use warnings;
-use Test::More 'no_plan';
+use Test::More;
 use Carp;
 $SIG{__DIE__} = \&confess;
 
@@ -12,7 +12,7 @@ use PDL;
 use FindBin qw/$Bin/;
 use lib "$Bin/../../../lib/";
 use Test::Approx;
-use SBG::U::Test qw/pdl_approx/;
+use Test::SBG::PDL qw/pdl_approx/;
 
 use SBG::DB::trans qw/superposition/;
 use SBG::DB::entity qw/id2dom/;
@@ -30,8 +30,7 @@ use SBG::Debug qw(debug);
 use SBG::U::DB;
 
 unless (SBG::U::DB::ping) {
-    ok warn "skip : no database\n";
-    exit;
+    plan skip_all => "No database";
 }
 
 # Tolerate rounding differences between stamp (using clib) and PDL
@@ -202,3 +201,4 @@ is_approx($irmsd, 5.11, "iRMSD", $toler);
 $irmsd = SBG::U::iRMSD::irmsd($doms2, $doms1);
 is_approx($irmsd, 5.11, "iRMSD reverse", $toler);
 
+done_testing;

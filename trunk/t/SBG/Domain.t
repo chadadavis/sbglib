@@ -2,7 +2,7 @@
 
 use strict;
 use warnings;
-use Test::More 'no_plan';
+use Test::More;
 
 use Moose::Autobox;
 
@@ -111,3 +111,4 @@ $TODO = "test cumulative transform";
 # But still, should maintain current cofm, for sake of overlap detection
 ok 0;
 
+done_testing;

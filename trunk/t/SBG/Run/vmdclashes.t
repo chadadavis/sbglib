@@ -4,13 +4,17 @@ use strict;
 use warnings;
 
 use Test::More;
+use Test::Approx;
+use IPC::Cmd qw(can_run);
 
 use FindBin qw/$Bin/;
 use lib "$Bin/../../../lib/";
-use Test::Approx;
+
 use SBG::Debug;
 use SBG::U::Object qw/load_object/;
 use SBG::Run::vmdclashes qw/vmdclashes/;
+
+plan skip_all => 'Binary not installed: vmd' unless can_run('vmd');
 
 # Precision (or error tolerance)
 my $prec = '2%';

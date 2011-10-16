@@ -4,13 +4,17 @@ use strict;
 use warnings;
 
 use Test::More;
+use Test::Approx;
+use IPC::Cmd qw(can_run);
 
 use FindBin qw/$Bin/;
 use lib "$Bin/../../../lib/";
-use Test::Approx;
+
 use SBG::Debug;
 use SBG::Run::naccess qw/sas_atoms/;
 use SBG::Domain;
+
+plan skip_all => 'Binary not installed: naccess' unless can_run('naccess');
 
 my $dom = SBG::Domain->new(pdbid => '1ral');
 my $sas = sas_atoms($dom);

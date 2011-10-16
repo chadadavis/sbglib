@@ -2,7 +2,7 @@
 
 use strict;
 use warnings;
-use Test::More 'no_plan';
+use Test::More;
 use Carp;
 
 use FindBin qw/$Bin/;
@@ -34,3 +34,4 @@ like($desc, qr/^\s*($re_descriptor)\s*$/,
     "Multi-segment descriptor with insertion codes and double-char chain IDs"
 );
 
+done_testing;

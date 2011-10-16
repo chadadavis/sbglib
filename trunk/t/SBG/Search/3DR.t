@@ -28,8 +28,7 @@ is(scalar($net->nodes), 4, "nodes");
 
 my $tdr = SBG::Search::3DR->new;
 unless ($tdr->_dbh) {
-    ok warn "skip : no database\n";
-    exit;
+    plan skip_all => "No database";
 }
 
 $net->build($tdr);

@@ -7,7 +7,7 @@ use lib "$Bin/../../lib/";
 use SBG::Debug qw(debug);
 
 use Test::More;
-use SBG::U::Test qw/pdl_approx/;
+use Test::SBG::PDL qw/pdl_approx/;
 
 use File::Temp;
 use Moose::Autobox;

@@ -13,8 +13,7 @@ use SBG::U::DB;
 use SBG::Debug qw(debug);
 
 unless (SBG::U::DB::ping) {
-    ok warn "skip : no database\n";
-    exit;
+    plan skip_all => 'No database';
 }
 
 use SBG::Node;

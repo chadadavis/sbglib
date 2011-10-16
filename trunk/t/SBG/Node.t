@@ -2,7 +2,7 @@
 
 use strict;
 use warnings;
-use Test::More 'no_plan';
+use Test::More;
 
 use FindBin qw/$Bin/;
 use lib "$Bin/../../lib/";
@@ -24,3 +24,4 @@ ok($n2 ge $n1, "String comparison: ge");
 my $n3 = new SBG::Node(new SBG::Seq(-display_id => 'Q9NPD3'));
 is($n2, $n3, "String equality, between unique objects");
 
+done_testing;

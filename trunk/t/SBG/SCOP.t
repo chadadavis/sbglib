@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 
-use Test::More 'no_plan';
+use Test::More;
 use strict;
 use warnings;
 
@@ -15,4 +15,4 @@ is(lca(@strings), 'a.2.4.1', 'lca()');
 ok(equiv(@strings, 4), 'equiv()');
 ok(!equiv(@strings, 5), 'not equiv()');
 
-__END__
+done_testing;
