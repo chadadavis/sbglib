@@ -14,8 +14,7 @@ use File::Temp qw/tempfile/;
 use SBG::U::DB;
 
 unless (SBG::U::DB::ping) {
-    ok warn "skip : no database\n";
-    exit;
+    plan skip_all => "No database";
 }
 
 use SBG::DB::contact;
@@ -37,3 +36,5 @@ my ($hit2) = @hits;
 is($hit1->{n_res1}, $hit2->{n_res2}, "bidirectional query");
 
 done_testing;
+
+

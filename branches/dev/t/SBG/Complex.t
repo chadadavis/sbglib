@@ -6,7 +6,7 @@ use FindBin qw/$Bin/;
 use lib "$Bin/../../lib/";
 use SBG::Debug;
 
-use Test::More 'no_plan';
+use Test::More;
 use Moose::Autobox;
 
 use Carp;
@@ -276,3 +276,4 @@ ok(0);
 $TODO = 'Build model when (some) structure given for inputs';
 ok(0);
 
+done_testing;

@@ -6,7 +6,7 @@ use FindBin qw/$Bin/;
 use lib "$Bin/../../../lib/";
 use SBG::Debug;
 
-use Test::More 'no_plan';
+use Test::More;
 use Carp;
 
 
@@ -29,6 +29,7 @@ use SBG::Run::rasmol;
 
 $TODO = 'update to Assembler2';
 ok(0);
+done_testing;
 exit;
 
 
@@ -110,3 +111,4 @@ sub _mkdom {
     return $sphere;
 }
 
+done_testing;

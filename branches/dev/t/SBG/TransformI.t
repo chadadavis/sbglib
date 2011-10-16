@@ -2,7 +2,7 @@
 
 use strict;
 use warnings;
-use Test::More 'no_plan';
+use Test::More;
 
 use Carp;
 $SIG{__DIE__} = \&confess;
@@ -11,7 +11,7 @@ use PDL;
 
 use FindBin qw/$Bin/;
 use lib "$Bin/../../lib/";
-use SBG::U::Test qw/pdl_approx/;
+use Test::SBG::PDL qw/pdl_approx/;
 use SBG::Transform::Affine;
 
 my $toler = 0.01;
@@ -75,3 +75,4 @@ my $sq_inv_prod = $sq_inv x $squared;
 pdl_approx($sq_inv_prod->matrix, $id->matrix, 'inverse() on composition',
     $toler,);
 
+done_testing;

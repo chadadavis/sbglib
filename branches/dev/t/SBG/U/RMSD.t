@@ -12,7 +12,7 @@ use File::Temp qw/tempfile/;
 use Test::Approx;
 use PDL::Lite;
 
-use SBG::U::Test qw/pdl_approx/;
+use Test::SBG::PDL qw/pdl_approx/;
 use SBG::U::RMSD qw/
     centroid radius_gyr radius_max superposition rmsd translation identity
     /;

@@ -37,7 +37,7 @@ use SBG::U::Map qw/chain_case/;
 use SBG::U::List qw/interval_overlap/;
 use SBG::Domain;
 use SBG::Domain::Sphere;
-use SBG::Run::PairedBlast qw/gi2pdbid/;
+use SBG::U::Map qw(gi2pdbid);
 
 # TODO DES OO
 my $DATABASE = "trans_3_0";

@@ -38,13 +38,15 @@ requires "Algorithm::Combinatorics" => "0";
 # In this distro
 #requires "Bio::DB::RCSB" => "0";  
 # Not indexed by CPAN, use the distro file path to install in cpan
-requires "Bio::Network::ProteinNet" => "0";
 #requires "CJFIELDS/BioPerl-Network-1.006900.tar.gz" => undef;
+requires "Bio::Network::ProteinNet" => "0";
 requires "Bio::Search::Hit::BlastHit" => "0";
 requires "Bio::Seq" => "0";
+# Not indexed by CPAN, use the distro file path to install in cpan
+#requires "CJFIELDS/BioPerl-Run-1.006900.tar.gz" => undef;
 requires "Bio::Tools::Run::Alignment::Clustalw" => "0";
 # Optional
-#requires "Bio::Tools::Run::QCons" => "0"; 
+requires "Bio::Tools::Run::QCons" => "0"; 
 requires "Bio::Tools::Run::StandAloneBlast" => "0";
 requires "CGI" => "0";
 requires "CHI" => "0";
@@ -67,7 +69,8 @@ requires "Getopt::Complete" => "0";
 requires "Getopt::Long" => "0";
 requires "Graph" => "0";
 requires "Graph::UnionFind" => "0";
-requires "Graph::Writer::GraphViz" => "0";
+# Optional, for writing network in PNG
+#requires "Graph::Writer::GraphViz" => "0";
 requires "IO::Compress::Gzip" => "0";
 requires "IO::File" => "0";
 requires "IO::String" => "0";
@@ -87,7 +90,6 @@ requires "Moose" => "0";
 requires "Moose::Autobox" => "0";
 requires "Moose::Role" => "0";
 requires "Moose::Util::TypeConstraints" => "0";
-requires "Mouse" => "0"; # SBG::Run::qcons
 requires "Net::Ping" => "0";
 # In this distro
 #requires "PBS::ARGV" => "0";  
@@ -124,6 +126,7 @@ test_requires 'Test::Most' => '0';
 test_requires 'Data::Dumper' => '0';
 test_requires 'Data::Dump' => '0';
 
+
 # These STAMP binaries need to be found in the PATH
 # http://code.google.com/p/bio-stamp/
 requires_external_bin 'pdbc';       # SBG::Run::pdbc
@@ -139,7 +142,6 @@ requires_external_bin 'clustalw';   # SBG::Complex SBG::Network
 # dot and circo are part of GraphViz
 #requires_external_bin 'dot';       # SBG::NetworkIO::dot
 #requires_external_bin 'circo';     # SBG::NetworkIO::dot
-#requires_external_bin 'Qcontacts'; # SBG::Run::qcons
 #requires_external_bin 'naccess';   # SBG::Run::naccess
 
 # Not available on CentOS

@@ -3,12 +3,12 @@
 use strict;
 use warnings;
 
-use Test::More 'no_plan';
+use Test::More;
 
 use FindBin qw/$Bin/;
 use lib "$Bin/../../../lib/";
 use Test::Approx;
-use SBG::U::Test qw/pdl_approx/;
+use Test::SBG::PDL qw/pdl_approx/;
 use SBG::Debug qw(debug);
 use SBG::Run::cofm qw/cofm/;
 use SBG::Domain;
@@ -78,3 +78,4 @@ _test($input, 19.636, (40.593, 9.387, 82.034));
 $TODO = "test insertion codes";
 ok 0;
 
+done_testing;

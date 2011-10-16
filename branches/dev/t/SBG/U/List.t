@@ -2,7 +2,7 @@
 
 use strict;
 use warnings;
-use Test::More 'no_plan';
+use Test::More;
 $, = ' ';
 
 use FindBin qw/$Bin/;
@@ -145,3 +145,5 @@ ok(0);
 # Check that the resulting objects are in the right order, by checking the names
 # my $rnames = $r->map($name);
 # is_deeply($rnames, $sortedn);
+
+done_testing;

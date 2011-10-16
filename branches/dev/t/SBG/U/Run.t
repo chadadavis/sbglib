@@ -2,14 +2,12 @@
 
 use strict;
 use warnings;
+use Test::More;
+use Test::Approx;
 
 use FindBin qw/$Bin/;
 use lib "$Bin/../../../lib/";
 use SBG::Debug;
-
-use Test::More 'no_plan';
-use Test::Approx;
-
 use SBG::U::Log qw/log/;
 use SBG::U::Run qw/start_lock end_lock frac_of getoptions/;
 
@@ -34,4 +32,6 @@ ok($lock3, "Redoing lock");
 
 my $percent = '52%';
 my $total   = 33;
-is_approx(frac_of($percent, $total), 17.16, 'frac_of')
+is_approx(frac_of($percent, $total), 17.16, 'frac_of');
+
+done_testing;

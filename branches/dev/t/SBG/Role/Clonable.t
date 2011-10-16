@@ -2,7 +2,7 @@
 
 use strict;
 use warnings;
-use Test::More 'no_plan';
+use Test::More;
 
 use Carp;
 $SIG{__DIE__} = \&confess;
@@ -33,3 +33,4 @@ my $dclone = dclone($t);
 isnt($dclone->matrix->get_dataref,
     $t->matrix->get_dataref, "dclone: PDLs also copy'ed");
 
+done_testing;
