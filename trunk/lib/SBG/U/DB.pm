@@ -58,8 +58,6 @@ our @EXPORT_OK = qw(connect dsn ping);
 use English qw(-no_match_vars);
 use Log::Any qw/$log/;
 use DBI;
-# Simply for documenting the dependency
-use DBD::mysql;
 # For testing the port before connecting;
 use Net::Ping;
 # To check for debug() mode (to disable connection caching)
