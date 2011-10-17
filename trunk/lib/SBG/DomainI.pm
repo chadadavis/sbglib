@@ -340,9 +340,8 @@ sub _build__path_specs {
 }
 
 sub _pdb_directories {
-    # First directory that exists:
-    my ($stampdir) = grep { -d ($_ || '') } 
-        ($ENV{STAMPDIR}, $ENV{HOME} . '/.stamp', '/usr/local/share/stamp');
+    my $stampdir = `stamp -stampdir`;
+    chomp $stampdir;
     my $pdb_directories = $stampdir . '/pdb.directories';
     if (! -r $pdb_directories) {
         warn 'Cannot read STAMP config: ', $pdb_directories;
