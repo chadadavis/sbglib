@@ -31,6 +31,10 @@ B<cofm> is a program in the STAMP package.
 
 L<SBG::U::DB::cofm> , L<SBG::Domain::Sphere>
 
+=head1 TODO
+
+option to use Rg or Rmax as the resulting radius
+
 =cut
 
 package SBG::Run::cofm;
@@ -69,8 +73,6 @@ B<cofm> must be in your PATH, or defined in a B<config.ini> file
 
 NB if the input L<SBG::DomainI> has a B<transformation>, this is not saved in
 the newly created L<SBG::Domain::Sphere>
-
-TODO option to use Rg or Rmax as the resulting radius
 
 Uses parser from L<SBG::DomainIO::cofm>
 
