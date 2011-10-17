@@ -77,6 +77,8 @@ requires "List::Util" => "0";
 requires "Log::Any" => "0";
 requires "Log::Any::Adapter" => "0";
 requires "Log::Log4perl" => "0";
+# From SBG::U::Log
+requires "Log::Dispatch::File" => "0";
 requires "Math::Round" => "0";
 requires "Math::Trig" => "0";
 requires "Module::Load" => "0";
