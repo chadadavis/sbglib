@@ -123,7 +123,7 @@ sub new {
     if (SBG::Debug::debug) { $level = 'DEBUG'; }
     $level = uc $level;
 
-    my $h = `hostname --short`;
+    my $h = `hostname -s`;
     chomp $h;
     $h = sprintf "%-15s", $h;
     my $pbs_jobid = sprintf "%8s", ($ENV{PBS_JOBID} || 'NotPBS');
