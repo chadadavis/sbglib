@@ -69,8 +69,7 @@ requires "Getopt::Long" => "0";
 requires "Graph" => "0";
 requires "Graph::UnionFind" => "0";
 # Optional, for writing network in PNG
-# Requires patched version from Github
-#requires "Graph::Writer::GraphViz" => "0";
+requires "Graph::Writer::GraphViz" => "0.11";
 requires "IO::Compress::Gzip" => "0";
 requires "IO::File" => "0";
 requires "IO::String" => "0";
@@ -93,8 +92,6 @@ requires "Moose::Util::TypeConstraints" => "0";
 requires "Net::Ping" => "0";
 # In this distro
 #requires "PBS::ARGV" => "0";  
-#requires "PDL" => "0";
-# Can depend on dev version?
 requires "PDL" => "2.4.9_007";
 requires "PDL::Basic" => "0";
 requires "PDL::Core" => "0";
