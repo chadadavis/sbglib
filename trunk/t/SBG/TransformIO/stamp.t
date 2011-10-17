@@ -4,6 +4,7 @@ use strict;
 use warnings;
 use FindBin qw/$Bin/;
 use lib "$Bin/../../../lib/";
+use lib "$Bin/../../../t/lib/";
 use SBG::Debug;
 
 use Test::More;

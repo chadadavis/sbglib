@@ -8,6 +8,7 @@ use FindBin qw/$Bin/;
 
 use FindBin qw/$Bin/;
 use lib "$Bin/../../../lib/";
+use lib "$Bin/../../../t/lib/";
 use Test::SBG::PDL qw/pdl_approx/;
 
 use SBG::DomainIO::pdb;

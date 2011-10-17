@@ -7,6 +7,7 @@ use Test::More;
 
 use FindBin qw/$Bin/;
 use lib "$Bin/../../../lib/";
+use lib "$Bin/../../../t/lib/";
 use Test::Approx;
 use Test::SBG::PDL qw/pdl_approx/;
 use SBG::Debug qw(debug);
