@@ -16,11 +16,25 @@ DEPENDENCIES
 STAMP (stamp, pdbc, pdbseq, transform, cofm)
 * http://code.google.com/p/bio-stamp/
 
-CPAN modules that require manual installation. Run:
+BioPerl-Run requires manual installation. It's not yet indexed by CPAN. To check if it's been indexed yet:
 
- cpanm CJFIELDS/BioPerl-Run-1.006900.tar.gz
- cpanm CHM/PDL-2.4.9_009.tar.gz
- cpanm https://nodeload.github.com/gugod/graph-writer-graphviz/tarball/master
+ cpan
+ i /Bio::Tools::Run::Alignment::Clustalw/
+
+If that returns the distribution BioPerl-Run then it does not need to be manually installed. Else:
+
+ cpan
+ intall CJFIELDS/BioPerl-Run-1.006900.tar.gz
+
+PDL requires manual installation until the 2.4.10 version is released. To check:
+
+ cpan
+ i /PDL-/
+
+If that returns 2.4.10 or larger, then it does not need to be manually installed. Else:
+
+ cpan
+ install CHM/PDL-2.4.9_009.tar.gz
 
 Others requirements can be installed via APT (on Debian/Ubuntu)
 * blastpgp
