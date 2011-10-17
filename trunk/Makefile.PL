@@ -133,6 +133,7 @@ requires_external_bin 'pdbseq';     # SBG::Run::pdbseq
 requires_external_bin 'stamp';      # SBG::STAMP
 requires_external_bin 'transform';  # SBG::DomainIO::stamp
 requires_external_bin 'cofm';       # SBG::Run::cofm
+requires_external_bin 'check_ints'; # SBG::Run::check_ints
 
 # Rasmol required by SBG::Run::rasmol (only used by tests)
 #requires_external_bin 'rasmol';    # SBG::Run::rasmol
