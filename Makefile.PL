@@ -53,7 +53,6 @@ requires "Carp" => "0";
 requires "Class::MOP::Class" => "0";
 requires "Clone" => "0";
 requires "Cwd" => "0";
-requires "DBD::mysql" => "0";
 requires "DBI" => "0";
 requires "Data::Dump" => "0";
 requires "Data::Dumper" => "0";
