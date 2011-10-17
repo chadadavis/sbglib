@@ -46,7 +46,7 @@ ok($dom->file && -f $dom->file, 'Finding file:' . $dom->file);
 
 # Find obsolete PDB entry
 $dom = SBG::Domain->new(pdbid => '2z8t');
-ok($dom->file && -f $dom->file, 'Finding file for obsolete:' . $dom->file);
+ok($dom->file && -f $dom->file, 'Finding file for obsolete PDB entry:' . $dom->file);
 
 # Find file when given PDB with an assembly
 $dom = SBG::Domain->new(pdbid => '1tim', assembly => 1, model => 1);
