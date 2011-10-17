@@ -83,6 +83,7 @@ use Bio::Tools::Run::StandAloneBlast;
 use Log::Any qw/$log/;
 use Scalar::Util qw/refaddr/;
 use Digest::MD5 qw/md5_base64/;
+use Carp;
 
 # For cloning alias hits (duplicate sequences)
 # NB Cannot use the (preferred) Storable::dclone here, as Hit contains CODEREFs
@@ -91,6 +92,7 @@ use Clone qw/clone/;
 use SBG::U::Map qw(gi2pdbid);
 use SBG::Debug qw(debug);
 use SBG::Cache qw(cache);
+
 
 =head2 j
 
@@ -198,6 +200,12 @@ sub search {
 my %_cache;
 sub _blast1 {
     my ($self, $seq, %ops) = @_;
+
+    if (! defined $ENV{BLASTDB}) {
+        # Since the BioPerl error is not informative:
+        croak "\n", 'To run local Blast, set BLASTDB=/path/to/database/dir/', "\n";
+    }
+
     # Note, cannot use the file system cache, because HitI contains CODE which
     # cannot be serialized by Storable.
     # Hash the amino acid sequence (case sensitive)

@@ -34,13 +34,7 @@ our @EXPORT_OK = qw/cache cache_get cache_set/;
 use File::Spec;
 use Log::Any qw/$log/;
 use CHI;
-use Carp qw(cluck);
 use SBG::Debug;
-
-BEGIN {
-    # Provide a backtrace because the caller is more than 1 level away
-    cluck "\n", __PACKAGE__ , ' is deprecated in favor of SBG::Cache';
-}
 
 =head2 cache
 
@@ -56,9 +50,15 @@ C<cache_get> and C<cache_set> .
 # Cache cache  ;-)
 my %cache_hash;
 my $arch;
+my $warned;
 
 sub cache {
     my ($name) = @_;
+
+    if (! defined $warned) {
+        warn "\n", __PACKAGE__ , ' is deprecated in favor of SBG::Cache', "\n";
+        $warned = 1;
+    }
 
     unless (defined $arch) { $arch = `uname -m`; chomp $arch; }
 
