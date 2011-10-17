@@ -18,9 +18,9 @@ STAMP (stamp, pdbc, pdbseq, transform, cofm)
 
 CPAN modules that require manual installation. Run:
 
- cpanm CJFIELDS/BioPerl-Network-1.006900.tar.gz
  cpanm CJFIELDS/BioPerl-Run-1.006900.tar.gz
- cpanm https://github.com/gugod/graph-writer-graphviz/tarball/master
+ cpanm CHM/PDL-2.4.9_009.tar.gz
+ cpanm https://nodeload.github.com/gugod/graph-writer-graphviz/tarball/master
 
 Others requirements can be installed via APT (on Debian/Ubuntu)
 * blastpgp

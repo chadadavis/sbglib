@@ -38,7 +38,6 @@ requires "Algorithm::Combinatorics" => "0";
 # In this distro
 #requires "Bio::DB::RCSB" => "0";  
 # Not indexed by CPAN, use the distro file path to install in cpan
-#requires "CJFIELDS/BioPerl-Network-1.006900.tar.gz" => undef;
 requires "Bio::Network::ProteinNet" => "0";
 requires "Bio::Search::Hit::BlastHit" => "0";
 requires "Bio::Seq" => "0";
@@ -70,6 +69,7 @@ requires "Getopt::Long" => "0";
 requires "Graph" => "0";
 requires "Graph::UnionFind" => "0";
 # Optional, for writing network in PNG
+# Requires patched version from Github
 #requires "Graph::Writer::GraphViz" => "0";
 requires "IO::Compress::Gzip" => "0";
 requires "IO::File" => "0";
@@ -93,7 +93,9 @@ requires "Moose::Util::TypeConstraints" => "0";
 requires "Net::Ping" => "0";
 # In this distro
 #requires "PBS::ARGV" => "0";  
-requires "PDL" => "0";
+#requires "PDL" => "0";
+# Can depend on dev version?
+requires "PDL" => "2.4.9_007";
 requires "PDL::Basic" => "0";
 requires "PDL::Core" => "0";
 requires "PDL::IO::Misc" => "0";
