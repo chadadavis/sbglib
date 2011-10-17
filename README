@@ -47,10 +47,15 @@ Optional:
 ** sudo apt-get install rasmol
 * graphviz (circo, dot), for SBG::NetworkIO::dot 
 ** sudo apt-get install graphviz
-* Qcontacts, for residue contacts
-** http://dl.dropbox.com/u/6526608/Qcontacts.tar.gz
 * NACCESS, for SBG::Run::naccess
 ** http://www.bioinf.manchester.ac.uk/naccess/
+
+Qcontacts: http://tsailab.tamu.edu/qcons
+
+Fischer, T. B., Holmes, J. B., Miller, I. R., Parsons, J. R., Tung, L., Hu, J. C., and Tsai, J. 
+(2006) Assessing methods for identifying pair-wise atomic contacts across binding interfaces. 
+J Struct Biol 153, 103-112.
+
 
 Blast databases:
 
