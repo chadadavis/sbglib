@@ -87,6 +87,7 @@ has 'radius' => (
     default => 0,
 );
 
+# Rmax
 has 'radius_max' => (is => 'rw', isa => 'Num');
 
 
@@ -307,6 +308,7 @@ If two spheres do not overlap, the absolute value of the negative number
 returned is the length of the shortest line between the surfaces of the two
 spheres.
 
+TODO This is untested
 
 =cut
 
