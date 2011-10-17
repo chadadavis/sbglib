@@ -40,8 +40,6 @@ requires "Algorithm::Combinatorics" => "0";
 requires "Bio::Network::ProteinNet" => "0";
 requires "Bio::Search::Hit::BlastHit" => "0";
 requires "Bio::Seq" => "0";
-# Not indexed by CPAN, use the distro file path to install in cpan
-#requires "CJFIELDS/BioPerl-Run-1.006900.tar.gz" => undef;
 requires "Bio::Tools::Run::Alignment::Clustalw" => "0";
 requires "Bio::Tools::Run::StandAloneBlast" => "0";
 requires "CGI" => "0";
