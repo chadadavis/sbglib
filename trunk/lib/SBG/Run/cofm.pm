@@ -79,14 +79,23 @@ Uses parser from L<SBG::DomainIO::cofm>
 =cut
 
 sub cofm {
-    my ($dom, %ops) = @_;
+    my ($dom) = @_;
+    my $sphere = cofm_native($dom);
+    return unless defined $sphere;
+    return $sphere unless $dom->transformation->has_matrix;
+    # Apply the transformation to the native centre of mass;
+    $dom->transformation->apply($sphere);
+    return $sphere;
+}
+
+sub cofm_native {
+    my ($dom) = @_;
 
     my $cache = cache();
     my $key = _hash($dom);
     my $sphere;
     $sphere = $cache->get($key);
     if (defined $sphere) {
-
         # [] is the marker for a negative cache entry
         return if ref($sphere) eq 'ARRAY';
         return $sphere;
@@ -95,7 +104,6 @@ sub cofm {
     # Cache miss, run external program
     $sphere = _run($dom);
     unless ($sphere) {
-
         # cofm failed, set negative cache entry
         $cache->set($key, []);
         return;
@@ -103,36 +111,23 @@ sub cofm {
 
     # Success, positive cache
     $cache->set($key, $sphere);
-
     return $sphere;
-
-}    # cofm
+}
 
 # Hash a DomainI, including any transformation coords
 # Used to get a unique identifier to the cache
 sub _hash {
     my ($dom)  = @_;
-    my $domstr = "$dom";
-    my $trans  = $dom->transformation;
-    my $transstr = $trans ? md5_base64("$trans") : '';
-    $domstr .= '(' . $transstr . ')' if $transstr;
-    return $domstr;
+    return "$dom";
 }
 
-=head2 _run
-
- Function: Computes centre-of-mass and radius of gyration of STAMP domain
- Example : 
- Returns : L<SBG::Domain::Sphere>
- Args    : L<SBG::DomainI>
-
-=cut
-
+# Computes centre-of-mass and radius of gyration of STAMP domain
+# Does not write the transformation, uses the native orientation untransformed
 sub _run {
     my ($dom) = @_;
 
-    # Get dom into a stamp-formatted file
-    my $io = SBG::DomainIO::stamp->new(tempfile => 1);
+    # Get dom into a stamp-formatted file (don't write transformation)
+    my $io = SBG::DomainIO::stamp->new(tempfile => 1, native => 1);
     $io->write($dom);
     my $path = $io->file;
     $io->close;
