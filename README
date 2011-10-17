@@ -16,22 +16,13 @@ DEPENDENCIES
 STAMP (stamp, pdbc, pdbseq, transform, cofm)
 * http://code.google.com/p/bio-stamp/
 
-BioPerl-Run requires manual installation. It's not yet indexed by CPAN. To check if it's been indexed yet:
-
- cpan
- i /Bio::Tools::Run::Alignment::Clustalw/
-
-If that returns the distribution BioPerl-Run then it does not need to be manually installed. Else:
-
- cpan
- intall CJFIELDS/BioPerl-Run-1.006900.tar.gz
-
 PDL requires manual installation until the 2.4.10 version is released. To check:
 
  cpan
  i /PDL-/
 
-If that returns 2.4.10 or larger, then it does not need to be manually installed. Else:
+If that returns 2.4.10 or larger, then it does not need to be manually
+installed. Else:
 
  cpan
  install CHM/PDL-2.4.9_009.tar.gz
@@ -52,9 +43,9 @@ Optional:
 
 Qcontacts: http://tsailab.tamu.edu/qcons
 
-Fischer, T. B., Holmes, J. B., Miller, I. R., Parsons, J. R., Tung, L., Hu, J. C., and Tsai, J. 
-(2006) Assessing methods for identifying pair-wise atomic contacts across binding interfaces. 
-J Struct Biol 153, 103-112.
+Fischer, T. B., Holmes, J. B., Miller, I. R., Parsons, J. R., Tung, L.,
+Hu, J. C., and Tsai, J.  (2006) Assessing methods for identifying pair-wise
+atomic contacts across binding interfaces.  J Struct Biol 153, 103-112.
 
 
 Blast databases:
