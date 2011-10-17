@@ -47,7 +47,6 @@ use Text::ParseWords qw/quotewords/;
 use PDL::Lite;
 use PDL::Core qw/pdl/;
 use Log::Any qw/$log/;
-use Digest::MD5 qw/md5_base64/;
 use File::Temp qw/tempfile/;
 
 use SBG::Domain::Sphere;
