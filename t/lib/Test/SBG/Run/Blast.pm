@@ -6,6 +6,12 @@ use Test::SBG::Tools;
 use Bio::SeqIO;
 #use Devel::Comments;
 
+BEGIN {
+    if (! defined $ENV{BLASTDB}) {
+        __PACKAGE__->SKIP_CLASS('Define BLASTDB=/path/to/database/dir/ to test Blast');
+    }
+}
+
 sub setup : Tests(setup) {
     my ($self) = @_;
     my $blast = SBG::Run::Blast->new;
