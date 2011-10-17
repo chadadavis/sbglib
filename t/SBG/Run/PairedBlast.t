@@ -10,7 +10,7 @@ use Bio::SeqIO;
 use SBG::Debug qw(debug);
 use SBG::Run::PairedBlast;
 
-plan skip_all => 'Define BLASTDB=/path/to/database/dir/ to test Blast' unless $ENV{BLASTDB};
+plan skip_all => 'To test Blast, set BLASTDB=/path/to/database/dir/' unless $ENV{BLASTDB};
 
 {
     my $seq = Bio::SeqIO->new(-file => "$Bin/../data/P25359.fa")->next_seq;
