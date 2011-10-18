@@ -99,6 +99,9 @@ sub uniprot2gene {
 sub tdracc2desc {
     my ($target) = @_;
 
+    # Sanitize
+    ($target) = $target =~ /^([_a-zA-Z0-9]*)$/;
+
     # TODO REFACTOR into an external 3DR module
     my $dsn = SBG::U::DB::dsn(database=>'3DR');
     my $dbh = SBG::U::DB::connect($dsn);
