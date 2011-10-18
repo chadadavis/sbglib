@@ -13,25 +13,37 @@ Test::SBG::PDL - Tools for testing PDLs
 
 =head1 DESCRIPTION
 
-Most tests are discrete. With transformations and atomic data, there are 
+Most tests are discrete. With transformations and atomic data, there are
 deviations, due to rounding and imperfect floating point representations. This
-answers the question: are the matrices basically the same, withing a few percent.
+answers the question: are the matrices basically the same, withing a few
+percent. L<Test::Approx> does this for simple types. This module does the same
+for PDLs. It combines the logic of L<Test::Approx> with the functionality of
+L<PDL::Core>C<::approx> and adds the ability to specify the error range as a
+percent.
+
+This is important because larger numbers may have larger deviations, or you
+may wish to tolerate larger deviations on larger numbers. If the values in
+your data matrix vary widely, it may not make sense to use a constant machine
+epsilon to threshold every value in the matrix. This module allows for
+percentage deviation, which is a function of each cell in the matrix.
 
 It does in a way that fits into a regular test harness, so that C<make test>
-works the same. If you want the general function, it's
+works the same. If you want the general function, that does not output TAP
+test results, it's
 
  my $are_the_same = pdl_equiv($pdl_1, $pdl_2, '5%');
-    
 
 =head1 SEE ALSO
 
 =over
 
-=item L<Test::More>
+=item L<Test::Approx>
 
-=item L<PDL::Core>
+Does something similar for simple data types (number / string)
 
-=item L<PDL::Ufunc>
+=item C<approx()> from L<PDL::Core>
+
+Does approximate equality, based on machine epsilon (configurable).
 
 =back
 
@@ -56,7 +68,8 @@ Approximate matrix equality
 
 Tolerance is a float or a percent (default '1%')
 
-This uses L<Test::More> so that it works nicely in your existing test framework
+This uses L<Test::More> so that it works nicely in your existing test
+framework.
 
 =cut
 
