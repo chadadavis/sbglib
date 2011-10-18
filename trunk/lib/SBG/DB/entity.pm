@@ -166,7 +166,9 @@ AND chain  = ?
         }
         push @hits, $row;
     }
-    $querysth->finish;
+    # Don't finish if you intended to fetch all rows
+#    $querysth->finish;
+
     #     $log->debug('rows: ', scalar(@hits));
     return @hits;
 

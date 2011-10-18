@@ -93,7 +93,8 @@ AND crystal=0
         $row->{entity2} = $entity2;
         push @hits, $row;
     }
-    $sth->finish;
+    # Don't finish if you intended to fetch all rows
+#    $sth->finish;
     return @hits;
 
 }    # query
