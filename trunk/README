@@ -54,17 +54,21 @@ To download PDB files, use the tools provided with STAMP:
 
 BLAST DATABASES
 
+The NCBI pdbaa Blast database does not include aliases for all sequences when
+they are 100% identical. We provide a script to retain these aliases. Note,
+sequences are not duplicated in the Blast databases, only the aliases are
+tracked.
+
  export BLASTDB=/usr/local/data/blastdb
  mkdir -p $BLASTDB
  cd $BLASTDB
+ # Fetches pdbaa by default (gzipped)
+ sbg-update-blastdb.pl [ pdbaa ]
 
-The 'pdbaa' database (PDB amino acid sequences, whole sequences)
-
- update_blastdb.pl nr pdbaa # (script from the NCBI)
- # Or Russell version (post-processed to retain aliases for duplicates)
- update_fastablastdb pdbaa  # (script from the Russell group)
  
-The 'pdbseq' database : (Sequences based on C-alpha atoms from structure).
+The 'pdbseq' database : (Sequences based on C-alpha atoms from structure). See
+the instructions provided by STAMP:
+
   http://code.google.com/p/bio-stamp/source/browse/trunk/README
 
 
