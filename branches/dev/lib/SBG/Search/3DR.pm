@@ -63,7 +63,7 @@ has 'pdbids' => (
 # seqid: sequence identity between query and template (average of two partners)
 our ($wtnres, $wtpdbcount, $wtseqid) = (.1, .2, .7);
 
-our $datadir = $ENV{AG} . '/3DR/data';
+our $datadir = ($ENV{AG} || '') . '/3DR/data';
 
 has 'model_sources' => (
     is      => 'rw',

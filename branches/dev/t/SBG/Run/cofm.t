@@ -7,11 +7,13 @@ use Test::More;
 
 use FindBin qw/$Bin/;
 use lib "$Bin/../../../lib/";
+use lib "$Bin/../../../t/lib/";
 use Test::Approx;
 use Test::SBG::PDL qw/pdl_approx/;
 use SBG::Debug qw(debug);
 use SBG::Run::cofm qw/cofm/;
 use SBG::Domain;
+use SBG::Transform::Affine;
 
 use PDL::Lite;
 use PDL::Core qw/pdl/;
@@ -21,7 +23,7 @@ my $prec = '2%';
 
 sub _test {
     my ($input, $radius, @coords) = @_;
-    my $sphere = cofm($input, cache => debug());
+    my $sphere = cofm($input);
     my $exp_center = pdl(@coords, 1.0);
     my $exp_r = $radius;
     pdl_approx($sphere->centroid, $exp_center, "center $exp_center", $prec);
@@ -33,6 +35,22 @@ my $input;
 # Simple segment
 $input = SBG::Domain->new(pdbid => '2nn6', descriptor => 'A 50 _ to A 120 _');
 _test($input, 15.246, (83.495, 17.452, 114.562));
+
+# Transformed domain
+my $matrix = pdl [ 
+    [ -1, 0, 0, 0 ],
+    [  0,-1, 0, 0 ],
+    [  0, 0,-1, 0 ],
+    [  0, 0, 0, 1 ],
+];
+my $transform = SBG::Transform::Affine->new(matrix => $matrix);
+$input = SBG::Domain->new(
+    pdbid => '2nn6', 
+    descriptor => 'A 50 _ to A 120 _', 
+    transformation => $transform,
+);
+# Note the negative(s)
+_test($input, 15.246, (-83.495, -17.452, -114.562));
 
 # With negative residue IDs
 $input = SBG::Domain->new(pdbid => '1jzd', descriptor => 'A -3 _ to A 60 _');

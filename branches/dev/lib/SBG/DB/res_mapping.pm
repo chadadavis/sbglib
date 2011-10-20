@@ -31,6 +31,7 @@ use Log::Any qw/$log/;
 use List::Util qw/min/;
 
 use SBG::U::Map qw/chain_case/;
+use SBG::Types qw($re_pdb $re_chain_id);
 
 # TODO DES OO
 my $DATABASE = "trans_3_0";
@@ -51,7 +52,12 @@ sub query {
     my $dsn = SBG::U::DB::dsn(database=>$DATABASE);
     my $dbh = SBG::U::DB::connect($dsn);
 
-    my $pdbseqstr = join(',', @$pdbseq);
+    # Sanitize inputs
+    ($pdbid)   = $pdbid   =~ /($re_pdb)/;
+    ($chainid) = $chainid =~ /($re_chain_id)/;
+    my @pdbseq = grep { /^[_0-9]+$/ } @$pdbseq;
+
+    my $pdbseqstr = join(',', @pdbseq);
 
     # Covert lower case to uppercase, if necessary
     $chainid = chain_case($chainid);

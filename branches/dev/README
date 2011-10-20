@@ -16,13 +16,14 @@ DEPENDENCIES
 STAMP (stamp, pdbc, pdbseq, transform, cofm)
 * http://code.google.com/p/bio-stamp/
 
-CPAN modules that require manual installation. Run:
+PDL requires manual installation until the 2.4.10 version is released.
 
- cpanm CJFIELDS/BioPerl-Network-1.006900.tar.gz
- cpanm CJFIELDS/BioPerl-Run-1.006900.tar.gz
- cpanm https://github.com/gugod/graph-writer-graphviz/tarball/master
+ cpan
+ install CHM/PDL-2.4.10.tar.gz
+ # If that does not yet exist, then:
+ install CHM/PDL-2.4.9_009.tar.gz
 
-Others requirements can be installed via APT (on Debian/Ubuntu)
+Other requirements can be installed via APT (on Debian/Ubuntu)
 * blastpgp
 ** sudo apt-get install blast2
 * clustalw
@@ -33,8 +34,6 @@ Optional:
 ** sudo apt-get install rasmol
 * graphviz (circo, dot), for SBG::NetworkIO::dot 
 ** sudo apt-get install graphviz
-* Qcontacts, for residue contacts
-** http://dl.dropbox.com/u/6526608/Qcontacts.tar.gz
 * NACCESS, for SBG::Run::naccess
 ** http://www.bioinf.manchester.ac.uk/naccess/
 
@@ -55,12 +54,37 @@ distributed with STAMP)
  
 INSTALLATION
 
-To install this module, run the following commands:
-
  perl Makefile.PL
  make # Will install any other module dependencies
  make test
  make install
+
+
+PROTEIN DATA BANK (PDB)
+
+To download PDB files, use the tools provided with STAMP:
+ http://code.google.com/p/bio-stamp/source/browse/trunk/README
+
+
+BLAST DATABASES
+
+The NCBI pdbaa Blast database does not include aliases for all sequences when
+they are 100% identical. We provide a script to retain these aliases. Note,
+sequences are not duplicated in the Blast databases, only the aliases are
+tracked.
+
+ export BLASTDB=/usr/local/data/blastdb
+ mkdir -p $BLASTDB
+ cd $BLASTDB
+ # Fetches pdbaa by default (gzipped)
+ sbg-update-blastdb.pl [ pdbaa ]
+
+ 
+The 'pdbseq' database : (Sequences based on C-alpha atoms from structure). See
+the instructions provided by STAMP:
+
+  http://code.google.com/p/bio-stamp/source/browse/trunk/README
+
 
 HOME PAGE
 

@@ -37,15 +37,10 @@ requires "Algorithm::Cluster" => "0";
 requires "Algorithm::Combinatorics" => "0";
 # In this distro
 #requires "Bio::DB::RCSB" => "0";  
-# Not indexed by CPAN, use the distro file path to install in cpan
-#requires "CJFIELDS/BioPerl-Network-1.006900.tar.gz" => undef;
 requires "Bio::Network::ProteinNet" => "0";
 requires "Bio::Search::Hit::BlastHit" => "0";
 requires "Bio::Seq" => "0";
-# Not indexed by CPAN, use the distro file path to install in cpan
-#requires "CJFIELDS/BioPerl-Run-1.006900.tar.gz" => undef;
 requires "Bio::Tools::Run::Alignment::Clustalw" => "0";
-# Optional
 requires "Bio::Tools::Run::QCons" => "0"; 
 requires "Bio::Tools::Run::StandAloneBlast" => "0";
 requires "CGI" => "0";
@@ -54,7 +49,6 @@ requires "Carp" => "0";
 requires "Class::MOP::Class" => "0";
 requires "Clone" => "0";
 requires "Cwd" => "0";
-requires "DBD::mysql" => "0";
 requires "DBI" => "0";
 requires "Data::Dump" => "0";
 requires "Data::Dumper" => "0";
@@ -69,8 +63,7 @@ requires "Getopt::Complete" => "0";
 requires "Getopt::Long" => "0";
 requires "Graph" => "0";
 requires "Graph::UnionFind" => "0";
-# Optional, for writing network in PNG
-#requires "Graph::Writer::GraphViz" => "0";
+requires "Graph::Writer::GraphViz" => "0.11";
 requires "IO::Compress::Gzip" => "0";
 requires "IO::File" => "0";
 requires "IO::String" => "0";
@@ -83,6 +76,8 @@ requires "List::Util" => "0";
 requires "Log::Any" => "0";
 requires "Log::Any::Adapter" => "0";
 requires "Log::Log4perl" => "0";
+# From SBG::U::Log
+requires "Log::Dispatch::File" => "0";
 requires "Math::Round" => "0";
 requires "Math::Trig" => "0";
 requires "Module::Load" => "0";
@@ -93,7 +88,7 @@ requires "Moose::Util::TypeConstraints" => "0";
 requires "Net::Ping" => "0";
 # In this distro
 #requires "PBS::ARGV" => "0";  
-requires "PDL" => "0";
+requires "PDL" => "2.4.9_007";
 requires "PDL::Basic" => "0";
 requires "PDL::Core" => "0";
 requires "PDL::IO::Misc" => "0";
@@ -118,6 +113,9 @@ requires "Text::ParseWords" => "0";
 requires "Tie::File" => "0";
 requires "autobox::List::Util" => "0";
 
+recommends "Bio::Tools::Run::QCons" => "0"; 
+recommends "DBD::mysql" => "0"; 
+
 # Required for testing
 test_requires 'Test::Approx' => '0';
 test_requires 'Test::Class' => '0';
@@ -134,6 +132,7 @@ requires_external_bin 'pdbseq';     # SBG::Run::pdbseq
 requires_external_bin 'stamp';      # SBG::STAMP
 requires_external_bin 'transform';  # SBG::DomainIO::stamp
 requires_external_bin 'cofm';       # SBG::Run::cofm
+requires_external_bin 'check_ints'; # SBG::Run::check_ints
 
 # Rasmol required by SBG::Run::rasmol (only used by tests)
 #requires_external_bin 'rasmol';    # SBG::Run::rasmol

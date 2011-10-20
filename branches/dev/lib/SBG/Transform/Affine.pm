@@ -8,6 +8,17 @@ coordinates.
 =head1 SYNOPSIS
 
  use SBG::Transform::Affine
+ my $identity = SBG::Transform::Affine->new();
+ 
+ use PDL;
+ my $custom = SBG::Transform::Affine->new(pdl [
+     [ -1, 0, 0, 0 ],
+     [  0,-2, 0, 0 ],
+     [  0, 0, 1, 0 ],
+     [  0, 0, 0, 1 ],
+ ]);
+ $custom->apply($domain_to_be_transformed);
+
 
 =head1 DESCRIPTION
 
