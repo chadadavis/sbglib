@@ -14,26 +14,17 @@ Only does pairwise superpositions at the moment.
 
 The B<stamp> binary must exist in you B<PATH>.
 
-NB this should not be /g/russell1/lbin/stamp
-
-See http://www.russell.embl.de/private/wiki/index.php/STAMP#Bugs
-
-Additionally STAMP requires the variable B<STAMPDIR> to be set to its B<defs>
-subdirectory, where it stores its data files. This might look something like
-this:
-
- export STAMPDIR=/usr/local/stamp.4.3/defs
- export PATH=$PATH:$STAMPDIR/../bin/linux
-
-
-
 =head1 SEE ALSO
 
-L<SBG::DomainI> , L<SBG::Superposition> , <U::RMSD>
+=over 4
 
-http://www.compbio.dundee.ac.uk/Software/Stamp/stamp.html
+=item * L<SBG::Superposition>
 
-STAMP is available under the open-source GPL license 
+=item * L<U::RMSD>
+
+=item * STAMP
+
+http://code.google.com/p/bio-stamp/
 
 =cut
 

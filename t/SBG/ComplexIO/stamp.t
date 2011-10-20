@@ -8,7 +8,7 @@ use Carp;
 use FindBin qw/$Bin/;
 
 use FindBin qw/$Bin/;
-use lib "$Bin/../../../lib/";
+use lib "$Bin/../../../lib";
 use SBG::ComplexIO::stamp;
 
 use SBG::Debug;

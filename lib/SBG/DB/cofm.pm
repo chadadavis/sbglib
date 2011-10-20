@@ -56,6 +56,18 @@ check PQS as the chain ID might differ from the PDB.
 
 =cut
 
+my $sql = "
+SELECT
+    Cx, Cy, Cz, Rg, Rmax
+FROM 
+    entity
+WHERE
+    bad = 0 
+    AND type   = 'chain'
+    AND idcode = ? 
+    AND chain  = ?
+";
+
 sub query {
     my ($pdbid, $chainid) = @_;
 
@@ -64,17 +76,7 @@ sub query {
     my $dbh = SBG::U::DB::connect($dsn);
 
     # Static handle, prepare it only once
-    my $cofm_sth = $dbh->prepare_cached("
-select
-Cx, Cy, Cz, Rg, Rmax
-from 
-entity
-where
-bad=0 and
-type='chain'and
-idcode=? and
-chain=?
-");
+    my $cofm_sth = $dbh->prepare_cached($sql);
 
     unless ($cofm_sth) {
         $log->error($dbh->errstr);

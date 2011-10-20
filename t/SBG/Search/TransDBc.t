@@ -4,26 +4,25 @@ use strict;
 use warnings;
 use FindBin qw/$Bin/;
 use lib "$Bin/../../../lib/";
-use SBG::Debug;
-
 use Test::More;
 use File::Temp qw/tempfile/;
+use File::Basename;
+
+use Bio::SeqIO;
 
 use SBG::U::DB;
 use SBG::Debug qw(debug);
-
-unless (SBG::U::DB::ping) {
-    plan skip_all => 'No database';
-}
-
 use SBG::Node;
 use SBG::Network;
 use SBG::Run::PairedBlast;
 use SBG::Search::TransDBc;
 
-use Bio::SeqIO;
-use File::Basename;
-use FindBin qw/$Bin/;
+unless (SBG::U::DB::ping) {
+    plan skip_all => 'No database';
+}
+
+plan skip_all => 'To test Blast, set BLASTDB=/path/to/database/dir/' unless $ENV{BLASTDB};
+
 my $file = shift || "$Bin/../data/1g3n.fa";
 my $name = basename($file, '.fa');
 my $seqio = new Bio::SeqIO(-file => $file);

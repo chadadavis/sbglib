@@ -10,12 +10,12 @@ Bio::DB::RCSB - Database object interface to RCSB Protein Databank metadata
 
 =head1 SYNOPSIS
 
-    use Bio::DB::RCSB;
-
-    my $dbh = Bio::DB::RCSB->new();
-
-    my $xml = $dbh->describeMol(structureId=>'4hhb.A');
-    
+ use Bio::DB::RCSB;
+ my $dbh = Bio::DB::RCSB->new();
+ # Optionally set a proxy (not necessary if already in your environment)
+ $dbh->proxy([qw(http ftp)], 'http://russelllab.org:3128');
+ my $xml = $dbh->describeMol(structureId=>'4hhb.A');
+ # Parse the XML however you like (regex, XML::XPath, etc)
 
 =head1 DESCRIPTION
 
@@ -25,18 +25,21 @@ For a description of all the functions available and their options, see:
  
 This module only supports a subset of those however. See the source for details.
 
-=head1 AUTHOR - Chad A. Davis
+=head1 AUTHOR - Chad A Davis
 
-Email Chad A. Davis E<lt>chad.a.davis@gmail.com E<gt>
+Email Chad A Davis E<lt>chad.a.davis@gmail.com E<gt>
 
-=head1 APPENDIX
+=head1 SEE ALSO
 
-The rest of the documentation details each of the object
-methods. Internal methods are usually preceded with a _
+=over 4
+
+=item * L<WWW::PDB>
+
+Allows for arbitrarily complex XML queries to RCSB web service.
+
+=back
 
 =cut
-
-# Let the code begin...
 
 package Bio::DB::RCSB;
 use strict;
@@ -74,11 +77,14 @@ has '_ua' => (
     is         => 'rw',
     isa        => 'LWP::UserAgent',
     lazy_build => 1,
+    handles    => [ qw(proxy) ],
 );
 
 sub _build__ua {
     my ($self) = @_;
     my $ua = LWP::UserAgent->new;
+    # Load any proxy setting defined in the environment
+    $ua->env_proxy;
     return $ua;
 }
 
