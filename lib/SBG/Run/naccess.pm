@@ -50,19 +50,24 @@ TODO caching
 sub sas_atoms {
     my @doms = flatten(@_);
     $log->debug(scalar(@doms), " domains: @doms");
+
     my $io = SBG::DomainIO::pdb->new(tempfile => 1, suffix => '.pdb');
     $io->write(@doms);
     $io->close;
-    my $file = $io->file;
-
+    # naccess has problems with certain directory names containing a dot
+    # So, be safe and run it on only the file name, after chdir
     my $pwd = getcwd();
-    chdir File::Spec->tmpdir;
-
+    chdir $io->tempdir;
+    $log->debug('getcwd: ', getcwd());
+    my $file = basename($io->file);
     my $cmd = "naccess $file";
     $log->debug($cmd);
     my $res = system("$cmd >/dev/null");
+    # Chdir back as soon as possible
     chdir $pwd;
-    my $rsa = $file;
+
+    # Same file name, but rsa rather than pdb extension
+    my $rsa = $io->file;
     $rsa =~ s/\.pdb$/.rsa/;
     unless (-r $rsa && -s $rsa) {
         $log->error("Cannot read RSA file: $rsa");
