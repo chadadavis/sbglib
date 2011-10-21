@@ -5,13 +5,15 @@ use warnings;
 use FindBin qw/$Bin/;
 use lib "$Bin/../../../lib/";
 use Test::More;
-use File::Temp qw/tempfile/;
-use File::Basename;
 
+# Load File::Slurp before File::Temp to avoid 'redefined' errors
+use SBG::Debug qw(debug);
+use File::Temp qw/tempfile/;
+
+use File::Basename;
 use Bio::SeqIO;
 
 use SBG::U::DB;
-use SBG::Debug qw(debug);
 use SBG::Node;
 use SBG::Network;
 use SBG::Run::PairedBlast;

@@ -5,9 +5,9 @@ use warnings;
 use FindBin qw($Bin);
 use Test::More;
 
-use Bio::SeqIO;
-
 use SBG::Debug qw(debug);
+# Anything that uses File::Temp needs to be loaded later, due to File::Slurp
+use Bio::SeqIO;
 use SBG::Run::PairedBlast;
 
 plan skip_all => 'To test Blast, set BLASTDB=/path/to/database/dir/' unless $ENV{BLASTDB};
