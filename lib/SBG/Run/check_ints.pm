@@ -32,6 +32,10 @@ use Text::ParseWords qw/quotewords/;
 use PDL::Lite;
 use PDL::Core qw/pdl/;
 use Log::Any qw/$log/;
+
+# File::Slurp bug: load before File::Temp to avoid 'redefined' error
+use File::Slurp;
+
 use File::Temp qw/tempfile/;
 
 use SBG::DomainIO::stamp;

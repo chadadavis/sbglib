@@ -36,6 +36,7 @@ use Moose::Role;
 use Moose::Util::TypeConstraints;
 
 use File::Temp qw/tempfile/;
+use File::Spec;
 use IO::String;
 use IO::File;
 use IO::Compress::Gzip;
@@ -186,14 +187,38 @@ has 'tempfile' => (
     trigger => \&_tempfile,
 );
 
+=head2 tempdir
+
+Set the directory where temporary files are created. 
+
+=cut
+
+has 'tempdir' => (
+    is         => 'rw',
+    isa        => 'Str',
+    lazy_build => 1,
+);
+
+sub _build_tempdir {
+    my ($self) = @_;
+    # Not using File::Spec->tmpdir() as that might return the current directory
+    my $tmpdir = $ENV{TMPDIR} || File::Spec->tmpdir;
+    my $name = __PACKAGE__;
+    $name =~ s/::/-/g;
+    $tmpdir = File::Spec->catdir($tmpdir, $name . '.tmp');
+    mkdir $tmpdir;
+    return $tmpdir;
+}
+
 =head2 pattern
 
 Pattern to be used for tempfile, e.g.
 
   myprog_XXXXXX
-  myprot_XXXXXX.pdb
-  XXXXXXX.png
-  
+  myprot_XXXXXX
+
+If you need an extension on the file, see L<#suffix>
+
 =cut
 
 has 'pattern' => (
@@ -217,12 +242,14 @@ has 'suffix' => (
 
 Whether previously created tempfiles should automatically be cleaned up on startup
 
+This is really the job of the OS.
+
 =cut
 
 has 'autoclean' => (
     is      => 'rw',
     isa     => 'Bool',
-    default => 1,
+    default => 0,
 );
 
 =head2 string
@@ -466,11 +493,11 @@ sub _tempfile {
 
     # Whether autoclean has already been run
     our $_autocleaned;
-    _clean_tmp($self->pattern) if !$_autocleaned && $self->autoclean;
+    $self->_clean_tmp() if !$_autocleaned && $self->autoclean;
 
     my $pattern = $self->pattern;
     my $suffix  = $self->suffix;
-    my ($tfh, $tpath) = tempfile($pattern, TMPDIR => 1, SUFFIX => $suffix);
+    my ($tfh, $tpath) = tempfile($pattern, DIR => $self->tempdir, SUFFIX => $suffix);
 
     # Silly to re-open this, but $self->file() opens it anyway
     $tfh->close();
@@ -481,15 +508,15 @@ sub _tempfile {
 
 # Clean previously created tmp files
 sub _clean_tmp {
-    my ($pattern, $ndays) = @_;
+    my ($self, $pattern, $ndays) = @_;
+    $pattern ||= $self->pattern;
     our $_autocleaned;
     $ndays = 7 unless defined($ndays);
 
     # Remove trailing 'X' mask
     $pattern =~ s/X//g if $pattern;
 
-    # Not using File::Spec->tmpdir() as that might return the current directory
-    my $tmpdir = $ENV{TMPDIR} || '/tmp/';
+    my $tmpdir = $self->tmpdir;
     my $user   = $ENV{USER};
     my $cmd    = "find $tmpdir";
     $cmd .= " -mtime +$ndays"      if $ndays;
