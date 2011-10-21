@@ -42,6 +42,11 @@ use SBG::U::List qw/wtavg/;
 use SBG::DB::entity;
 use SBG::DB::contact;
 
+BEGIN {
+    warn __PACKAGE__ , ' is deprecated in favor of SBG::Search::TransDBBlast';
+}
+
+
 # TODO abstract this out from 3DR and TransDBc
 
 # Count (unique) templates by PDB ID, to prefer templates from common structures

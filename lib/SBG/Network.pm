@@ -197,7 +197,8 @@ sub clear_symmetry {
 
 # This just does all-against-all to find the symmetry
 # Some (inadequate) shortcuts are attempted in the following methods
-# TODO needs to be abstracted into a clustering library (Matt's)
+# TODO needs to be abstracted into a clustering library
+# e.g. (Algorithm::Cluster::Thresh)
 sub symmetry {
     my ($self,) = @_;
 

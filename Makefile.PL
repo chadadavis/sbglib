@@ -41,6 +41,7 @@ requires "Bio::Network::ProteinNet" => "0";
 requires "Bio::Search::Hit::BlastHit" => "0";
 requires "Bio::Seq" => "0";
 requires "Bio::Tools::Run::Alignment::Clustalw" => "0";
+requires "Bio::Tools::Run::QCons" => "0"; 
 requires "Bio::Tools::Run::StandAloneBlast" => "0";
 requires "CGI" => "0";
 requires "CHI" => "0";
