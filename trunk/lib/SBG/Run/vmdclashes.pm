@@ -54,7 +54,7 @@ sub vmdclashes {
     my ($thing) = @_;
     my $file;
     if ($thing->isa('SBG::Complex')) {
-        my $io = SBG::ComplexIO::pdb->new(tempfile => 1);
+        my $io = SBG::ComplexIO::pdb->new(tempfile => 1, suffix => '.pdb');
         $io->write($thing);
         $io->close;
         $file = $io->file;
