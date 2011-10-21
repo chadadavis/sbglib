@@ -152,6 +152,7 @@ install_script 'script/fasta2net.pl';
 install_script 'script/net2model.pl';
 install_script 'script/sbgobj.pl';
 install_script 'sbglib.sh';
+install_script 'script/sbg-update-blastdb.pl';
 
 # Automagically install above deps from CPAN
 auto_install();
